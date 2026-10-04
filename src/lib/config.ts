@@ -28,3 +28,8 @@ export function teamFeePayUrl(): string | null {
 export function privacyUrl(): string | null {
   return process.env.PRIVACY_URL?.trim() || null;
 }
+
+/** The club shop (kit and merchandise), opened from the app. */
+export function shopUrl(): string | null {
+  return process.env.SHOP_URL?.trim() || null;
+}
