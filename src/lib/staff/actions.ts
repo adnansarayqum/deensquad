@@ -25,10 +25,10 @@ export async function undoCheckIn(sessionId: string, playerId: string): Promise<
   refresh();
 }
 
-/** The gate scanner: checks in a family from their pass and says who was checked in. */
+/** The gate scanner: checks a child in from their pass and says what happened. */
 export async function scanPass(token: string): Promise<ScanResult> {
   const user = await requireStaff();
   const result = await asUser(user.id, (tx) => checkInByPass(tx, token, new Date()));
-  if (result.ok && result.children.some((c) => c.status === "checked_in")) refresh();
+  if (result.ok && result.child.status === "checked_in") refresh();
   return result;
 }

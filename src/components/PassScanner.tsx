@@ -9,8 +9,7 @@ import { scanPass } from "@/lib/staff/actions";
 const flagText = { no_payment_plan: "No payment plan", missing_consent: "No photo consent", unread_news: "Hasn't read news" } as const;
 const reasonText = {
   not_a_pass: "That isn't a Deen Squad pass.",
-  unknown_parent: "This pass is for a parent who is no longer at the club.",
-  no_children: "No children are linked to this parent.",
+  unknown_child: "This pass is for a child who is no longer at the club.",
 } as const;
 
 /** Full-screen camera scanner for family gate passes. Each pass checks the family in straight away. */
@@ -99,8 +98,6 @@ export function PassScanner() {
     );
   }
 
-  const checkedIn = result?.ok ? result.children.filter((c) => c.status !== "no_session_today") : [];
-  const flagged = checkedIn.filter((c) => c.flags.length > 0);
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Scan gate passes" className="fixed inset-0 z-50 flex flex-col bg-pitch-deep text-on-pitch">
@@ -133,35 +130,33 @@ export function PassScanner() {
             <p className="text-[17px] font-bold">{reasonText[result.reason]}</p>
           </div>
         ) : (
-          <div className={`flex flex-col gap-2 rounded-app p-4 text-ink ${checkedIn.length === 0 ? "bg-paper" : flagged.length ? "bg-orange-tint" : "bg-grass-tint"}`}>
-            <p className="text-sm text-ink-muted">{result.parent}</p>
-            {result.children.map((c) => (
-              <div key={c.id} className="flex items-center gap-3">
-                <span
-                  className={`grid h-10 w-10 shrink-0 place-items-center rounded-pill font-display text-[20px] ${
-                    c.status === "no_session_today" ? "bg-line text-ink-muted" : "bg-grass text-on-grass"
-                  }`}
-                >
-                  {c.status === "no_session_today" ? <X aria-hidden size={18} /> : <Check aria-hidden size={20} strokeWidth={3} />}
-                </span>
-                <span className="flex flex-col">
-                  <span className="text-[17px] font-extrabold">
-                    {c.firstName} {c.lastInitial}. · {c.ageGroup}
-                  </span>
-                  <span className="text-[13px] text-ink-muted">
-                    {c.status === "checked_in"
-                      ? "Checked in"
-                      : c.status === "already_here"
-                        ? "Already checked in"
-                        : "No session for this group today"}
-                    {c.flags.length && c.status !== "no_session_today" ? ` · needs a word: ${c.flags.map((f) => flagText[f]).join(", ")}` : ""}
-                  </span>
-                </span>
-              </div>
-            ))}
-          </div>
+          <ChildResult child={result.child} />
         )}
       </div>
+    </div>
+  );
+}
+
+function ChildResult({ child: c }: { child: Extract<ScanResult, { ok: true }>["child"] }) {
+  const here = c.status !== "no_session_today";
+  const tone = !here ? "bg-paper" : c.flags.length ? "bg-orange-tint" : "bg-grass-tint";
+  return (
+    <div className={`flex items-center gap-4 rounded-app p-4 text-ink ${tone}`}>
+      <span
+        className={`grid h-16 w-16 shrink-0 place-items-center rounded-pill ${here ? "bg-grass text-on-grass" : "bg-line text-ink-muted"}`}
+      >
+        {here ? <Check aria-hidden size={34} strokeWidth={3} /> : <X aria-hidden size={30} />}
+      </span>
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="font-display text-[34px] leading-none tracking-[0.02em]">
+          {c.firstName} {c.lastInitial}.
+        </span>
+        <span className="text-[15px] font-bold">
+          {c.ageGroup} ·{" "}
+          {c.status === "checked_in" ? "Checked in" : c.status === "already_here" ? "Already checked in" : "No session for this group today"}
+        </span>
+        {here && c.flags.length ? <span className="text-[14px]">Needs a word: {c.flags.map((f) => flagText[f]).join(", ")}</span> : null}
+      </span>
     </div>
   );
 }

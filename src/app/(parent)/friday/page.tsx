@@ -45,8 +45,8 @@ export default async function FridayPage() {
               <QrCode aria-hidden size={24} />
             </span>
             <span className="flex flex-1 flex-col">
-              <span className="text-[15px] font-bold">Gate pass</span>
-              <span className="text-[13px] text-on-pitch-muted">Show it at the gate to check in {family.children.length > 1 ? "everyone" : family.children[0].firstName}</span>
+              <span className="text-[15px] font-bold">{family.children.length > 1 ? "Gate passes" : "Gate pass"}</span>
+              <span className="text-[13px] text-on-pitch-muted">{family.children.length > 1 ? "One for each child. Show it at the gate" : `Show it at the gate to check ${family.children[0].firstName} in`}</span>
             </span>
             <ChevronRight aria-hidden size={20} className="shrink-0 text-on-pitch-muted" />
           </Link>
