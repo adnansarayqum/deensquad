@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { runChase } from "@/lib/chase/run";
+import { runPlanNotifications } from "@/lib/plans/run";
 
 // Called every hour by the Railway cron job with `Authorization: Bearer <CRON_SECRET>`.
 
@@ -14,7 +15,7 @@ function authorised(header: string | null): boolean {
 export async function POST(request: Request) {
   if (!authorised(request.headers.get("authorization"))) return Response.json({ error: "unauthorised" }, { status: 401 });
   try {
-    const result = await runChase();
+    const result = { ...(await runChase()), plans: await runPlanNotifications() };
     console.info("[chase]", JSON.stringify(result));
     return Response.json(result);
   } catch (error) {

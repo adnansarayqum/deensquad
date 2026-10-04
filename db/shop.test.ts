@@ -175,3 +175,23 @@ describe("session plans and practice sheets", () => {
     await expect(t.asUser(outsider, (tx) => tx.query(`insert into practice_sheets (title) values ('x')`))).rejects.toThrow();
   });
 });
+
+describe("plan notifications", () => {
+  it("tells each group's parents once, and waits overnight", async () => {
+    const { notifyPending } = await import("@/lib/plans/notify");
+    const sent: { users: string[]; title: string }[] = [];
+    const push = async (_tx: unknown, users: string[], p: { title: string }) => void sent.push({ users, title: p.title });
+    const night = new Date(Date.now());
+    night.setUTCHours(23, 30); // 23:30 or 00:30 London: quiet
+    expect(await t.asSystem((tx) => notifyPending(tx, night, push))).toEqual({ plans: 0, sheets: 0 });
+    const day = new Date(Date.now());
+    day.setUTCHours(10, 0);
+    const first = await t.asSystem((tx) => notifyPending(tx, day, push));
+    expect(first.plans + first.sheets).toBeGreaterThan(0);
+    const u10 = sent.find((s) => s.title.startsWith("U10 session plan"));
+    expect(u10?.users).toContain(adnan);
+    const [hana] = await t.asSystem((tx) => tx.query<{ id: string }>(`select auth_user_id as id from guardians where email = 'hana@example.com'`));
+    expect(u10?.users).not.toContain(hana.id); // a U15 family
+    expect(await t.asSystem((tx) => notifyPending(tx, day, push))).toEqual({ plans: 0, sheets: 0 });
+  });
+});

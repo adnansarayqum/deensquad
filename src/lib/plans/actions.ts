@@ -8,6 +8,7 @@ import { asUser } from "../db";
 import { isAgeGroup } from "../domain";
 import { readUpload, saveFile } from "../files";
 import { cleanBody, cleanText } from "../validate";
+import { runPlanNotifications } from "./run";
 
 export type PlanState = { error?: string; saved?: boolean };
 
@@ -41,6 +42,7 @@ export async function savePlan(_prev: PlanState, formData: FormData): Promise<Pl
     return null;
   });
   if (error) return { error };
+  await runPlanNotifications();
   refresh();
   return { saved: true };
 }
@@ -81,6 +83,7 @@ export async function addPracticeSheet(_prev: PlanState, formData: FormData): Pr
       user.staff.id,
     ]);
   });
+  await runPlanNotifications();
   refresh();
   return { saved: true };
 }
