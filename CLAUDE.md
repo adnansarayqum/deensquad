@@ -56,7 +56,7 @@ Before committing: `npm run typecheck && npm run lint && npm test`, and `npm run
 
 ## Roadmap (agreed with the club owner's pain points)
 
-1. Done: Postgres on Railway, email sign-in, admin import/invites/news/sessions/staff. Next: verify the club's domain in Resend, set `EMAIL_FROM`, import real families.
+1. Done: Postgres on Railway, email sign-in, admin import/invites/news/sessions/staff. Club domain verified in Resend; `EMAIL_FROM` is app@thedeensquadfootballacademy.co.uk. Next: import real families.
 2. Done: chase ladder (push, email 24h, SMS 48h when Twilio is set, gate flag). Later: automatic WhatsApp once the club has a WhatsApp Business account.
 3. Admin: Saturday report, badges and coach notes UI, weekly challenge, voice-note announcements (needs file storage).
 4. Push notifications and offline support (service worker), TeamFeePay export import.
