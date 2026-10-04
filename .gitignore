@@ -44,3 +44,6 @@ next-env.d.ts
 /e2e/.results/
 /playwright-report/
 !.env.example
+
+# local database and email outbox for development
+/.data/

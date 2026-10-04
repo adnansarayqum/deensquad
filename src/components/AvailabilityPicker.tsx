@@ -3,18 +3,23 @@
 import { useOptimistic, useTransition } from "react";
 import { Check, X } from "lucide-react";
 import type { Availability } from "@/lib/domain";
-import { setAvailability } from "@/lib/actions";
+import { setAvailability } from "@/lib/parent/actions";
 
 export function AvailabilityPicker({
   sessionId,
+  playerId,
   answer,
   childName,
   question,
+  compact = false,
 }: {
   sessionId: string;
+  playerId: string;
   answer: Availability | undefined;
   childName: string;
   question: string;
+  /** Shorter buttons when several children are listed on one screen. */
+  compact?: boolean;
 }) {
   const [optimistic, setOptimistic] = useOptimistic(answer);
   const [pending, startTransition] = useTransition();
@@ -22,13 +27,13 @@ export function AvailabilityPicker({
   const choose = (value: Availability) =>
     startTransition(async () => {
       setOptimistic(value);
-      await setAvailability(sessionId, value);
+      await setAvailability(sessionId, playerId, value);
     });
 
-  const base =
-    "flex min-h-[100px] flex-1 flex-col items-center justify-center gap-1.5 rounded-app border-2 text-[17px] font-extrabold transition-transform active:translate-y-1 active:shadow-none";
+  const base = `flex ${compact ? "min-h-[64px] flex-row gap-2 text-base" : "min-h-[100px] flex-col gap-1.5 text-[17px]"} flex-1 items-center justify-center rounded-app border-2 font-extrabold transition-transform active:translate-y-1 active:shadow-none`;
   const coming = optimistic === "coming";
   const away = optimistic === "away";
+  const icon = compact ? 22 : 30;
 
   return (
     <div className="flex flex-col gap-3">
@@ -39,7 +44,7 @@ export function AvailabilityPicker({
           onClick={() => choose("coming")}
           className={`${base} ${coming ? "border-grass bg-grass text-on-grass shadow-lip-grass" : "border-line bg-paper text-ink shadow-lip-neutral"}`}
         >
-          <Check aria-hidden size={30} strokeWidth={3} />
+          <Check aria-hidden size={icon} strokeWidth={3} />
           Coming
         </button>
         <button
@@ -48,7 +53,7 @@ export function AvailabilityPicker({
           onClick={() => choose("away")}
           className={`${base} ${away ? "border-kit-orange bg-kit-orange text-on-orange shadow-[0_4px_0_#7a3310]" : "border-line bg-paper text-ink shadow-lip-neutral"}`}
         >
-          <X aria-hidden size={30} strokeWidth={3} />
+          <X aria-hidden size={icon} strokeWidth={3} />
           Not this week
         </button>
       </div>

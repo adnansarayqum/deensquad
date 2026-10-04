@@ -1,25 +1,22 @@
-// The Deen Squad domain model. These types are shared by the demo data source and,
-// later, the Supabase data source, so screens never care where data comes from.
+// The Deen Squad domain model shared by the screens, the data layer and the admin.
 
-export type AgeGroup = "U7" | "U9" | "U11" | "U13" | "U15";
+export const AGE_GROUPS = ["U7", "U9", "U11", "U13", "U15"] as const;
+export type AgeGroup = (typeof AGE_GROUPS)[number];
 
-export type Guardian = {
+export function isAgeGroup(value: unknown): value is AgeGroup {
+  return typeof value === "string" && (AGE_GROUPS as readonly string[]).includes(value);
+}
+
+/** A child at the club, as their parent sees them. */
+export type Child = {
   id: string;
   firstName: string;
   lastName: string;
-  /** Language announcements are delivered in. */
-  language: "en" | "ur" | "ar" | "bn" | "so";
-};
-
-export type Player = {
-  id: string;
-  firstName: string;
-  lastInitial: string;
-  shirtNumber: number;
+  shirtNumber: number | null;
   ageGroup: AgeGroup;
-  position: string;
+  position: string | null;
   joinedOn: string; // ISO date
-  guardianIds: string[];
+  photoConsent: boolean | null;
 };
 
 export type SessionKind = "training" | "match" | "tournament";
@@ -32,12 +29,10 @@ export type Session = {
   endsAt: string; // ISO date-time
   venue: string;
   ageGroups: AgeGroup[];
-  briefing?: {
-    arriveBy: string; // e.g. "6:20pm"
-    kit: string;
-    weather?: string;
-    prayer: string;
-  };
+  arriveBy: string | null;
+  kit: string | null;
+  prayerNote: string | null;
+  cancelled: boolean;
 };
 
 export type Availability = "coming" | "away";
@@ -50,33 +45,18 @@ export type Announcement = {
   body: string;
   postedAt: string; // ISO date-time
   requiresAck: boolean;
-  voiceNote?: { durationSec: number; from: string };
+  postedBy: string | null;
 };
 
-export type ChecklistItemId = "registered" | "emergency-contacts" | "kit-ordered" | "payment-plan" | "photo-consent";
+export type PaymentState = "active" | "missing" | "overdue" | "self_reported";
 
-export type ChecklistItem = {
-  id: ChecklistItemId;
-  title: string;
-  detail: string;
-  doneDetail: string;
-  actionLabel: string;
-  icon: "card" | "camera" | "shirt" | "phone" | "id";
-};
+export type ChecklistItemId = "registered" | "emergency-contacts" | "payment-plan" | "photo-consent";
 
 export type Badge = {
   id: string;
   name: string;
   icon: "star" | "clock" | "trophy" | "flame" | "target";
-  earnedOn?: string; // ISO date; missing = locked
-};
-
-export type Challenge = {
-  id: string;
-  name: string;
-  description: string;
-  target: number;
-  progress: number;
+  earnedOn?: string; // ISO date; missing = not earned yet
 };
 
 export type CoachNote = {
@@ -86,11 +66,4 @@ export type CoachNote = {
   writtenOn: string;
 };
 
-export type RegisterFlag = "no_payment_plan" | "missing_consent";
-
-export type RegisterEntry = {
-  playerId: string;
-  status: "checked_in" | "expected" | "away";
-  checkedInAt?: string; // ISO date-time
-  flag?: RegisterFlag;
-};
+export type StaffRole = "admin" | "coach";

@@ -4,15 +4,14 @@ import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { CalendarDays, ListChecks, Megaphone, User } from "lucide-react";
 
-const tabs = [
-  { segment: "news", label: "News", icon: Megaphone },
-  { segment: "friday", label: "Friday", icon: CalendarDays },
-  { segment: "checklist", label: "To-do", icon: ListChecks },
-  { segment: "player", label: "Yusuf", icon: User },
-] as const;
-
-export function TabBar({ unread }: { unread: number }) {
+export function TabBar({ unread, playerLabel }: { unread: number; playerLabel: string }) {
   const active = useSelectedLayoutSegment();
+  const tabs = [
+    { segment: "news", label: "News", icon: Megaphone },
+    { segment: "friday", label: "Friday", icon: CalendarDays },
+    { segment: "checklist", label: "To-do", icon: ListChecks },
+    { segment: "player", label: playerLabel, icon: User },
+  ] as const;
   return (
     <nav
       aria-label="Main"

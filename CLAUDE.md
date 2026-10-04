@@ -2,31 +2,35 @@
 
 # Deen Squad parent app
 
-Mobile web app (installable PWA) for The Deen Squad Football Academy. Parents read club news and tap to acknowledge it, say whether their child is coming on Friday, finish a setup checklist and follow their child's progress. Coaches use a gate register. The app runs in **demo mode** today (no database); the Supabase schema for the real backend is in `supabase/migrations/`.
+Mobile web app (installable PWA) for The Deen Squad Football Academy. Parents sign in by email, read club news and tap to acknowledge it, say whether each child is coming to the next session, finish a per-child checklist and follow each child's progress. Coaches use a gate register. Admins import families from a CSV, send invites, post news with read receipts (and chase on WhatsApp), schedule sessions and manage staff. Data lives in Postgres (Railway in production).
 
 ## Commands
 
 | Task | Command |
 | --- | --- |
-| Dev server | `npm run dev` |
+| Dev server | `npm run dev` (in-process Postgres in `.data/db` with a sample club; emails go to `.data/outbox.jsonl`; delete `.data` to reset) |
 | Production build | `npm run build` then `npm run start` |
 | Types (regenerates Next route types first) | `npm run typecheck` |
 | Lint | `npm run lint` |
 | Unit + database tests (Vitest, PGlite) | `npm test` |
-| End-to-end tests (Playwright, phone viewport) | `npm run test:e2e` (needs a build; set `PLAYWRIGHT_CHROMIUM_PATH` to reuse an installed Chromium) |
+| End-to-end tests (Playwright, phone viewport) | `npm run test:e2e` (needs a build; fresh in-memory DB; `E2E_DATABASE_URL` for a real empty Postgres; `PLAYWRIGHT_CHROMIUM_PATH` to reuse an installed Chromium) |
+| Apply migrations to `DATABASE_URL` | `npm run db:migrate` (Railway runs it before every deploy) |
 | Regenerate design tokens | `npm run tokens` |
-| Deploy | Push to `main`. Railway (project `deensquad`, service `parent-app`, Amsterdam region) builds and deploys it; settings are in `railway.json` and override the dashboard. Live at https://parent-app-production-4b29.up.railway.app |
+| Deploy | Push to `main`. Railway (project `deensquad`: service `parent-app` + `Postgres`, Amsterdam) builds it, runs `scripts/migrate.mjs` as the pre-deploy step, then deploys; settings in `railway.json` override the dashboard. Live at https://parent-app-production-4b29.up.railway.app |
 
 Before committing: `npm run typecheck && npm run lint && npm test`, and `npm run test:e2e` when screens or actions change. Stop any running `next start` before `npm run build`; rebuilding under a live server serves mismatched chunks.
 
 ## Architecture
 
-- `src/app/(parent)/` routes share a layout with the bottom tab bar: `news`, `friday`, `checklist` (+ `payment`, `consent`), `player`. `src/app/coach/` is the coach's gate register (no tab bar). `/` redirects to `/news`.
-- `src/lib/domain.ts` holds the types. `src/lib/seed.ts` is the demo data (one family: Adnan and Yusuf, U9s; dates are relative to now so the coming Friday is always shown).
-- `src/lib/views.ts` holds pure functions that build each screen's data from seed + saved state. Screens only ever read these view shapes, so swapping in Supabase means re-implementing `src/lib/data.ts`, not the screens.
-- `src/lib/demo-state.ts` stores a family's taps (reads, availability, checklist, consent, coach check-ins) in the `ds_demo` cookie. All decoding is defensive; unknown values are dropped.
-- `src/lib/actions.ts` holds the Server Actions. Each validates ids against `knownIds()` before writing. Setting a cookie in a Server Action re-renders the route, so no `revalidatePath` is needed in demo mode. When the database arrives, use `refresh()` or `revalidatePath` after writes.
-- `supabase/migrations/0001_init.sql` holds the full schema with row level security: guardians see only their own family; `staff` (coach/admin) see all. `supabase/schema.test.ts` runs it in PGlite and tests the policies as different users. Keep that test passing when changing the schema.
+- **Database:** `db/migrations/*.sql`, applied in name order, each once (`scripts/migrate.mjs` on Railway, `src/lib/db/migrate.ts` locally). Never edit a migration that has been deployed; add a new numbered file. `0001_auth.sql` is a Supabase-shaped auth schema (`auth.users`, `auth.uid()`, sign-in requests, sessions). `0002_club.sql` is the club schema with row level security.
+- **Security model:** the app connects as the DB owner. `asUser(userId, fn)` (`src/lib/db`) opens a transaction, sets `app.user_id` and `set local role authenticated`, so every policy applies. `asSystem` bypasses RLS and is only for sign-in/sessions/invites. Parent writes that touch `players` or `payment_status` go through security-definer functions (`set_photo_consent`, `report_payment_setup`); the squad headcount comes from `squad_counts()` so parents never read other families' answers. `staff_names` exposes staff names without emails.
+- **Multi-child:** `player_guardians` is many-to-many. Parent queries must filter to `my_player_ids()` / the family's age groups explicitly, because a parent who is also staff can read the whole club under RLS.
+- **Drivers:** `DATABASE_URL=postgres://` uses postgres.js; `pglite://memory` or `pglite://<dir>` uses PGlite. Both behind `Database`/`Queryable` in `src/lib/db/types.ts`. Cast enums/arrays to text (`::text`, `::text[]`), counts to `::int`, dates to `::text` in selects so both drivers return the same shapes. `DEV_SEED=1` seeds the sample club (refused on Railway).
+- **Auth (`src/lib/auth`):** email with a 6-digit code + single-use link (hashed in `auth.sign_in_requests`, 15 min; invites 7 days, link only). The code exists because iPhone home-screen apps don't share cookies with Safari. The link page needs a tap (email scanners). Unknown emails get the same screen and no email. Rate limits per email/IP. Sessions: random cookie `ds_session`, SHA-256 in `auth.sessions`, 90-day sliding. `src/proxy.ts` only does the optimistic cookie check; pages call `requireParent/requireStaff/requireAdmin` (`session.ts`). `ADMIN_EMAILS` creates the first admin on sign-in.
+- **Email (`src/lib/email`):** Resend over HTTPS when `RESEND_API_KEY` is set; otherwise an outbox file in dev/tests. In production without a key, only admin sign-in emails are printed to the log.
+- **Parent screens:** `src/app/(parent)/` (news, friday, checklist + contacts/payment/consent, player). Loaders in `src/lib/parent/load.ts`, queries in `data.ts`, pure view builders in `views.ts`, actions in `actions.ts` (call `refresh()` after in-place writes).
+- **Staff:** `/coach` register (`src/lib/staff`), `/admin` (`src/app/admin`, `src/lib/admin`): CSV import (`import.ts`, preview is a dry run rolled back), invites, news + read receipts + WhatsApp chase (logged in `announcement_chases`), sessions, staff. Coaches can do everything except import/invite/edit families/manage staff.
+- Tests: `db/schema.test.ts` (RLS as different people), `src/**/*.test.ts` (auth, import, views) on PGlite via `test/db.ts`; `e2e/` signs in with codes from the outbox.
 
 ## Next.js 16 notes (this is newer than most training data)
 
@@ -49,7 +53,7 @@ Before committing: `npm run typecheck && npm run lint && npm test`, and `npm run
 
 ## Roadmap (agreed with the club owner's pain points)
 
-1. Supabase: create the project, run the migration, add `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`, sign-in by email magic link or phone OTP, implement `src/lib/data.ts` against the database behind `DATA_SOURCE=supabase`.
-2. Announcement chase ladder: app notification, then personal WhatsApp after 24h, text after 48h, then flagged at the gate on Friday (log in `announcement_chases`).
-3. Admin dashboard (Saturday report, families-with-gaps from the `family_gaps` view, voice-note announcements).
+1. Done: Postgres on Railway, email sign-in, admin import/invites/news/sessions/staff. Next: verify the club's domain in Resend, set `EMAIL_FROM`, import real families.
+2. Announcement chase ladder: automate what the admin does by hand today (push notification, WhatsApp after 24h, text after 48h, flag at the gate; log in `announcement_chases`).
+3. Admin: Saturday report, badges and coach notes UI, weekly challenge, voice-note announcements (needs file storage).
 4. Push notifications and offline support (service worker), real QR scanning for the coach register, TeamFeePay export import.

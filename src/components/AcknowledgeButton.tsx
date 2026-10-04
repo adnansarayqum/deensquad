@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { acknowledgeAnnouncement } from "@/lib/actions";
+import { acknowledgeAnnouncement } from "@/lib/parent/actions";
 
 export function AcknowledgeButton({ announcementId }: { announcementId: string }) {
   const [pending, startTransition] = useTransition();
