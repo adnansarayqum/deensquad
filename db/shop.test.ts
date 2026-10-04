@@ -114,3 +114,14 @@ describe("reading orders", () => {
     expect(ready).toBe(true);
   });
 });
+
+describe("points and stars", () => {
+  it("lets staff give awards and families read only their own children's", async () => {
+    await t.asUser(coach, (tx) => tx.query(`insert into player_awards (player_id, points, reason) values ($1, 3, 'Good effort')`, [otherChild]));
+    const mine = await t.asUser(adnan, (tx) => tx.query<{ player_id: string }>(`select player_id from player_awards`));
+    expect(mine.every((a) => a.player_id === DEV_IDS.yusuf || a.player_id === DEV_IDS.musa)).toBe(true);
+    const theirs = await t.asUser(other, (tx) => tx.query<{ points: number }>(`select points from player_awards`));
+    expect(theirs).toEqual([{ points: 3 }]);
+    await expect(t.asUser(adnan, (tx) => tx.query(`insert into player_awards (player_id, stars) values ($1, 1)`, [DEV_IDS.yusuf]))).rejects.toThrow();
+  });
+});

@@ -1,4 +1,5 @@
 import type { Queryable } from "../db/types";
+import { applyRegistration, readRegistration, type Registered, type Registration } from "./registration";
 import { codeHash, newCode, newToken, sameHash, sha256, UUID } from "./tokens";
 
 // Email sign-in: a 6-digit code and a link in one email. Both are single-use and stored only as hashes.
@@ -43,10 +44,11 @@ export async function ensureBootstrapAdmin(tx: Queryable, email: string, adminEm
 
 export async function issueSignIn(
   tx: Queryable,
-  opts: { email: string; ip: string | null; now: Date; purpose: "sign_in" | "invite" },
+  opts: { email: string; ip: string | null; now: Date; purpose: "sign_in" | "invite"; registration?: Registration },
 ): Promise<IssueResult> {
-  const { email, ip, now, purpose } = opts;
-  if (!(await isKnownEmail(tx, email))) return { ok: false, reason: "unknown" };
+  const { email, ip, now, purpose, registration } = opts;
+  // Signing up is the one way in for an email the club doesn't have yet.
+  if (!registration && !(await isKnownEmail(tx, email))) return { ok: false, reason: "unknown" };
 
   if (purpose === "sign_in") {
     const hourAgo = new Date(now.getTime() - 3600_000);
@@ -66,23 +68,32 @@ export async function issueSignIn(
   const code = purpose === "sign_in" ? newCode() : null;
   const expiresAt = new Date(now.getTime() + (purpose === "invite" ? INVITE_DAYS * 86400_000 : SIGN_IN_MINUTES * 60_000));
   const [{ id }] = await tx.query<{ id: string }>(
-    `insert into auth.sign_in_requests (email, purpose, link_hash, ip, created_at, expires_at) values ($1, $2, $3, $4, $5, $6) returning id`,
-    [email, purpose, sha256(token), ip, now, expiresAt],
+    `insert into auth.sign_in_requests (email, purpose, link_hash, ip, created_at, expires_at, registration)
+     values ($1, $2, $3, $4, $5, $6, $7::jsonb) returning id`,
+    [email, purpose, sha256(token), ip, now, expiresAt, registration ? JSON.stringify(registration) : null],
   );
   if (code) await tx.query(`update auth.sign_in_requests set code_hash = $2 where id = $1`, [id, codeHash(id, code)]);
   return { ok: true, request: { requestId: id, email, code, token, expiresAt } };
 }
 
 export type VerifyResult =
-  | { ok: true; userId: string; email: string }
+  | { ok: true; userId: string; email: string; registered?: Registered }
   | { ok: false; reason: "wrong" | "expired" | "used" | "too_many"; attemptsLeft?: number };
 
-type RequestRow = { id: string; email: string; code_hash: string | null; attempts: number; expires_at: Date; used_at: Date | null };
+type RequestRow = {
+  id: string;
+  email: string;
+  code_hash: string | null;
+  attempts: number;
+  expires_at: Date;
+  used_at: Date | null;
+  registration?: unknown;
+};
 
 export async function verifyCode(tx: Queryable, requestId: string, code: string, now: Date): Promise<VerifyResult> {
   if (!UUID.test(requestId)) return { ok: false, reason: "wrong" };
   const [row] = await tx.query<RequestRow>(
-    `select id, email, code_hash, attempts, expires_at, used_at from auth.sign_in_requests where id = $1 for update`,
+    `select id, email, code_hash, attempts, expires_at, used_at, registration from auth.sign_in_requests where id = $1 for update`,
     [requestId],
   );
   if (!row || !row.code_hash) return { ok: false, reason: "wrong" };
@@ -99,7 +110,7 @@ export async function verifyCode(tx: Queryable, requestId: string, code: string,
 
 export async function verifyLink(tx: Queryable, token: string, now: Date): Promise<VerifyResult> {
   const [row] = await tx.query<RequestRow>(
-    `select id, email, code_hash, attempts, expires_at, used_at from auth.sign_in_requests where link_hash = $1 for update`,
+    `select id, email, code_hash, attempts, expires_at, used_at, registration from auth.sign_in_requests where link_hash = $1 for update`,
     [sha256(token)],
   );
   if (!row) return { ok: false, reason: "wrong" };
@@ -125,8 +136,12 @@ function checkUsable(row: RequestRow, now: Date): "used" | "expired" | null {
 
 async function finish(tx: Queryable, row: RequestRow, now: Date): Promise<VerifyResult> {
   await tx.query(`update auth.sign_in_requests set used_at = $2 where id = $1`, [row.id, now]);
+  // A sign-up: the email is now proved, so the family can be created before linking it to the sign-in.
+  const raw = typeof row.registration === "string" ? (JSON.parse(row.registration) as unknown) : row.registration;
+  const registration = readRegistration(raw);
+  const registered = registration ? await applyRegistration(tx, row.email, registration) : undefined;
   const userId = await completeSignIn(tx, row.email, now);
-  return { ok: true, userId, email: row.email };
+  return { ok: true, userId, email: row.email, registered };
 }
 
 /** Finds or creates the sign-in for this email and links it to the club's parent and staff records. */

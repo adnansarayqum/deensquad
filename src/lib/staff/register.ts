@@ -43,14 +43,20 @@ export async function loadRegisterSessions(tx: Queryable, now: Date): Promise<Se
   return next.map(toSession);
 }
 
-export async function loadRegister(tx: Queryable, opts: { now: Date; sessionId?: unknown; group?: unknown }): Promise<RegisterView | null> {
-  const todays = await loadRegisterSessions(tx, opts.now);
+/** `allowed` limits a coach to their own age groups (sessions and squads outside them are left out). */
+export async function loadRegister(
+  tx: Queryable,
+  opts: { now: Date; sessionId?: unknown; group?: unknown; allowed?: AgeGroup[] },
+): Promise<RegisterView | null> {
+  const allowed = opts.allowed;
+  const mine = (s: Session): Session => (allowed ? { ...s, ageGroups: s.ageGroups.filter((g) => allowed.includes(g)) } : s);
+  const todays = (await loadRegisterSessions(tx, opts.now)).map(mine).filter((s) => s.ageGroups.length > 0);
   let session: Session | undefined = todays.find((s) => s.id === opts.sessionId) ?? todays[0];
   if (!session && typeof opts.sessionId === "string") {
     const [row] = await tx.query<SessionRow>(`select ${SESSION_COLUMNS} from sessions s where s.id::text = $1`, [opts.sessionId]);
-    session = row ? toSession(row) : undefined;
+    session = row ? mine(toSession(row)) : undefined;
   }
-  if (!session) return null;
+  if (!session || session.ageGroups.length === 0) return null;
 
   const counts = await tx.query<{ age_group: AgeGroup; n: number }>(
     `select age_group::text as age_group, count(*)::int as n from players where age_group = any($1::text[]::age_group[]) group by age_group`,

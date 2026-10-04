@@ -52,8 +52,10 @@ function splitName(full: string | null): { first: string | null; last: string | 
 export function parseAgeGroup(value: string | null): AgeGroup | null {
   if (!value) return null;
   const m = value.match(/(?:u|under)\s*-?\s*(\d{1,2})/i) ?? value.match(/^\s*(\d{1,2})\s*s?\s*$/i);
-  const group = m ? `U${Number(m[1])}` : null;
-  return group && (AGE_GROUPS as readonly string[]).includes(group) ? (group as AgeGroup) : null;
+  if (!m) return null;
+  // "U9" or "9s" means the group that covers that age: U10 takes 8, 9 and 10 year olds.
+  const age = Number(m[1]);
+  return AGE_GROUPS.find((g) => Number(g.slice(1)) >= age && age >= 4) ?? null;
 }
 
 /** DD/MM/YYYY (UK order), D/M/YYYY, DD-MM-YYYY, DD.MM.YYYY or YYYY-MM-DD → "YYYY-MM-DD". */

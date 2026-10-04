@@ -129,7 +129,7 @@ test("player: switch between children and sign out", async ({ page }) => {
 test("coach: register marks a player here; parents can't open it", async ({ page }) => {
   await signIn(page, "coach@deensquad.test");
   await page.goto("/coach");
-  await page.getByRole("link", { name: "U9", exact: true }).click();
+  await page.getByRole("link", { name: "U10", exact: true }).click();
   await expect(page.getByText("0 of 14 expected")).toBeVisible();
   await page.getByRole("button", { name: "Mark Yusuf S. here" }).click();
   await expect(page.getByText("Yusuf S. checked in")).toBeVisible();
@@ -146,14 +146,14 @@ test("admin: import a family, post news, add a session", async ({ page }) => {
   await page.getByText("Or paste the rows").click();
   await page
     .locator("textarea[name=csv]")
-    .fill("Child first name,Child last name,Age group,Parent first name,Parent email\nAli,Khan,U9,Sana,sana@example.com\nZara,Khan,U13,Sana,sana@example.com\nBad,Row,U10,Pat,pat@example.com");
+    .fill("Child first name,Child last name,Age group,Parent first name,Parent email\nAli,Khan,U10,Sana,sana@example.com\nZara,Khan,U12,Sana,sana@example.com\nBad,Row,U19,Pat,pat@example.com");
   await page.getByRole("button", { name: "Check the file" }).click();
   await expect(page.getByText("Row 4:")).toBeVisible();
   await page.screenshot({ path: shot("admin-import"), fullPage: true });
   await page.getByRole("button", { name: "Import 2 rows" }).click();
   await expect(page.getByText(/2 children added/)).toBeVisible();
 
-  await page.goto("/admin/families?group=U13");
+  await page.goto("/admin/families?group=U12");
   await expect(page.getByText("Zara Khan")).toBeVisible();
   await page.getByRole("button", { name: "Email invites" }).click();
   await expect(page.getByText(/Invites sent to \d+ parents/)).toBeVisible();
@@ -240,6 +240,63 @@ test("shop: a parent orders kit for a child and pays by transfer; the club is to
   await expect(page.getByRole("button", { name: "Handed over" })).toBeVisible();
   await page.screenshot({ path: shot("admin-shop"), fullPage: true });
 
-  await page.goto("/coach?group=U9");
+  await page.goto("/coach?group=U10");
   await expect(page.getByText(/Kit order ready to collect/)).toBeVisible();
+});
+
+test("sign-up: a new parent registers their child, proves their email and lands in the app", async ({ page }) => {
+  await page.goto("/sign-in");
+  await page.getByRole("link", { name: "Sign up" }).click();
+  await expect(page).toHaveURL(/\/sign-up$/);
+  await page.getByLabel("First name").first().fill("Hana");
+  await page.getByLabel("Last name").first().fill("Rahman");
+  await page.getByLabel("Email address").fill("hana@example.com");
+  await page.getByLabel("Mobile number").fill("07700 900555");
+  await page.locator("#childFirstName-0").fill("Ilyas");
+  await page.locator("#childDob-0").fill("2017-05-01");
+  await page.locator("#childGroup-0").selectOption("U10");
+  await page.screenshot({ path: shot("sign-up"), fullPage: true });
+  await page.getByRole("button", { name: "Sign up" }).click();
+  await expect(page).toHaveURL(/\/sign-in\/code$/);
+  await page.getByLabel("6-digit code").fill(latestCode("hana@example.com"));
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/checklist$/);
+  await expect(page.getByRole("heading", { name: "Ilyas's checklist" })).toBeVisible();
+  const mails = readFileSync(OUTBOX, "utf8");
+  expect(mails).toContain("New family signed up: Hana Rahman");
+});
+
+test("coach groups: a U7 coach posts to U7 only and gives a star; the parent sees it", async ({ page }) => {
+  await signIn(page, "admin@deensquad.test");
+  await page.goto("/admin/staff");
+  const coachGroups = page.getByRole("form", { name: "Coach Hamza's age groups" });
+  await coachGroups.getByLabel("U7").check();
+  await coachGroups.getByRole("button", { name: "Save groups" }).click();
+  await expect(coachGroups.getByLabel("U7")).toBeChecked();
+
+  await page.context().clearCookies();
+  await signIn(page, "coach@deensquad.test");
+  await page.goto("/admin/news");
+  await expect(page.getByLabel("Every family")).toHaveCount(0);
+  await expect(page.getByLabel("U10")).toHaveCount(0);
+  await page.goto("/admin/families");
+  await expect(page.getByText("Musa Sample")).toBeVisible();
+  await expect(page.getByText("Yusuf Sample")).toHaveCount(0);
+
+  await page.goto("/coach/awards");
+  await page.getByRole("link", { name: /Musa Sample/ }).click();
+  await page.getByText("+5", { exact: true }).click();
+  await page.getByText("Star player").click();
+  await page.getByLabel(/What for/).fill("Brilliant first touch");
+  await page.getByRole("button", { name: "Give award" }).click();
+  await expect(page.getByText(/Given\. Musa's parents/)).toBeVisible();
+  await page.screenshot({ path: shot("coach-awards"), fullPage: true });
+
+  // Musa's other parent (Adnan has used up his codes for the hour in the earlier tests).
+  await page.context().clearCookies();
+  await signIn(page, "sara@example.com");
+  await page.goto("/player");
+  await page.getByRole("link", { name: "Musa", exact: true }).click();
+  await expect(page.getByText("Brilliant first touch", { exact: false })).toBeVisible();
+  await page.screenshot({ path: shot("player-awards"), fullPage: true });
 });

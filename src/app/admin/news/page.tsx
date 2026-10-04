@@ -5,15 +5,16 @@ import { StatefulForm } from "@/components/admin/StatefulForm";
 import { postNews } from "@/lib/admin/actions";
 import { loadNewsList } from "@/lib/admin/data";
 import { TOPICS } from "@/lib/admin/topics";
-import { requireStaff } from "@/lib/auth/session";
+import { isGroupCoach, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { postedLabel } from "@/lib/dates";
-import { AGE_GROUPS } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "News" };
 
 export default async function AdminNewsPage() {
   const user = await requireStaff();
+  const limited = isGroupCoach(user.staff);
+  const myGroups = staffGroups(user.staff);
   const news = await asUser(user.id, (tx) => loadNewsList(tx));
   const now = new Date();
 
@@ -49,18 +50,24 @@ export default async function AdminNewsPage() {
           </div>
           <fieldset className="flex flex-col gap-2">
             <legend className="field-label">Who is it for?</legend>
-            <label className="flex min-h-11 items-center gap-3 text-[15px] font-bold">
-              <input type="radio" name="audience" value="all" defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
-              Every family
-            </label>
-            <label className="flex min-h-11 items-center gap-3 text-[15px] font-bold">
-              <input type="radio" name="audience" value="groups" className="h-5 w-5 accent-[var(--grass)]" />
-              Only these age groups:
-            </label>
-            <div className="flex flex-wrap gap-2 pl-8">
-              {AGE_GROUPS.map((g) => (
+            {limited ? (
+              <input type="hidden" name="audience" value="groups" />
+            ) : (
+              <>
+                <label className="flex min-h-11 items-center gap-3 text-[15px] font-bold">
+                  <input type="radio" name="audience" value="all" defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
+                  Every family
+                </label>
+                <label className="flex min-h-11 items-center gap-3 text-[15px] font-bold">
+                  <input type="radio" name="audience" value="groups" className="h-5 w-5 accent-[var(--grass)]" />
+                  Only these age groups:
+                </label>
+              </>
+            )}
+            <div className={`flex flex-wrap gap-2 ${limited ? "" : "pl-8"}`}>
+              {myGroups.map((g) => (
                 <label key={g} className="flex min-h-11 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
-                  <input type="checkbox" name="groups" value={g} className="h-4 w-4 accent-[var(--grass)]" />
+                  <input type="checkbox" name="groups" value={g} defaultChecked={limited && myGroups.length === 1} className="h-4 w-4 accent-[var(--grass)]" />
                   <span className="text-sm font-extrabold">{g}</span>
                 </label>
               ))}

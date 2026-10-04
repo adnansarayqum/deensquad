@@ -5,9 +5,9 @@ import { DEV_EMAILS, DEV_IDS } from "@/lib/db/dev-seed";
 import { testDatabase } from "../test/db";
 
 let t: Awaited<ReturnType<typeof testDatabase>>;
-let adnan: string; // parent of Yusuf (U9) and Musa (U7)
+let adnan: string; // parent of Yusuf (U10) and Musa (U7)
 let sara: string; // their other parent
-let other: string; // parent of one U9 child
+let other: string; // parent of one U10 child
 let coach: string;
 let admin: string;
 let otherChild: string;
@@ -46,7 +46,7 @@ describe("families", () => {
 
   it("shows sessions and news for every age group in the family", async () => {
     const news = await t.asUser(adnan, (tx) => tx.query<{ title: string }>("select title from announcements"));
-    expect(news).toHaveLength(3); // U9 kit message + two for everyone
+    expect(news).toHaveLength(3); // U10 kit message + two for everyone
     const u7Only = await t.asSystem((tx) =>
       tx.query<{ id: string }>(`insert into announcements (topic, title, body, audience) values ('Kit', 'U7 bibs', 'x', '{U7}') returning id`),
     );
@@ -109,10 +109,10 @@ describe("squad headcount", () => {
     const [session] = await t.asSystem((tx) =>
       tx.query<{ id: string }>("select id from sessions where kind = 'training' and starts_at > now() order by starts_at limit 1"),
     );
-    const [u9] = await t.asUser(adnan, (tx) => tx.query<{ coming: number; away: number; squad: number }>("select * from squad_counts($1, 'U9')", [session.id]));
+    const [u9] = await t.asUser(adnan, (tx) => tx.query<{ coming: number; away: number; squad: number }>("select * from squad_counts($1, 'U10')", [session.id]));
     expect(u9).toEqual({ coming: 11, away: 2, squad: 16 });
-    const [u13] = await t.asUser(adnan, (tx) => tx.query<{ squad: number }>("select squad from squad_counts($1, 'U13')", [session.id]));
-    expect(u13.squad).toBe(0);
+    const [u12] = await t.asUser(adnan, (tx) => tx.query<{ squad: number }>("select squad from squad_counts($1, 'U12')", [session.id]));
+    expect(u12.squad).toBe(0);
   });
 });
 

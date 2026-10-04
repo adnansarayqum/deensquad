@@ -1,6 +1,6 @@
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
-import type { AgeGroup, PaymentState, Session, StaffRole } from "../domain";
+import { AGE_GROUPS, type AgeGroup, type PaymentState, type Session, type StaffRole } from "../domain";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
 
 // Queries for the club admin. They run as a member of staff (row level security on: staff see the club).
@@ -44,7 +44,8 @@ export type FamilyRow = {
   guardians: FamilyGuardian[];
 };
 
-export async function loadFamilies(tx: Queryable, group: AgeGroup | null): Promise<FamilyRow[]> {
+/** Every family, or one age group's; `within` limits a coach to their own groups. */
+export async function loadFamilies(tx: Queryable, group: AgeGroup | null, within: readonly AgeGroup[] = AGE_GROUPS): Promise<FamilyRow[]> {
   const rows = await tx.query<{
     id: string;
     first_name: string;
@@ -67,10 +68,10 @@ export async function loadFamilies(tx: Queryable, group: AgeGroup | null): Promi
      join family_gaps fg on fg.player_id = p.id
      left join player_guardians pg on pg.player_id = p.id
      left join guardians g on g.id = pg.guardian_id
-     where $1::text is null or p.age_group::text = $1
+     where ($1::text is null or p.age_group::text = $1) and p.age_group::text = any ($2::text[])
      group by p.id, fg.payment, fg.in_app, fg.emergency_contacts
      order by p.age_group, p.last_name, p.first_name`,
-    [group],
+    [group, [...within]],
   );
   return rows.map((r) => ({
     id: r.id,
@@ -302,11 +303,19 @@ export async function loadSessionsAdmin(tx: Queryable, now: Date): Promise<{ upc
   return { upcoming: upcoming.map(map), recent: recent.map(map), lastVenue: venue[0]?.venue ?? null };
 }
 
-export type StaffRow = { id: string; email: string; displayName: string; role: StaffRole; signedIn: boolean };
+export type StaffRow = { id: string; email: string; displayName: string; role: StaffRole; signedIn: boolean; ageGroups: AgeGroup[] };
 
 export async function loadStaff(tx: Queryable): Promise<StaffRow[]> {
-  const rows = await tx.query<{ id: string; email: string; display_name: string; role: StaffRole; signed_in: boolean }>(
-    `select id, email, display_name, role::text as role, auth_user_id is not null as signed_in from staff order by role, display_name`,
+  const rows = await tx.query<{ id: string; email: string; display_name: string; role: StaffRole; signed_in: boolean; age_groups: string[] }>(
+    `select id, email, display_name, role::text as role, auth_user_id is not null as signed_in, age_groups::text[] as age_groups
+     from staff order by role, display_name`,
   );
-  return rows.map((r) => ({ id: r.id, email: r.email, displayName: r.display_name, role: r.role, signedIn: r.signed_in }));
+  return rows.map((r) => ({
+    id: r.id,
+    email: r.email,
+    displayName: r.display_name,
+    role: r.role,
+    signedIn: r.signed_in,
+    ageGroups: AGE_GROUPS.filter((g) => (r.age_groups ?? []).includes(g)),
+  }));
 }

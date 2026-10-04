@@ -2,7 +2,7 @@ import { addDays, londonDate, londonTime, nextFridaySession } from "../dates";
 import type { Queryable } from "./types";
 
 // Sample club for local development and end-to-end tests only. Never runs on Railway.
-// One family has two children (Yusuf, U9 and Musa, U7) and two parents, so the multi-child
+// One family has two children (Yusuf, U10 and Musa, U7) and two parents, so the multi-child
 // screens are exercised. All names are invented; emails use reserved test domains and
 // phone numbers come from Ofcom's range for drama (07700 900xxx).
 
@@ -20,7 +20,7 @@ export const DEV_EMAILS = {
   coach: "coach@deensquad.test",
 } as const;
 
-const U9 = ["Ahmed K", "Bilal R", "Hamza T", "Idris H", "Yahya B", "Ismail N", "Ayaan P", "Zakariya O", "Harun Q", "Rayyan J", "Sulaiman W", "Adam F", "Ilyas C", "Ibrahim M", "Zayd A"];
+const U10 = ["Ahmed K", "Bilal R", "Hamza T", "Idris H", "Yahya B", "Ismail N", "Ayaan P", "Zakariya O", "Harun Q", "Rayyan J", "Sulaiman W", "Adam F", "Ilyas C", "Ibrahim M", "Zayd A"];
 const U7 = ["Nuh E", "Isa G", "Dawud L", "Yunus V"];
 
 export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
@@ -41,7 +41,7 @@ export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
   );
   await tx.query(
     `insert into players (id, first_name, last_name, date_of_birth, shirt_number, age_group, position, joined_on, photo_consent, photo_consent_recorded_at) values
-       ($1, 'Yusuf', 'Sample', '2018-03-14', 7, 'U9', 'Midfielder', '2026-09-05', true, now()),
+       ($1, 'Yusuf', 'Sample', '2018-03-14', 7, 'U10', 'Midfielder', '2026-09-05', true, now()),
        ($2, 'Musa', 'Sample', '2020-06-02', 3, 'U7', null, '2026-09-05', null, null)`,
     [DEV_IDS.yusuf, DEV_IDS.musa],
   );
@@ -54,8 +54,8 @@ export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
   }
 
   // The rest of the squads, one parent each.
-  const squad: { id: string; group: "U9" | "U7" }[] = [];
-  const all = [...U9.map((n) => ({ n, group: "U9" as const })), ...U7.map((n) => ({ n, group: "U7" as const }))];
+  const squad: { id: string; group: "U10" | "U7" }[] = [];
+  const all = [...U10.map((n) => ({ n, group: "U10" as const })), ...U7.map((n) => ({ n, group: "U7" as const }))];
   for (const [i, { n, group }] of all.entries()) {
     const [first, last] = n.split(" ");
     const playerId = await one(
@@ -79,7 +79,7 @@ export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
     sessionIds.push(
       (await one(
         `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups, arrive_by, kit, prayer_note)
-         values ('training', 'Training', $1, $2, 'Bobby Moore Sports Hub', '{U7,U9,U11,U13,U15}', '6:20pm', 'Green top · shin pads · water bottle', 'Prayer break in the session')
+         values ('training', 'Training', $1, $2, 'Bobby Moore Sports Hub', '{U6,U7,U10,U12,U15}', '6:20pm', 'Green top · shin pads · water bottle', 'Prayer break in the session')
          returning id`,
         [londonTime(d.year, d.month, d.day, 18, 30), londonTime(d.year, d.month, d.day, 20, 0)],
       ))!,
@@ -87,7 +87,7 @@ export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
   }
   const cup = londonDate(addDays(coming.start, 15));
   await tx.query(
-    `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups) values ('tournament', 'Autumn Cup', $1, $2, 'Venue to be confirmed', '{U9,U11,U13}')`,
+    `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups) values ('tournament', 'Autumn Cup', $1, $2, 'Venue to be confirmed', '{U10,U12,U15}')`,
     [londonTime(cup.year, cup.month, cup.day, 10, 0), londonTime(cup.year, cup.month, cup.day, 15, 0)],
   );
   const past = sessionIds.slice(0, 6);
@@ -100,15 +100,15 @@ export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
   for (const s of [past[4], past[5]]) {
     await tx.query(`insert into attendance (session_id, player_id) values ($1, $2)`, [s, DEV_IDS.musa]);
   }
-  // Most of the U9s have answered for this Friday.
-  for (const [i, p] of squad.filter((s) => s.group === "U9").entries()) {
+  // Most of the U10s have answered for this Friday.
+  for (const [i, p] of squad.filter((s) => s.group === "U10").entries()) {
     if (i < 11) await tx.query(`insert into availability (session_id, player_id, answer) values ($1, $2, 'coming')`, [thisFriday, p.id]);
     else if (i < 13) await tx.query(`insert into availability (session_id, player_id, answer) values ($1, $2, 'away')`, [thisFriday, p.id]);
   }
 
   const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600000);
   const kit = await one(
-    `insert into announcements (topic, title, body, audience, posted_by, posted_at) values ('Kit', 'New away kit: sizes needed by Friday', 'Please reply with your child''s size so we can place the bulk order.', '{U9}', $1, $2) returning id`,
+    `insert into announcements (topic, title, body, audience, posted_by, posted_at) values ('Kit', 'New away kit: sizes needed by Friday', 'Please reply with your child''s size so we can place the bulk order.', '{U10}', $1, $2) returning id`,
     [coachStaffId, hoursAgo(3)],
   );
   const winter = await one(
@@ -138,6 +138,13 @@ export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
     DEV_IDS.yusuf,
     coachStaffId,
   ]);
+
+  await tx.query(
+    `insert into player_awards (player_id, stars, points, reason, awarded_by, created_at) values
+       ($1, 1, 5, 'Star player: two assists and great teamwork', $2, $3),
+       ($1, 0, 2, 'First to help put the cones away', $2, $4)`,
+    [DEV_IDS.yusuf, coachStaffId, addDays(now, -8), addDays(now, -1)],
+  );
 
   // The club shop, as on the club's SumUp store (sizes are samples until the club confirms them).
   const kidsAndAdults = "{5-6,7-8,9-10,11-12,13-14,S,M,L,XL}";

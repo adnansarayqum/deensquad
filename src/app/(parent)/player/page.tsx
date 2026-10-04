@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Player" };
 const badgeIcons: Record<Badge["icon"], typeof Star> = { star: Star, clock: Clock, trophy: Trophy, flame: Flame, target: Target };
 
 export default async function PlayerPage({ searchParams }: PageProps<"/player">) {
-  const [{ family, child, stats, badges, note }, { user }] = await Promise.all([getPlayerPage((await searchParams).child), getFamily()]);
+  const [{ family, child, stats, badges, note, awards }, { user }] = await Promise.all([getPlayerPage((await searchParams).child), getFamily()]);
 
   return (
     <>
@@ -70,7 +70,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           stats.attendancePct === null ? (
             <Card className="p-4 text-[15px] leading-[22px]">{child.firstName}&apos;s stats start after their first session.</Card>
           ) : (
-            <dl className="grid grid-cols-3 gap-2.5">
+            <dl className="grid grid-cols-2 gap-2.5">
               <Card className="flex flex-col-reverse items-center p-2.5">
                 <dt className="text-xs font-bold text-ink-muted">sessions</dt>
                 <dd className="font-display text-[40px] leading-none text-ink tabular-nums">{stats.sessions}</dd>
@@ -80,11 +80,40 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                 <dd className="font-display text-[40px] leading-none text-ink tabular-nums">{stats.attendancePct}%</dd>
               </Card>
               <Card tone="gold" className="flex flex-col-reverse items-center p-2.5">
-                <dt className="text-xs font-bold text-gold-text">badges</dt>
-                <dd className="font-display text-[40px] leading-none text-gold-text tabular-nums">{badges.filter((b) => b.earnedOn).length}</dd>
+                <dt className="text-xs font-bold text-gold-text">points</dt>
+                <dd className="font-display text-[40px] leading-none text-gold-text tabular-nums">{awards?.totals.points ?? 0}</dd>
+              </Card>
+              <Card tone="gold" className="flex flex-col-reverse items-center p-2.5">
+                <dt className="text-xs font-bold text-gold-text">{awards?.totals.stars === 1 ? "star" : "stars"}</dt>
+                <dd className="font-display text-[40px] leading-none text-gold-text tabular-nums">{awards?.totals.stars ?? 0}</dd>
               </Card>
             </dl>
           )
+        ) : null}
+
+        {child && awards && awards.recent.length > 0 ? (
+          <Card className="flex flex-col gap-2 p-3.5">
+            <h2 className="text-base font-extrabold">From the coaches</h2>
+            <ul className="flex flex-col divide-y-2 divide-line">
+              {awards.recent.map((a) => (
+                <li key={a.id} className="flex items-center gap-3 py-2">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-crest-gold text-on-gold">
+                    {a.stars ? <Star aria-hidden size={20} fill="currentColor" strokeWidth={0} /> : <span className="font-display text-[20px]">+{a.points}</span>}
+                  </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-[15px] font-bold">
+                      {[a.stars ? "Star player" : null, a.points ? `${a.points} ${a.points === 1 ? "point" : "points"}` : null].filter(Boolean).join(" and ")}
+                    </span>
+                    <span className="text-[13px] text-ink-muted">
+                      {[a.reason, a.from, new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" }).format(new Date(a.givenAt))]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
         ) : null}
 
         {child && badges.length > 0 ? (

@@ -3,7 +3,7 @@ import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
 import { inQuietHours, runLadder, type ChaseTarget, type Senders } from "./ladder";
 
-// The sample club: the U9 kit message was posted 3 hours before `seeded`, unread by everyone.
+// The sample club: the U10 kit message was posted 3 hours before `seeded`, unread by everyone.
 // "Winter timings" (74 hours old, all groups) has been read by Adnan, the other parent of Yusuf and Musa.
 const seeded = new Date("2026-10-05T11:00:00Z"); // midday in London
 const hoursLater = (h: number) => new Date(seeded.getTime() + h * 3600_000);
@@ -52,7 +52,7 @@ describe("chase ladder", () => {
     expect(early.email).toBe(19);
     const result = await run(hoursLater(25));
     const kit = sent.email.filter((x) => x.title.startsWith("New away kit"));
-    expect(kit).toHaveLength(17); // 16 U9 children: Yusuf has two parents, the rest one each
+    expect(kit).toHaveLength(17); // 16 U10 children: Yusuf has two parents, the rest one each
     expect(result.email).toBe(17);
     expect((await run(hoursLater(26))).email).toBe(0);
   });

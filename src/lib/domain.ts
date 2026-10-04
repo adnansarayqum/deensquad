@@ -1,6 +1,7 @@
 // The Deen Squad domain model shared by the screens, the data layer and the admin.
 
-export const AGE_GROUPS = ["U7", "U9", "U11", "U13", "U15"] as const;
+// The club's groups: U6 (boys and girls), U7, U10 (ages 8–10), U12 (11–12), U15 (13–15).
+export const AGE_GROUPS = ["U6", "U7", "U10", "U12", "U15"] as const;
 export type AgeGroup = (typeof AGE_GROUPS)[number];
 
 export function isAgeGroup(value: unknown): value is AgeGroup {

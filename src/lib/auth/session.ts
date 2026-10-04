@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { asSystem } from "../db";
+import { AGE_GROUPS, isAgeGroup, type AgeGroup } from "../domain";
 import { SESSION_COOKIE } from "./cookies";
 import { linkRecords, readSession } from "./service";
 
@@ -13,8 +14,18 @@ export type CurrentUser = {
   id: string;
   email: string;
   guardian: { id: string; firstName: string } | null;
-  staff: { id: string; role: StaffRole; displayName: string } | null;
+  staff: { id: string; role: StaffRole; displayName: string; ageGroups: AgeGroup[] } | null;
 };
+
+/** The age groups a member of staff works with: their own for a coach who has some, otherwise every group. */
+export function staffGroups(staff: { role: StaffRole; ageGroups: AgeGroup[] }): AgeGroup[] {
+  return staff.role === "coach" && staff.ageGroups.length ? AGE_GROUPS.filter((g) => staff.ageGroups.includes(g)) : [...AGE_GROUPS];
+}
+
+/** True for a coach limited to some age groups (they can't post to everyone). */
+export function isGroupCoach(staff: { role: StaffRole; ageGroups: AgeGroup[] }): boolean {
+  return staff.role === "coach" && staff.ageGroups.length > 0;
+}
 
 /** The signed-in person for this request, or null. Checked against the database once per request. */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
@@ -26,7 +37,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     const load = () =>
       Promise.all([
         tx.query<{ id: string; first_name: string }>(`select id, first_name from guardians where auth_user_id = $1`, [session.userId]),
-        tx.query<{ id: string; role: StaffRole; display_name: string }>(`select id, role::text as role, display_name from staff where auth_user_id = $1`, [
+        tx.query<{ id: string; role: StaffRole; display_name: string; age_groups: string[] }>(`select id, role::text as role, display_name, age_groups::text[] as age_groups from staff where auth_user_id = $1`, [
           session.userId,
         ]),
       ]);
@@ -40,7 +51,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       id: session.userId,
       email: session.email,
       guardian: guardians[0] ? { id: guardians[0].id, firstName: guardians[0].first_name } : null,
-      staff: staff[0] ? { id: staff[0].id, role: staff[0].role, displayName: staff[0].display_name } : null,
+      staff: staff[0] ? { id: staff[0].id, role: staff[0].role, displayName: staff[0].display_name, ageGroups: (staff[0].age_groups ?? []).filter(isAgeGroup) } : null,
     };
   });
 });

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Check, ChevronLeft } from "lucide-react";
+import { Check, ChevronLeft, Star } from "lucide-react";
 import { CheckInButton, UndoCheckInButton } from "@/components/CheckInButton";
 import { PassScanner } from "@/components/PassScanner";
 import { Progress } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { clock, shortDay } from "@/lib/dates";
 import { loadRegister, summarise, type RegisterFlag } from "@/lib/staff/register";
@@ -22,7 +22,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
   const user = await requireStaff();
   const params = await searchParams;
   const now = new Date();
-  const view = await asUser(user.id, (tx) => loadRegister(tx, { now, sessionId: params.session, group: params.group }));
+  const view = await asUser(user.id, (tx) => loadRegister(tx, { now, sessionId: params.session, group: params.group, allowed: staffGroups(user.staff) }));
   const time = clock(now.toISOString());
   const back = user.guardian ? { href: "/player", label: "Parent view" } : { href: "/admin", label: "Club admin" };
 
@@ -34,7 +34,11 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
           {back.label}
         </Link>
         <h1 className="font-display text-[44px] leading-[0.95] tracking-[0.02em]">Register</h1>
-        <p className="text-[15px] text-on-pitch-muted">No sessions coming up. Add the term&apos;s sessions in the club admin.</p>
+        <p className="text-[15px] text-on-pitch-muted">No sessions coming up for your groups. Add the term&apos;s sessions in the club admin.</p>
+        <Link href="/coach/awards" className="inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-bold text-floodlight">
+          <Star aria-hidden size={16} fill="currentColor" strokeWidth={0} />
+          Points and stars
+        </Link>
       </div>
     );
   }
@@ -89,6 +93,10 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
           </nav>
         ) : null}
         <PassScanner />
+        <Link href="/coach/awards" className="inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-bold text-floodlight">
+          <Star aria-hidden size={16} fill="currentColor" strokeWidth={0} />
+          Points and stars
+        </Link>
       </header>
 
       {s.latest.map((r) => (

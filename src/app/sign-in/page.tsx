@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthShell, FormError } from "@/components/auth/AuthShell";
 import { EmailForm } from "@/components/auth/EmailForm";
@@ -18,7 +19,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
 
   if (isDemo()) {
     const roles = [
-      { role: "parent", label: "Parent", detail: "Adnan: two children, Yusuf (U9s) and Musa (U7s)" },
+      { role: "parent", label: "Parent", detail: "Adnan: two children, Yusuf (U10s) and Musa (U7s)" },
       { role: "admin", label: "Club admin", detail: "Families, news with read receipts, sessions, staff" },
       { role: "coach", label: "Coach", detail: "The gate register on Friday" },
     ];
@@ -46,6 +47,12 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
       <EmailForm next={next} />
       <p className="text-sm leading-5 text-ink-muted">
         Not getting emails? Check your spam folder, or ask the club which email address they have for you.
+      </p>
+      <p className="text-[15px]">
+        New to the club?{" "}
+        <Link href="/sign-up" className="font-bold text-grass-text underline">
+          Sign up
+        </Link>
       </p>
       {privacy ? (
         <a href={privacy} className="text-sm font-bold text-grass-text underline" target="_blank" rel="noopener noreferrer">

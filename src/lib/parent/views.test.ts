@@ -27,17 +27,17 @@ const session = (id: string, groups: Child["ageGroup"][], cancelled = false): Se
 });
 
 describe("the week for a family", () => {
-  const kids = [child("a", "Yusuf", "U9"), child("b", "Musa", "U7")];
+  const kids = [child("a", "Yusuf", "U10"), child("b", "Musa", "U7")];
   it("asks about every child who hasn't answered", () => {
-    const week = buildWeek(kids, [session("s", ["U7", "U9"])], new Map(), new Map());
+    const week = buildWeek(kids, [session("s", ["U7", "U10"])], new Map(), new Map());
     expect(weekSummary(week)).toBe("Are Yusuf and Musa coming?");
   });
   it("summarises answers", () => {
-    const week = buildWeek(kids, [session("s", ["U7", "U9"])], new Map([["s:a", "coming"], ["s:b", "away"]]), new Map());
+    const week = buildWeek(kids, [session("s", ["U7", "U10"])], new Map([["s:a", "coming"], ["s:b", "away"]]), new Map());
     expect(weekSummary(week)).toBe("Yusuf coming · Musa away");
   });
   it("gives each child their own group's session", () => {
-    const week = buildWeek(kids, [session("u9", ["U9"]), session("u7", ["U7"])], new Map(), new Map());
+    const week = buildWeek(kids, [session("u9", ["U10"]), session("u7", ["U7"])], new Map(), new Map());
     expect(week.map((w) => w.session?.id)).toEqual(["u9", "u7"]);
   });
   it("joins names", () => expect(joinNames(["A", "B", "C"])).toBe("A, B and C"));

@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireAdmin, requireStaff } from "../auth/session";
+import { isGroupCoach, requireAdmin, requireStaff, staffGroups } from "../auth/session";
 import { UUID, normaliseEmail } from "../auth/tokens";
 import { appUrl } from "../config";
 import { londonTime } from "../dates";
@@ -252,6 +252,10 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
   if (!title) return { error: "Add a headline." };
   if (!body) return { error: "Write the message." };
   if (!everyone && groups.length === 0) return { error: "Choose who it's for: everyone, or at least one age group." };
+  if (isGroupCoach(user.staff)) {
+    const mine = staffGroups(user.staff);
+    if (everyone || groups.some((g) => !mine.includes(g))) return { error: `You can post to your own groups: ${mine.join(", ")}.` };
+  }
   const [row] = await asUser(user.id, (tx) =>
     tx.query<{ id: string }>(
       `insert into announcements (topic, title, body, audience, requires_ack, posted_by) values ($1, $2, $3, $4::text[]::age_group[], $5, $6) returning id`,
@@ -378,16 +382,27 @@ export async function addStaff(_prev: FormState, formData: FormData): Promise<Fo
   if (!name) return { error: "Add their name as parents should see it, like Coach Bilal." };
   if (!email) return { error: "Add their email address. It's how they sign in." };
   if (role !== "coach" && role !== "admin") return { error: "Choose coach or admin." };
+  const groups = role === "coach" ? formData.getAll("groups").filter(isAgeGroup) : [];
   const added = await asUser(user.id, (tx) =>
-    tx.query(`insert into staff (email, display_name, role) values ($1, $2, $3::staff_role) on conflict ((lower(email))) do nothing returning id`, [
-      email,
-      name,
-      role,
-    ]),
+    tx.query(
+      `insert into staff (email, display_name, role, age_groups) values ($1, $2, $3::staff_role, $4::text[]::age_group[])
+       on conflict ((lower(email))) do nothing returning id`,
+      [email, name, role, groups],
+    ),
   );
   if (added.length === 0) return { error: "That email is already on the staff list." };
   refresh();
   return { saved: true };
+}
+
+/** Which age groups a coach looks after. None ticked means every group. */
+export async function setStaffGroups(formData: FormData): Promise<void> {
+  const user = await requireAdmin();
+  const staff = id(formData.get("id"));
+  if (!staff) return;
+  const groups = formData.getAll("groups").filter(isAgeGroup);
+  await asUser(user.id, (tx) => tx.query(`update staff set age_groups = $2::text[]::age_group[] where id = $1 and role = 'coach'`, [staff, groups]));
+  refresh();
 }
 
 export async function removeStaff(formData: FormData): Promise<void> {

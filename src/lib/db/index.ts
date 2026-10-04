@@ -56,7 +56,7 @@ async function open(): Promise<Database> {
         if (isDemo()) await tx.query(
           `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups, arrive_by, kit, prayer_note)
            select 'training', 'Training', date_trunc('day', now()), date_trunc('day', now()) + interval '23 hours 59 minutes', 'Bobby Moore Sports Hub',
-             '{U7,U9,U11,U13,U15}', '6:20pm', 'Green top · shin pads · water bottle', 'Prayer break in the session'
+             '{U6,U7,U10,U12,U15}', '6:20pm', 'Green top · shin pads · water bottle', 'Prayer break in the session'
            where not exists (select 1 from sessions where starts_at::date = now()::date)`,
         );
       }

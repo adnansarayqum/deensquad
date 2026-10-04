@@ -5,17 +5,18 @@ import { AdminTitle, Notice } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
 import { inviteParents } from "@/lib/admin/actions";
 import { loadFamilies, loadOverview } from "@/lib/admin/data";
-import { requireStaff } from "@/lib/auth/session";
+import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
-import { AGE_GROUPS, isAgeGroup } from "@/lib/domain";
+import { isAgeGroup } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Families" };
 
 export default async function FamiliesPage({ searchParams }: PageProps<"/admin/families">) {
   const user = await requireStaff();
   const params = await searchParams;
-  const group = isAgeGroup(params.group) ? params.group : null;
-  const [families, overview] = await asUser(user.id, (tx) => Promise.all([loadFamilies(tx, group), loadOverview(tx)]));
+  const mine = staffGroups(user.staff);
+  const group = isAgeGroup(params.group) && mine.includes(params.group) ? params.group : null;
+  const [families, overview] = await asUser(user.id, (tx) => Promise.all([loadFamilies(tx, group, mine), loadOverview(tx)]));
   const isAdmin = user.staff.role === "admin";
 
   return (
@@ -50,7 +51,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
       ) : null}
 
       <nav aria-label="Age groups" className="flex flex-wrap gap-2">
-        {[null, ...AGE_GROUPS].map((g) => (
+        {[null, ...mine].map((g) => (
           <Link
             key={g ?? "all"}
             href={g ? `/admin/families?group=${g}` : "/admin/families"}

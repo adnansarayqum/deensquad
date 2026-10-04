@@ -5,10 +5,11 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { adminEmails, appUrl } from "../config";
 import { asSystem } from "../db";
-import { sendEmails } from "../email/send";
-import { signInEmail } from "../email/templates";
+import { canSendEmail, sendEmails } from "../email/send";
+import { newFamilyEmail, signInEmail } from "../email/templates";
 import { PENDING_COOKIE, SESSION_COOKIE, cookieOptions, safeNext } from "./cookies";
 import { readPending, type Pending } from "./pending";
+import { parseRegistration, type Registered } from "./registration";
 import { SESSION_DAYS, SIGN_IN_MINUTES, createSession, deleteSession, ensureBootstrapAdmin, issueSignIn, verifyCode, verifyLink } from "./service";
 import { cleanCode, maskEmail, normaliseEmail } from "./tokens";
 
@@ -61,6 +62,52 @@ export async function requestCode(_prev: FormState, formData: FormData): Promise
   redirect("/sign-in/code");
 }
 
+/** A new family signing itself up: we email a code, and the family is created once it's entered. */
+export async function register(_prev: FormState, formData: FormData): Promise<FormState> {
+  const email = normaliseEmail(formData.get("email"));
+  if (!email) return { error: "Enter your email address, like name@example.com." };
+  const check = parseRegistration(formData);
+  if (!check.ok) return { error: check.error };
+
+  const ip = await clientIp();
+  const result = await asSystem((tx) => issueSignIn(tx, { email, ip, now: new Date(), purpose: "sign_in", registration: check.registration }));
+  if (!result.ok) return { error: "That's a lot of codes in one hour. Wait a little while, then try again." };
+  const { requestId, code, token } = result.request;
+  const base = await baseUrl();
+  try {
+    await sendEmails([signInEmail({ to: email, code: code!, link: base ? `${base}/sign-in/link?token=${token}` : null, appUrl: base })]);
+  } catch (error) {
+    console.error("[sign-up] email failed:", error instanceof Error ? error.message : error);
+    return { error: "We couldn't send the email just now. Try again in a minute." };
+  }
+  const pending: Pending = { id: requestId, to: maskEmail(email), next: "/checklist" };
+  (await cookies()).set(PENDING_COOKIE, JSON.stringify(pending), cookieOptions(SIGN_IN_MINUTES * 60));
+  redirect("/sign-in/code");
+}
+
+/** Tells the club's admins about a family that has just signed itself up. Never blocks sign-in. */
+async function tellClub(email: string, registered: Registered | undefined) {
+  if (!registered?.added.length || !canSendEmail()) return;
+  try {
+    const base = await baseUrl();
+    const admins = await asSystem((tx) => tx.query<{ email: string }>(`select email from staff where role = 'admin'`));
+    await sendEmails(
+      admins.map((a) =>
+        newFamilyEmail({
+          to: a.email,
+          parentName: registered.parentName,
+          parentEmail: email,
+          children: registered.added.map((c) => `${c.firstName} ${c.lastName} (${c.ageGroup})`),
+          link: base ? `${base}/admin/families` : null,
+          appUrl: base,
+        }),
+      ),
+    );
+  } catch (error) {
+    console.error("[sign-up] club email failed:", error instanceof Error ? error.message : error);
+  }
+}
+
 async function startSession(userId: string) {
   const token = await asSystem((tx) => createSession(tx, userId, new Date()));
   const store = await cookies();
@@ -92,6 +139,7 @@ export async function submitCode(_prev: FormState, formData: FormData): Promise<
     }
   }
   await startSession(result.userId);
+  await tellClub(result.email, result.registered);
   redirect(pending.next);
 }
 
@@ -101,7 +149,8 @@ export async function submitLink(formData: FormData): Promise<void> {
   const result = await asSystem((tx) => verifyLink(tx, token, new Date()));
   if (!result.ok) redirect("/sign-in?link=expired");
   await startSession(result.userId);
-  redirect("/");
+  await tellClub(result.email, result.registered);
+  redirect(result.registered ? "/checklist" : "/");
 }
 
 export async function signOut(): Promise<void> {

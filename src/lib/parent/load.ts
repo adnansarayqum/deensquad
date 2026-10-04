@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { requireParent } from "../auth/session";
+import { loadAwards } from "../awards/data";
 import { asUser } from "../db";
 import type { Child } from "../domain";
 import {
@@ -102,7 +103,7 @@ async function getStats(userId: string, child: Child, now: Date) {
 
 export async function getPlayerPage(childParam: unknown) {
   const { family, child, userId } = await getChild(childParam);
-  if (!child) return { family, child: null, stats: null, badges: [], note: null };
-  const { facts, ...stats } = await getStats(userId, child, new Date());
-  return { family, child, stats, badges: facts.badges, note: facts.note };
+  if (!child) return { family, child: null, stats: null, badges: [], note: null, awards: null };
+  const [{ facts, ...stats }, awards] = await Promise.all([getStats(userId, child, new Date()), asUser(userId, (tx) => loadAwards(tx, child.id))]);
+  return { family, child, stats, badges: facts.badges, note: facts.note, awards };
 }

@@ -118,3 +118,16 @@ ${link ? button(link, "See orders") : ""}`,
   );
   return { to, subject, text, html };
 }
+
+export function newFamilyEmail(opts: { to: string; parentName: string; parentEmail: string; children: string[]; link: string | null; appUrl: string | null }): Email {
+  const { to, parentName, parentEmail, children, link, appUrl } = opts;
+  const subject = `New family signed up: ${parentName}`;
+  const text = [`${parentName} (${parentEmail}) has signed up in the app.`, "", ...children.map((c) => `- ${c}`), ...(link ? ["", `See families: ${link}`] : [])].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0"><b>${escape(parentName)}</b> (${escape(parentEmail)}) has signed up in the app.</p>
+<ul style="padding-left:20px">${children.map((c) => `<li>${escape(c)}</li>`).join("")}</ul>
+${link ? button(link, "See families") : ""}`,
+  );
+  return { to, subject, text, html };
+}

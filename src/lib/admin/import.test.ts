@@ -19,19 +19,21 @@ describe("planning an import", () => {
   it("reads UK dates and age groups written different ways", () => {
     expect(parseDate("14/03/2018", now)).toBe("2018-03-14");
     expect(parseDate("31/02/2018", now)).toBeNull();
-    expect(parseAgeGroup("Under 9s")).toBe("U9");
-    expect(parseAgeGroup("u11")).toBe("U11");
-    expect(parseAgeGroup("U10")).toBeNull();
+    expect(parseAgeGroup("Under 9s")).toBe("U10");
+    expect(parseAgeGroup("u11")).toBe("U12");
+    expect(parseAgeGroup("U10")).toBe("U10");
+    expect(parseAgeGroup("U6")).toBe("U6");
+    expect(parseAgeGroup("U16")).toBeNull();
   });
 
   it("groups siblings by parent email and links a second parent", () => {
     const plan = planImport(
       [
         "Child name,Age group,Parent name,Email,Phone,Parent 2 name,Parent 2 email",
-        "Ali Khan,U9,Sana Khan,SANA@example.com,07700 900111,Omar Khan,omar@example.com",
+        "Ali Khan,U10,Sana Khan,SANA@example.com,07700 900111,Omar Khan,omar@example.com",
         "Zara Khan,U7,Sana Khan,sana@example.com,,,",
-        "No Email,U9,Someone,,,,",
-        "Bad Group,U10,Pat,pat@example.com,,,",
+        "No Email,U10,Someone,,,,",
+        "Bad Group,U19,Pat,pat@example.com,,,",
       ].join("\n"),
       now,
     );
@@ -42,7 +44,7 @@ describe("planning an import", () => {
   });
 
   it("says which required columns are missing", () => {
-    const plan = planImport("Name,Team\nAli,U9", now);
+    const plan = planImport("Name,Team\nAli,U10", now);
     expect(plan.errors[0].message).toMatch(/parent email/);
   });
 });
@@ -53,9 +55,9 @@ describe("applying an import", () => {
     const admin = await t.signIn(DEV_EMAILS.admin);
     const csv = [
       "Child first name,Child last name,Age group,Shirt number,Parent first name,Parent email,Parent 2 first name,Parent 2 email",
-      "Ali,Khan,U9,4,Sana,sana@example.com,Omar,omar@example.com",
+      "Ali,Khan,U10,4,Sana,sana@example.com,Omar,omar@example.com",
       "Zara,Khan,U7,,Sana,sana@example.com,,",
-      "Yusuf,Sample,U11,,Adnan,adnan@example.com,,",
+      "Yusuf,Sample,U12,,Adnan,adnan@example.com,,",
     ].join("\n");
     const first = await t.asUser(admin, (tx) => applyImport(tx, planImport(csv, now)));
     expect(first).toMatchObject({ childrenAdded: 2, childrenUpdated: 1, parentsAdded: 2, parentsUpdated: 1 });
@@ -73,7 +75,7 @@ describe("applying an import", () => {
   it("is refused for a parent", async () => {
     const t = await testDatabase({ seed: true, now });
     const parent = await t.signIn(DEV_EMAILS.parent);
-    const plan = planImport("Child name,Age group,Parent name,Email\nNew Kid,U9,X Y,x@example.com", now);
+    const plan = planImport("Child name,Age group,Parent name,Email\nNew Kid,U10,X Y,x@example.com", now);
     await expect(t.asUser(parent, (tx) => applyImport(tx, plan))).rejects.toThrow(/row-level security/);
   });
 });
