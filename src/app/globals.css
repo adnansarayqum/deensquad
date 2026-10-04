@@ -1,0 +1,75 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "tnum" 0;
+  }
+  /* Every control gets the design system's two-tone focus ring, so it shows on cream and on pitch. */
+  :where(a, button, input, label, [tabindex]):focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--focus-halo);
+  }
+}
+
+@layer components {
+  /* Mowing stripes: the one decorative pattern. Never behind body text. */
+  .stripes-v {
+    background: repeating-linear-gradient(90deg, var(--pitch) 0 48px, var(--pitch-stripe) 48px 96px);
+  }
+  .stripes-v-tight {
+    background: repeating-linear-gradient(90deg, var(--pitch) 0 40px, var(--pitch-stripe) 40px 80px);
+  }
+
+  /* Chunky app buttons: pressable lip that disappears when pressed. */
+  .btn-chunky {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 52px;
+    padding-inline: 1.25rem;
+    border-radius: var(--radius-l);
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 0.01em;
+    transition: transform 150ms ease, box-shadow 150ms ease;
+  }
+  .btn-chunky:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow: none;
+  }
+  .btn-grass {
+    background: var(--grass);
+    color: var(--on-grass);
+    box-shadow: var(--lip-grass);
+  }
+  .btn-paper {
+    background: var(--paper);
+    color: var(--ink);
+    border: 2px solid var(--line);
+    box-shadow: var(--lip-neutral);
+  }
+  .btn-chunky:disabled {
+    background: var(--line);
+    color: var(--ink-muted);
+    box-shadow: none;
+    border-color: var(--line);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
