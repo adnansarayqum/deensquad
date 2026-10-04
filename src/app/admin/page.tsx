@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AdminTitle, Notice, ReadBar, Section } from "@/components/admin/bits";
 import { loadNewsList, loadOverview, loadSessionsAdmin } from "@/lib/admin/data";
 import { requireStaff } from "@/lib/auth/session";
-import { asUser } from "@/lib/db";
+import { asUser, isDemo } from "@/lib/db";
 import { clock, shortDay } from "@/lib/dates";
 import { emailConfigured } from "@/lib/email/send";
 
@@ -30,7 +30,7 @@ export default async function AdminHome() {
     <>
       <AdminTitle>Assalamu alaikum, {user.staff.displayName.split(" ")[0]}</AdminTitle>
 
-      {isAdmin && !emailConfigured() && process.env.NODE_ENV === "production" ? (
+      {isAdmin && !emailConfigured() && process.env.NODE_ENV === "production" && !isDemo() ? (
         <Notice tone="action">
           Email isn&apos;t set up yet, so parents can&apos;t get sign-in codes or invites. Add <b>RESEND_API_KEY</b> and <b>EMAIL_FROM</b> to the
           app&apos;s variables in Railway.
