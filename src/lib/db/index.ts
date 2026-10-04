@@ -50,7 +50,16 @@ async function open(): Promise<Database> {
     if (process.env.RAILWAY_ENVIRONMENT && !(isDemo() && isPglite)) throw new Error("DEV_SEED must not be used on Railway.");
     await db.transaction(async (tx) => {
       const [{ n }] = await tx.query<{ n: number }>("select count(*)::int as n from guardians");
-      if (n === 0) await seedDev(tx);
+      if (n === 0) {
+        await seedDev(tx);
+        // The demo can be shown any day: give it a session today so gate passes can be scanned.
+        if (isDemo()) await tx.query(
+          `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups, arrive_by, kit, prayer_note)
+           select 'training', 'Training', date_trunc('day', now()), date_trunc('day', now()) + interval '23 hours 59 minutes', 'Bobby Moore Sports Hub',
+             '{U7,U9,U11,U13,U15}', '6:20pm', 'Green top · shin pads · water bottle', 'Prayer break in the session'
+           where not exists (select 1 from sessions where starts_at::date = now()::date)`,
+        );
+      }
     });
   }
   return db;
