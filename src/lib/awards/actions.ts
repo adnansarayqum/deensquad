@@ -66,3 +66,18 @@ export async function writeCoachNote(_prev: AwardState, formData: FormData): Pro
   refresh();
   return { saved: true };
 }
+
+/** Gives (or takes back) one of the club's badges. Coaches for their own groups, admins anyone. */
+export async function setBadge(formData: FormData): Promise<void> {
+  const user = await requireStaff();
+  const player = formData.get("player");
+  const badge = formData.get("badge");
+  const give = formData.get("give") === "yes";
+  if (typeof player !== "string" || !UUID.test(player) || typeof badge !== "string" || !/^[a-z0-9-]{1,40}$/.test(badge)) return;
+  await asUser(user.id, async (tx) => {
+    if (!(await canAward(tx, player, staffGroups(user.staff)))) return;
+    if (give) await tx.query(`insert into player_badges (player_id, badge_id) values ($1, $2) on conflict do nothing`, [player, badge]);
+    else await tx.query(`delete from player_badges where player_id = $1 and badge_id = $2`, [player, badge]);
+  });
+  refresh();
+}

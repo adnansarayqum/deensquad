@@ -1,3 +1,5 @@
+import { Download } from "lucide-react";
+import { EXPORTS } from "@/lib/exports/reports";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminTitle, Notice, ReadBar, Section } from "@/components/admin/bits";
@@ -71,6 +73,24 @@ export default async function AdminHome() {
           </Link>
         ))}
       </dl>
+
+      {isAdmin ? (
+        <Section title="Download spreadsheets" aside={<span className="text-sm text-ink-muted">Open in Excel or Google Sheets</span>}>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {Object.entries(EXPORTS).map(([kind, e]) => (
+              <li key={kind}>
+                <a href={`/api/admin/export/${kind}`} download className="flex h-full items-start gap-3 rounded-app border-2 border-line bg-paper p-3">
+                  <Download aria-hidden size={20} className="mt-0.5 shrink-0 text-grass-text" />
+                  <span className="flex flex-col">
+                    <span className="text-[15px] font-bold">{e.label}</span>
+                    <span className="text-[13px] text-ink-muted">{e.detail}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      ) : null}
 
       {overview.notInvited > 0 && isAdmin ? (
         <Notice tone="action">

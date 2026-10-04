@@ -126,7 +126,7 @@ export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
   await tx.query(`insert into emergency_contacts (player_id, name, phone, relationship) values ($1, 'Aunt Hafsa', '07700 900099', 'Aunt')`, [DEV_IDS.yusuf]);
 
   await tx.query(
-    `insert into badges (id, name, icon) values ('first-goal', 'First goal', 'star'), ('on-time-5', 'On time ×5', 'clock'), ('good-adab', 'Good adab', 'trophy'), ('ten-sessions', '10 sessions', 'target')`,
+    `insert into badges (id, name, icon) values ('first-goal', 'First goal', 'star'), ('on-time-5', 'On time ×5', 'clock'), ('good-adab', 'Good adab', 'trophy'), ('ten-sessions', '10 sessions', 'target') on conflict (id) do nothing`,
     [],
   );
   await tx.query(`insert into player_badges (player_id, badge_id, earned_on) values ($1, 'first-goal', $2), ($1, 'good-adab', $3)`, [

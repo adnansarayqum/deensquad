@@ -26,8 +26,11 @@ async function signIn(page: Page, email: string) {
   await expect(page).not.toHaveURL(/\/sign-in/);
 }
 
+let testNumber = 0;
 test.beforeEach(async ({ context }) => {
   await context.clearCookies();
+  // Each test signs in from its own address, so the per-IP sign-in limit doesn't trip as the suite grows.
+  await context.setExtraHTTPHeaders({ "x-forwarded-for": `10.0.0.${++testNumber}` });
 });
 
 test("signed-out visitors are sent to sign in, and a wrong code is refused", async ({ page }) => {
@@ -319,7 +322,7 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
   await page.screenshot({ path: shot("player-awards"), fullPage: true });
 });
 
-test("plans: the club shares a U10 session plan and a practice sheet; the parent opens them", async ({ page }) => {
+test("plans: the club shares a U10 session plan and a practice sheet; the parent opens them", async ({ page, playwright }) => {
   const pdf = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
   await signIn(page, "admin@deensquad.test");
   await page.goto("/coach/plans");
@@ -349,12 +352,14 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await page.getByRole("link", { name: /Practise at home/ }).click();
   await expect(page.getByRole("heading", { name: "Keepy-uppy challenge" })).toBeVisible();
 
-  await page.context().clearCookies();
-  const anon = await page.request.get(href!, { maxRedirects: 0 });
-  expect(anon.status()).not.toBe(200);
+  // Someone with the link but no sign-in gets sent to sign in, not the file.
+  const stranger = await playwright.request.newContext({ baseURL: "http://localhost:3100" });
+  const anon = await stranger.get(href!, { maxRedirects: 0 });
+  expect(anon.status()).toBe(307);
+  await stranger.dispose();
 });
 
-test("writing help: a coach dictates rough notes and AI tidies them into a draft", async ({ page }) => {
+test("writing help, downloads and badges: AI tidies a draft, an admin downloads a sheet and awards a badge; parents can't download", async ({ page }) => {
   await signIn(page, "admin@deensquad.test");
   await page.goto("/admin/news");
   await expect(page.getByRole("button", { name: "Dictate" })).toBeVisible();
@@ -369,4 +374,21 @@ test("writing help: a coach dictates rough notes and AI tidies them into a draft
   await page.goto("/coach/practice");
   await page.getByRole("button", { name: /^Draft$/ }).click();
   await expect(page.getByLabel("Title")).toHaveValue("Pitch closed on Saturday");
+  // Spreadsheet downloads and badges (same admin sign-in: the suite stays under the per-email code limit).
+  await page.goto("/admin");
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: /Families and payments/ }).click()]);
+  expect(download.suggestedFilename()).toMatch(/^deen-squad-families-\d{4}-\d{2}-\d{2}\.csv$/);
+  const csv = readFileSync((await download.path())!, "utf8");
+  expect(csv).toContain('"Yusuf","Sample","U10"');
+
+  await page.goto("/coach/awards?group=U10");
+  await page.getByRole("link", { name: /Yusuf Sample/ }).click();
+  await page.getByRole("button", { name: "Award On time ×5" }).click();
+  await expect(page.getByRole("button", { name: "Take back On time ×5" })).toBeVisible();
+  await page.screenshot({ path: shot("badges"), fullPage: true });
+
+  await page.context().clearCookies();
+  await signIn(page, "parent1@example.com");
+  const res = await page.request.get("/api/admin/export/families");
+  expect(res.status()).toBe(403);
 });
