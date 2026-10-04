@@ -5,7 +5,7 @@ The parent app and club admin for **The Deen Squad Football Academy**: a phone-f
 | Who | What they can do |
 | --- | --- |
 | **Parents** | Sign in with their email (6-digit code). Read club news and tap "I've read this". Say whether each child is coming to the next session. Work through each child's checklist: emergency contacts, payments (TeamFeePay), photo consent. Follow each child's attendance, streak, badges and coach's notes. Parents with several children see all of them; both parents can sign in. |
-| **Coaches** | Gate register: who's expected, who's here, who needs a word (no payment plan or photo consent). Post news and see who hasn't read it. |
+| **Coaches** | Scan each parent's gate pass with the phone camera to check in all their children at once. Gate register: who's expected, who's here, who needs a word (no payment plan or photo consent). Post news and see who hasn't read it. |
 | **Admins** | Import families from a spreadsheet, email invites, fix family details, record payment status, schedule sessions, chase unread news on WhatsApp, add coaches. |
 
 Live at https://parent-app-production-4b29.up.railway.app
@@ -35,6 +35,7 @@ Variables on `parent-app`:
 | `APP_URL` | Optional. The app's web address for emailed links (defaults to the Railway domain) |
 | `TEAMFEEPAY_URL`, `PRIVACY_URL` | Optional links shown in the app |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | App notifications (set) |
+| `QR_SECRET` | Signs parents' gate passes. Changing it cancels every pass (set) |
 | `CRON_SECRET` | Lets the hourly `chase-ladder` cron job run the reminders (set) |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Optional. Text reminders after 48 hours |
 

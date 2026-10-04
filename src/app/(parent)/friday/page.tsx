@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { CalendarX, Clock, MoonStar, Shirt } from "lucide-react";
+import Link from "next/link";
+import { CalendarX, ChevronRight, Clock, MoonStar, QrCode, Shirt } from "lucide-react";
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { clock, shortDay } from "@/lib/dates";
@@ -38,6 +39,18 @@ export default async function FridayPage() {
       )}
 
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
+        {family.children.length > 0 ? (
+          <Link href="/pass" className="flex items-center gap-3 rounded-app bg-pitch-deep px-3.5 py-3 text-on-pitch">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold">
+              <QrCode aria-hidden size={24} />
+            </span>
+            <span className="flex flex-1 flex-col">
+              <span className="text-[15px] font-bold">Gate pass</span>
+              <span className="text-[13px] text-on-pitch-muted">Show it at the gate to check in {family.children.length > 1 ? "everyone" : family.children[0].firstName}</span>
+            </span>
+            <ChevronRight aria-hidden size={20} className="shrink-0 text-on-pitch-muted" />
+          </Link>
+        ) : null}
         {family.children.length === 0 ? (
           <Card className="p-4 text-[15px] leading-[22px]">No players are linked to your email yet. Ask the club to add your child.</Card>
         ) : null}

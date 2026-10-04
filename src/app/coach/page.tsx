@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Check, ChevronLeft } from "lucide-react";
 import { CheckInButton, UndoCheckInButton } from "@/components/CheckInButton";
+import { PassScanner } from "@/components/PassScanner";
 import { Progress } from "@/components/ui";
 import { requireStaff } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
@@ -86,6 +87,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
             ))}
           </nav>
         ) : null}
+        <PassScanner />
       </header>
 
       {s.latest.map((r) => (
