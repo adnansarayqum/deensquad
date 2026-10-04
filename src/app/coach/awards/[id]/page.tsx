@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, Star } from "lucide-react";
 import { AppHeader, Card } from "@/components/ui";
 import { AwardForm, NoteForm } from "@/components/awards/AwardForm";
+import { aiConfigured } from "@/lib/ai/claude";
 import { removeAward } from "@/lib/awards/actions";
 import { loadAwards } from "@/lib/awards/data";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
@@ -78,7 +79,7 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
         ) : null}
 
         <Card className="p-4">
-          <NoteForm playerId={player.id} firstName={player.first_name} />
+          <NoteForm playerId={player.id} firstName={player.first_name} ai={aiConfigured()} />
         </Card>
       </main>
     </div>

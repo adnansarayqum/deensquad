@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Attachment } from "@/components/plans/Attachment";
 import { StaffShell } from "@/components/plans/StaffShell";
+import { PracticeFromPlan, WritingHelp } from "@/components/writing/WritingHelp";
+import { aiConfigured } from "@/lib/ai/claude";
+import { shortDay } from "@/lib/dates";
+import { iso } from "@/lib/db/types";
 import { Card, Pill } from "@/components/ui";
 import { isGroupCoach, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
@@ -16,12 +20,26 @@ export default async function StaffPracticePage() {
   const user = await requireStaff();
   const groups = staffGroups(user.staff);
   const limited = isGroupCoach(user.staff);
-  const sheets = await asUser(user.id, (tx) => loadPracticeSheets(tx, groups));
+  const ai = aiConfigured();
+  const [sheets, plans] = await asUser(user.id, (tx) =>
+    Promise.all([
+      loadPracticeSheets(tx, groups),
+      tx.query<{ id: string; age_group: string; body: string; starts_at: Date; title: string }>(
+        `select sp.id, sp.age_group::text as age_group, sp.body, s.starts_at, s.title
+         from session_plans sp join sessions s on s.id = sp.session_id
+         where sp.body is not null and sp.age_group::text = any ($1::text[]) and s.starts_at > now() - interval '10 days'
+         order by s.starts_at desc limit 10`,
+        [groups],
+      ),
+    ]),
+  );
+  const recentPlans = plans.map((p) => ({ id: p.id, label: `${p.age_group} · ${shortDay(iso(p.starts_at))}`, text: p.body }));
 
   return (
     <StaffShell back="/coach/plans" backLabel="Session plans" title="Home practice" intro="Drills and crib sheets for families to try at home. Parents find them on the Friday screen.">
       <div className="rounded-app border-2 border-line bg-paper p-4">
         <StatefulForm action={addPracticeSheet} submitLabel="Share with parents" savedMessage="Shared. Parents in those groups can see it now." resetOnSave>
+          {ai ? <PracticeFromPlan plans={recentPlans} titleId="title" bodyId="body" /> : null}
           <div>
             <label htmlFor="title" className="field-label">
               Title
@@ -33,6 +51,9 @@ export default async function StaffPracticePage() {
               Instructions <span className="font-normal text-ink-muted">(optional if you attach a sheet)</span>
             </label>
             <textarea id="body" name="body" rows={5} maxLength={4000} placeholder="10 minutes a day. Count your best score and tell your coach on Friday." className="field" />
+            <div className="mt-2">
+              <WritingHelp bodyId="body" titleId="title" kind="practice" ai={ai} />
+            </div>
           </div>
           <div>
             <label htmlFor="file" className="field-label">

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Attachment } from "@/components/plans/Attachment";
+import { WritingHelp } from "@/components/writing/WritingHelp";
+import { aiConfigured } from "@/lib/ai/claude";
 import { StaffShell } from "@/components/plans/StaffShell";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { UUID } from "@/lib/auth/tokens";
@@ -45,6 +47,9 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/coa
               placeholder={"Warm-up: rondos\nMain: passing on the move, first touch away from pressure\nGame: 5 v 5, two-touch"}
               className="field"
             />
+            <div className="mt-2">
+              <WritingHelp bodyId="body" kind="plan" ai={aiConfigured()} context={`Age group: ${group}. Session: ${session.title}, ${shortDay(session.startsAt)}.`} />
+            </div>
           </div>
           {plan?.file ? (
             <div className="flex flex-col gap-2">

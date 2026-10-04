@@ -353,3 +353,20 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   const anon = await page.request.get(href!, { maxRedirects: 0 });
   expect(anon.status()).not.toBe(200);
 });
+
+test("writing help: a coach dictates rough notes and AI tidies them into a draft", async ({ page }) => {
+  await signIn(page, "admin@deensquad.test");
+  await page.goto("/admin/news");
+  await expect(page.getByRole("button", { name: "Dictate" })).toBeVisible();
+  await page.getByLabel("Message").fill("pitch shut sat council reseeding");
+  await page.getByRole("button", { name: "Tidy up with AI" }).click();
+  await expect(page.getByLabel("Headline")).toHaveValue("Pitch closed on Saturday");
+  await expect(page.getByLabel("Message")).toHaveValue("Tidied: pitch shut sat council reseeding");
+  await page.screenshot({ path: shot("ai-news"), fullPage: true });
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByLabel("Message")).toHaveValue("pitch shut sat council reseeding");
+
+  await page.goto("/coach/practice");
+  await page.getByRole("button", { name: /^Draft$/ }).click();
+  await expect(page.getByLabel("Title")).toHaveValue("Pitch closed on Saturday");
+});

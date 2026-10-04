@@ -5,6 +5,8 @@ import { StatefulForm } from "@/components/admin/StatefulForm";
 import { postNews } from "@/lib/admin/actions";
 import { loadNewsList } from "@/lib/admin/data";
 import { TOPICS } from "@/lib/admin/topics";
+import { WritingHelp } from "@/components/writing/WritingHelp";
+import { aiConfigured } from "@/lib/ai/claude";
 import { isGroupCoach, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { postedLabel } from "@/lib/dates";
@@ -47,6 +49,9 @@ export default async function AdminNewsPage() {
               Message
             </label>
             <textarea id="body" name="body" rows={5} maxLength={4000} className="field" />
+            <div className="mt-2">
+              <WritingHelp bodyId="body" titleId="title" kind="news" ai={aiConfigured()} />
+            </div>
           </div>
           <fieldset className="flex flex-col gap-2">
             <legend className="field-label">Who is it for?</legend>

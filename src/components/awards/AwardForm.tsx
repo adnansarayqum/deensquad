@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { Star } from "lucide-react";
 import { giveAward, writeCoachNote, type AwardState } from "@/lib/awards/actions";
+import { WritingHelp } from "@/components/writing/WritingHelp";
 
 const POINTS = [1, 2, 5, 10];
 
@@ -67,7 +68,7 @@ export function AwardForm({ playerId, firstName }: { playerId: string; firstName
   );
 }
 
-export function NoteForm({ playerId, firstName }: { playerId: string; firstName: string }) {
+export function NoteForm({ playerId, firstName, ai }: { playerId: string; firstName: string; ai: boolean }) {
   const [state, action, pending] = useActionState<AwardState, FormData>(writeCoachNote, {});
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
@@ -80,6 +81,7 @@ export function NoteForm({ playerId, firstName }: { playerId: string; firstName:
         Note for {firstName}&apos;s parents
       </label>
       <textarea id="note" name="note" rows={3} maxLength={500} placeholder="What went well and what to work on" className="field" />
+      <WritingHelp bodyId="note" kind="note" ai={ai} context={`The child's first name is ${firstName}.`} />
       <Messages state={state} pending={pending} saved="Note saved. It shows on their player page." />
       <button type="submit" className="btn-chunky btn-paper" disabled={pending}>
         {pending ? "Saving…" : "Save note"}

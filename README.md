@@ -37,6 +37,7 @@ Variables on `parent-app`:
 | `SUMUP_API_KEY`, `SUMUP_MERCHANT_CODE` | Card payments in the club shop (SumUp hosted checkout) |
 | `BANK_ACCOUNT_NAME`, `BANK_SORT_CODE`, `BANK_ACCOUNT_NUMBER` | Bank transfer option in the club shop |
 | `SHOP_ORDERS_EMAIL` | Who gets new-order emails (default: every admin) |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | "Tidy up with AI" for staff writing news, plans, practice sheets and notes (optional) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | App notifications (set) |
 | `QR_SECRET` | Signs children's gate passes. Changing it cancels every pass (set) |
 | `CRON_SECRET` | Lets the hourly `chase-ladder` cron job run the reminders (set) |
