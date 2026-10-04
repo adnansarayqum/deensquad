@@ -40,6 +40,10 @@ Variables on `parent-app`:
 
 **Chasing unread news.** When a message needs a tap: app notification straight away, email after 24 hours, text after 48 hours (if Twilio is set up), then the child is flagged on the coach's register. A parent is skipped once they or their child's other parent has read it; nothing is sent between 9pm and 8am. A Railway cron function calls `/api/cron/chase` every hour.
 
+## Demo copy
+
+A second Railway service, `demo`, runs the same code with `DEMO_MODE=1`, `DATABASE_URL=pglite://memory`, `DEV_SEED=1` and `EMAIL_OUTBOX=/tmp/outbox.jsonl`: the sample club in memory, one-tap sign-in as a parent, admin or coach, and no emails sent. Its data resets whenever it restarts or redeploys. One-tap sign-in only works when `DEMO_MODE=1` and the database is in memory, so it can't be switched on for the real app by accident.
+
 ## Tests
 
 ```bash

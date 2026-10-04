@@ -27,7 +27,7 @@ export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
   const one = async (text: string, params: unknown[]) => (await tx.query<{ id: string }>(text, params))[0]?.id;
 
   await tx.query(
-    `insert into staff (email, display_name, role) values ($1, 'Club admin', 'admin'), ($2, 'Coach', 'coach')`,
+    `insert into staff (email, display_name, role) values ($1, 'Ibrahim Khan', 'admin'), ($2, 'Coach Hamza', 'coach')`,
     [DEV_EMAILS.admin, DEV_EMAILS.coach],
   );
   const coachStaffId = await one(`select id from staff where email = $1`, [DEV_EMAILS.coach]);

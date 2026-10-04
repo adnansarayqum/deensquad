@@ -46,13 +46,19 @@ async function open(): Promise<Database> {
   const wantsSeed = process.env.DEV_SEED === "1" || (isPglite && process.env.DEV_SEED !== "0");
   if (isPglite || wantsSeed) await migrate(db);
   if (wantsSeed) {
-    if (process.env.RAILWAY_ENVIRONMENT) throw new Error("DEV_SEED must not be used on Railway.");
+    // On Railway the sample club is only allowed in the demo copy, which keeps its data in memory.
+    if (process.env.RAILWAY_ENVIRONMENT && !(isDemo() && isPglite)) throw new Error("DEV_SEED must not be used on Railway.");
     await db.transaction(async (tx) => {
       const [{ n }] = await tx.query<{ n: number }>("select count(*)::int as n from guardians");
       if (n === 0) await seedDev(tx);
     });
   }
   return db;
+}
+
+/** The demo copy of the app: sample club in memory, one-tap sign-in, nothing sent. Never on the real app. */
+export function isDemo(): boolean {
+  return process.env.DEMO_MODE === "1" && (process.env.DATABASE_URL ?? "").startsWith("pglite://");
 }
 
 /** Runs `fn` as a signed-in user: row level security applies to every statement. */
