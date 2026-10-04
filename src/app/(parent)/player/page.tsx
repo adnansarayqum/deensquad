@@ -169,6 +169,9 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           ) : (
             <span className="text-ink-muted">Signed in as {user.email}</span>
           )}
+          <a href="/privacy" className="inline-flex min-h-11 items-center font-bold text-ink-muted underline">
+            Privacy
+          </a>
           <form action={signOut}>
             <button type="submit" className="inline-flex min-h-11 items-center gap-1.5 font-bold text-ink-muted">
               <LogOut aria-hidden size={16} />

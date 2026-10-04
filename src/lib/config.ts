@@ -24,9 +24,14 @@ export function teamFeePayUrl(): string | null {
   return process.env.TEAMFEEPAY_URL?.trim() || null;
 }
 
-/** The club's privacy notice, linked from the sign-in screen once the club has one. */
-export function privacyUrl(): string | null {
-  return process.env.PRIVACY_URL?.trim() || null;
+/** The club's privacy notice: the one built into the app (/privacy), unless PRIVACY_URL points elsewhere. */
+export function privacyUrl(): string {
+  return process.env.PRIVACY_URL?.trim() || "/privacy";
+}
+
+/** Where people write to the club about their data (shown in the privacy notice). */
+export function clubEmail(): string | null {
+  return process.env.CLUB_EMAIL?.trim() || null;
 }
 
 export type BankDetails = { accountName: string; sortCode: string; accountNumber: string };

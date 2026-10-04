@@ -16,6 +16,12 @@ function latestCode(email: string): string {
   return code;
 }
 
+/** Leaves the page first: an in-flight prefetch can otherwise re-set the session cookie after it's cleared. */
+async function switchUser(page: Page) {
+  await page.goto("about:blank");
+  await page.context().clearCookies();
+}
+
 async function signIn(page: Page, email: string) {
   await page.goto("/sign-in");
   await page.getByLabel("Email address").fill(email);
@@ -242,7 +248,7 @@ test("shop: a parent orders kit for a child and pays by transfer; the club is to
   const mails = readFileSync(OUTBOX, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string });
   expect(mails.some((m) => m.to === "admin@deensquad.test" && m.subject === `New kit order ${reference} from Adnan Sample`)).toBe(true);
 
-  await page.context().clearCookies();
+  await switchUser(page);
   await signIn(page, "admin@deensquad.test");
   await page.goto("/admin/shop");
   await page.getByRole("button", { name: "Transfer received" }).click();
@@ -295,7 +301,7 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
   await coachGroups.getByRole("button", { name: "Save groups" }).click();
   await expect(coachGroups.getByLabel("U7")).toBeChecked();
 
-  await page.context().clearCookies();
+  await switchUser(page);
   await signIn(page, "coach@deensquad.test");
   await page.goto("/admin/news");
   await expect(page.getByLabel("Every family")).toHaveCount(0);
@@ -314,7 +320,7 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
   await page.screenshot({ path: shot("coach-awards"), fullPage: true });
 
   // Musa's other parent (Adnan has used up his codes for the hour in the earlier tests).
-  await page.context().clearCookies();
+  await switchUser(page);
   await signIn(page, "sara@example.com");
   await page.goto("/player");
   await page.getByRole("link", { name: "Musa", exact: true }).click();
@@ -339,7 +345,7 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await page.getByRole("button", { name: "Share with parents" }).click();
   await expect(page.getByText(/Shared\. Parents in those groups/)).toBeVisible();
 
-  await page.context().clearCookies();
+  await switchUser(page);
   await signIn(page, "sara@example.com");
   await page.goto("/friday");
   await expect(page.getByRole("heading", { name: /U10 session plan/ })).toBeVisible();
@@ -387,8 +393,17 @@ test("writing help, downloads and badges: AI tidies a draft, an admin downloads 
   await expect(page.getByRole("button", { name: "Take back On time ×5" })).toBeVisible();
   await page.screenshot({ path: shot("badges"), fullPage: true });
 
-  await page.context().clearCookies();
+  await switchUser(page);
   await signIn(page, "parent1@example.com");
   const res = await page.request.get("/api/admin/export/families");
   expect(res.status()).toBe(403);
+});
+
+test("privacy: anyone can read the notice from the sign-in screen", async ({ page }) => {
+  await page.goto("/sign-in");
+  const href = await page.getByRole("link", { name: "How the club uses your information" }).getAttribute("href");
+  expect(href).toBe("/privacy");
+  await page.goto(href!);
+  await expect(page.getByRole("heading", { name: "Your rights" })).toBeVisible();
+  await page.screenshot({ path: shot("privacy"), fullPage: true });
 });

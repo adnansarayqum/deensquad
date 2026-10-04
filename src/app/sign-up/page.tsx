@@ -24,11 +24,9 @@ export default async function SignUpPage() {
           Sign in
         </Link>
       </p>
-      {privacy ? (
-        <a href={privacy} className="text-sm font-bold text-grass-text underline" target="_blank" rel="noopener noreferrer">
-          How the club uses your information
-        </a>
-      ) : null}
+      <a href={privacy} className="text-sm font-bold text-grass-text underline" target="_blank" rel="noopener noreferrer">
+        How the club uses your information
+      </a>
     </AuthShell>
   );
 }
