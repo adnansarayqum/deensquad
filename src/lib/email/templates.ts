@@ -94,3 +94,27 @@ ${button(link, "Open the app")}
   );
   return { to, subject, text, html };
 }
+
+export function newOrderEmail(opts: {
+  to: string;
+  parentName: string;
+  reference: string;
+  total: string;
+  paid: boolean;
+  lines: string[];
+  link: string | null;
+  appUrl: string | null;
+}): Email {
+  const { to, parentName, reference, total, paid, lines, link, appUrl } = opts;
+  const state = paid ? `Paid ${total} by card.` : `${total} to come by bank transfer, reference ${reference}.`;
+  const subject = `New kit order ${reference} from ${parentName}`;
+  const text = [`New kit order from ${parentName}.`, "", ...lines.map((l) => `- ${l}`), "", state, ...(link ? ["", `See all orders: ${link}`] : [])].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">New kit order from <b>${escape(parentName)}</b>.</p>
+<ul style="padding-left:20px">${lines.map((l) => `<li>${escape(l)}</li>`).join("")}</ul>
+<p>${escape(state)}</p>
+${link ? button(link, "See orders") : ""}`,
+  );
+  return { to, subject, text, html };
+}

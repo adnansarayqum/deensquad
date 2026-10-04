@@ -12,6 +12,9 @@ const env = [
   "ADMIN_EMAILS=",
   "APP_URL=http://localhost:3100",
   "CRON_SECRET=e2e-cron-secret",
+  "BANK_ACCOUNT_NAME='Deen Squad FA'",
+  "BANK_SORT_CODE=00-00-00",
+  "BANK_ACCOUNT_NUMBER=12345678",
 ].join(" ");
 
 export default defineConfig({

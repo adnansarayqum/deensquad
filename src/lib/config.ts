@@ -29,7 +29,19 @@ export function privacyUrl(): string | null {
   return process.env.PRIVACY_URL?.trim() || null;
 }
 
-/** The club shop (kit and merchandise), opened from the app. */
-export function shopUrl(): string | null {
-  return process.env.SHOP_URL?.trim() || null;
+export type BankDetails = { accountName: string; sortCode: string; accountNumber: string };
+
+/** The club account parents pay shop orders into by bank transfer. The demo shows sample details. */
+export function bankDetails(): BankDetails | null {
+  const accountName = process.env.BANK_ACCOUNT_NAME?.trim();
+  const sortCode = process.env.BANK_SORT_CODE?.trim();
+  const accountNumber = process.env.BANK_ACCOUNT_NUMBER?.trim();
+  if (accountName && sortCode && accountNumber) return { accountName, sortCode, accountNumber };
+  if (process.env.DEMO_MODE === "1") return { accountName: "Deen Squad FA (sample)", sortCode: "00-00-00", accountNumber: "00000000" };
+  return null;
+}
+
+/** Who hears about new shop orders. Defaults to every admin on the Staff screen. */
+export function shopOrdersEmails(): string[] {
+  return (process.env.SHOP_ORDERS_EMAIL ?? "").split(",").map((e) => e.trim()).filter((e) => e.includes("@"));
 }

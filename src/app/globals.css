@@ -91,6 +91,33 @@
   .field[aria-invalid="true"] {
     border-color: var(--kit-orange);
   }
+  /* A radio choice drawn as a chip (sizes, which child). Selected = grass with a word, never colour alone. */
+  .choice-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    min-width: 56px;
+    padding-inline: 1rem;
+    border-radius: var(--radius-m);
+    border: 2px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .choice-chip:has(input:checked) {
+    border-color: var(--grass);
+    background: var(--grass-tint);
+    color: var(--grass-text);
+    font-weight: 800;
+  }
+  .choice-chip:has(input:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--focus-halo);
+  }
   .field-label {
     display: block;
     margin-bottom: 6px;

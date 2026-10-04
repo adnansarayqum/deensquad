@@ -6,7 +6,7 @@ import { Check, QrCode, TriangleAlert, X } from "lucide-react";
 import type { ScanResult } from "@/lib/staff/checkin";
 import { scanPass } from "@/lib/staff/actions";
 
-const flagText = { no_payment_plan: "No payment plan", missing_consent: "No photo consent", unread_news: "Hasn't read news" } as const;
+const flagText = { no_payment_plan: "No payment plan", missing_consent: "No photo consent", unread_news: "Hasn't read news", kit_ready: "Kit ready to collect" } as const;
 const reasonText = {
   not_a_pass: "That isn't a Deen Squad pass.",
   unknown_child: "This pass is for a child who is no longer at the club.",

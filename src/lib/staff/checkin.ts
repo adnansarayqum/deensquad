@@ -33,9 +33,13 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
     age_group: AgeGroup;
     photo_consent: boolean | null;
     payment: PaymentState;
+    kit_ready: boolean;
   }>(
     `select p.id, p.first_name, p.last_name, p.shirt_number, p.age_group::text as age_group, p.photo_consent,
-       coalesce(ps.state, 'missing')::text as payment
+       coalesce(ps.state, 'missing')::text as payment,
+       exists (
+         select 1 from shop_order_items i join shop_orders o on o.id = i.order_id where i.player_id = p.id and o.status = 'ready'
+       ) as kit_ready
      from players p left join payment_status ps on ps.player_id = p.id where p.id = $1`,
     [playerId],
   );
@@ -72,6 +76,7 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
       flags: [
         ...(c.payment === "missing" || c.payment === "overdue" ? (["no_payment_plan"] as const) : []),
         ...(c.photo_consent === null ? (["missing_consent"] as const) : []),
+        ...(c.kit_ready ? (["kit_ready"] as const) : []),
       ],
     },
   };

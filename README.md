@@ -33,7 +33,10 @@ Variables on `parent-app`:
 | `ADMIN_EMAILS` | Who becomes admin on first sign-in (comma-separated) |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Sending sign-in codes and invites through [Resend](https://resend.com). Until set, only admin sign-in emails work: the code is printed in the Railway logs. |
 | `APP_URL` | Optional. The app's web address for emailed links (defaults to the Railway domain) |
-| `TEAMFEEPAY_URL`, `SHOP_URL`, `PRIVACY_URL` | Links shown in the app: payments step, club shop (on To-do), privacy notice |
+| `TEAMFEEPAY_URL`, `PRIVACY_URL` | Links shown in the app: payments step, privacy notice |
+| `SUMUP_API_KEY`, `SUMUP_MERCHANT_CODE` | Card payments in the club shop (SumUp hosted checkout) |
+| `BANK_ACCOUNT_NAME`, `BANK_SORT_CODE`, `BANK_ACCOUNT_NUMBER` | Bank transfer option in the club shop |
+| `SHOP_ORDERS_EMAIL` | Who gets new-order emails (default: every admin) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | App notifications (set) |
 | `QR_SECRET` | Signs children's gate passes. Changing it cancels every pass (set) |
 | `CRON_SECRET` | Lets the hourly `chase-ladder` cron job run the reminders (set) |

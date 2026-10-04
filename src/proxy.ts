@@ -4,7 +4,7 @@ import { SESSION_COOKIE, cookieOptions } from "@/lib/auth/cookies";
 // Optimistic check only: no session cookie means "go and sign in". Every page and action still
 // checks the session against the database (src/lib/auth/session.ts) before touching data.
 
-const PUBLIC = [/^\/sign-in(\/|$)/, /^\/api\/health$/, /^\/api\/cron\//];
+const PUBLIC = [/^\/sign-in(\/|$)/, /^\/api\/health$/, /^\/api\/cron\//, /^\/api\/sumup\//];
 const SESSION_SECONDS = 90 * 86400;
 
 export function proxy(request: NextRequest) {

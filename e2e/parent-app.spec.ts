@@ -200,3 +200,46 @@ test("the hourly chase job needs its secret, then emails reminders for unread ne
   expect(body.email).toBeGreaterThan(0);
   expect(readFileSync(OUTBOX, "utf8")).toContain("Please read: Winter timings start 7 Nov");
 });
+
+test("shop: a parent orders kit for a child and pays by transfer; the club is told and makes it ready", async ({ page }) => {
+  await signIn(page, "adnan@example.com");
+  await page.goto("/checklist");
+  await page.getByRole("link", { name: /Club shop/ }).click();
+  await expect(page).toHaveURL(/\/shop$/);
+  await page.screenshot({ path: shot("shop"), fullPage: true });
+
+  await page.getByRole("link", { name: /Hoodie/ }).click();
+  await page.getByText("Yusuf", { exact: true }).click();
+  await page.getByText("9-10", { exact: true }).click();
+  await page.getByLabel(/Initials/).fill("ys");
+  await page.screenshot({ path: shot("shop-item"), fullPage: true });
+  await page.getByRole("button", { name: "Add to basket" }).click();
+  await expect(page.getByText("Added to your basket.")).toBeVisible();
+
+  await page.getByRole("link", { name: "View basket" }).click();
+  await expect(page.getByText("For Yusuf · Size 9-10 · Initials YS")).toBeVisible();
+  await page.screenshot({ path: shot("shop-basket"), fullPage: true });
+  // No SumUp key in tests, so bank transfer is the only way to pay.
+  await expect(page.getByLabel(/Bank transfer/)).toBeChecked();
+  await page.getByRole("button", { name: "Place order" }).click();
+  await expect(page.getByText(/Order placed. Send the bank transfer/)).toBeVisible();
+  await expect(page.getByText("12345678")).toBeVisible();
+  const reference = (await page.locator("dd").last().textContent())!.trim();
+  expect(reference).toMatch(/^DS-[0-9A-F]{6}$/);
+  await page.screenshot({ path: shot("shop-order"), fullPage: true });
+
+  const mails = readFileSync(OUTBOX, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string });
+  expect(mails.some((m) => m.to === "admin@deensquad.test" && m.subject === `New kit order ${reference} from Adnan Sample`)).toBe(true);
+
+  await page.context().clearCookies();
+  await signIn(page, "admin@deensquad.test");
+  await page.goto("/admin/shop");
+  await page.getByRole("button", { name: "Transfer received" }).click();
+  await expect(page.getByRole("cell", { name: "Hoodie" })).toBeVisible();
+  await page.getByRole("button", { name: "Ready for Friday" }).first().click();
+  await expect(page.getByRole("button", { name: "Handed over" })).toBeVisible();
+  await page.screenshot({ path: shot("admin-shop"), fullPage: true });
+
+  await page.goto("/coach?group=U9");
+  await expect(page.getByText(/Kit order ready to collect/)).toBeVisible();
+});

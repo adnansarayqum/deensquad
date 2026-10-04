@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Camera, Check, CreditCard, ExternalLink, IdCard, Phone, Shirt } from "lucide-react";
-import { shopUrl } from "@/lib/config";
+import { Camera, Check, ChevronRight, CreditCard, IdCard, Phone, Shirt } from "lucide-react";
 import { AppHeader, Card, Eyebrow, Progress } from "@/components/ui";
 import { getChecklistPage } from "@/lib/parent/load";
 import type { ChecklistItemView } from "@/lib/parent/views";
@@ -15,7 +14,6 @@ export default async function ChecklistPage() {
   const single = groups.length === 1 ? groups[0] : null;
   const remaining = total - done;
   const who = single ? single.child.firstName : "everyone";
-  const shop = shopUrl();
 
   return (
     <>
@@ -113,11 +111,9 @@ export default async function ChecklistPage() {
           );
         })}
 
-        {shop && family.children.length > 0 ? (
-          <a
-            href={shop}
-            target="_blank"
-            rel="noopener noreferrer"
+        {family.children.length > 0 ? (
+          <Link
+            href="/shop"
             className="mt-3 flex items-center gap-3 rounded-app bg-pitch-deep px-3.5 py-3 text-on-pitch"
           >
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold">
@@ -125,10 +121,10 @@ export default async function ChecklistPage() {
             </span>
             <span className="flex flex-1 flex-col">
               <span className="text-[15px] font-bold">Club shop</span>
-              <span className="text-[13px] text-on-pitch-muted">Training tops, kit and more</span>
+              <span className="text-[13px] text-on-pitch-muted">Kit and training wear, picked up on Friday</span>
             </span>
-            <ExternalLink aria-hidden size={18} className="shrink-0 text-on-pitch-muted" />
-          </a>
+            <ChevronRight aria-hidden size={20} className="shrink-0 text-on-pitch-muted" />
+          </Link>
         ) : null}
       </main>
     </>

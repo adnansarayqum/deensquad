@@ -10,6 +10,7 @@ export function AdminNav({ isAdmin }: { isAdmin: boolean }) {
     { href: "/admin/families", label: "Families" },
     { href: "/admin/news", label: "News" },
     { href: "/admin/sessions", label: "Sessions" },
+    { href: "/admin/shop", label: "Shop" },
     ...(isAdmin ? [{ href: "/admin/staff", label: "Staff" }] : []),
   ];
   return (

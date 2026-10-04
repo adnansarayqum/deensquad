@@ -6,7 +6,7 @@ import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
 
 // The coach's gate register for one session and one age group. Runs as staff (row level security on).
 
-export type RegisterFlag = "no_payment_plan" | "missing_consent" | "unread_news";
+export type RegisterFlag = "no_payment_plan" | "missing_consent" | "unread_news" | "kit_ready";
 
 export type RegisterRow = {
   id: string;
@@ -69,6 +69,7 @@ export async function loadRegister(tx: Queryable, opts: { now: Date; sessionId?:
     answer: Availability | null;
     checked_in_at: Date | null;
     unread_news: boolean;
+    kit_ready: boolean;
   }>(
     `select p.id, p.first_name, p.last_name, p.shirt_number, p.photo_consent,
        coalesce(ps.state, 'missing')::text as payment, a.answer::text as answer, at.checked_in_at,
@@ -81,7 +82,10 @@ export async function loadRegister(tx: Queryable, opts: { now: Date; sessionId?:
              select 1 from announcement_reads r join player_guardians rg on rg.guardian_id = r.guardian_id
              where r.announcement_id = an.id and rg.player_id = p.id
            )
-       ) as unread_news
+       ) as unread_news,
+       exists (
+         select 1 from shop_order_items i join shop_orders o on o.id = i.order_id where i.player_id = p.id and o.status = 'ready'
+       ) as kit_ready
      from players p
      left join payment_status ps on ps.player_id = p.id
      left join availability a on a.player_id = p.id and a.session_id = $1
@@ -107,6 +111,7 @@ export async function loadRegister(tx: Queryable, opts: { now: Date; sessionId?:
         ...(r.payment === "missing" || r.payment === "overdue" ? (["no_payment_plan"] as const) : []),
         ...(r.photo_consent === null ? (["missing_consent"] as const) : []),
         ...(r.unread_news ? (["unread_news"] as const) : []),
+        ...(r.kit_ready ? (["kit_ready"] as const) : []),
       ],
     })),
   };
