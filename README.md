@@ -23,7 +23,7 @@ Sign in as `adnan@example.com` (a parent of two), `coach@deensquad.test` or `adm
 
 ## Deploy (Railway)
 
-Project `deensquad`: the `parent-app` service and a `Postgres` service, both in Amsterdam. Every push to `main` deploys. Before each deploy Railway runs `node scripts/migrate.mjs`, so database changes go out with the code; a failed migration stops the deploy.
+Project `deensquad`: the `parent-app` service and a `Postgres` service, both in Amsterdam. Every push to `main` deploys. The app runs `node scripts/migrate.mjs` as it starts, so database changes go out with the code; if a migration fails, the new version never passes its health check and the old one keeps running.
 
 Variables on `parent-app`:
 

@@ -1,5 +1,5 @@
-// Applies db/migrations/*.sql to DATABASE_URL. Railway runs this before every deploy
-// (preDeployCommand in railway.json), so a failed migration stops the deploy.
+// Applies db/migrations/*.sql to DATABASE_URL. Railway runs this as the app starts (startCommand in
+// railway.json); a failed migration exits non-zero, so the new version never becomes healthy.
 // Same rules as src/lib/db/migrate.ts: name order, each file once, all in one transaction.
 
 import { readdirSync, readFileSync } from "node:fs";

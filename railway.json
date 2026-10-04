@@ -4,14 +4,15 @@
     "builder": "RAILPACK"
   },
   "deploy": {
-    "preDeployCommand": ["node scripts/migrate.mjs"],
-    "startCommand": "node_modules/.bin/next start",
+    "startCommand": "sh -c 'node scripts/migrate.mjs && exec node_modules/.bin/next start'",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 60,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 5,
     "multiRegionConfig": {
-      "europe-west4-drams3a": { "numReplicas": 1 }
+      "europe-west4-drams3a": {
+        "numReplicas": 1
+      }
     }
   }
 }
