@@ -23,11 +23,14 @@ npm run dev        # http://localhost:3000
 
 To see it as parents will, open it on your phone (same Wi-Fi, use your computer's IP) or deploy it.
 
-## Deploy (Vercel)
+## Deploy (Railway)
 
-1. Import this repo at vercel.com/new. The defaults are right for Next.js.
-2. Optional: add `NEXT_PUBLIC_TEAMFEEPAY_URL` with the club's TeamFeePay sign-up link.
-3. Open the deployed link on a phone and use **Add to Home Screen**.
+It's hosted on Railway (project `deensquad`, service `parent-app`): https://parent-app-production-4b29.up.railway.app
+
+- Every push to `main` deploys automatically.
+- Build and run settings live in `railway.json`: Railpack builder, `next start`, health check on `/news`, Europe (Amsterdam) region. Settings in that file override the Railway dashboard.
+- Variables are set on the service: `DATA_SOURCE=demo`, plus optional `NEXT_PUBLIC_TEAMFEEPAY_URL` with the club's TeamFeePay sign-up link. `NEXT_PUBLIC_*` values are baked in at build time, so redeploy after changing one.
+- Open the link on a phone and use **Add to Home Screen**.
 
 ## Tests
 

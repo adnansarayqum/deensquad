@@ -15,6 +15,7 @@ Mobile web app (installable PWA) for The Deen Squad Football Academy. Parents re
 | Unit + database tests (Vitest, PGlite) | `npm test` |
 | End-to-end tests (Playwright, phone viewport) | `npm run test:e2e` (needs a build; set `PLAYWRIGHT_CHROMIUM_PATH` to reuse an installed Chromium) |
 | Regenerate design tokens | `npm run tokens` |
+| Deploy | Push to `main`. Railway (project `deensquad`, service `parent-app`, Amsterdam region) builds and deploys it; settings are in `railway.json` and override the dashboard. Live at https://parent-app-production-4b29.up.railway.app |
 
 Before committing: `npm run typecheck && npm run lint && npm test`, and `npm run test:e2e` when screens or actions change. Stop any running `next start` before `npm run build`; rebuilding under a live server serves mismatched chunks.
 
