@@ -41,6 +41,35 @@ ${link ? `<p>Or tap below on the phone you want to sign in on.</p>${button(link,
   return { to, subject, text, html };
 }
 
+/** The ladder's 24-hour reminder: the message itself, plus a link that signs them in where needed. */
+export function reminderEmail(opts: { to: string; firstName: string; title: string; body: string; children: string[]; link: string; appUrl: string | null }): Email {
+  const { to, firstName, title, body, children, link, appUrl } = opts;
+  const names = children.length <= 1 ? (children[0] ?? "your child") : `${children.slice(0, -1).join(", ")} and ${children.at(-1)}`;
+  const subject = `Please read: ${title}`;
+  const text = [
+    `Assalamu alaikum ${firstName},`,
+    "",
+    `The club posted a message for ${names}'s parents and would like to know you've seen it:`,
+    "",
+    title,
+    body,
+    "",
+    "Open the app and tap \"I've read this\":",
+    link,
+  ].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">Assalamu alaikum ${escape(firstName)},</p>
+<p>The club posted a message for ${escape(names)}'s parents and would like to know you've seen it.</p>
+<div style="border-left:4px solid #c9952f;padding:4px 0 4px 14px;margin:16px 0">
+<p style="font-weight:800;margin:0 0 6px">${escape(title)}</p>
+<p style="margin:0;white-space:pre-line">${escape(body)}</p></div>
+${button(link, "I've read this")}
+<p style="color:#56625a;margin-bottom:0">The button opens the app, where one tap lets the club know.</p>`,
+  );
+  return { to, subject, text, html };
+}
+
 export function inviteEmail(opts: { to: string; firstName: string; children: string[]; link: string; appUrl: string | null }): Email {
   const { to, firstName, children, link, appUrl } = opts;
   const names = children.length <= 1 ? (children[0] ?? "your child") : `${children.slice(0, -1).join(", ")} and ${children.at(-1)}`;

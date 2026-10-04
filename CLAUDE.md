@@ -30,6 +30,7 @@ Before committing: `npm run typecheck && npm run lint && npm test`, and `npm run
 - **Email (`src/lib/email`):** Resend over HTTPS when `RESEND_API_KEY` is set; otherwise an outbox file in dev/tests. In production without a key, only admin sign-in emails are printed to the log.
 - **Parent screens:** `src/app/(parent)/` (news, friday, checklist + contacts/payment/consent, player). Loaders in `src/lib/parent/load.ts`, queries in `data.ts`, pure view builders in `views.ts`, actions in `actions.ts` (call `refresh()` after in-place writes).
 - **Staff:** `/coach` register (`src/lib/staff`), `/admin` (`src/app/admin`, `src/lib/admin`): CSV import (`import.ts`, preview is a dry run rolled back), invites, news + read receipts + WhatsApp chase (logged in `announcement_chases`), sessions, staff. Coaches can do everything except import/invite/edit families/manage staff.
+- **Chase ladder (`src/lib/chase`):** `ladder.ts` is the engine (pure SQL + injected senders, tested on PGlite): app push at post, email after 24h, SMS after 48h (Twilio, only if configured), gate flag on the register after 48h. Skips a parent once anyone sharing a child has read it; quiet hours 21:00–08:00 London; logged in `announcement_chases` (app/sms/gate unique per parent). `senders.ts` holds web-push/Resend/Twilio. Runs on posting (`postNews`) and hourly via `POST /api/cron/chase` (Bearer `CRON_SECRET`) from the Railway cron function `chase-ladder`. `public/sw.js` shows notifications; `NotificationsCard` offers them on Club news.
 - Tests: `db/schema.test.ts` (RLS as different people), `src/**/*.test.ts` (auth, import, views) on PGlite via `test/db.ts`; `e2e/` signs in with codes from the outbox.
 
 ## Next.js 16 notes (this is newer than most training data)
@@ -54,6 +55,6 @@ Before committing: `npm run typecheck && npm run lint && npm test`, and `npm run
 ## Roadmap (agreed with the club owner's pain points)
 
 1. Done: Postgres on Railway, email sign-in, admin import/invites/news/sessions/staff. Next: verify the club's domain in Resend, set `EMAIL_FROM`, import real families.
-2. Announcement chase ladder: automate what the admin does by hand today (push notification, WhatsApp after 24h, text after 48h, flag at the gate; log in `announcement_chases`).
+2. Done: chase ladder (push, email 24h, SMS 48h when Twilio is set, gate flag). Later: automatic WhatsApp once the club has a WhatsApp Business account.
 3. Admin: Saturday report, badges and coach notes UI, weekly challenge, voice-note announcements (needs file storage).
 4. Push notifications and offline support (service worker), real QR scanning for the coach register, TeamFeePay export import.

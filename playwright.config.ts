@@ -11,6 +11,7 @@ const env = [
   "EMAIL_OUTBOX=e2e/.results/outbox.jsonl",
   "ADMIN_EMAILS=",
   "APP_URL=http://localhost:3100",
+  "CRON_SECRET=e2e-cron-secret",
 ].join(" ");
 
 export default defineConfig({

@@ -10,7 +10,11 @@ import { loadRegister, summarise, type RegisterFlag } from "@/lib/staff/register
 
 export const metadata: Metadata = { title: "Register" };
 
-const flagText: Record<RegisterFlag, string> = { no_payment_plan: "No payment plan", missing_consent: "No photo consent yet" };
+const flagText: Record<RegisterFlag, string> = {
+  no_payment_plan: "No payment plan",
+  missing_consent: "No photo consent yet",
+  unread_news: "Hasn't read club news",
+};
 
 export default async function CoachRegisterPage({ searchParams }: PageProps<"/coach">) {
   const user = await requireStaff();

@@ -12,6 +12,7 @@ import { AGE_GROUPS, isAgeGroup, type AgeGroup } from "../domain";
 import { canSendEmail } from "../email/send";
 import { cleanBody, cleanPhone, cleanText, dialable } from "../validate";
 import { applyImport, planImport, type ImportProblem, type ImportSummary } from "./import";
+import { runChase } from "../chase/run";
 import { sendInvites } from "./invites";
 import { TOPICS } from "./topics";
 
@@ -257,6 +258,10 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
       [topic, title, body, everyone ? null : groups, formData.get("requiresAck") === "on", user.staff.id],
     ),
   );
+  // First rung of the chase ladder: notify parents now (unless it's night-time; the hourly run picks it up at 8am).
+  if (formData.get("requiresAck") === "on") {
+    await runChase({ announcementId: row.id }).catch((e) => console.error("[chase] on post:", e instanceof Error ? e.message : e));
+  }
   redirect(`/admin/news/${row.id}?posted=1`);
 }
 

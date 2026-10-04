@@ -224,7 +224,17 @@ export async function loadNewsList(tx: Queryable, limit = 50): Promise<NewsRow[]
   return rows.map(toNews);
 }
 
-export type UnreadGuardian = { id: string; name: string; firstName: string; phone: string | null; inApp: boolean; children: string; partnerRead: boolean };
+export type UnreadGuardian = {
+  id: string;
+  name: string;
+  firstName: string;
+  phone: string | null;
+  inApp: boolean;
+  children: string;
+  partnerRead: boolean;
+  /** Reminders already sent: app, email, sms, whatsapp (repeats allowed for WhatsApp). */
+  chased: string[];
+};
 
 export async function loadNewsDetail(tx: Queryable, id: string): Promise<{ news: NewsRow; unread: UnreadGuardian[] } | null> {
   const [row] = await tx.query<NewsDbRow>(
@@ -232,7 +242,16 @@ export async function loadNewsDetail(tx: Queryable, id: string): Promise<{ news:
     [id],
   );
   if (!row) return null;
-  const unread = await tx.query<{ id: string; first_name: string; last_name: string; phone: string | null; in_app: boolean; children: string; partner_read: boolean }>(
+  const unread = await tx.query<{
+    id: string;
+    first_name: string;
+    last_name: string;
+    phone: string | null;
+    in_app: boolean;
+    children: string;
+    partner_read: boolean;
+    chased: string[] | null;
+  }>(
     `select g.id, g.first_name, g.last_name, g.phone, g.auth_user_id is not null as in_app,
        string_agg(distinct p.first_name, ', ') as children,
        exists (
@@ -240,7 +259,8 @@ export async function loadNewsDetail(tx: Queryable, id: string): Promise<{ news:
          join player_guardians other on other.guardian_id = r.guardian_id
          where r.announcement_id = $1 and r.guardian_id <> g.id
            and other.player_id in (select player_id from player_guardians where guardian_id = g.id)
-       ) as partner_read
+       ) as partner_read,
+       (select array_agg(c.channel::text order by c.sent_at) from announcement_chases c where c.announcement_id = $1 and c.guardian_id = g.id) as chased
      from guardians g
      join player_guardians pg on pg.guardian_id = g.id
      join players p on p.id = pg.player_id
@@ -260,6 +280,7 @@ export async function loadNewsDetail(tx: Queryable, id: string): Promise<{ news:
       inApp: u.in_app,
       children: u.children,
       partnerRead: u.partner_read,
+      chased: u.chased ?? [],
     })),
   };
 }

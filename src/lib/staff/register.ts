@@ -6,7 +6,7 @@ import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
 
 // The coach's gate register for one session and one age group. Runs as staff (row level security on).
 
-export type RegisterFlag = "no_payment_plan" | "missing_consent";
+export type RegisterFlag = "no_payment_plan" | "missing_consent" | "unread_news";
 
 export type RegisterRow = {
   id: string;
@@ -68,16 +68,27 @@ export async function loadRegister(tx: Queryable, opts: { now: Date; sessionId?:
     payment: PaymentState;
     answer: Availability | null;
     checked_in_at: Date | null;
+    unread_news: boolean;
   }>(
     `select p.id, p.first_name, p.last_name, p.shirt_number, p.photo_consent,
-       coalesce(ps.state, 'missing')::text as payment, a.answer::text as answer, at.checked_in_at
+       coalesce(ps.state, 'missing')::text as payment, a.answer::text as answer, at.checked_in_at,
+       -- last rung of the chase ladder: nobody in the family has read a message that's been waiting two days or more
+       exists (
+         select 1 from announcements an
+         where an.requires_ack and an.posted_at <= $3::timestamptz - interval '48 hours' and an.posted_at > $3::timestamptz - interval '14 days'
+           and (an.audience is null or p.age_group = any (an.audience))
+           and not exists (
+             select 1 from announcement_reads r join player_guardians rg on rg.guardian_id = r.guardian_id
+             where r.announcement_id = an.id and rg.player_id = p.id
+           )
+       ) as unread_news
      from players p
      left join payment_status ps on ps.player_id = p.id
      left join availability a on a.player_id = p.id and a.session_id = $1
      left join attendance at on at.player_id = p.id and at.session_id = $1
      where p.age_group = $2::age_group
      order by p.first_name, p.last_name`,
-    [session.id, group],
+    [session.id, group, opts.now],
   );
 
   return {
@@ -95,6 +106,7 @@ export async function loadRegister(tx: Queryable, opts: { now: Date; sessionId?:
       flags: [
         ...(r.payment === "missing" || r.payment === "overdue" ? (["no_payment_plan"] as const) : []),
         ...(r.photo_consent === null ? (["missing_consent"] as const) : []),
+        ...(r.unread_news ? (["unread_news"] as const) : []),
       ],
     })),
   };

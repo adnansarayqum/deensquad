@@ -9,7 +9,10 @@ import { loadNewsDetail } from "@/lib/admin/data";
 import { UUID } from "@/lib/auth/tokens";
 import { requireStaff } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
-import { postedLabel } from "@/lib/dates";
+import { postedLabel, shortDay, clock } from "@/lib/dates";
+import { LADDER } from "@/lib/chase/ladder";
+import { pushConfigured, smsConfigured } from "@/lib/chase/senders";
+import { canSendEmail } from "@/lib/email/send";
 import { dialable } from "@/lib/validate";
 
 export const metadata: Metadata = { title: "Message" };
@@ -24,6 +27,14 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
   const { news, unread } = detail;
   const chase = unread.filter((u) => !u.partnerRead);
   const covered = unread.filter((u) => u.partnerRead);
+  const posted = new Date(news.postedAt).getTime();
+  const at = (hours: number) => new Date(posted + hours * 3600_000).toISOString();
+  const steps = [
+    { label: "App notification", when: "when posted", ready: pushConfigured(), setup: "needs VAPID keys" },
+    { label: "Email reminder", when: `${shortDay(at(LADDER.email.afterHours))} ${clock(at(LADDER.email.afterHours))}`, ready: canSendEmail(), setup: "needs Resend" },
+    { label: "Text reminder", when: `${shortDay(at(LADDER.sms.afterHours))} ${clock(at(LADDER.sms.afterHours))}`, ready: smsConfigured(), setup: "needs a Twilio account" },
+  ];
+  const chaseLabel: Record<string, string> = { app: "Notified", email: "Emailed", sms: "Texted", whatsapp: "WhatsApp", gate: "At the gate" };
 
   return (
     <>
@@ -42,6 +53,25 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
       </Section>
 
       {news.requiresAck ? (
+        <Section title="Automatic reminders">
+          <p className="text-sm text-ink-muted">
+            Only parents who haven&apos;t read it (and whose child&apos;s other parent hasn&apos;t either) are reminded. Nothing is sent between 9pm and 8am.
+            Children of parents who still haven&apos;t read it after two days are flagged on the coach&apos;s register.
+          </p>
+          <ol className="flex flex-col gap-1.5 text-[15px]">
+            {steps.map((s) => (
+              <li key={s.label} className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  <b>{s.label}</b> · {s.when}
+                </span>
+                {s.ready ? <Pill tone="done">On</Pill> : <Pill tone="neutral">Off · {s.setup}</Pill>}
+              </li>
+            ))}
+          </ol>
+        </Section>
+      ) : null}
+
+      {news.requiresAck ? (
         <Section title={chase.length ? `Not read yet (${chase.length})` : "Everyone has read it"}>
           {chase.length ? <p className="text-sm text-ink-muted">WhatsApp opens with a short reminder ready to send. Each reminder is logged.</p> : null}
           <ul className="flex flex-col gap-2">
@@ -52,6 +82,16 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
                   <span className="text-[13px] text-ink-muted">
                     {u.children} · {u.inApp ? "in the app" : "hasn't signed in yet"}
                   </span>
+                  {u.chased.length ? (
+                    <span className="mt-1 flex flex-wrap gap-1">
+                      {[...new Set(u.chased)].map((c) => (
+                        <Pill key={c} tone="neutral">
+                          {chaseLabel[c] ?? c}
+                          {c === "whatsapp" && u.chased.filter((x) => x === c).length > 1 ? ` ×${u.chased.filter((x) => x === c).length}` : ""}
+                        </Pill>
+                      ))}
+                    </span>
+                  ) : null}
                 </span>
                 {u.phone ? (
                   <span className="flex gap-2">

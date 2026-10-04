@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight, Flame } from "lucide-react";
 import { AcknowledgeButton } from "@/components/AcknowledgeButton";
+import { NotificationsCard } from "@/components/NotificationsCard";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { clock, postedLabel, shortDay } from "@/lib/dates";
 import { getNewsPage } from "@/lib/parent/load";
@@ -57,6 +58,7 @@ export default async function NewsPage() {
       </AppHeader>
 
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
+        <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} />
         {family.children.length === 0 ? (
           <Card className="p-4 text-[15px] leading-[22px]">
             No players are linked to your email yet. Ask the club to add your child, then open the app again.

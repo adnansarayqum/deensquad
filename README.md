@@ -34,6 +34,11 @@ Variables on `parent-app`:
 | `RESEND_API_KEY`, `EMAIL_FROM` | Sending sign-in codes and invites through [Resend](https://resend.com). Until set, only admin sign-in emails work: the code is printed in the Railway logs. |
 | `APP_URL` | Optional. The app's web address for emailed links (defaults to the Railway domain) |
 | `TEAMFEEPAY_URL`, `PRIVACY_URL` | Optional links shown in the app |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | App notifications (set) |
+| `CRON_SECRET` | Lets the hourly `chase-ladder` cron job run the reminders (set) |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Optional. Text reminders after 48 hours |
+
+**Chasing unread news.** When a message needs a tap: app notification straight away, email after 24 hours, text after 48 hours (if Twilio is set up), then the child is flagged on the coach's register. A parent is skipped once they or their child's other parent has read it; nothing is sent between 9pm and 8am. A Railway cron function calls `/api/cron/chase` every hour.
 
 ## Tests
 

@@ -189,3 +189,14 @@ test("an invited parent signs in from the link and sees their children", async (
   await expect(page.getByRole("group", { name: /Is Ali coming/ })).toBeVisible();
   await expect(page.getByRole("group", { name: /Is Zara coming/ })).toBeVisible();
 });
+
+test("the hourly chase job needs its secret, then emails reminders for unread news", async ({ request }) => {
+  expect((await request.post("/api/cron/chase")).status()).toBe(401);
+  expect((await request.post("/api/cron/chase", { headers: { Authorization: "Bearer wrong" } })).status()).toBe(401);
+  const res = await request.post("/api/cron/chase", { headers: { Authorization: "Bearer e2e-cron-secret" } });
+  expect(res.ok()).toBe(true);
+  const body = (await res.json()) as { quiet: boolean; email: number };
+  if (body.quiet) return; // run between 9pm and 8am: nothing is sent, by design
+  expect(body.email).toBeGreaterThan(0);
+  expect(readFileSync(OUTBOX, "utf8")).toContain("Please read: Winter timings start 7 Nov");
+});
