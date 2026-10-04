@@ -89,7 +89,7 @@ test("friday: each child gets their own answer and headcount", async ({ page }) 
 test("to-do: contacts copied to a sibling, consent and payments", async ({ page }) => {
   await signIn(page, "sara@example.com");
   await page.goto("/checklist");
-  await expect(page.getByRole("progressbar", { name: "5 of 8 steps done" })).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "5 of 10 steps done" })).toBeVisible();
   await page.screenshot({ path: shot("checklist"), fullPage: true });
 
   const musa = page.getByRole("region", { name: "Musa's checklist" });
@@ -109,6 +109,14 @@ test("to-do: contacts copied to a sibling, consent and payments", async ({ page 
   await musa.getByRole("link", { name: /Set up payments/ }).click();
   await page.getByRole("button", { name: "I've set it up for Musa" }).click();
   await expect(page).toHaveURL(/\/checklist$/);
+
+  for (const name of ["Musa", "Yusuf"]) {
+    await page.getByRole("region", { name: `${name}'s checklist` }).getByRole("link", { name: /Club contract/ }).click();
+    await page.getByText(/gone through the player responsibilities with/).click();
+    await page.getByText("I agree to the parent or guardian responsibilities.").click();
+    await page.getByRole("button", { name: "Sign the contract" }).click();
+    await expect(page).toHaveURL(/\/checklist$/);
+  }
   await expect(page.getByText("All done. Everyone is fully set up.")).toBeVisible();
 });
 
@@ -264,6 +272,16 @@ test("sign-up: a new parent registers their child, proves their email and lands 
   await expect(page.getByRole("heading", { name: "Ilyas's checklist" })).toBeVisible();
   const mails = readFileSync(OUTBOX, "utf8");
   expect(mails).toContain("New family signed up: Hana Rahman");
+
+  await page.getByRole("link", { name: /Club contract/ }).click();
+  await expect(page.getByRole("heading", { name: "Player responsibilities" })).toBeVisible();
+  await page.getByText(/gone through the player responsibilities with/).click();
+  await page.getByText("I agree to the parent or guardian responsibilities.").click();
+  await expect(page.getByLabel(/Your full name/)).toHaveValue("Hana Rahman");
+  await page.screenshot({ path: shot("contract"), fullPage: true });
+  await page.getByRole("button", { name: "Sign the contract" }).click();
+  await expect(page).toHaveURL(/\/checklist$/);
+  await expect(page.getByText("Signed for this season")).toBeVisible();
 });
 
 test("coach groups: a U7 coach posts to U7 only and gives a star; the parent sees it", async ({ page }) => {

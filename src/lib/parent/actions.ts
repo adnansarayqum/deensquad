@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireParent } from "../auth/session";
 import { UUID } from "../auth/tokens";
 import { asUser } from "../db";
+import { CONTRACT } from "../documents/contract";
 import type { Availability } from "../domain";
 import { cleanPhone, cleanText } from "../validate";
 
@@ -85,5 +86,26 @@ export async function reportPaymentSetup(formData: FormData): Promise<void> {
   const child = formData.get("child");
   if (typeof child !== "string" || !UUID.test(child)) return;
   await asUser(user.id, (tx) => tx.query(`select report_payment_setup($1)`, [child]));
+  redirect("/checklist");
+}
+
+export type AgreementState = { error?: string };
+
+/** The parent agrees to the club contract for one child, for themselves and on the child's behalf. */
+export async function signAgreement(_prev: AgreementState, formData: FormData): Promise<AgreementState> {
+  const user = await requireParent();
+  const child = formData.get("child");
+  const parentName = cleanText(formData.get("parentName"), 80);
+  if (typeof child !== "string" || !UUID.test(child)) return { error: "Something went wrong. Reload and try again." };
+  if (formData.get("playerAgrees") !== "on") return { error: "Tick to confirm you've gone through the player responsibilities together." };
+  if (formData.get("parentAgrees") !== "on") return { error: "Tick to agree to the parent responsibilities." };
+  if (!parentName || parentName.split(" ").length < 2) return { error: "Type your full name to sign." };
+  const [player] = await asUser(user.id, (tx) =>
+    tx.query<{ first_name: string; last_name: string }>(`select first_name, last_name from players where id = $1 and id in (select my_player_ids())`, [child]),
+  );
+  if (!player) return { error: "Something went wrong. Reload and try again." };
+  await asUser(user.id, (tx) =>
+    tx.query(`select sign_agreement($1, $2, $3, $4)`, [child, CONTRACT.id, parentName, `${player.first_name} ${player.last_name}`]),
+  );
   redirect("/checklist");
 }

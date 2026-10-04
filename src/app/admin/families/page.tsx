@@ -94,6 +94,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
                       ) : null}
                       {f.consent === null ? <Pill tone="action">No photo answer</Pill> : null}
                       {f.contacts === 0 ? <Pill tone="action">No emergency contact</Pill> : null}
+                      {!f.agreed ? <Pill tone="action">Contract not signed</Pill> : null}
                     </span>
                   </span>
                   <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />

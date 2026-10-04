@@ -1,3 +1,4 @@
+import { CONTRACT } from "../documents/contract";
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { AGE_GROUPS, type AgeGroup, type PaymentState, type Session, type StaffRole } from "../domain";
@@ -41,6 +42,7 @@ export type FamilyRow = {
   inApp: boolean;
   consent: boolean | null;
   contacts: number;
+  agreed: boolean;
   guardians: FamilyGuardian[];
 };
 
@@ -56,10 +58,12 @@ export async function loadFamilies(tx: Queryable, group: AgeGroup | null, within
     in_app: boolean;
     photo_consent: boolean | null;
     contacts: number;
+    agreed: boolean;
     guardians: FamilyGuardian[] | string;
   }>(
     `select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number, fg.payment::text as payment, fg.in_app,
        p.photo_consent, fg.emergency_contacts as contacts,
+       exists (select 1 from agreements ag where ag.player_id = p.id and ag.document = $3) as agreed,
        coalesce(json_agg(json_build_object(
          'id', g.id, 'name', g.first_name || ' ' || g.last_name, 'email', g.email, 'phone', g.phone,
          'inApp', g.auth_user_id is not null, 'invited', g.invited_at is not null
@@ -71,7 +75,7 @@ export async function loadFamilies(tx: Queryable, group: AgeGroup | null, within
      where ($1::text is null or p.age_group::text = $1) and p.age_group::text = any ($2::text[])
      group by p.id, fg.payment, fg.in_app, fg.emergency_contacts
      order by p.age_group, p.last_name, p.first_name`,
-    [group, [...within]],
+    [group, [...within], CONTRACT.id],
   );
   return rows.map((r) => ({
     id: r.id,
@@ -83,6 +87,7 @@ export async function loadFamilies(tx: Queryable, group: AgeGroup | null, within
     inApp: r.in_app,
     consent: r.photo_consent,
     contacts: r.contacts,
+    agreed: r.agreed,
     guardians: typeof r.guardians === "string" ? (JSON.parse(r.guardians) as FamilyGuardian[]) : r.guardians,
   }));
 }

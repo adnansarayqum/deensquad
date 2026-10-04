@@ -125,3 +125,18 @@ describe("points and stars", () => {
     await expect(t.asUser(adnan, (tx) => tx.query(`insert into player_awards (player_id, stars) values ($1, 1)`, [DEV_IDS.yusuf]))).rejects.toThrow();
   });
 });
+
+describe("club contract", () => {
+  it("lets a parent sign for their own child only, once per season", async () => {
+    const sign = (user: string, player: string) =>
+      t.asUser(user, (tx) => tx.query(`select sign_agreement($1, 'contract-test', 'Adnan Sample', 'Yusuf Sample')`, [player]));
+    await sign(adnan, DEV_IDS.yusuf);
+    await sign(sara, DEV_IDS.yusuf); // the other parent: already signed, nothing changes
+    await expect(sign(adnan, otherChild)).rejects.toThrow(/not allowed/);
+    const rows = await t.asUser(coach, (tx) => tx.query<{ parent_name: string }>(`select parent_name from agreements where document = 'contract-test'`));
+    expect(rows).toEqual([{ parent_name: "Adnan Sample" }]);
+    await expect(
+      t.asUser(adnan, (tx) => tx.query(`insert into agreements (player_id, document, parent_name, player_name) values ($1, 'x', 'a', 'b')`, [DEV_IDS.musa])),
+    ).rejects.toThrow();
+  });
+});

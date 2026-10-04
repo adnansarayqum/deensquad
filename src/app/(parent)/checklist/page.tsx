@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Camera, Check, ChevronRight, CreditCard, IdCard, Phone, Shirt } from "lucide-react";
+import { Camera, Check, ChevronRight, CreditCard, FileSignature, IdCard, Phone, Shirt } from "lucide-react";
 import { AppHeader, Card, Eyebrow, Progress } from "@/components/ui";
 import { getChecklistPage } from "@/lib/parent/load";
 import type { ChecklistItemView } from "@/lib/parent/views";
 
 export const metadata: Metadata = { title: "To-do" };
 
-const icons: Record<ChecklistItemView["icon"], typeof Camera> = { card: CreditCard, camera: Camera, phone: Phone, id: IdCard };
+const icons: Record<ChecklistItemView["icon"], typeof Camera> = { card: CreditCard, camera: Camera, phone: Phone, id: IdCard, contract: FileSignature };
 
 export default async function ChecklistPage() {
   const { family, groups, done, total } = await getChecklistPage();

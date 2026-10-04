@@ -1,3 +1,4 @@
+import { CONTRACT } from "../documents/contract";
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import type { AgeGroup, Announcement, Availability, Badge, Child, CoachNote, PaymentState, Session } from "../domain";
@@ -154,11 +155,11 @@ export async function loadSquadCounts(tx: Queryable, sessionId: string, group: A
   return row ?? { coming: 0, away: 0, squad: 0 };
 }
 
-export type ChecklistFacts = { contacts: Map<string, number>; payment: Map<string, PaymentState> };
+export type ChecklistFacts = { contacts: Map<string, number>; payment: Map<string, PaymentState>; agreed?: Set<string> };
 
 export async function loadChecklistFacts(tx: Queryable, childIds: string[]): Promise<ChecklistFacts> {
-  if (childIds.length === 0) return { contacts: new Map(), payment: new Map() };
-  const [contacts, payment] = await Promise.all([
+  if (childIds.length === 0) return { contacts: new Map(), payment: new Map(), agreed: new Set() };
+  const [contacts, payment, agreed] = await Promise.all([
     tx.query<{ player_id: string; n: number }>(
       `select player_id, count(*)::int as n from emergency_contacts where player_id = any($1::uuid[]) group by player_id`,
       [childIds],
@@ -167,10 +168,12 @@ export async function loadChecklistFacts(tx: Queryable, childIds: string[]): Pro
       `select player_id, state::text as state from payment_status where player_id = any($1::uuid[])`,
       [childIds],
     ),
+    tx.query<{ player_id: string }>(`select player_id from agreements where player_id = any($1::uuid[]) and document = $2`, [childIds, CONTRACT.id]),
   ]);
   return {
     contacts: new Map(contacts.map((r) => [r.player_id, r.n])),
     payment: new Map(payment.map((r) => [r.player_id, r.state])),
+    agreed: new Set(agreed.map((r) => r.player_id)),
   };
 }
 

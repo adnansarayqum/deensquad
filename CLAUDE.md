@@ -37,6 +37,7 @@ Before committing: `npm run typecheck && npm run lint && npm test`, and `npm run
 - **Coach groups:** `staff.age_groups` (set on Admin → Staff; empty = every group). `staffGroups()`/`isGroupCoach()` in `session.ts` limit a coach's register, families list, news audience (no "everyone") and awards to their groups. Enforced in the app layer, not RLS.
 - **Self sign-up (`/sign-up`, `src/lib/auth/registration.ts`):** no approval. The details ride on the sign-in request (`auth.sign_in_requests.registration`) and the family is created only when the emailed code/link is used (`finish` → `applyRegistration`); admins get a "New family signed up" email. An existing email just gets new children added by name.
 - **Points and stars (`player_awards`, `src/lib/awards`, `/coach/awards`):** coaches (own groups) and admins give a star and/or 1–50 points with a reason, plus coach notes; parents see totals and recent awards on the player screen.
+- **Club contract (`src/lib/documents/contract.ts`, `/checklist/agreement`, `agreements`):** the club's player-parent contract text, agreed per child via `sign_agreement()` (security definer, own children only). `CONTRACT.id` names the season; change it to ask everyone again. It's a To-do step; admins see "Contract not signed" on Families. Safeguarding can be added as another document the same way.
 - Tests: `db/schema.test.ts` (RLS as different people), `src/**/*.test.ts` (auth, import, views) on PGlite via `test/db.ts`; `e2e/` signs in with codes from the outbox.
 
 ## Next.js 16 notes (this is newer than most training data)

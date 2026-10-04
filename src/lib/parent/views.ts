@@ -63,7 +63,7 @@ export type ChecklistItemView = {
   title: string;
   detail: string;
   actionLabel: string;
-  icon: "card" | "camera" | "phone" | "id";
+  icon: "card" | "camera" | "phone" | "id" | "contract";
   done: boolean;
   href?: string;
 };
@@ -108,6 +108,19 @@ export function buildChecklist(child: Child, facts: ChecklistFacts): ChecklistIt
       done: payment === "active" || payment === "self_reported",
       href: `/checklist/payment${q}`,
     },
+    ...(facts.agreed
+      ? [
+          {
+            id: "agreement" as const,
+            title: "Club contract",
+            detail: facts.agreed.has(child.id) ? "Signed for this season" : `Read and agree with ${child.firstName}`,
+            actionLabel: "Read",
+            icon: "contract" as const,
+            done: facts.agreed.has(child.id),
+            href: `/checklist/agreement${q}`,
+          },
+        ]
+      : []),
     {
       id: "photo-consent",
       title: "Photo consent",
