@@ -47,7 +47,7 @@ export async function sendEmails(emails: Email[]): Promise<void> {
 
   const outbox = process.env.EMAIL_OUTBOX ?? (process.env.NODE_ENV !== "production" ? ".data/outbox.jsonl" : null);
   if (outbox) {
-    const file = resolve(outbox);
+    const file = resolve(/*turbopackIgnore: true*/ outbox);
     mkdirSync(dirname(file), { recursive: true });
     for (const e of emails) {
       appendFileSync(file, JSON.stringify({ ...e, at: new Date().toISOString() }) + "\n");

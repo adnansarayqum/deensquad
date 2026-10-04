@@ -35,7 +35,7 @@ async function open(): Promise<Database> {
     if (target === "memory") {
       db = await pgliteDatabase();
     } else {
-      const dir = resolve(target);
+      const dir = resolve(/*turbopackIgnore: true*/ target);
       mkdirSync(dir, { recursive: true });
       db = await pgliteDatabase(dir);
     }
