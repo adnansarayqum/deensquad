@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarX, ChevronRight, Clock, MoonStar, QrCode, Shirt } from "lucide-react";
+import { BookOpen, CalendarX, ChevronRight, ClipboardList, Clock, MoonStar, QrCode, Shirt } from "lucide-react";
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
+import { Attachment } from "@/components/plans/Attachment";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { clock, shortDay } from "@/lib/dates";
 import type { Session } from "@/lib/domain";
 import type { SquadCounts } from "@/lib/parent/data";
 import { getFridayPage } from "@/lib/parent/load";
 import type { ChildWeek } from "@/lib/parent/views";
+import type { SessionPlan } from "@/lib/plans/data";
 
 export const metadata: Metadata = { title: "Friday" };
 
 export default async function FridayPage() {
-  const { family, week, upcoming } = await getFridayPage();
+  const { family, week, upcoming, plans, latestSheet } = await getFridayPage();
   const single = week.length === 1 ? week[0] : null;
   const sessions = uniqueSessions(week);
 
@@ -78,6 +80,23 @@ export default async function FridayPage() {
         {sessions.filter((s) => !s.cancelled).map((s) => (
           <Briefing key={s.id} session={s} labelled={sessions.length > 1} />
         ))}
+
+        {plans.map((p) => (
+          <PlanCard key={p.id} plan={p} sessionLabel={sessions.length > 1 ? sessions.find((s) => s.id === p.sessionId) : undefined} />
+        ))}
+
+        {latestSheet ? (
+          <Link href="/practice" className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-grass-tint text-grass-text">
+              <BookOpen aria-hidden size={22} />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-[15px] font-bold">Practise at home</span>
+              <span className="truncate text-[13px] text-ink-muted">Latest: {latestSheet.title}</span>
+            </span>
+            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+          </Link>
+        ) : null}
 
         {single?.session && !single.session.cancelled && single.counts ? (
           <Headcount group={single.child.ageGroup} counts={single.counts} />
@@ -220,6 +239,24 @@ function NoSession({ name }: { name: string }) {
         <MoonStar aria-hidden size={24} />
       </span>
       <p className="text-[15px] leading-[22px]">No session scheduled for {name}&apos;s group yet. The club will add the dates here.</p>
+    </Card>
+  );
+}
+
+function PlanCard({ plan, sessionLabel }: { plan: SessionPlan; sessionLabel?: Session }) {
+  return (
+    <Card className="flex flex-col gap-2.5 p-4">
+      <div className="flex items-center gap-2.5">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-grass-tint text-grass-text">
+          <ClipboardList aria-hidden size={20} />
+        </span>
+        <h2 className="text-[17px] font-extrabold">
+          {plan.ageGroup} session plan{sessionLabel ? <span className="font-bold text-ink-muted"> · {shortDay(sessionLabel.startsAt)}</span> : null}
+        </h2>
+      </div>
+      {plan.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{plan.body}</p> : null}
+      {plan.file ? <Attachment file={plan.file} label={plan.body ? "Full plan" : plan.file.name} /> : null}
+      {plan.from ? <p className="text-[13px] text-ink-muted">From {plan.from}</p> : null}
     </Card>
   );
 }

@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { requireParent } from "../auth/session";
 import { loadAwards } from "../awards/data";
+import { loadPlans, loadPracticeSheets } from "../plans/data";
 import { asUser } from "../db";
 import type { Child } from "../domain";
 import {
@@ -72,7 +73,22 @@ export async function getFridayPage() {
   const { user, family } = await getFamily();
   const { sessions, week } = await loadWeek(user.id, family, new Date());
   const shown = new Set(week.flatMap((w) => (w.session ? [w.session.id] : [])));
-  return { family, week, upcoming: sessions.filter((s) => !shown.has(s.id)).slice(0, 4) };
+  const groups = familyGroups(family);
+  const [plans, sheets] = await asUser(user.id, (tx) => Promise.all([loadPlans(tx, [...shown], groups), loadPracticeSheets(tx, groups, 3)]));
+  // Only the plan for each child's own group at the session they're going to.
+  const wanted = new Set(week.flatMap((w) => (w.session && !w.session.cancelled ? [`${w.session.id}|${w.child.ageGroup}`] : [])));
+  return {
+    family,
+    week,
+    upcoming: sessions.filter((s) => !shown.has(s.id)).slice(0, 4),
+    plans: plans.filter((p) => wanted.has(`${p.sessionId}|${p.ageGroup}`)),
+    latestSheet: sheets[0] ?? null,
+  };
+}
+
+export async function getPracticePage() {
+  const { user, family } = await getFamily();
+  return { family, sheets: await asUser(user.id, (tx) => loadPracticeSheets(tx, familyGroups(family))) };
 }
 
 export async function getChecklistPage() {

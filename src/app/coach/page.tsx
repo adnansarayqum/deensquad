@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Check, ChevronLeft, Star } from "lucide-react";
+import { Check, ChevronLeft, ClipboardList, Star } from "lucide-react";
 import { CheckInButton, UndoCheckInButton } from "@/components/CheckInButton";
 import { PassScanner } from "@/components/PassScanner";
 import { Progress } from "@/components/ui";
@@ -38,6 +38,10 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
         <Link href="/coach/awards" className="inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-bold text-floodlight">
           <Star aria-hidden size={16} fill="currentColor" strokeWidth={0} />
           Points and stars
+        </Link>
+        <Link href="/coach/plans" className="inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-bold text-floodlight">
+          <ClipboardList aria-hidden size={16} />
+          Session plans
         </Link>
       </div>
     );
@@ -93,10 +97,16 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
           </nav>
         ) : null}
         <PassScanner />
-        <Link href="/coach/awards" className="inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-bold text-floodlight">
-          <Star aria-hidden size={16} fill="currentColor" strokeWidth={0} />
-          Points and stars
-        </Link>
+        <div className="flex flex-wrap gap-x-5">
+          <Link href="/coach/awards" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-floodlight">
+            <Star aria-hidden size={16} fill="currentColor" strokeWidth={0} />
+            Points and stars
+          </Link>
+          <Link href="/coach/plans" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-floodlight">
+            <ClipboardList aria-hidden size={16} />
+            Session plans
+          </Link>
+        </div>
       </header>
 
       {s.latest.map((r) => (

@@ -318,3 +318,38 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
   await expect(page.getByText("Brilliant first touch", { exact: false })).toBeVisible();
   await page.screenshot({ path: shot("player-awards"), fullPage: true });
 });
+
+test("plans: the club shares a U10 session plan and a practice sheet; the parent opens them", async ({ page }) => {
+  const pdf = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
+  await signIn(page, "admin@deensquad.test");
+  await page.goto("/coach/plans");
+  await page.getByRole("link", { name: /U10/ }).first().click();
+  await page.getByLabel("What you'll work on").fill("Warm-up: rondos\nMain: passing on the move");
+  await page.getByLabel(/Attach a PDF or photo/).setInputFiles({ name: "u10-plan.pdf", mimeType: "application/pdf", buffer: pdf });
+  await page.getByRole("button", { name: "Share with parents" }).click();
+  await expect(page.getByText(/U10 parents can see it/)).toBeVisible();
+  await page.screenshot({ path: shot("coach-plan"), fullPage: true });
+
+  await page.goto("/coach/practice");
+  await page.getByLabel("Title").fill("Keepy-uppy challenge");
+  await page.getByLabel(/Instructions/).fill("Ten minutes a day. Tell your coach your best score on Friday.");
+  await page.getByRole("button", { name: "Share with parents" }).click();
+  await expect(page.getByText(/Shared\. Parents in those groups/)).toBeVisible();
+
+  await page.context().clearCookies();
+  await signIn(page, "sara@example.com");
+  await page.goto("/friday");
+  await expect(page.getByRole("heading", { name: /U10 session plan/ })).toBeVisible();
+  await expect(page.getByText("Main: passing on the move")).toBeVisible();
+  const href = await page.getByRole("link", { name: /Full plan/ }).getAttribute("href");
+  const res = await page.request.get(href!);
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-type"]).toBe("application/pdf");
+  await page.screenshot({ path: shot("friday-plan"), fullPage: true });
+  await page.getByRole("link", { name: /Practise at home/ }).click();
+  await expect(page.getByRole("heading", { name: "Keepy-uppy challenge" })).toBeVisible();
+
+  await page.context().clearCookies();
+  const anon = await page.request.get(href!, { maxRedirects: 0 });
+  expect(anon.status()).not.toBe(200);
+});

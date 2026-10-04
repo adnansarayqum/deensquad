@@ -140,3 +140,38 @@ describe("club contract", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("session plans and practice sheets", () => {
+  it("shows a plan and its file to the group's families only", async () => {
+    const [session] = await t.asSystem((tx) =>
+      tx.query<{ id: string }>(`select id from sessions where 'U10' = any (age_groups) and starts_at > now() order by starts_at limit 1`),
+    );
+    const [{ id: fileId }] = await t.asUser(coach, (tx) =>
+      tx.query<{ id: string }>(`insert into club_files (name, mime, size, data) values ('plan.pdf', 'application/pdf', 4, $1) returning id`, [
+        new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+      ]),
+    );
+    await t.asUser(coach, (tx) =>
+      tx.query(`insert into session_plans (session_id, age_group, body, file_id) values ($1, 'U10', 'Rondos', $2)`, [session.id, fileId]),
+    );
+    // Adnan has a U10 child; parent1 (U10 too in the seed) can see it; a family without U10 can't.
+    const seen = await t.asUser(adnan, (tx) => tx.query<{ body: string }>(`select body from session_plans`));
+    expect(seen).toEqual([{ body: "Rondos" }]);
+    const file = await t.asUser(adnan, (tx) => tx.query<{ size: number }>(`select size from club_files where id = $1`, [fileId]));
+    expect(file).toEqual([{ size: 4 }]);
+
+    const [hana] = await t.asSystem((tx) =>
+      tx.query<{ id: string }>(`insert into guardians (first_name, last_name, email) values ('Hana', 'R', 'hana@example.com') returning id`),
+    );
+    const [kid] = await t.asSystem((tx) => tx.query<{ id: string }>(`insert into players (first_name, last_name, age_group) values ('Ali', 'R', 'U15') returning id`));
+    await t.asSystem((tx) => tx.query(`insert into player_guardians (player_id, guardian_id) values ($1, $2)`, [kid.id, hana.id]));
+    const outsider = await t.signIn("hana@example.com");
+    expect(await t.asUser(outsider, (tx) => tx.query(`select 1 from session_plans`))).toHaveLength(0);
+    expect(await t.asUser(outsider, (tx) => tx.query(`select 1 from club_files where id = $1`, [fileId]))).toHaveLength(0);
+
+    await t.asUser(coach, (tx) => tx.query(`insert into practice_sheets (title, age_groups) values ('U15 drills', '{U15}'), ('For everyone', '{}')`));
+    const sheets = await t.asUser(outsider, (tx) => tx.query<{ title: string }>(`select title from practice_sheets order by title`));
+    expect(sheets.map((s) => s.title)).toEqual(["For everyone", "U15 drills"]);
+    await expect(t.asUser(outsider, (tx) => tx.query(`insert into practice_sheets (title) values ('x')`))).rejects.toThrow();
+  });
+});

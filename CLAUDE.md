@@ -38,6 +38,7 @@ Before committing: `npm run typecheck && npm run lint && npm test`, and `npm run
 - **Self sign-up (`/sign-up`, `src/lib/auth/registration.ts`):** no approval. The details ride on the sign-in request (`auth.sign_in_requests.registration`) and the family is created only when the emailed code/link is used (`finish` → `applyRegistration`); admins get a "New family signed up" email. An existing email just gets new children added by name.
 - **Points and stars (`player_awards`, `src/lib/awards`, `/coach/awards`):** coaches (own groups) and admins give a star and/or 1–50 points with a reason, plus coach notes; parents see totals and recent awards on the player screen.
 - **Club contract (`src/lib/documents/contract.ts`, `/checklist/agreement`, `agreements`):** the club's player-parent contract text, agreed per child via `sign_agreement()` (security definer, own children only). `CONTRACT.id` names the season; change it to ask everyone again. It's a To-do step; admins see "Contract not signed" on Families. Safeguarding can be added as another document the same way.
+- **Session plans and home practice (`src/lib/plans`, `/coach/plans`, `/coach/practice`, `/practice`):** coaches (own groups) and admins write a plan per session per group and post practice sheets, each with an optional PDF or photo (≤ 8 MB, type checked by its bytes in `src/lib/files.ts`). Files live in Postgres (`club_files`, bytea) and are served by `GET /api/files/[id]`, where RLS lets a family open only files on plans or sheets for their groups. Parents see their child's plan and the latest practice sheet on Friday. Server Action body limit is 9 MB in `next.config.ts`.
 - Tests: `db/schema.test.ts` (RLS as different people), `src/**/*.test.ts` (auth, import, views) on PGlite via `test/db.ts`; `e2e/` signs in with codes from the outbox.
 
 ## Next.js 16 notes (this is newer than most training data)
@@ -63,5 +64,5 @@ Before committing: `npm run typecheck && npm run lint && npm test`, and `npm run
 
 1. Done: Postgres on Railway, email sign-in, admin import/invites/news/sessions/staff. Club domain verified in Resend; `EMAIL_FROM` is app@thedeensquadfootballacademy.co.uk. Next: import real families.
 2. Done: chase ladder (push, email 24h, SMS 48h when Twilio is set, gate flag). Later: automatic WhatsApp once the club has a WhatsApp Business account.
-3. Admin: Saturday report, badges and coach notes UI, weekly challenge, voice-note announcements (needs file storage).
+3. Done: points and stars, coach notes, session plans and practice sheets. Next: Saturday report, weekly challenge, voice-note announcements.
 4. Push notifications and offline support (service worker), TeamFeePay export import.
