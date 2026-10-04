@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Receipt, ShoppingBasket } from "lucide-react";
-import { BackHeader } from "@/components/BackHeader";
-import { Card } from "@/components/ui";
+import { AppHeader, Card, ScreenTitle } from "@/components/ui";
 import { ProductImage } from "@/components/shop/ProductImage";
 import { formatPence } from "@/lib/shop/data";
 import { getShopPage } from "@/lib/shop/load";
@@ -13,9 +12,10 @@ export default async function ShopPage() {
   const { products, basketCount } = await getShopPage();
   return (
     <>
-      <BackHeader back="/checklist" backLabel="To-do" title="Club shop">
-        Order kit here and pick it up at Friday training.
-      </BackHeader>
+      <AppHeader>
+        <ScreenTitle>Club shop</ScreenTitle>
+        <p className="text-sm text-on-pitch-muted">Order kit here and pick it up at Friday training.</p>
+      </AppHeader>
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
         <div className="grid grid-cols-2 gap-2">
           <Link href="/shop/basket" className="btn-chunky btn-paper btn-small">
