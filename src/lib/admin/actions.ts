@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { coachLimit, isGroupCoach, requireAdmin, requireStaff, staffGroups } from "../auth/session";
 import { UUID, normaliseEmail } from "../auth/tokens";
 import { appUrl } from "../config";
@@ -293,9 +294,10 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
       [topic, title, body, everyone ? null : groups, formData.get("requiresAck") === "on", user.staff.id, squadSession ?? null],
     ),
   );
-  // First rung of the chase ladder: notify parents now (unless it's night-time; the hourly run picks it up at 8am).
+  // First rung of the chase ladder: notify parents once the response has gone (unless it's night-time; the hourly
+  // run picks it up at 8am), so a slow push or email service never holds up or fails the post.
   if (formData.get("requiresAck") === "on") {
-    await runChase({ announcementId: row.id }).catch((e) => console.error("[chase] on post:", e instanceof Error ? e.message : e));
+    after(() => runChase({ announcementId: row.id }).catch((e) => console.error("[chase] on post:", e instanceof Error ? e.message : e)));
   }
   redirect(`/admin/news/${row.id}?posted=1`);
 }

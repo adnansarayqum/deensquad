@@ -19,6 +19,7 @@ vi.mock("next/navigation", () => ({
     throw new Error(`redirect ${url}`);
   },
 }));
+vi.mock("next/server", () => ({ after: (fn: () => unknown) => void fn() }));
 vi.mock("../chase/run", () => ({ runChase: async () => ({}) }));
 
 const { postNews } = await import("../admin/actions");

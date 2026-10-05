@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { isGroupCoach, requireStaff, staffGroups } from "../auth/session";
 import { UUID } from "../auth/tokens";
 import { asUser } from "../db";
@@ -11,6 +12,11 @@ import { cleanBody, cleanText } from "../validate";
 import { runPlanNotifications } from "./run";
 
 export type PlanState = { error?: string; saved?: boolean };
+
+/** Announces new plans and sheets once the response has gone, so a slow or failing push never holds up or fails a save. */
+function notifyAfterResponse() {
+  after(() => runPlanNotifications().catch((e) => console.error("[plans] notify after save:", e instanceof Error ? e.message : e)));
+}
 
 /** Writes (or replaces) a group's plan for a session: text, an attachment, or both. */
 export async function savePlan(_prev: PlanState, formData: FormData): Promise<PlanState> {
@@ -42,7 +48,7 @@ export async function savePlan(_prev: PlanState, formData: FormData): Promise<Pl
     return null;
   });
   if (error) return { error };
-  await runPlanNotifications();
+  notifyAfterResponse();
   refresh();
   return { saved: true };
 }
@@ -83,7 +89,7 @@ export async function addPracticeSheet(_prev: PlanState, formData: FormData): Pr
       user.staff.id,
     ]);
   });
-  await runPlanNotifications();
+  notifyAfterResponse();
   refresh();
   return { saved: true };
 }
