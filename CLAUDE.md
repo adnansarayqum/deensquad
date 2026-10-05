@@ -44,6 +44,7 @@ Before committing: `npm run typecheck && npm run lint && npm test`, and `npm run
 - **Badges:** the club's badges are seeded by migration 0012; coaches (own groups) and admins award or take them back on `/coach/awards/[id]` (`setBadge`).
 - **Spreadsheet downloads (`src/lib/exports`, `GET /api/admin/export/[kind]`, admins only):** families and payments, attendance this season (from 1 August), shop orders, points/stars/badges. CSV with a BOM; cells starting = + - @ are defused.
 - **Privacy notice (`/privacy`, public):** built into the app and linked from sign-in, sign-up and the player screen; `CLUB_EMAIL` adds a contact address, `PRIVACY_URL` swaps in an external page. Keep it in step with what the app collects and which processors it uses (Railway, Resend, Anthropic, SumUp, push services). Retention periods in it are club policy, not automated.
+- **Error alerts (`src/lib/alerts.ts`, `onRequestError` in `src/instrumentation.ts`):** in production, a failed page/action/route emails `ALERT_EMAIL` (default `ADMIN_EMAILS`), at most once per 30 minutes, with the path and message only. Railway itself emails crashes and failed deploys. Postgres volume backups: daily, weekly and monthly schedules on the Railway volume.
 - Tests: `db/schema.test.ts` (RLS as different people), `src/**/*.test.ts` (auth, import, views) on PGlite via `test/db.ts`; `e2e/` signs in with codes from the outbox.
 
 ## Next.js 16 notes (this is newer than most training data)
