@@ -217,7 +217,10 @@ const NEWS_COLUMNS = `a.id, a.topic, a.title, a.body, a.audience::text[] as audi
   a.squad_session_id, (select ss.title from sessions ss where ss.id = a.squad_session_id) as squad_title,
   (select count(distinct pg.guardian_id)::int from player_guardians pg join players p on p.id = pg.player_id
     where ${newsReaches()}) as audience_count,
-  (select count(*)::int from announcement_reads r where r.announcement_id = a.id) as read_count`;
+  -- parents who've read it and still have a child it reaches (a squad message follows the squad as it changes)
+  (select count(distinct r.guardian_id)::int from announcement_reads r
+    join player_guardians pg on pg.guardian_id = r.guardian_id join players p on p.id = pg.player_id
+    where r.announcement_id = a.id and ${newsReaches()}) as read_count`;
 
 type NewsDbRow = {
   id: string;
