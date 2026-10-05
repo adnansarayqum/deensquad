@@ -451,6 +451,7 @@ test("writing help, downloads and badges: AI tidies a draft, an admin downloads 
   await signIn(page, "admin@deensquad.test");
   await page.goto("/admin/news");
   await expect(page.getByRole("button", { name: "Dictate" })).toBeVisible();
+  await expect(page.getByText("First names only. Don't include children's surnames.")).toBeVisible();
   await page.getByLabel("Message").fill("pitch shut sat council reseeding");
   await page.getByRole("button", { name: "Tidy up with AI" }).click();
   await expect(page.getByLabel("Headline")).toHaveValue("Pitch closed on Saturday");

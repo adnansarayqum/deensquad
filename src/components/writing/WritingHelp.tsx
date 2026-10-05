@@ -153,6 +153,7 @@ export function WritingHelp({
           </button>
         ) : null}
       </div>
+      {ai ? <p className="text-sm text-ink-muted">First names only. Don&apos;t include children&apos;s surnames.</p> : null}
       {listening ? (
         <p role="status" className="text-sm text-ink-muted">
           Listening. Speak normally; your words appear in the box.
