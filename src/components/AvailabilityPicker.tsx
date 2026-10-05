@@ -12,6 +12,7 @@ export function AvailabilityPicker({
   childName,
   question,
   compact = false,
+  squad = false,
 }: {
   sessionId: string;
   playerId: string;
@@ -20,6 +21,8 @@ export function AvailabilityPicker({
   question: string;
   /** Shorter buttons when several children are listed on one screen. */
   compact?: boolean;
+  /** A tournament squad invite: the same answers, worded as "can play" and "can't play". */
+  squad?: boolean;
 }) {
   const [optimistic, setOptimistic] = useOptimistic(answer);
   const [pending, startTransition] = useTransition();
@@ -45,7 +48,7 @@ export function AvailabilityPicker({
           className={`${base} ${coming ? "border-grass bg-grass text-on-grass shadow-lip-grass" : "border-line bg-paper text-ink shadow-lip-neutral"}`}
         >
           <Check aria-hidden size={icon} strokeWidth={3} />
-          Coming
+          {squad ? "Yes" : "Coming"}
         </button>
         <button
           type="button"
@@ -54,16 +57,20 @@ export function AvailabilityPicker({
           className={`${base} ${away ? "border-kit-orange bg-kit-orange text-on-orange shadow-[0_4px_0_#7a3310]" : "border-line bg-paper text-ink shadow-lip-neutral"}`}
         >
           <X aria-hidden size={icon} strokeWidth={3} />
-          Not this week
+          {squad ? "No" : "Not this week"}
         </button>
       </div>
       <p className="text-center text-sm text-ink-muted" aria-live="polite">
         {pending
           ? "Saving…"
           : coming
-            ? `Saved. Coach can see ${childName} is coming.`
+            ? squad
+              ? `Saved. The coach can see ${childName} can play.`
+              : `Saved. Coach can see ${childName} is coming.`
             : away
-              ? `Saved. Coach knows ${childName} is away this week.`
+              ? squad
+                ? `Saved. The coach knows ${childName} can't play, so they can ask a reserve.`
+                : `Saved. Coach knows ${childName} is away this week.`
               : `Tap once. ${childName}'s coach sees it straight away.`}
       </p>
     </div>

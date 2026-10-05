@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AdminTitle, Section } from "@/components/admin/bits";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
@@ -136,11 +137,18 @@ function SessionList({ title, sessions, mine, editable = false }: { title: strin
               {s.ageGroups.join(", ")} · {s.venue}
             </span>
             <span className="text-[13px]">
-              {editable ? `${s.coming} coming · ${s.away} away` : `${s.attended} checked in`}
+              {editable ? `${s.coming} ${s.picked ? "confirmed" : "coming"} · ${s.away} ${s.picked ? "can't play" : "away"}` : `${s.attended} checked in`}
             </span>
+            {s.picked ? <span className="text-[13px] font-bold">Squad: {s.picked} picked</span> : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {s.cancelled ? <Pill tone="action">Cancelled</Pill> : null}
+            {/* Tournament squads: pick who plays (matches and tournaments, or any session that already has a squad). */}
+            {canChange(s) && (s.picked > 0 || s.kind !== "training") ? (
+              <Link href={`/admin/sessions/${s.id}/squad`} className="btn-chunky btn-paper btn-small" aria-label={`${s.picked ? "Squad" : "Pick squad"} for ${s.title} ${shortDay(s.startsAt)}`}>
+                {s.picked ? "Squad" : "Pick squad"}
+              </Link>
+            ) : null}
             {canChange(s) ? (
               <form action={setSessionCancelled}>
                 <input type="hidden" name="id" value={s.id} />

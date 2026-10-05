@@ -8,13 +8,13 @@ import { clock, shortDay } from "@/lib/dates";
 import type { Session } from "@/lib/domain";
 import type { SquadCounts } from "@/lib/parent/data";
 import { getFridayPage } from "@/lib/parent/load";
-import type { ChildWeek } from "@/lib/parent/views";
+import { availabilityQuestion, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
 import type { SessionPlan } from "@/lib/plans/data";
 
 export const metadata: Metadata = { title: "Friday" };
 
 export default async function FridayPage() {
-  const { family, week, upcoming, plans, latestSheet } = await getFridayPage();
+  const { family, week, invites, upcoming, plans, latestSheet } = await getFridayPage();
   const single = week.length === 1 ? week[0] : null;
   const sessions = uniqueSessions(week);
 
@@ -26,9 +26,14 @@ export default async function FridayPage() {
             {shortDay(single.session.startsAt)} · {single.child.ageGroup}s
           </p>
           <h1 className="font-display text-[48px] leading-[0.92] tracking-[0.02em]">
-            {single.session.cancelled ? `${single.session.title} cancelled` : `Is ${single.child.firstName} coming?`}
+            {single.session.cancelled
+              ? `${single.session.title} cancelled`
+              : single.session.squad
+                ? `Can ${single.child.firstName} play?`
+                : `Is ${single.child.firstName} coming?`}
           </h1>
           <p className="text-sm text-on-pitch-muted">
+            {single.session.squad ? `${single.session.title} · ` : ""}
             {clock(single.session.startsAt)}–{clock(single.session.endsAt)} · {single.session.venue}
           </p>
         </AppHeader>
@@ -67,7 +72,8 @@ export default async function FridayPage() {
                 playerId={single.child.id}
                 answer={single.answer}
                 childName={single.child.firstName}
-                question={`Is ${single.child.firstName} coming? ${shortDay(single.session.startsAt)}`}
+                question={availabilityQuestion(single.child.firstName, single.session, shortDay(single.session.startsAt))}
+                squad={Boolean(single.session.squad)}
               />
             )
           ) : (
@@ -76,6 +82,10 @@ export default async function FridayPage() {
         ) : (
           week.map((w) => <ChildCard key={w.child.id} week={w} />)
         )}
+
+        {invites.map((i) => (
+          <InviteCard key={`${i.session.id}:${i.child.id}`} invite={i} />
+        ))}
 
         {sessions.filter((s) => !s.cancelled).map((s) => (
           <Briefing key={s.id} session={s} labelled={sessions.length > 1} />
@@ -99,7 +109,7 @@ export default async function FridayPage() {
         ) : null}
 
         {single?.session && !single.session.cancelled && single.counts ? (
-          <Headcount group={single.child.ageGroup} counts={single.counts} />
+          <Headcount group={single.child.ageGroup} counts={single.counts} squad={Boolean(single.session.squad)} />
         ) : null}
 
         {upcoming.length > 0 ? (
@@ -150,6 +160,7 @@ function ChildCard({ week: w }: { week: ChildWeek }) {
       {w.session ? (
         <>
           <p className="-mt-1.5 text-sm text-ink-muted">
+            {w.session.squad ? `${w.session.title} · ` : ""}
             {shortDay(w.session.startsAt)} · {clock(w.session.startsAt)}–{clock(w.session.endsAt)} · {w.session.venue}
           </p>
           {w.session.cancelled ? (
@@ -160,7 +171,8 @@ function ChildCard({ week: w }: { week: ChildWeek }) {
               playerId={w.child.id}
               answer={w.answer}
               childName={name}
-              question={`Is ${name} coming? ${shortDay(w.session.startsAt)}`}
+              question={availabilityQuestion(name, w.session, shortDay(w.session.startsAt))}
+              squad={Boolean(w.session.squad)}
               compact
             />
           )}
@@ -168,6 +180,25 @@ function ChildCard({ week: w }: { week: ChildWeek }) {
       ) : (
         <p className="text-[15px] text-ink-muted">No session scheduled for {name}&apos;s group yet.</p>
       )}
+    </Card>
+  );
+}
+
+/** A squad session further ahead than the child's next session: the family is asked straight away. */
+function InviteCard({ invite: { child, session, answer } }: { invite: SquadInvite }) {
+  const question = availabilityQuestion(child.firstName, session, shortDay(session.startsAt));
+  return (
+    <Card tone="gold" className="flex flex-col gap-3 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <Pill tone="gold">Picked for the squad</Pill>
+        {answer ? null : <Pill tone="action">Please answer</Pill>}
+      </div>
+      <h2 className="text-[19px] leading-[25px] font-extrabold">{question}</h2>
+      <p className="-mt-1.5 text-sm text-ink-muted">
+        {clock(session.startsAt)}–{clock(session.endsAt)} · {session.venue}
+        {session.arriveBy ? ` · arrive ${session.arriveBy}` : ""}
+      </p>
+      <AvailabilityPicker sessionId={session.id} playerId={child.id} answer={answer} childName={child.firstName} question={question} squad compact />
     </Card>
   );
 }
@@ -199,20 +230,20 @@ function Briefing({ session, labelled }: { session: Session; labelled: boolean }
   );
 }
 
-function Headcount({ group, counts }: { group: string; counts: SquadCounts }) {
+function Headcount({ group, counts, squad }: { group: string; counts: SquadCounts; squad: boolean }) {
   const unanswered = Math.max(0, counts.squad - counts.coming - counts.away);
   const total = Math.max(1, counts.squad);
   return (
-    <section aria-label={`${group}s this week`} className="flex items-center gap-4 rounded-app bg-pitch-deep p-4 text-on-pitch">
+    <section aria-label={squad ? `${group}s in the squad` : `${group}s this week`} className="flex items-center gap-4 rounded-app bg-pitch-deep p-4 text-on-pitch">
       <span className="font-display text-[56px] leading-[0.9] text-floodlight tabular-nums">{counts.coming}</span>
       <div className="flex flex-1 flex-col gap-1.5">
-        <span className="text-[15px] font-bold">{group}s coming this week</span>
+        <span className="text-[15px] font-bold">{squad ? `of the ${counts.squad} ${group}s picked can play` : `${group}s coming this week`}</span>
         <div className="flex h-2.5 overflow-hidden rounded-pill bg-pitch" aria-hidden>
           <div className="bg-grass" style={{ width: `${(counts.coming / total) * 100}%` }} />
           <div className="bg-kit-orange" style={{ width: `${(counts.away / total) * 100}%` }} />
         </div>
         <span className="text-[13px] text-on-pitch-muted">
-          {counts.away} away · {unanswered} still to answer
+          {counts.away} {squad ? "can't play" : "away"} · {unanswered} still to answer
         </span>
       </div>
     </section>

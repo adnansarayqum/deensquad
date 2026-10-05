@@ -96,7 +96,7 @@ export default async function AdminNewsPage() {
           {news.map((n) => (
             <Link key={n.id} href={`/admin/news/${n.id}`} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper px-4 py-3">
               <span className="text-[13px] text-ink-muted">
-                {n.topic} · {n.audience ? n.audience.join(", ") : "Every family"} · {postedLabel(n.postedAt, now)}
+                {n.topic} · {n.squad ? `Squad · ${n.squad.title}` : n.audience ? n.audience.join(", ") : "Every family"} · {postedLabel(n.postedAt, now)}
                 {n.postedBy ? ` · ${n.postedBy}` : ""}
               </span>
               <span className="text-base font-bold">{n.title}</span>

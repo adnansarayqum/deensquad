@@ -50,7 +50,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
 
       <Section title={news.title}>
         <p className="text-[13px] text-ink-muted">
-          {news.topic} · {news.audience ? news.audience.join(", ") : "Every family"} · {postedLabel(news.postedAt, new Date())}
+          {news.topic} · {news.squad ? `Squad · ${news.squad.title}` : news.audience ? news.audience.join(", ") : "Every family"} · {postedLabel(news.postedAt, new Date())}
           {news.postedBy ? ` · ${news.postedBy}` : ""}
         </p>
         <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
