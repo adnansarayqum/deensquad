@@ -21,6 +21,8 @@ export function cleanPhone(value: unknown): string | null {
   const digits = raw.replace(/\D/g, "");
   if (raw.startsWith("+")) return digits.length >= 8 && digits.length <= 15 ? `+${digits}` : null;
   if (/^0\d{10}$/.test(digits)) return `${digits.slice(0, 5)} ${digits.slice(5)}`;
+  // A UK mobile whose leading 0 was dropped (Excel stores 07700900123 as the number 7700900123).
+  if (/^7\d{9}$/.test(digits)) return `0${digits.slice(0, 4)} ${digits.slice(4)}`;
   if (/^44\d{10}$/.test(digits)) return `+${digits}`;
   return null;
 }
