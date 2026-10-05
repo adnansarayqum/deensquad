@@ -54,7 +54,7 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/coa
           {plan?.file ? (
             <div className="flex flex-col gap-2">
               <span className="field-label">Attached</span>
-              <Attachment file={plan.file} />
+              <Attachment file={plan.file} from={`/coach/plans/${session.id}?group=${group}`} />
               <label className="flex min-h-11 items-center gap-3 text-[15px]">
                 <input type="checkbox" name="removeFile" className="h-5 w-5 accent-[var(--grass)]" />
                 Remove this attachment

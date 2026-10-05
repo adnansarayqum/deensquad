@@ -26,7 +26,7 @@ export default async function PracticePage() {
               {s.ageGroups.length ? <Pill tone="neutral">{s.ageGroups.join(", ")}</Pill> : null}
             </div>
             {s.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{s.body}</p> : null}
-            {s.file ? <Attachment file={s.file} /> : null}
+            {s.file ? <Attachment file={s.file} from="/practice" /> : null}
             <p className="text-[13px] text-ink-muted">{[s.from, day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</p>
           </Card>
         ))}

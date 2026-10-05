@@ -286,7 +286,7 @@ function PlanCard({ plan, sessionLabel }: { plan: SessionPlan; sessionLabel?: Se
         </h2>
       </div>
       {plan.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{plan.body}</p> : null}
-      {plan.file ? <Attachment file={plan.file} label={plan.body ? "Full plan" : plan.file.name} /> : null}
+      {plan.file ? <Attachment file={plan.file} label={plan.body ? "Full plan" : plan.file.name} from="/friday" /> : null}
       {plan.from ? <p className="text-[13px] text-ink-muted">From {plan.from}</p> : null}
     </Card>
   );

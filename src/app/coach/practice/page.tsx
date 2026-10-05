@@ -86,7 +86,7 @@ export default async function StaffPracticePage() {
             <Pill tone="neutral">{s.ageGroups.length ? s.ageGroups.join(", ") : "Everyone"}</Pill>
           </div>
           {s.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{s.body}</p> : null}
-          {s.file ? <Attachment file={s.file} /> : null}
+          {s.file ? <Attachment file={s.file} from="/coach/practice" /> : null}
           <div className="flex items-center justify-between gap-2 text-[13px] text-ink-muted">
             <span>{[s.from, day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</span>
             {user.staff.role === "admin" || s.postedById === user.staff.id ? (

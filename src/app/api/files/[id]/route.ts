@@ -1,10 +1,12 @@
 import { getCurrentUser } from "@/lib/auth/session";
 import { UUID } from "@/lib/auth/tokens";
 import { asUser } from "@/lib/db";
+import { contentDisposition } from "@/lib/viewer";
 
 // Serves an attached plan or practice sheet. Row level security decides who can open it:
-// staff, or a family whose group the plan or sheet is for.
-export async function GET(_request: Request, { params }: RouteContext<"/api/files/[id]">) {
+// staff, or a family whose group the plan or sheet is for. The in-app viewer (/files/[id]) reads it from here;
+// `?download=1` asks the browser to save it instead of showing it.
+export async function GET(request: Request, { params }: RouteContext<"/api/files/[id]">) {
   const { id } = await params;
   const user = await getCurrentUser();
   if (!user) return new Response("Sign in to open this file.", { status: 401 });
@@ -17,7 +19,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/file
   return new Response(new Uint8Array(body), {
     headers: {
       "Content-Type": file.mime,
-      "Content-Disposition": `inline; filename="${file.name.replace(/"/g, "")}"`,
+      "Content-Disposition": contentDisposition(file.name, new URL(request.url).searchParams.get("download") === "1"),
       "Cache-Control": "private, max-age=3600",
       "X-Content-Type-Options": "nosniff",
     },

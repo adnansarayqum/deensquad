@@ -443,8 +443,35 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
   await page.screenshot({ path: shot("player-awards"), fullPage: true });
 });
 
-test("plans: the club shares a U10 session plan and a practice sheet; the parent opens them", async ({ page, playwright }) => {
-  const pdf = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
+/** A small real PDF with one line of text per page, so the viewer has something to draw. */
+function makePdf(pages: string[]): Buffer {
+  const objects: string[] = [];
+  const pageIds = pages.map((_, i) => 4 + i * 2);
+  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pages.length} >>`;
+  objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+  pages.forEach((text, i) => {
+    const stream = `BT /F1 36 Tf 60 700 Td (${text}) Tj ET`;
+    objects[pageIds[i]] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${pageIds[i] + 1} 0 R >>`;
+    objects[pageIds[i] + 1] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+  });
+  let out = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  for (let n = 1; n < objects.length; n++) {
+    offsets[n] = out.length;
+    out += `${n} 0 obj\n${objects[n]}\nendobj\n`;
+  }
+  const xref = out.length;
+  out += `xref\n0 ${objects.length}\n0000000000 65535 f \n${offsets.slice(1).map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("")}`;
+  out += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, "latin1");
+}
+
+// A 1×1 PNG, for a practice sheet with a photo.
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+
+test("plans: the club shares a U10 session plan and a practice sheet; the parent opens them in the app", async ({ page, playwright }) => {
+  const pdf = makePdf(["Warm-up: rondos", "Main: passing on the move"]);
   await signIn(page, "admin@deensquad.test");
   await page.goto("/coach/plans");
   await page.getByRole("link", { name: /U10/ }).first().click();
@@ -457,27 +484,69 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await page.goto("/coach/practice");
   await page.getByLabel("Title").fill("Keepy-uppy challenge");
   await page.getByLabel(/Instructions/).fill("Ten minutes a day. Tell your coach your best score on Friday.");
+  await page.getByLabel(/Attach a PDF or photo/).setInputFiles({ name: "keepy-uppy.png", mimeType: "image/png", buffer: PNG });
   await page.getByRole("button", { name: "Share with parents" }).click();
   await expect(page.getByText(/Shared\. Parents in those groups/)).toBeVisible();
+  // The coach opens the sheet's photo in the app's viewer (same window) and comes back.
+  await page.getByRole("link", { name: /keepy-uppy\.png/ }).first().click();
+  await expect(page).toHaveURL(/\/files\/[0-9a-f-]{36}\?from=%2Fcoach%2Fpractice$/);
+  await expect(page.getByRole("img", { name: "keepy-uppy.png" })).toBeVisible();
+  await page.getByRole("link", { name: "Back" }).click();
+  await expect(page).toHaveURL(/\/coach\/practice$/);
 
   await switchUser(page);
   await signIn(page, "sara@example.com");
   await page.goto("/friday");
   await expect(page.getByRole("heading", { name: /U10 session plan/ })).toBeVisible();
   await expect(page.getByText("Main: passing on the move")).toBeVisible();
-  const href = await page.getByRole("link", { name: /Full plan/ }).getAttribute("href");
-  const res = await page.request.get(href!);
-  expect(res.status()).toBe(200);
-  expect(res.headers()["content-type"]).toBe("application/pdf");
   await page.screenshot({ path: shot("friday-plan"), fullPage: true });
+  // The plan opens inside the app, drawn page by page, with a way back (the installed app has no browser back).
+  const fullPlan = page.getByRole("link", { name: /Full plan/ });
+  await expect(fullPlan).not.toHaveAttribute("target", "_blank");
+  await fullPlan.click();
+  await expect(page).toHaveURL(/\/files\/[0-9a-f-]{36}\?from=%2Ffriday$/);
+  const viewer = page.url();
+  const fileId = viewer.match(/\/files\/([0-9a-f-]{36})/)![1];
+  await expect(page.getByText("2 pages", { exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Page 1 of 2" })).toHaveAttribute("data-drawn", "drawn");
+  const firstPage = (await page.getByRole("img", { name: "Page 1 of 2" }).boundingBox())!;
+  expect(firstPage.width).toBeGreaterThan(300);
+  await page.getByRole("img", { name: "Page 2 of 2" }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole("img", { name: "Page 2 of 2" })).toHaveAttribute("data-drawn", "drawn");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: shot("file-viewer") });
+  const back = page.getByRole("link", { name: "Back" });
+  expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  // Download saves the file (same rules as viewing it).
+  const downloadHref = await page.getByRole("link", { name: "Download" }).getAttribute("href");
+  expect(downloadHref).toBe(`/api/files/${fileId}?download=1`);
+  const saved = await page.request.get(downloadHref!);
+  expect(saved.status()).toBe(200);
+  expect(saved.headers()["content-type"]).toBe("application/pdf");
+  expect(saved.headers()["content-disposition"]).toBe('attachment; filename="u10-plan.pdf"');
+  expect(saved.headers()["x-content-type-options"]).toBe("nosniff");
+  expect((await page.request.get(`/api/files/${fileId}`)).headers()["content-disposition"]).toBe('inline; filename="u10-plan.pdf"');
+  await back.click();
+  await expect(page).toHaveURL(/\/friday$/);
+  await expect(page.getByRole("heading", { name: /U10 session plan/ })).toBeVisible();
+
   await page.getByRole("link", { name: /Practise at home/ }).click();
   await expect(page.getByRole("heading", { name: "Keepy-uppy challenge" })).toBeVisible();
+  await page.getByRole("link", { name: /keepy-uppy\.png/ }).click();
+  await expect(page.getByRole("img", { name: "keepy-uppy.png" })).toBeVisible();
 
-  // Someone with the link but no sign-in gets sent to sign in, not the file.
+  // Someone with the link but no sign-in gets sent to sign in, not the file or the viewer.
   const stranger = await playwright.request.newContext({ baseURL: "http://localhost:3100" });
-  const anon = await stranger.get(href!, { maxRedirects: 0 });
-  expect(anon.status()).toBe(307);
+  expect((await stranger.get(`/api/files/${fileId}`, { maxRedirects: 0 })).status()).toBe(307);
+  expect((await stranger.get(viewer, { maxRedirects: 0 })).status()).toBe(307);
   await stranger.dispose();
+
+  // A U7-only parent can't open the U10 plan, in the viewer or directly.
+  await switchUser(page);
+  await signIn(page, "parent16@example.com");
+  expect((await page.goto(`/files/${fileId}`))?.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "That page isn't on the pitch" })).toBeVisible();
+  expect((await page.request.get(`/api/files/${fileId}`)).status()).toBe(404);
 });
 
 test("writing help, downloads and badges: AI tidies a draft, an admin downloads a sheet and awards a badge; parents can't download", async ({ page }) => {
