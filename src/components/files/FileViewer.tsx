@@ -24,15 +24,28 @@ export function FileViewer(props: Props) {
 
 type Loaded = { doc: PDFDocumentProxy; sizes: { width: number; height: number }[] };
 
+/** The file (or the PDF reader itself) couldn't be fetched: worth trying again with a better signal. */
+class NetworkError extends Error {}
+
+/** Why a file couldn't be shown: no signal (try again), or a file this viewer can't read (download it). */
+type Failure = "network" | "unreadable";
+
 async function loadPdf(src: string, signal: AbortSignal): Promise<Loaded> {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  let pdfjs: typeof import("pdfjs-dist");
+  let data: Uint8Array;
+  try {
+    pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    const res = await fetch(src, { credentials: "same-origin", signal });
+    if (!res.ok) throw new Error(`File request failed: ${res.status}`);
+    data = new Uint8Array(await res.arrayBuffer());
+  } catch (error) {
+    throw new NetworkError("Couldn't fetch the file", { cause: error });
+  }
   // The worker is bundled with the app (no CDN) and shared by every document opened in this tab.
   if (!pdfjs.GlobalWorkerOptions.workerPort) {
     pdfjs.GlobalWorkerOptions.workerPort = new Worker(new URL("pdfjs-dist/legacy/build/pdf.worker.min.mjs", import.meta.url), { type: "module" });
   }
-  const res = await fetch(src, { credentials: "same-origin", signal });
-  if (!res.ok) throw new Error(`File request failed: ${res.status}`);
-  const data = new Uint8Array(await res.arrayBuffer());
+  // From here on, a failure means PDF.js can't read this file (damaged, or a kind it doesn't support).
   const doc = await pdfjs.getDocument({ data, enableXfa: false }).promise;
   const sizes = [];
   for (let i = 1; i <= doc.numPages; i++) {
@@ -43,7 +56,7 @@ async function loadPdf(src: string, signal: AbortSignal): Promise<Loaded> {
 }
 
 function PdfViewer({ src, downloadHref, name, retry }: Props & { retry: () => void }) {
-  const [state, setState] = useState<{ status: "loading" } | { status: "ready"; loaded: Loaded } | { status: "error" }>({ status: "loading" });
+  const [state, setState] = useState<{ status: "loading" } | { status: "ready"; loaded: Loaded } | { status: "error"; failure: Failure }>({ status: "loading" });
 
   useEffect(() => {
     const abort = new AbortController();
@@ -57,7 +70,7 @@ function PdfViewer({ src, downloadHref, name, retry }: Props & { retry: () => vo
       (error: unknown) => {
         if (abort.signal.aborted) return;
         console.error(error);
-        setState({ status: "error" });
+        setState({ status: "error", failure: error instanceof NetworkError ? "network" : "unreadable" });
       },
     );
     return () => {
@@ -67,7 +80,7 @@ function PdfViewer({ src, downloadHref, name, retry }: Props & { retry: () => vo
   }, [src]);
 
   if (state.status === "loading") return <Loading label={`Opening ${name}`} />;
-  if (state.status === "error") return <Failed retry={retry} downloadHref={downloadHref} />;
+  if (state.status === "error") return <Failed failure={state.failure} retry={retry} downloadHref={downloadHref} />;
   const { doc, sizes } = state.loaded;
   return (
     <div className="flex flex-col gap-3">
@@ -152,7 +165,8 @@ function ImageViewer({ src, downloadHref, name, retry }: Props & { retry: () => 
   useEffect(() => {
     if (img.current?.complete && img.current.naturalWidth > 0) setState("ready");
   }, []);
-  if (state === "error") return <Failed retry={retry} downloadHref={downloadHref} />;
+  // A photo that fails to load is most often a dropped signal.
+  if (state === "error") return <Failed failure="network" retry={retry} downloadHref={downloadHref} />;
   return (
     <>
       {state === "loading" ? <Loading label={`Opening ${name}`} /> : null}
@@ -178,7 +192,24 @@ function Loading({ label }: { label: string }) {
   );
 }
 
-function Failed({ retry, downloadHref }: { retry: () => void; downloadHref: string }) {
+function Failed({ failure, retry, downloadHref }: { failure: Failure; retry: () => void; downloadHref: string }) {
+  if (failure === "unreadable") {
+    return (
+      <div role="alert" className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4">
+        <span className="flex items-center gap-2.5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-orange-tint text-kit-orange">
+            <FileWarning aria-hidden size={20} />
+          </span>
+          <span className="text-[17px] font-extrabold">This file can&apos;t be shown here</span>
+        </span>
+        <p className="text-[15px] leading-[22px]">Download it to open on your phone.</p>
+        <a href={downloadHref} className="btn-chunky btn-grass self-start">
+          <Download aria-hidden size={18} />
+          Download
+        </a>
+      </div>
+    );
+  }
   return (
     <div role="alert" className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4">
       <span className="flex items-center gap-2.5">

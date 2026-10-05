@@ -481,7 +481,28 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await expect(page.getByText(/U10 parents can see it/)).toBeVisible();
   await page.screenshot({ path: shot("coach-plan"), fullPage: true });
 
+  // A damaged PDF (it passes the upload check but PDF.js can't read it): the viewer says so and offers Download, not "check your signal".
   await page.goto("/coach/practice");
+  await page.getByLabel("Title").fill("Broken file check");
+  await page.getByLabel(/Attach a PDF or photo/).setInputFiles({ name: "broken.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n") });
+  await page.getByRole("button", { name: "Share with parents" }).click();
+  await expect(page.getByText(/Shared\. Parents in those groups/)).toBeVisible();
+  await page.getByRole("link", { name: /broken\.pdf/ }).click();
+  const unreadable = page.locator("main").getByRole("alert");
+  await expect(unreadable).toContainText("This file can't be shown here");
+  await expect(unreadable).toContainText("Download it to open on your phone.");
+  await expect(unreadable).not.toContainText(/signal/i);
+  await expect(unreadable.getByRole("link", { name: "Download" })).toHaveAttribute("href", /\/api\/files\/[0-9a-f-]{36}\?download=1$/);
+  await expect(unreadable.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  await page.getByRole("link", { name: "Back" }).click();
+  await expect(page).toHaveURL(/\/coach\/practice$/);
+  await page
+    .getByRole("heading", { name: "Broken file check" })
+    .locator("xpath=ancestor::*[.//button[normalize-space()='Remove']][1]")
+    .getByRole("button", { name: "Remove" })
+    .click();
+  await expect(page.getByRole("heading", { name: "Broken file check" })).toHaveCount(0);
+
   await page.getByLabel("Title").fill("Keepy-uppy challenge");
   await page.getByLabel(/Instructions/).fill("Ten minutes a day. Tell your coach your best score on Friday.");
   await page.getByLabel(/Attach a PDF or photo/).setInputFiles({ name: "keepy-uppy.png", mimeType: "image/png", buffer: PNG });
@@ -529,6 +550,18 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await back.click();
   await expect(page).toHaveURL(/\/friday$/);
   await expect(page.getByRole("heading", { name: /U10 session plan/ })).toBeVisible();
+
+  // Opened directly (a pasted link, a reload), Back goes to the screen named in the link, not wherever the
+  // browser was before. And with no signal the viewer says so and can try again.
+  await page.goto("/news");
+  await page.route(`**/api/files/${fileId}`, (route) => route.abort("internetdisconnected"));
+  await page.goto(viewer);
+  await expect(page.locator("main").getByRole("alert")).toContainText("Check your signal and try again");
+  await page.unroute(`**/api/files/${fileId}`);
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText("2 pages", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Back" }).click();
+  await expect(page).toHaveURL(/\/friday$/);
 
   await page.getByRole("link", { name: /Practise at home/ }).click();
   await expect(page.getByRole("heading", { name: "Keepy-uppy challenge" })).toBeVisible();

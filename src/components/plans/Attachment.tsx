@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { FileText, ImageIcon } from "lucide-react";
 import { fileLabel, type FileRef } from "@/lib/files";
 import { viewerHref } from "@/lib/viewer";
+import { markViewerOpened } from "@/lib/viewer-marker";
 
 /**
  * A link that opens an attached PDF or photo in the app's own viewer (same window, with Back), so the
@@ -9,9 +12,11 @@ import { viewerHref } from "@/lib/viewer";
  */
 export function Attachment({ file, label, from }: { file: FileRef; label?: string; from: string }) {
   const Icon = file.mime === "application/pdf" ? FileText : ImageIcon;
+  const href = viewerHref(file.id, from);
   return (
     <Link
-      href={viewerHref(file.id, from)}
+      href={href}
+      onClick={() => markViewerOpened(href)}
       className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-line bg-paper px-3 py-2 transition-transform active:translate-y-0.5"
     >
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-grass-tint text-grass-text">
