@@ -6,7 +6,7 @@ import { PassCarousel } from "@/components/PassCarousel";
 import { getFamily } from "@/lib/parent/load";
 import { passToken } from "@/lib/pass/token";
 
-export const metadata: Metadata = { title: "Gate pass" };
+export const metadata: Metadata = { title: "Attendance QR code" };
 
 export default async function PassPage() {
   const { family } = await getFamily();
@@ -22,10 +22,10 @@ export default async function PassPage() {
 
   return (
     <>
-      <BackHeader back="/friday" backLabel="Friday" title={several ? "Gate passes" : "Gate pass"}>
+      <BackHeader back="/friday" backLabel="Friday" title={several ? "Attendance QR codes" : "Attendance QR code"}>
         {several
-          ? "Show the pass for each child who's here. Swipe to the next child."
-          : `Show this at the gate to check ${cards[0]?.firstName ?? "your child"} in.`}
+          ? "Show the QR code for each child who's here. Swipe to the next child."
+          : `Show this to the coach when you arrive to check ${cards[0]?.firstName ?? "your child"} in.`}
       </BackHeader>
       <main className="flex flex-col items-center gap-4 px-4 pt-5 pb-4">
         {cards.length === 0 ? (
@@ -38,7 +38,7 @@ export default async function PassPage() {
               Turn your screen brightness up so it scans first time.
             </p>
             <p className="text-center text-sm leading-5 text-ink-muted">
-              Each pass stays the same every week, so you can take screenshots for when there&apos;s no signal.
+              Each QR code stays the same every week, so you can take screenshots for when there&apos;s no signal.
             </p>
           </>
         )}

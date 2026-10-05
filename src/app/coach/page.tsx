@@ -198,7 +198,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
                 Here ({s.here.length})
               </h3>
               {s.here.length === 0 ? (
-                <p className="text-[13px] text-ink-muted">Nobody checked in yet. Scan a pass or tap Mark here.</p>
+                <p className="text-[13px] text-ink-muted">Nobody checked in yet. Scan a QR code or tap Mark here.</p>
               ) : (
                 <ul className="flex flex-col gap-2.5">
                   {s.here.map((r) => (
@@ -208,7 +208,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
                           {r.firstName} {r.lastInitial}.
                         </span>
                         <span className="text-[13px] text-ink-muted">
-                          {r.method === "qr" ? "Pass scanned" : "Marked here"} · {clock(r.checkedInAt!)}
+                          {r.method === "qr" ? "QR code scanned" : "Marked here"} · {clock(r.checkedInAt!)}
                         </span>
                       </span>
                       <UndoCheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} />

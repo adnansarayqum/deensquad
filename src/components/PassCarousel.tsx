@@ -20,13 +20,13 @@ export function PassCarousel({ cards }: { cards: PassCard[] }) {
           setIndex(Math.round(el.scrollLeft / el.clientWidth));
         }}
         className="flex w-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        aria-label={cards.length > 1 ? "Gate passes. Swipe to see each child." : "Gate pass"}
+        aria-label={cards.length > 1 ? "Attendance QR codes. Swipe to see each child." : "Attendance QR code"}
         role="region"
       >
         {cards.map((c, i) => (
           <section
             key={c.id}
-            aria-label={`${c.firstName}'s pass${cards.length > 1 ? `, ${i + 1} of ${cards.length}` : ""}`}
+            aria-label={`${c.firstName}'s QR code${cards.length > 1 ? `, ${i + 1} of ${cards.length}` : ""}`}
             className="flex w-full shrink-0 snap-center flex-col items-center gap-3 px-2"
           >
             <h2 className="font-display text-[40px] leading-none tracking-[0.02em]">

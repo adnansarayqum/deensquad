@@ -737,7 +737,7 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
   // The parent's pass (Musa's mother; each address may only ask for five codes an hour).
   await signIn(page, "sara@example.com");
   await page.goto("/pass");
-  await expect(page.getByRole("heading", { name: "Gate passes" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Attendance QR codes" })).toBeVisible();
   const qr = page.getByRole("img", { name: "QR code that checks Musa in" });
   await expect(qr).toBeVisible();
   await page.screenshot({ path: shot("pass"), fullPage: true });
@@ -792,10 +792,10 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     // No signal at the gate: the scanner says so (not "not a pass") and offers to try again.
     const offline = (url: URL) => url.pathname === "/coach";
     await coach.route(offline, (route) => (route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue()));
-    await coach.getByRole("button", { name: "Scan passes" }).click();
-    const scanner = coach.getByRole("dialog", { name: "Scan gate passes" });
+    await coach.getByRole("button", { name: "Scan QR codes" }).click();
+    const scanner = coach.getByRole("dialog", { name: "Scan attendance QR codes" });
     await expect(scanner.getByText("No signal – not checked in yet")).toBeVisible({ timeout: 15_000 });
-    await expect(scanner.getByText("That isn't a Deen Squad pass.")).toHaveCount(0);
+    await expect(scanner.getByText("That isn't a Deen Squad attendance QR code.")).toHaveCount(0);
     expect((await scanner.getByRole("button", { name: "Try again" }).boundingBox())!.height).toBeGreaterThanOrEqual(48);
     await coach.screenshot({ path: shot("coach-scan-no-signal") });
 
@@ -807,7 +807,7 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await scanner.getByRole("button", { name: "Close the scanner" }).click();
 
     await expect(here.getByRole("heading", { name: "Here (1)" })).toBeVisible();
-    await expect(here.getByText(/Pass scanned/)).toBeVisible();
+    await expect(here.getByText(/QR code scanned/)).toBeVisible();
     await here.getByRole("button", { name: "Undo check-in for Musa S." }).click();
     await expect(here.getByRole("heading", { name: "Here (0)" })).toBeVisible();
 

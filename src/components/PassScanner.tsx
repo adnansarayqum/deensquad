@@ -8,8 +8,8 @@ import { scanPass } from "@/lib/staff/actions";
 
 const flagText = { no_payment_plan: "No payment plan", missing_consent: "No photo consent", unread_news: "Hasn't read news", kit_ready: "Kit ready to collect" } as const;
 const reasonText = {
-  not_a_pass: "That isn't a Deen Squad pass.",
-  unknown_child: "This pass is for a child who is no longer at the club.",
+  not_a_pass: "That isn't a Deen Squad attendance QR code.",
+  unknown_child: "This QR code is for a child who is no longer at the club.",
 } as const;
 
 /** What the scanner shows: the server's answer, or that the answer never came back (no signal or a server fault). */
@@ -102,7 +102,7 @@ export function PassScanner() {
         className="btn-chunky btn-grass w-full"
       >
         <QrCode aria-hidden size={22} />
-        Scan passes
+        Scan QR codes
       </button>
     );
   }
@@ -115,9 +115,9 @@ export function PassScanner() {
   };
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Scan gate passes" className="fixed inset-0 z-50 flex flex-col bg-pitch-deep text-on-pitch">
+    <div role="dialog" aria-modal="true" aria-label="Scan attendance QR codes" className="fixed inset-0 z-50 flex flex-col bg-pitch-deep text-on-pitch">
       <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),16px)] pb-3">
-        <h2 className="font-display text-[32px] leading-none tracking-[0.02em]">Scan passes</h2>
+        <h2 className="font-display text-[32px] leading-none tracking-[0.02em]">Scan QR codes</h2>
         <button
           type="button"
           onClick={() => setOpen(false)}
@@ -138,14 +138,14 @@ export function PassScanner() {
         {error ? (
           <p className="rounded-app bg-orange-tint p-4 text-[15px] text-ink">{error}</p>
         ) : !result ? (
-          <p className="text-center text-[15px] text-on-pitch-muted">Hold the parent&apos;s pass inside the box.</p>
+          <p className="text-center text-[15px] text-on-pitch-muted">Hold the parent&apos;s QR code inside the box.</p>
         ) : !result.ok && result.reason === "no_signal" ? (
           <div className="flex flex-col gap-3 rounded-app bg-orange-tint p-4 text-ink">
             <div className="flex items-center gap-3">
               <WifiOff aria-hidden size={28} className="shrink-0 text-kit-orange" />
               <p className="flex flex-col">
                 <span className="text-[17px] font-bold">No signal – not checked in yet</span>
-                <span className="text-[14px]">The pass is fine. The app couldn&apos;t reach the club, so try again or use Mark here.</span>
+                <span className="text-[14px]">The QR code is fine. The app couldn&apos;t reach the club, so try again or use Mark here.</span>
               </p>
             </div>
             <button type="button" disabled={retrying} onClick={() => retry(result.token)} className="btn-chunky btn-grass w-full">

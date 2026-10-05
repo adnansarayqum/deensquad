@@ -94,7 +94,7 @@ export async function buildExport(tx: Queryable, kind: ExportKind, now: Date): P
       );
       return {
         header: ["Session date", "Session", "Group", "Child first name", "Child last name", "Checked in", "How"],
-        rows: rows.map((r) => [day(r.starts_at), r.title, r.age_group, r.first_name, r.last_name, london(r.checked_in_at), r.method === "qr" ? "Gate pass" : "Marked by coach"]),
+        rows: rows.map((r) => [day(r.starts_at), r.title, r.age_group, r.first_name, r.last_name, london(r.checked_in_at), r.method === "qr" ? "QR code" : "Marked by coach"]),
       };
     }
     case "orders": {
