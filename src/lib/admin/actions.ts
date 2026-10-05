@@ -14,7 +14,7 @@ import { cleanBody, cleanPhone, cleanText, dialable } from "../validate";
 import { applyImport, planImport, type ImportProblem, type ImportSummary } from "./import";
 import { overlaps, within } from "./scope";
 import { cancelSession, removeSession } from "./sessions";
-import { changeStaffRole } from "./staff";
+import { changeStaffRole, removeStaffMember } from "./staff";
 import { newsReaches } from "../squads/sql";
 import { canManageSquad, saveSquad } from "../squads/squads";
 import { runChase } from "../chase/run";
@@ -486,11 +486,6 @@ export async function removeStaff(formData: FormData): Promise<void> {
   const user = await requireAdmin();
   const staff = id(formData.get("id"));
   if (!staff || staff === user.staff.id) return;
-  await asUser(user.id, (tx) =>
-    tx.query(
-      `delete from staff s where s.id = $1 and (s.role <> 'admin' or (select count(*) from staff where role = 'admin') > 1)`,
-      [staff],
-    ),
-  );
+  await asUser(user.id, (tx) => removeStaffMember(tx, staff));
   refresh();
 }

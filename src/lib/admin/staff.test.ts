@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS } from "../db/dev-seed";
-import { changeStaffRole } from "./staff";
+import { changeStaffRole, removeStaffMember } from "./staff";
 
 let t: Awaited<ReturnType<typeof testDatabase>>;
 let admin: string;
@@ -49,5 +49,34 @@ describe("changing a member of staff's role", () => {
     const result = await t.asUser(coach, (tx) => changeStaffRole(tx, ids.coach, "admin")).catch((e: unknown) => e);
     expect(result).not.toEqual({ ok: true });
     expect((await staffRow(ids.coach)).role).toBe("coach");
+  });
+});
+
+describe("removing staff alongside role changes", () => {
+  const admins = () => t.asSystem(async (tx) => (await tx.query<{ n: number }>(`select count(*)::int as n from staff where role = 'admin'`))[0].n);
+
+  it("removes a coach", async () => {
+    expect(await t.asUser(admin, (tx) => removeStaffMember(tx, ids.coach))).toEqual({ ok: true });
+    expect(await staffRow(ids.coach)).toBeUndefined();
+  });
+
+  it("never removes the last admin", async () => {
+    expect(await t.asUser(admin, (tx) => removeStaffMember(tx, ids.admin))).toEqual({ ok: false, reason: "last_admin" });
+    expect(await admins()).toBe(1);
+  });
+
+  it("demote one admin then remove the other: the second step is refused", async () => {
+    await t.asUser(admin, (tx) => changeStaffRole(tx, ids.coach, "admin"));
+    expect(await t.asUser(admin, (tx) => changeStaffRole(tx, ids.coach, "coach"))).toEqual({ ok: true });
+    expect(await t.asUser(admin, (tx) => removeStaffMember(tx, ids.admin))).toEqual({ ok: false, reason: "last_admin" });
+    expect(await admins()).toBe(1);
+  });
+
+  it("remove one admin then demote the other: the second step is refused", async () => {
+    await t.asUser(admin, (tx) => changeStaffRole(tx, ids.coach, "admin"));
+    const other = await t.signIn(DEV_EMAILS.coach); // now an admin
+    expect(await t.asUser(other, (tx) => removeStaffMember(tx, ids.admin))).toEqual({ ok: true });
+    expect(await t.asUser(other, (tx) => changeStaffRole(tx, ids.coach, "coach"))).toEqual({ ok: false, reason: "last_admin" });
+    expect(await admins()).toBe(1);
   });
 });
