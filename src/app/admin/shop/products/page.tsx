@@ -100,7 +100,7 @@ export default async function ShopProductsPage() {
       </AdminTitle>
 
       <Section title="Add an item">
-        <StatefulForm action={saveProduct} submitLabel="Add item" savedMessage="Item added." resetOnSave>
+        <StatefulForm action={saveProduct} submitLabel="Add item" savedMessage="Item added.">
           <ProductFields />
         </StatefulForm>
       </Section>

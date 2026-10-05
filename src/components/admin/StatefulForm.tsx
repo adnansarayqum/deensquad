@@ -1,16 +1,20 @@
 "use client";
 
 import { useActionState, useEffect, useRef, type ReactNode } from "react";
+import { submitKeepingInput } from "@/components/submitKeepingInput";
 
 type State = { error?: string; saved?: boolean };
+const INITIAL: State = {};
 
-/** A form whose Server Action returns { error } or { saved }; shows either message under the fields. */
+/**
+ * A form whose Server Action returns { error } or { saved }; shows either message under the fields.
+ * Typed input stays after an error; after any other result the form resets (to the saved values on edit forms).
+ */
 export function StatefulForm({
   action,
   submitLabel,
   pendingLabel = "Saving…",
   savedMessage = "Saved.",
-  resetOnSave = false,
   className = "",
   children,
 }: {
@@ -18,18 +22,17 @@ export function StatefulForm({
   submitLabel: string;
   pendingLabel?: string;
   savedMessage?: string;
-  resetOnSave?: boolean;
   className?: string;
   children: ReactNode;
 }) {
-  const [state, run, pending] = useActionState<State, FormData>(action, {});
+  const [state, run, pending] = useActionState<State, FormData>(action, INITIAL);
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
-    if (state.saved && resetOnSave) form.current?.reset();
-  }, [state, resetOnSave]);
+    if (state !== INITIAL && !state.error) form.current?.reset();
+  }, [state]);
 
   return (
-    <form ref={form} action={run} className={`flex flex-col gap-4 ${className}`} noValidate>
+    <form ref={form} action={run} onSubmit={submitKeepingInput(run)} className={`flex flex-col gap-4 ${className}`} noValidate>
       {children}
       {state.error ? (
         <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">

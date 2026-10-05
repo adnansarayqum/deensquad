@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { addEmergencyContact, type ContactFormState } from "@/lib/parent/actions";
+import { submitKeepingInput } from "@/components/submitKeepingInput";
 
 type Kid = { id: string; firstName: string };
 
@@ -13,7 +14,7 @@ export function ContactForm({ child, siblings }: { child: Kid; siblings: Kid[] }
   }, [state]);
 
   return (
-    <form ref={form} action={action} className="flex flex-col gap-4" noValidate>
+    <form ref={form} action={action} onSubmit={submitKeepingInput(action)} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="child" value={child.id} />
       <div>
         <label htmlFor="name" className="field-label">

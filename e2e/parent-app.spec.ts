@@ -229,6 +229,20 @@ test("admin: import a family, post news, add a session", async ({ page }) => {
   await page.goto("/admin/news");
   await page.getByLabel("Headline").fill("Pitch closed on Saturday");
   await page.getByLabel("Message").fill("The council is reseeding the pitch.");
+  // No audience chosen: the error shows and the headline and message are kept.
+  await page.getByLabel("Only these age groups:").check();
+  // Hold the action back briefly to see the button say it's working.
+  await page.route("**/admin/news", async (route) => {
+    if (route.request().method() === "POST") await new Promise((r) => setTimeout(r, 800));
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Post to parents" }).click();
+  await expect(page.getByRole("button", { name: "Posting…" })).toBeDisabled();
+  await expect(page.getByText("Choose who it's for")).toBeVisible();
+  await page.unroute("**/admin/news");
+  await expect(page.getByLabel("Headline")).toHaveValue("Pitch closed on Saturday");
+  await expect(page.getByLabel("Message")).toHaveValue("The council is reseeding the pitch.");
+  await page.getByLabel("Every family").check();
   await page.getByRole("button", { name: "Post to parents" }).click();
   await expect(page.getByText("Posted.")).toBeVisible();
   await expect(page.getByText(/0 of \d+ read/)).toBeVisible();
@@ -238,6 +252,8 @@ test("admin: import a family, post news, add a session", async ({ page }) => {
   await page.getByLabel("Title").fill("Cup training");
   await page.getByRole("button", { name: "Add sessions" }).click();
   await expect(page.getByText("Sessions added.")).toBeVisible();
+  // A saved form clears, ready for the next one.
+  await expect(page.getByLabel("Title")).toHaveValue("Training");
 });
 
 test("an invited parent signs in from the link and sees their children", async ({ page }) => {
@@ -318,10 +334,21 @@ test("sign-up: a new parent registers their child, proves their email and lands 
   await page.getByLabel("First name").first().fill("Hana");
   await page.getByLabel("Last name").first().fill("Rahman");
   await page.getByLabel("Email address").fill("hana@example.com");
-  await page.getByLabel("Mobile number").fill("07700 900555");
+  await page.getByLabel("Mobile number").fill("12345");
   await page.locator("#childFirstName-0").fill("Ilyas");
   await page.locator("#childDob-0").fill("2017-05-01");
   await page.locator("#childGroup-0").selectOption("U10");
+  // A mistyped number: the error shows and everything typed is still there to fix.
+  await page.getByRole("button", { name: "Sign up" }).click();
+  await expect(page.getByText("Check your phone number")).toBeVisible();
+  await expect(page.getByLabel("First name").first()).toHaveValue("Hana");
+  await expect(page.getByLabel("Last name").first()).toHaveValue("Rahman");
+  await expect(page.getByLabel("Email address")).toHaveValue("hana@example.com");
+  await expect(page.getByLabel("Mobile number")).toHaveValue("12345");
+  await expect(page.locator("#childFirstName-0")).toHaveValue("Ilyas");
+  await expect(page.locator("#childDob-0")).toHaveValue("2017-05-01");
+  await expect(page.locator("#childGroup-0")).toHaveValue("U10");
+  await page.getByLabel("Mobile number").fill("07700 900555");
   await page.screenshot({ path: shot("sign-up"), fullPage: true });
   await page.getByRole("button", { name: "Sign up" }).click();
   await expect(page).toHaveURL(/\/sign-in\/code$/);
@@ -394,11 +421,17 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
 
   await page.goto("/coach/awards");
   await page.getByRole("link", { name: /Musa Sample/ }).click();
-  await page.getByText("+5", { exact: true }).click();
-  await page.getByText("Star player").click();
+  // Nothing chosen: the error shows and the reason is kept.
   await page.getByLabel(/What for/).fill("Brilliant first touch");
   await page.getByRole("button", { name: "Give award" }).click();
+  await expect(page.getByText("Choose points or a star.")).toBeVisible();
+  await expect(page.getByLabel(/What for/)).toHaveValue("Brilliant first touch");
+  await page.getByText("+5", { exact: true }).click();
+  await page.getByText("Star player").click();
+  await page.getByRole("button", { name: "Give award" }).click();
   await expect(page.getByText(/Given\. Musa's parents/)).toBeVisible();
+  await expect(page.getByLabel(/What for/)).toHaveValue("");
+  await expect(page.getByLabel("Star player")).not.toBeChecked();
   await page.screenshot({ path: shot("coach-awards"), fullPage: true });
 
   // Musa's other parent (Adnan has used up his codes for the hour in the earlier tests).

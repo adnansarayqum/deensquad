@@ -116,7 +116,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
         {isAdmin ? (
           <details className="rounded-app border-2 border-dashed border-line px-3.5 py-2.5">
             <summary className="cursor-pointer text-sm font-bold">Add another parent</summary>
-            <StatefulForm action={saveGuardian} submitLabel="Add parent" savedMessage="Parent added." resetOnSave className="mt-3">
+            <StatefulForm action={saveGuardian} submitLabel="Add parent" savedMessage="Parent added." className="mt-3">
               <input type="hidden" name="child" value={child.id} />
               <GuardianFields prefix="new-parent" />
             </StatefulForm>

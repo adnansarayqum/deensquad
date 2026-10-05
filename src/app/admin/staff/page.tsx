@@ -85,7 +85,6 @@ export default async function StaffPage() {
           action={addStaff}
           submitLabel="Add"
           savedMessage="Added. They can sign in with that email straight away."
-          resetOnSave
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
