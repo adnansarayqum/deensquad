@@ -893,3 +893,38 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await browser.close();
   }
 });
+
+test("staff roles: an admin makes a coach an admin, who then sees the shop, and back again", async ({ browser }) => {
+  test.skip(!existsSync(ADMIN_STATE) || !existsSync(COACH_STATE), "run with the earlier tests: needs their saved sign-in");
+  const phone = { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: "http://localhost:3100" };
+  const adminContext = await browser.newContext({ ...phone, storageState: ADMIN_STATE });
+  const coachContext = await browser.newContext({ ...phone, storageState: COACH_STATE });
+  const admin = await adminContext.newPage();
+  const coach = await coachContext.newPage();
+
+  await coach.goto("/admin");
+  await expect(coach.getByRole("link", { name: "Shop", exact: true })).toHaveCount(0);
+
+  await admin.goto("/admin/staff");
+  // The only admin can't be made a coach (nor change their own role).
+  await expect(admin.getByRole("button", { name: "Make Ibrahim Khan a coach" })).toHaveCount(0);
+  const makeAdmin = admin.getByRole("button", { name: "Make Coach Hamza an admin" });
+  expect((await makeAdmin.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  await makeAdmin.click();
+  await expect(admin.getByRole("button", { name: "Make Coach Hamza a coach" })).toBeVisible();
+  await expect(admin.getByRole("form", { name: "Coach Hamza's age groups" })).toHaveCount(0);
+  await admin.screenshot({ path: shot("admin-staff-roles"), fullPage: true });
+
+  await coach.goto("/admin");
+  await coach.getByRole("link", { name: "Shop", exact: true }).click();
+  await expect(coach).toHaveURL(/\/admin\/shop$/);
+
+  // And back: a coach again (of every group until their groups are ticked), with no shop.
+  await admin.getByRole("button", { name: "Make Coach Hamza a coach" }).click();
+  await expect(admin.getByRole("button", { name: "Make Coach Hamza an admin" })).toBeVisible();
+  await expect(admin.getByRole("form", { name: "Coach Hamza's age groups" }).getByLabel("U7")).not.toBeChecked();
+  await coach.goto("/admin");
+  await expect(coach.getByRole("link", { name: "Shop", exact: true })).toHaveCount(0);
+  await adminContext.close();
+  await coachContext.close();
+});

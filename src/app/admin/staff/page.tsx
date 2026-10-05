@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AdminTitle, Section } from "@/components/admin/bits";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
-import { addStaff, removeStaff, setStaffGroups } from "@/lib/admin/actions";
+import { addStaff, removeStaff, setStaffGroups, setStaffRole } from "@/lib/admin/actions";
 import { loadStaff } from "@/lib/admin/data";
 import { requireAdmin } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
@@ -21,7 +21,9 @@ export default async function StaffPage() {
       <p className="text-[15px] leading-[22px] text-ink-muted">
         Coaches take the register and post news for the age groups ticked
         against them (none ticked means every group). Admins see the whole club
-        and can also import families, send invites and manage staff.
+        and can also import families, send invites, run the shop and manage
+        staff. Make someone an admin or a coach at any time; the club always
+        keeps at least one admin.
       </p>
 
       <ul className="grid gap-2 lg:grid-cols-2 lg:items-start">
@@ -60,6 +62,29 @@ export default async function StaffPage() {
                 ) : null}
               </span>
             </div>
+            {s.id !== user.staff.id &&
+            !(s.role === "admin" && admins <= 1) ? (
+              <form action={setStaffRole}>
+                <input type="hidden" name="id" value={s.id} />
+                <input
+                  type="hidden"
+                  name="role"
+                  value={s.role === "admin" ? "coach" : "admin"}
+                />
+                <button
+                  type="submit"
+                  className="btn-chunky btn-paper btn-small min-h-12"
+                  aria-label={`Make ${s.displayName} ${s.role === "admin" ? "a coach" : "an admin"}`}
+                >
+                  {s.role === "admin" ? "Make coach" : "Make admin"}
+                </button>
+                <span className="mt-1 block text-[13px] text-ink-muted">
+                  {s.role === "admin"
+                    ? "They'll coach every group until you tick theirs."
+                    : "Admins see every group and run the shop."}
+                </span>
+              </form>
+            ) : null}
             {s.role === "coach" ? (
               <form
                 action={setStaffGroups}

@@ -14,6 +14,7 @@ import { cleanBody, cleanPhone, cleanText, dialable } from "../validate";
 import { applyImport, planImport, type ImportProblem, type ImportSummary } from "./import";
 import { overlaps, within } from "./scope";
 import { cancelSession, removeSession } from "./sessions";
+import { changeStaffRole } from "./staff";
 import { newsReaches } from "../squads/sql";
 import { canManageSquad, saveSquad } from "../squads/squads";
 import { runChase } from "../chase/run";
@@ -465,6 +466,19 @@ export async function setStaffGroups(formData: FormData): Promise<void> {
   if (!staff) return;
   const groups = formData.getAll("groups").filter(isAgeGroup);
   await asUser(user.id, (tx) => tx.query(`update staff set age_groups = $2::text[]::age_group[] where id = $1 and role = 'coach'`, [staff, groups]));
+  refresh();
+}
+
+/**
+ * Makes a coach an admin or an admin a coach (Admin → Staff). Never the last admin, and not your own role
+ * (the Staff screen doesn't offer it, as with Remove). Ticked age groups are cleared either way.
+ */
+export async function setStaffRole(formData: FormData): Promise<void> {
+  const user = await requireAdmin();
+  const staff = id(formData.get("id"));
+  const role = formData.get("role");
+  if (!staff || staff === user.staff.id || (role !== "admin" && role !== "coach")) return;
+  await asUser(user.id, (tx) => changeStaffRole(tx, staff, role));
   refresh();
 }
 
