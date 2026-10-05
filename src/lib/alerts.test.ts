@@ -27,4 +27,13 @@ describe("error alerts", () => {
     expect(await sendErrorAlert({ message: "lost", path: "/news", kind: "render" }, t + 62 * 60_000)).toBe(false);
     vi.unstubAllEnvs();
   });
+
+  it("ignores a visitor leaving before the page finished loading", async () => {
+    const { isClientDisconnect } = await import("./alerts");
+    expect(isClientDisconnect("The destination stream closed early.")).toBe(true);
+    expect(isClientDisconnect("aborted")).toBe(true);
+    expect(isClientDisconnect("read ECONNRESET")).toBe(true);
+    expect(isClientDisconnect("relation \"players\" does not exist")).toBe(false);
+    expect(isClientDisconnect("Cannot read properties of undefined")).toBe(false);
+  });
 });

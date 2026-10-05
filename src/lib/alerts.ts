@@ -16,8 +16,17 @@ function recipients(): string[] {
   return configured.length ? configured : [...adminEmails()];
 }
 
+/**
+ * The visitor left before the page finished loading (closed the app, switched screens or lost signal),
+ * so the server couldn't finish sending it. Nothing failed on our side; not worth an email.
+ */
+export function isClientDisconnect(message: string): boolean {
+  return /destination stream closed early|^aborted$|ECONNRESET|socket hang up/i.test(message);
+}
+
 export async function sendErrorAlert(error: { message: string; digest?: string; path: string; kind: string }, now = Date.now()): Promise<boolean> {
   if (process.env.NODE_ENV !== "production" || !emailConfigured()) return false;
+  if (isClientDisconnect(error.message)) return false;
   if (now - lastSent < QUIET_MS) {
     suppressed++;
     return false;
