@@ -15,7 +15,7 @@ export default function ErrorPage({ error, retry }: { error: Error & { digest?: 
       <p className="text-label text-crest-gold uppercase">Stoppage time</p>
       <h1 className="font-display text-[56px] leading-[0.9] text-floodlight">Something went wrong</h1>
       <p className="text-[15px] text-on-pitch-muted">
-        That didn&apos;t load. Check your signal and try again. Nothing you saved before this has been lost.
+        That didn&apos;t go through. Check your signal and try again. Anything you&apos;d already saved is safe.
       </p>
       <button type="button" onClick={() => retry()} className="btn-chunky btn-grass">
         Try again

@@ -53,6 +53,28 @@ describe("scanning a pass", () => {
     });
   });
 
+  it("picks the same session every time when two overlap: earliest start, then id", async () => {
+    // A Saturday with no seeded sessions. Inserted latest-first, so table order can't decide it.
+    const saturday = (h: number, m = 0) => new Date(Date.UTC(2026, 9, 10, h - 1, m)); // London is UTC+1 in October
+    const add = (id: string, title: string, start: Date) =>
+      t.asSystem((tx) =>
+        tx.query(`insert into sessions (id, kind, title, starts_at, ends_at, venue, age_groups) values ($1, 'training', $2, $3, $4, 'Hub', '{U7}')`, [
+          id,
+          title,
+          start,
+          saturday(12),
+        ]),
+      );
+    await add("30000000-0000-4000-8000-00000000000f", "Later start", saturday(10, 30));
+    await add("30000000-0000-4000-8000-00000000000b", "Same start, higher id", saturday(10));
+    await add("30000000-0000-4000-8000-00000000000a", "Same start, lower id", saturday(10));
+
+    const scan = await t.asUser(coach, (tx) => checkInByPass(tx, passToken(DEV_IDS.musa), saturday(11)));
+    expect(scan).toMatchObject({ ok: true, child: { status: "checked_in", session: { title: "Same start, lower id" } } });
+    const rows = await t.asSystem((tx) => tx.query<{ session_id: string }>(`select session_id from attendance where player_id = $1 and session_id::text like '30000000-%'`, [DEV_IDS.musa]));
+    expect(rows).toEqual([{ session_id: "30000000-0000-4000-8000-00000000000a" }]);
+  });
+
   it("rejects anything that isn't a pass, and parents can't check anyone in", async () => {
     expect(await t.asUser(coach, (tx) => checkInByPass(tx, "hello", atGate))).toEqual({ ok: false, reason: "not_a_pass" });
     const parent = await t.signIn(DEV_EMAILS.parent);

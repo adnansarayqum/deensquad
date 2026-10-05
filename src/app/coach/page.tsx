@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Check, ChevronLeft, ClipboardList, Star } from "lucide-react";
+import { ChevronLeft, ClipboardList, Star } from "lucide-react";
 import { CheckInButton, UndoCheckInButton } from "@/components/CheckInButton";
 import { PassScanner } from "@/components/PassScanner";
 import { Pill, Progress } from "@/components/ui";
@@ -109,24 +109,26 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
         </div>
       </header>
 
-      {s.latest.map((r) => (
-        <div key={r.id} className="mx-4 mt-3 flex items-center gap-3 rounded-app bg-grass-tint px-3.5 py-3 text-ink">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-grass font-display text-[22px] text-on-grass">
-            {r.shirtNumber ?? r.firstName[0]}
-          </span>
-          <span className="flex flex-1 flex-col">
-            <span className="text-[15px] font-bold">
-              {r.firstName} {r.lastInitial}. checked in
-            </span>
-            <span className="text-[13px] text-ink-muted">
-              {group}s · {clock(r.checkedInAt!)}
-            </span>
-          </span>
-          <span className="grid h-7 w-7 place-items-center rounded-pill bg-grass text-on-grass">
-            <Check aria-hidden size={16} strokeWidth={3} />
-          </span>
-        </div>
-      ))}
+      {s.latest.length > 0 ? (
+        <section aria-label="Just checked in">
+          {s.latest.map((r) => (
+            <div key={r.id} className="mx-4 mt-3 flex items-center gap-3 rounded-app bg-grass-tint py-2 pr-2 pl-3.5 text-ink">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-grass font-display text-[22px] text-on-grass">
+                {r.shirtNumber ?? r.firstName[0]}
+              </span>
+              <span className="flex flex-1 flex-col">
+                <span className="text-[15px] font-bold">
+                  {r.firstName} {r.lastInitial}. checked in
+                </span>
+                <span className="text-[13px] text-ink-muted">
+                  {group}s · {clock(r.checkedInAt!)}
+                </span>
+              </span>
+              <UndoCheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} />
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       {s.flagged.map((r) => (
         <div key={r.id} className="mx-4 mt-2.5 flex items-center gap-3 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 py-3 text-ink">

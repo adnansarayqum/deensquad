@@ -48,10 +48,12 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
   const d = londonDate(now);
   const options = await tx.query<{ id: string; title: string; starts_at: Date; ends_at: Date }>(
     `select id, title, starts_at, ends_at from sessions
-     where starts_at between $1 and $2 and cancelled_at is null and $3::age_group = any (age_groups)`,
+     where starts_at between $1 and $2 and cancelled_at is null and $3::age_group = any (age_groups)
+     order by starts_at, id`,
     [londonTime(d.year, d.month, d.day, 0, 0), londonTime(d.year, d.month, d.day, 23, 59), c.age_group],
   );
-  // The session that's on now, or else the nearest one today.
+  // The session that's on now, or else the nearest one today. Ties (overlapping sessions) go to the earliest start,
+  // then id, as the register picks by default: the sort is stable over the query's order.
   const session = options.sort((a, b) => distance(a, now) - distance(b, now))[0];
 
   let status: ScannedChild["status"] = "no_session_today";

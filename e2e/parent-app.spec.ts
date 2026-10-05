@@ -172,7 +172,14 @@ test("coach: register marks a player here; parents can't open it", async ({ page
   for (const button of await page.getByRole("main").getByRole("button").all()) {
     expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   }
-  await here.getByRole("button", { name: "Undo check-in for Adam F." }).click();
+  // The Undo for a mis-tap is right at the top, beside the "checked in" banner, without scrolling.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const undoAdam = page.getByRole("region", { name: "Just checked in" }).getByRole("button", { name: "Undo check-in for Adam F." });
+  await expect(undoAdam).toBeInViewport({ ratio: 1 });
+  const box = (await undoAdam.boundingBox())!;
+  expect(box.height).toBeGreaterThanOrEqual(48);
+  expect(box.width).toBeGreaterThanOrEqual(48);
+  await undoAdam.click();
   await expect(here.getByRole("heading", { name: "Here (1)" })).toBeVisible();
   await expect(away.getByRole("button", { name: "Mark Adam F. here" })).toBeVisible();
   await expect(page.getByText("1 of 14 expected")).toBeVisible();
@@ -558,7 +565,7 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await coach.unroute(offline);
     await scanner.getByRole("button", { name: "Try again" }).click();
     await expect(scanner.getByText("Musa S.")).toBeVisible();
-    await expect(scanner.getByText(/U7 · (Checked in|Already checked in)/)).toBeVisible();
+    await expect(scanner.getByText("U7 · Checked in", { exact: true })).toBeVisible();
     await coach.screenshot({ path: shot("coach-scan") });
     await scanner.getByRole("button", { name: "Close the scanner" }).click();
 
