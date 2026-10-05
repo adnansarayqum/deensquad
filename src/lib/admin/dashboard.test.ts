@@ -48,9 +48,11 @@ describe("admin overview numbers", () => {
     expect(u10.session?.title).toBe("Training");
     expect(d.attendance.next.find((g) => g.group === "U7")).toMatchObject({ squad: 5, coming: 0, away: 0, unanswered: 5 });
     expect(d.attendance.next.map((g) => g.group)).toEqual(["U6", "U7", "U10", "U12", "U15"]);
-    // Season: six Fridays held. Yusuf came to five (of 6 × 16 U10 places), Musa to two (of 6 × 5).
-    expect(d.attendance.season.find((g) => g.group === "U10")).toMatchObject({ held: 6, checkedIn: 5, averagePct: 5 });
-    expect(d.attendance.season.find((g) => g.group === "U7")).toMatchObject({ held: 6, checkedIn: 2, averagePct: 7 });
+    // Season: six Fridays have passed, but "held" counts only those where the group's register was
+    // taken (someone from it checked in). Yusuf came to five of them (5 of 5 × 16 U10 places = 6%),
+    // Musa to two (2 of 2 × 5 U7 places = 20%).
+    expect(d.attendance.season.find((g) => g.group === "U10")).toMatchObject({ held: 5, checkedIn: 5, averagePct: 6 });
+    expect(d.attendance.season.find((g) => g.group === "U7")).toMatchObject({ held: 2, checkedIn: 2, averagePct: 20 });
     expect(d.attendance.season.find((g) => g.group === "U12")).toMatchObject({ squad: 0, averagePct: null });
     expect(d.attendance.recent.map((s) => s.checkedIn)).toEqual([1, 0, 1, 1, 2, 2]);
 
@@ -99,6 +101,32 @@ describe("admin overview numbers", () => {
     expect(monthStart(AUGUST).toISOString()).toBe("2026-07-31T23:00:00.000Z");
   });
 
+  it("averages attendance over sessions where the register was taken", async () => {
+    const t = await testDatabase();
+    await t.asSystem(async (tx) => {
+      await tx.query(`insert into staff (email, display_name, role) values ('owner@deensquad.test', 'Owner', 'admin')`);
+      await tx.query(`insert into players (first_name, last_name, age_group) select 'Child', n::text, 'U12' from generate_series(1, 10) n`);
+      await tx.query(`insert into players (first_name, last_name, age_group) values ('Solo', 'One', 'U15'), ('Solo', 'Two', 'U15')`);
+      // Three finished U12/U15 sessions this season: 5, 7 and 0 U12s checked in; no U15 ever.
+      for (const [day, n] of [["2026-09-04", 5], ["2026-09-11", 7], ["2026-09-18", 0]] as const) {
+        const [{ id }] = await tx.query<{ id: string }>(
+          `insert into sessions (title, starts_at, ends_at, venue, age_groups) values ('Training', $1::timestamptz, $1::timestamptz + interval '90 minutes', 'Hub', '{U12,U15}') returning id`,
+          [`${day}T17:30:00Z`],
+        );
+        await tx.query(`insert into attendance (session_id, player_id) select $1, id from players where age_group = 'U12' order by last_name limit $2`, [id, n]);
+      }
+    });
+    const admin = await t.signIn("owner@deensquad.test");
+    const d = await t.asUser(admin, (tx) => loadDashboard(tx, { now: OCTOBER, limit: null, withShop: false }));
+    // 12 check-ins over the 2 sessions with the register taken, for 10 children: 60%.
+    expect(d.attendance.season.find((g) => g.group === "U12")).toMatchObject({ squad: 10, held: 2, checkedIn: 12, averagePct: 60 });
+    // Nobody from the U15s was ever checked in: no sessions held, no percentage (the page says "Register not used yet").
+    expect(d.attendance.season.find((g) => g.group === "U15")).toMatchObject({ squad: 2, held: 0, checkedIn: 0, averagePct: null });
+    expect(JSON.stringify(d)).not.toMatch(/NaN|Infinity/);
+    // The recent-sessions chart still shows all three, including the empty one.
+    expect(d.attendance.recent.map((s) => s.checkedIn)).toEqual([5, 7, 0]);
+  });
+
   it("reads sensibly for an empty club, with no division by zero", async () => {
     const t = await testDatabase();
     await t.asSystem((tx) => tx.query(`insert into staff (email, display_name, role) values ('owner@deensquad.test', 'Owner', 'admin')`));
@@ -137,7 +165,8 @@ describe("admin overview numbers", () => {
     expect(d.players).toBe(5);
     expect(d.attendance.next.map((g) => g.group)).toEqual(["U7"]);
     expect(d.attendance.season.map((g) => g.group)).toEqual(["U7"]);
-    expect(d.attendance.season[0]).toMatchObject({ held: 6, checkedIn: 2 });
+    // Only the two Fridays Musa was checked in at count as held for the U7s.
+    expect(d.attendance.season[0]).toMatchObject({ held: 2, checkedIn: 2 });
     // Only Musa's check-ins count on the recent chart, not Yusuf's.
     expect(d.attendance.recent.map((s) => s.checkedIn)).toEqual([0, 0, 0, 0, 1, 1]);
     // Musa's two parents and the four other U7 parents.

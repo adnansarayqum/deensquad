@@ -25,6 +25,9 @@ const TODO_LABEL: Record<(typeof TODO_NEEDS)[number], string> = {
   consent: "no photo answer",
 };
 
+/** Counts each parent's own taps: the chase ladder stops once a partner has read it, so this can be higher. */
+const BEHIND_TEXT = (n: number) => `${n === 1 ? "parent hasn't" : "parents haven't"} tapped ‘I’ve read this’ on 2 or more messages (a partner may have)`;
+
 const CHANNEL_LABEL: Record<Channel, string> = {
   app: "App notifications",
   email: "Emails",
@@ -143,9 +146,9 @@ function AttendanceSection({ d, limited }: { d: Dashboard; limited: boolean }) {
                 <StackedBar
                   label={`${g.group}, ${shortDay(g.session.startsAt)}`}
                   segments={[
-                    { label: "coming", value: g.coming, tone: "done", href: `/coach?group=${g.group}` },
-                    { label: "not coming", value: g.away, tone: "neutral", href: `/coach?group=${g.group}` },
-                    { label: "not answered", value: g.unanswered, tone: "rest", href: `/coach?group=${g.group}` },
+                    { label: "coming", value: g.coming, tone: "done", href: `/coach?session=${g.session.id}&group=${g.group}` },
+                    { label: "not coming", value: g.away, tone: "neutral", href: `/coach?session=${g.session.id}&group=${g.group}` },
+                    { label: "not answered", value: g.unanswered, tone: "rest", href: `/coach?session=${g.session.id}&group=${g.group}` },
                   ]}
                 />
               ) : null}
@@ -154,7 +157,7 @@ function AttendanceSection({ d, limited }: { d: Dashboard; limited: boolean }) {
         </ul>
       )}
 
-      <Sub>This season (from 1 August)</Sub>
+      <Sub>This season (from 1 August), sessions with the register taken</Sub>
       {season.length === 0 ? (
         <Empty>{noChildren}</Empty>
       ) : (
@@ -186,7 +189,7 @@ function AttendanceSection({ d, limited }: { d: Dashboard; limited: boolean }) {
                 </td>
                 <td className="py-2">
                   {g.averagePct === null ? (
-                    <span className="text-ink-muted">No sessions yet</span>
+                    <span className="text-ink-muted">Register not used yet</span>
                   ) : (
                     <PercentBar pct={g.averagePct} label={`${g.group}: ${g.averagePct}% of the squad of ${g.squad} checked in on average`} />
                   )}
@@ -228,7 +231,7 @@ function FamiliesSection({ d, limited }: { d: Dashboard; limited: boolean }) {
         </Link>
       }
     >
-      <Sub>{plural(f.parents, "parent", "parents")} in the app</Sub>
+      <Sub>{plural(f.parents, "parent", "parents")}</Sub>
       {f.parents === 0 ? (
         <Empty>{limited ? "No parents in your groups yet." : "No parents yet."}</Empty>
       ) : (
@@ -241,8 +244,13 @@ function FamiliesSection({ d, limited }: { d: Dashboard; limited: boolean }) {
           ]}
         />
       )}
+      {f.parents > 0 ? (
+        <p className="-mt-1 text-[13px] text-ink-muted">
+          These count parents. Their links list the children whose parents haven&apos;t signed in yet or weren&apos;t invited.
+        </p>
+      ) : null}
 
-      <Sub>Children with to-dos left ({plural(d.players, "child", "children")})</Sub>
+      <Sub>Children with to-dos left (of {plural(d.players, "child", "children")})</Sub>
       <ul className="grid grid-cols-2 gap-2">
         {TODO_NEEDS.map((n) => (
           <li key={n}>
@@ -352,10 +360,10 @@ function NewsSection({ d }: { d: Dashboard }) {
         ))}
       </ul>
 
-      <Link href="/admin/news" aria-label={`${n.behind} ${n.behind === 1 ? "parent has" : "parents have"} 2 or more messages unread`} className="flex min-h-12 items-center gap-3 rounded-dash border-2 border-line px-3 py-2 hover:bg-cream">
+      <Link href="/admin/news" aria-label={`${n.behind} ${BEHIND_TEXT(n.behind)}`} className="flex min-h-12 items-center gap-3 rounded-dash border-2 border-line px-3 py-2 hover:bg-cream">
         <span className={`font-display text-[36px] leading-none tabular-nums ${n.behind > 0 ? "text-kit-orange" : "text-ink"}`}>{n.behind}</span>
         <span className={`text-[14px] ${n.behind > 0 ? "font-bold text-kit-orange" : "text-ink-muted"}`}>
-          {n.behind === 1 ? "parent has" : "parents have"} 2 or more messages unread
+          {BEHIND_TEXT(n.behind)}
         </span>
       </Link>
     </Section>

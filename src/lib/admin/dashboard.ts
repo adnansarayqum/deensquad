@@ -21,7 +21,11 @@ export type NextSessionGroup = {
 export type SeasonGroup = {
   group: AgeGroup;
   squad: number;
-  /** Sessions for this group that have finished this season (from 1 August), not counting cancelled ones. */
+  /**
+   * Sessions this season (from 1 August) that have finished, weren't cancelled and had at least one
+   * child from this group checked in, i.e. the register was taken. Sessions where nobody from the
+   * group was marked in are left out, so an unused register doesn't read as 0% attendance.
+   */
   held: number;
   checkedIn: number;
   /** Checked in ÷ (sessions held × squad size), as a whole percentage. Null when there's nothing to divide by. */
@@ -96,7 +100,7 @@ export async function loadDashboard(
     tx.query<{ group: AgeGroup; squad: number; held: number; checked_in: number }>(
       `select g.grp as "group",
          (select count(*)::int from players p where p.age_group::text = g.grp) as squad,
-         count(s.id)::int as held,
+         (count(s.id) filter (where c.n > 0))::int as held,
          coalesce(sum(c.n), 0)::int as checked_in
        from unnest($1::text[]) with ordinality as g (grp, ord)
        left join sessions s on g.grp = any (s.age_groups::text[]) and s.starts_at >= $2 and s.ends_at <= $3 and s.cancelled_at is null

@@ -1,10 +1,13 @@
 import { CONTRACT } from "../documents/contract";
 
 // What a child still needs, as SQL conditions on `players p`. The Families filter (?need=) and the
-// overview's to-do counts both use these, so a number on the overview always matches the list it
-// links to. The first four are the parent To-do (see buildChecklist in src/lib/parent/views.ts):
-// a step is done when there's an emergency contact, a photo answer, a payment plan that's active or
-// reported as set up, and this season's contract (CONTRACT.id) agreed.
+// overview's to-do figures and its to-check, overdue and no-plan payment figures use these, so each
+// of those equals the length of the list it links to. (The overview's Parents bar counts parents;
+// its invite/signin links list those parents' children, so the numbers can differ.)
+//
+// The first four are the parent To-do (see buildChecklist in src/lib/parent/views.ts): a step is
+// done when there's an emergency contact, a photo answer, a payment plan that's active or reported
+// as set up, and this season's contract (CONTRACT.id) agreed.
 
 const contract = `'${CONTRACT.id.replace(/'/g, "''")}'`;
 const paymentState = `coalesce((select ps.state::text from payment_status ps where ps.player_id = p.id), 'missing')`;

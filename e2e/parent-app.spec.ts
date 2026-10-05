@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { devices, expect, test, type Page } from "@playwright/test";
 import jsQR from "jsqr";
@@ -37,6 +37,12 @@ async function signIn(page: Page, email: string) {
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).not.toHaveURL(/\/sign-in/);
 }
+
+// Saved sign-ins from an earlier run must never stand in for this run's.
+test.beforeAll(() => {
+  rmSync(ADMIN_STATE, { force: true });
+  rmSync(COACH_STATE, { force: true });
+});
 
 let testNumber = 0;
 test.beforeEach(async ({ context }) => {
@@ -477,6 +483,7 @@ test("writing help, downloads and badges: AI tidies a draft, an admin downloads 
 });
 
 test("admin dashboard: a computer gets the sidebar, four sections and a Families table; phones keep the header; a U7 coach sees only U7", async ({ browser }) => {
+  test.skip(!existsSync(ADMIN_STATE) || !existsSync(COACH_STATE), "run with the earlier tests: needs their saved sign-in");
   const desktop = { viewport: { width: 1280, height: 800 }, baseURL: "http://localhost:3100" };
 
   // The admin on a computer.
@@ -497,6 +504,9 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await expect(page.getByRole("link", { name: /\d+ ready to collect/ })).toBeVisible();
   await expect(page.getByRole("progressbar", { name: /Pitch closed|parents have read it/ }).first()).toBeVisible();
   await expect(page.locator("main")).not.toContainText("NaN");
+  await expect(page.getByRole("heading", { name: "This season (from 1 August), sessions with the register taken" })).toBeVisible();
+  await expect(page.getByText("These count parents. Their links list the children")).toBeVisible();
+  await expect(page.getByRole("link", { name: /^\d+ (parent hasn't|parents haven't) tapped ‘I’ve read this’ on 2 or more messages \(a partner may have\)$/ })).toBeVisible();
   // Every bar and figure on the overview is at least 48px tall to tap.
   for (const link of await page.getByRole("main").getByRole("link").all()) {
     if (await link.isVisible()) expect((await link.boundingBox())!.height, await link.innerText()).toBeGreaterThanOrEqual(48);
@@ -505,6 +515,18 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await page.emulateMedia({ colorScheme: "dark" });
   await page.screenshot({ path: shot("admin-dashboard-desktop-dark"), fullPage: true });
   await page.emulateMedia({ colorScheme: "light" });
+
+  // The U10 bar links to that session's register (not just today's) and the register shows its day and time.
+  const u10 = page.locator("li", { has: page.locator("b", { hasText: /^U10$/ }) }).first();
+  const when = (await u10.locator("p").innerText()).match(/· (\w{3} \d{1,2} \w{3,4}) · (.+) (\d{1,2}:\d{2}[ap]m)$/)!;
+  const coming = u10.getByRole("link", { name: /^\d+ coming$/ });
+  const href = (await coming.getAttribute("href"))!;
+  expect(href).toMatch(/^\/coach\?session=[0-9a-f-]{36}&group=U10$/);
+  await coming.click();
+  await expect(page).toHaveURL(href);
+  await expect(page.getByText(`Gate check-in · ${when[1]} ${when[3]}`)).toBeVisible();
+  await expect(page.getByRole("heading", { name: `${when[2]} register` })).toBeVisible();
+  await page.goto("/admin");
 
   // A to-do count opens Families filtered to those children, as a table with one row per child.
   const contract = page.getByRole("link", { name: /^\d+ contract not signed$/ });
@@ -557,7 +579,7 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await expect(main).not.toContainText(/U6|U10|U12|U15/);
   await expect(coach.getByRole("img", { name: /^U7, / })).toBeVisible();
   // The five U7s: Musa's parents have finished his To-do, the other four haven't started.
-  await expect(main.getByRole("heading", { name: "Children with to-dos left (5 children)" })).toBeVisible();
+  await expect(main.getByRole("heading", { name: "Children with to-dos left (of 5 children)" })).toBeVisible();
   await expect(coach.getByRole("link", { name: "4 contract not signed" })).toBeVisible();
   await expect(coach.getByRole("link", { name: "4 no emergency contact" })).toBeVisible();
   await coach.getByRole("link", { name: "4 no emergency contact" }).click();
