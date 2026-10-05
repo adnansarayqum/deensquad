@@ -146,17 +146,6 @@ export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
     [DEV_IDS.yusuf, coachStaffId, addDays(now, -8), addDays(now, -1)],
   );
 
-  // The club shop, as on the club's SumUp store (sizes are samples until the club confirms them).
-  const kidsAndAdults = "{5-6,7-8,9-10,11-12,13-14,S,M,L,XL}";
-  await tx.query(
-    `insert into shop_products (name, description, price_pence, sizes, initials_price_pence, sort) values
-       ('Hoodie', 'Club hoodie with the crest.', 1500, $1::text[], 500, 1),
-       ('Rain jacket', 'Lightweight and showerproof.', 2000, $1::text[], 500, 2),
-       ('1/2 zip top', 'Training top for colder sessions.', 1500, $1::text[], 500, 3),
-       ('T-shirt', 'Training T-shirt.', 1500, $1::text[], 500, 4),
-       ('Tracksuit bottoms', null, 1000, $1::text[], 500, 5),
-       ('Shorts', null, 700, $1::text[], null, 6),
-       ('Socks', null, 700, '{Junior,Adult}', null, 7)`,
-    [kidsAndAdults],
-  );
+  // The club shop comes from migration 0013 (the club's real kit).
+
 }

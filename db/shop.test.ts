@@ -10,7 +10,7 @@ let sara: string;
 let other: string;
 let coach: string;
 let hoodie: string; // £15, sizes, initials £5
-let socks: string; // £7, Junior/Adult, no initials
+let socks: string; // £7, one size, no initials
 let otherChild: string;
 
 const place = (user: string, items: unknown[], payBy = "card") =>
@@ -22,8 +22,8 @@ beforeAll(async () => {
   sara = await t.signIn(DEV_EMAILS.secondParent);
   other = await t.signIn("parent1@example.com");
   coach = await t.signIn(DEV_EMAILS.coach);
-  [{ id: hoodie }] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from shop_products where name = 'Hoodie'`));
-  [{ id: socks }] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from shop_products where name = 'Socks'`));
+  [{ id: hoodie }] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from shop_products where name = 'Deen Squad full zip hoodie'`));
+  [{ id: socks }] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from shop_products where name = 'Black football socks'`));
   [{ id: otherChild }] = await t.asSystem((tx) =>
     tx.query<{ id: string }>(
       `select p.id from players p join player_guardians pg on pg.player_id = p.id join guardians g on g.id = pg.guardian_id where g.email = 'parent1@example.com'`,
@@ -34,8 +34,8 @@ beforeAll(async () => {
 describe("placing an order", () => {
   it("prices the order from the products table, not the basket", async () => {
     const [{ id }] = await place(adnan, [
-      { product: hoodie, player: DEV_IDS.yusuf, size: "9-10", initials: "yk", quantity: 2, price: 1 },
-      { product: socks, player: DEV_IDS.musa, size: "Junior", quantity: 1, unit_pence: 0 },
+      { product: hoodie, player: DEV_IDS.yusuf, size: "Youth M (69-75cm chest)", initials: "yk", quantity: 2, price: 1 },
+      { product: socks, player: DEV_IDS.musa, quantity: 1, unit_pence: 0 },
     ]);
     const [order] = await t.asSystem((tx) =>
       tx.query<{ total_pence: number; status: string }>(`select total_pence, status::text from shop_orders where id = $1`, [id]),
@@ -48,22 +48,22 @@ describe("placing an order", () => {
   it("refuses sizes, initials and quantities the item doesn't offer", async () => {
     await expect(place(adnan, [{ product: hoodie, size: "XXXL", quantity: 1 }])).rejects.toThrow(/invalid size/);
     await expect(place(adnan, [{ product: hoodie, quantity: 1 }])).rejects.toThrow(/invalid size/);
-    await expect(place(adnan, [{ product: socks, size: "Adult", initials: "AB", quantity: 1 }])).rejects.toThrow(/invalid initials/);
-    await expect(place(adnan, [{ product: hoodie, size: "S", initials: "ABCD", quantity: 1 }])).rejects.toThrow(/invalid initials/);
-    await expect(place(adnan, [{ product: hoodie, size: "S", quantity: 50 }])).rejects.toThrow(/invalid quantity/);
+    await expect(place(adnan, [{ product: socks, initials: "AB", quantity: 1 }])).rejects.toThrow(/invalid initials/);
+    await expect(place(adnan, [{ product: hoodie, size: "Adult S", initials: "ABCD", quantity: 1 }])).rejects.toThrow(/invalid initials/);
+    await expect(place(adnan, [{ product: hoodie, size: "Adult S", quantity: 50 }])).rejects.toThrow(/invalid quantity/);
     await expect(place(adnan, [])).rejects.toThrow(/invalid basket/);
-    await expect(place(adnan, [{ product: socks, size: "Adult", quantity: 1 }], "cash")).rejects.toThrow(/invalid payment method/);
+    await expect(place(adnan, [{ product: socks, quantity: 1 }], "cash")).rejects.toThrow(/invalid payment method/);
   });
 
   it("refuses hidden items and other families' children", async () => {
     await t.asSystem((tx) => tx.query(`update shop_products set active = false where id = $1`, [socks]));
-    await expect(place(adnan, [{ product: socks, size: "Adult", quantity: 1 }])).rejects.toThrow(/not available/);
+    await expect(place(adnan, [{ product: socks, quantity: 1 }])).rejects.toThrow(/not available/);
     await t.asSystem((tx) => tx.query(`update shop_products set active = true where id = $1`, [socks]));
-    await expect(place(adnan, [{ product: socks, player: otherChild, size: "Adult", quantity: 1 }])).rejects.toThrow(/not allowed/);
+    await expect(place(adnan, [{ product: socks, player: otherChild, quantity: 1 }])).rejects.toThrow(/not allowed/);
   });
 
   it("only takes orders from parents", async () => {
-    await expect(place(coach, [{ product: socks, size: "Adult", quantity: 1 }])).rejects.toThrow(/not allowed/);
+    await expect(place(coach, [{ product: socks, quantity: 1 }])).rejects.toThrow(/not allowed/);
   });
 
   it("doesn't let parents write orders directly", async () => {
@@ -78,7 +78,7 @@ describe("placing an order", () => {
 
 describe("reading orders", () => {
   it("shows a family its own orders only", async () => {
-    await place(other, [{ product: socks, player: otherChild, size: "Junior", quantity: 1 }], "bank");
+    await place(other, [{ product: socks, player: otherChild, quantity: 1 }], "bank");
     const mine = await t.asUser(adnan, loadMyOrders);
     const saras = await t.asUser(sara, loadMyOrders);
     const others = await t.asUser(other, loadMyOrders);
@@ -99,7 +99,7 @@ describe("reading orders", () => {
     await t.asUser(other, (tx) => tx.query(`update shop_orders set status = 'paid' where id = $1`, [order.id]));
     expect(await t.asUser(coach, loadSupplierTotals)).toEqual([]);
     await t.asUser(coach, (tx) => tx.query(`update shop_orders set status = 'paid' where id = $1`, [order.id]));
-    expect(await t.asUser(coach, loadSupplierTotals)).toEqual([{ productName: "Socks", size: "Junior", quantity: 1, initials: 0 }]);
+    expect(await t.asUser(coach, loadSupplierTotals)).toEqual([{ productName: "Black football socks", size: null, quantity: 1, initials: 0 }]);
   });
 
   it("flags a child on the register when their kit is ready", async () => {

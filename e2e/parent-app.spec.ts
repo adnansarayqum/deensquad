@@ -225,16 +225,16 @@ test("shop: a parent orders kit for a child and pays by transfer; the club is to
   await expect(page).toHaveURL(/\/shop$/);
   await page.screenshot({ path: shot("shop"), fullPage: true });
 
-  await page.getByRole("link", { name: /Hoodie/ }).click();
+  await page.getByRole("link", { name: /full zip hoodie/ }).click();
   await page.getByText("Yusuf", { exact: true }).click();
-  await page.getByText("9-10", { exact: true }).click();
+  await page.getByText("Youth M (69-75cm chest)", { exact: true }).click();
   await page.getByLabel(/Initials/).fill("ys");
   await page.screenshot({ path: shot("shop-item"), fullPage: true });
   await page.getByRole("button", { name: "Add to basket" }).click();
   await expect(page.getByText("Added to your basket.")).toBeVisible();
 
   await page.getByRole("link", { name: "View basket" }).click();
-  await expect(page.getByText("For Yusuf · Size 9-10 · Initials YS")).toBeVisible();
+  await expect(page.getByText("For Yusuf · Size Youth M (69-75cm chest) · Initials YS")).toBeVisible();
   await page.screenshot({ path: shot("shop-basket"), fullPage: true });
   // No SumUp key in tests, so bank transfer is the only way to pay.
   await expect(page.getByLabel(/Bank transfer/)).toBeChecked();
@@ -252,7 +252,7 @@ test("shop: a parent orders kit for a child and pays by transfer; the club is to
   await signIn(page, "admin@deensquad.test");
   await page.goto("/admin/shop");
   await page.getByRole("button", { name: "Transfer received" }).click();
-  await expect(page.getByRole("cell", { name: "Hoodie" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Deen Squad full zip hoodie" })).toBeVisible();
   await page.getByRole("button", { name: "Ready for Friday" }).first().click();
   await expect(page.getByRole("button", { name: "Handed over" })).toBeVisible();
   await page.screenshot({ path: shot("admin-shop"), fullPage: true });

@@ -56,17 +56,17 @@ export function AddToBasketForm({
       {product.initialsPrice ? (
         <div>
           <label htmlFor="initials" className="field-label">
-            Initials <span className="font-normal text-ink-muted">(optional, {product.initialsPrice} extra)</span>
+            Initials <span className="font-normal text-ink-muted">(optional, 2 letters, {product.initialsPrice} extra)</span>
           </label>
           <input
             id="initials"
             name="initials"
             value={initials}
-            onChange={(e) => setInitials(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3))}
+            onChange={(e) => setInitials(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2))}
             autoComplete="off"
             autoCapitalize="characters"
-            placeholder="Up to 3 letters"
-            maxLength={3}
+            placeholder="2 letters"
+            maxLength={2}
             className="field tracking-[0.2em]"
           />
         </div>

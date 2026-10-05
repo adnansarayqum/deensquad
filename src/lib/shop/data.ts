@@ -24,11 +24,12 @@ type ProductRow = {
   sizes: string[];
   initials_price_pence: number | null;
   image_url: string | null;
+  image_file_id: string | null;
   active: boolean;
   sort: number;
 };
 
-const PRODUCT_COLUMNS = `id, name, description, price_pence, sizes, initials_price_pence, image_url, active, sort`;
+const PRODUCT_COLUMNS = `id, name, description, price_pence, sizes::text[] as sizes, initials_price_pence, image_url, image_file_id, active, sort`;
 const toProduct = (r: ProductRow): Product => ({
   id: r.id,
   name: r.name,
@@ -36,7 +37,8 @@ const toProduct = (r: ProductRow): Product => ({
   pricePence: r.price_pence,
   sizes: r.sizes ?? [],
   initialsPence: r.initials_price_pence,
-  imageUrl: r.image_url,
+  // A stored photo is served by the app; a plain link is shown until it's been copied in.
+  imageUrl: r.image_file_id ? `/api/files/${r.image_file_id}` : r.image_url,
   active: r.active,
   sort: r.sort,
 });

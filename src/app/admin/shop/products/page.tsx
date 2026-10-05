@@ -50,11 +50,23 @@ function ProductFields({ p }: { p?: Product }) {
         <input id={`description-${key}`} name="description" defaultValue={p?.description ?? ""} maxLength={300} className="field" />
       </div>
       <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
-        <div>
-          <label htmlFor={`image-${key}`} className="field-label">
-            Photo link <span className="font-normal text-ink-muted">(optional, https://)</span>
+        <div className="flex flex-col gap-2">
+          <span className="field-label">Photo</span>
+          {p?.imageUrl ? (
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element -- the club's own stored photo */}
+              <img src={p.imageUrl} alt="" className="h-16 w-16 rounded-xl border-2 border-line object-cover" />
+              <label className="flex min-h-11 items-center gap-2 text-[15px]">
+                <input type="checkbox" name="removePhoto" className="h-5 w-5 accent-[var(--grass)]" />
+                Remove photo
+              </label>
+            </div>
+          ) : null}
+          <input id={`photo-${key}`} name="photo" type="file" accept="image/jpeg,image/png,image/webp" aria-label={p?.imageUrl ? "Replace the photo" : "Add a photo"} className="field py-3 text-[15px]" />
+          <label htmlFor={`image-${key}`} className="text-sm text-ink-muted">
+            Or paste a link to a photo (https://). The app keeps its own copy.
           </label>
-          <input id={`image-${key}`} name="imageUrl" type="url" defaultValue={p?.imageUrl ?? ""} className="field" />
+          <input id={`image-${key}`} name="imageUrl" type="url" className="field" />
         </div>
         <div>
           <label htmlFor={`sort-${key}`} className="field-label">

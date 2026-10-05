@@ -7,11 +7,13 @@ import { requireParent, requireStaff } from "../auth/session";
 import { UUID } from "../auth/tokens";
 import { appUrl } from "../config";
 import { asSystem, asUser, isDemo } from "../db";
+import { readUpload, saveFile } from "../files";
 import { cleanText } from "../validate";
 import { BASKET_COOKIE, addLine, parseBasket, type BasketLine } from "./basket";
 import { orderReference } from "./data";
 import { paymentOptions } from "./options";
 import { notifyNewOrder } from "./notify";
+import { localiseProductImages } from "./images";
 import { createCheckout, sumupConfigured } from "./sumup";
 
 const basketCookie = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge: 14 * 86400 };
@@ -33,7 +35,7 @@ export async function addToBasket(_prev: AddState, formData: FormData): Promise<
   const product = formData.get("product");
   const player = formData.get("player");
   const size = cleanText(formData.get("size"), 30);
-  const initials = cleanText(formData.get("initials"), 3)?.toUpperCase().replace(/[^A-Z]/g, "") || null;
+  const initials = cleanText(formData.get("initials"), 10)?.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2) || null;
   const quantity = Math.min(20, Math.max(1, Number(formData.get("quantity")) || 1));
   if (typeof product !== "string" || !UUID.test(product)) return { error: "Something went wrong. Reload and try again." };
 
@@ -179,35 +181,50 @@ export async function saveProduct(_prev: ProductFormState, formData: FormData): 
   const initials = initialsText === "" ? null : Number(initialsText);
   const sizes = String(formData.get("sizes") ?? "")
     .split(",")
-    .map((s) => s.trim())
+    .map((s) => s.trim().slice(0, 30))
     .filter(Boolean)
     .slice(0, 30);
-  const image = cleanText(formData.get("imageUrl"), 500);
+  const link = cleanText(formData.get("imageUrl"), 1000);
+  const upload = await readUpload(formData.get("photo"));
+  const removePhoto = formData.get("removePhoto") === "on";
   if (!name) return { error: "Add the item's name." };
   if (!Number.isFinite(price) || price < 0 || price > 1000) return { error: "Add a price in pounds, like 15 or 7.50." };
   if (initials !== null && (!Number.isFinite(initials) || initials < 0 || initials > 100)) return { error: "The initials price should be in pounds, like 5." };
-  if (image && !/^https:\/\//.test(image)) return { error: "The photo link should start with https://" };
+  if (link && !/^https:\/\//.test(link)) return { error: "The photo link should start with https://" };
+  if (!upload.ok) return { error: upload.error };
+  if (upload.upload?.mime === "application/pdf") return { error: "Use a photo (JPEG, PNG or WebP) for the item, not a PDF." };
+
   const values = [
     name,
     cleanText(formData.get("description"), 300),
     Math.round(price * 100),
     sizes,
     initials === null ? null : Math.round(initials * 100),
-    image,
     formData.get("active") === "on",
     Number(formData.get("sort")) || 0,
   ];
-  await asUser(user.id, (tx) =>
-    typeof id === "string" && UUID.test(id)
-      ? tx.query(
-          `update shop_products set name = $2, description = $3, price_pence = $4, sizes = $5::text[], initials_price_pence = $6, image_url = $7, active = $8, sort = $9 where id = $1`,
-          [id, ...values],
+  await asUser(user.id, async (tx) => {
+    const existing = typeof id === "string" && UUID.test(id) ? id : null;
+    const [row] = existing
+      ? await tx.query<{ id: string; image_file_id: string | null }>(
+          `update shop_products set name = $2, description = $3, price_pence = $4, sizes = $5::text[], initials_price_pence = $6, active = $7, sort = $8
+           where id = $1 returning id, image_file_id`,
+          [existing, ...values],
         )
-      : tx.query(
-          `insert into shop_products (name, description, price_pence, sizes, initials_price_pence, image_url, active, sort) values ($1, $2, $3, $4::text[], $5, $6, $7, $8)`,
+      : await tx.query<{ id: string; image_file_id: string | null }>(
+          `insert into shop_products (name, description, price_pence, sizes, initials_price_pence, active, sort) values ($1, $2, $3, $4::text[], $5, $6, $7)
+           returning id, image_file_id`,
           values,
-        ),
-  );
+        );
+    if (!row) return;
+    // The photo: a new upload, a new link (copied in below), or taken off. Otherwise unchanged.
+    if (upload.upload || link || removePhoto) {
+      const fileId = upload.upload ? await saveFile(tx, upload.upload, user.staff.id) : null;
+      await tx.query(`update shop_products set image_file_id = $2, image_url = $3 where id = $1`, [row.id, fileId, upload.upload ? null : link]);
+      if (row.image_file_id) await tx.query(`delete from club_files where id = $1`, [row.image_file_id]);
+    }
+  });
+  if (link) await localiseProductImages();
   refresh();
   return { saved: true };
 }

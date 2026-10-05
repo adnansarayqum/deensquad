@@ -8,7 +8,7 @@ export const MAX_FILE_BYTES = 8 * 1024 * 1024;
 export type Upload = { name: string; mime: string; data: Uint8Array };
 export type UploadCheck = { ok: true; upload: Upload | null } | { ok: false; error: string };
 
-function sniff(b: Uint8Array): string | null {
+export function sniff(b: Uint8Array): string | null {
   const at = (i: number, ...bytes: number[]) => bytes.every((v, j) => b[i + j] === v);
   if (at(0, 0x25, 0x50, 0x44, 0x46)) return "application/pdf"; // %PDF
   if (at(0, 0xff, 0xd8, 0xff)) return "image/jpeg";
@@ -28,7 +28,7 @@ export async function readUpload(value: FormDataEntryValue | null): Promise<Uplo
   return { ok: true, upload: { name, mime, data } };
 }
 
-export async function saveFile(tx: Queryable, upload: Upload, staffId: string): Promise<string> {
+export async function saveFile(tx: Queryable, upload: Upload, staffId: string | null): Promise<string> {
   const [{ id }] = await tx.query<{ id: string }>(
     `insert into club_files (name, mime, size, data, uploaded_by) values ($1, $2, $3, $4, $5) returning id`,
     [upload.name, upload.mime, upload.data.byteLength, upload.data, staffId],

@@ -1,0 +1,51 @@
+import "server-only";
+
+import { asSystem } from "../db";
+import { MAX_FILE_BYTES, saveFile, sniff } from "../files";
+
+// Product photos given as links (pasted by an admin, or the imported kit photos, whose links expire)
+// are copied into the app's own storage so the shop never shows a broken image.
+
+export async function fetchImage(url: string): Promise<{ data: Uint8Array; mime: string } | null> {
+  if (!/^https:\/\//.test(url)) return null;
+  const res = await fetch(url, { signal: AbortSignal.timeout(20_000), redirect: "follow" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const size = Number(res.headers.get("content-length") ?? 0);
+  if (size > MAX_FILE_BYTES) throw new Error("too big");
+  const data = new Uint8Array(await res.arrayBuffer());
+  if (data.byteLength > MAX_FILE_BYTES) throw new Error("too big");
+  const mime = sniff(data);
+  if (!mime || mime === "application/pdf") throw new Error("not a photo");
+  return { data, mime };
+}
+
+/** Copies every linked product photo into club_files. Never throws; returns how many were copied. */
+export async function localiseProductImages(): Promise<number> {
+  try {
+    const pending = await asSystem((tx) =>
+      tx.query<{ id: string; name: string; image_url: string }>(
+        `select id, name, image_url from shop_products where image_url is not null and image_file_id is null`,
+      ),
+    );
+    let copied = 0;
+    for (const p of pending) {
+      try {
+        const image = await fetchImage(p.image_url);
+        if (!image) continue;
+        const ext = image.mime.split("/")[1];
+        await asSystem(async (tx) => {
+          const fileId = await saveFile(tx, { name: `${p.name}.${ext}`.slice(0, 100), mime: image.mime, data: image.data }, null);
+          await tx.query(`update shop_products set image_file_id = $2, image_url = null where id = $1`, [p.id, fileId]);
+        });
+        copied++;
+      } catch (error) {
+        console.error(`[shop] couldn't copy the photo for ${p.name}:`, error instanceof Error ? error.message : error);
+      }
+    }
+    if (copied) console.info(`[shop] copied ${copied} product photo(s) into the app`);
+    return copied;
+  } catch (error) {
+    console.error("[shop] photo copy failed:", error instanceof Error ? error.message : error);
+    return 0;
+  }
+}
