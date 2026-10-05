@@ -1,5 +1,7 @@
-import { readFileSync } from "node:fs";
-import { expect, test, type Page } from "@playwright/test";
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { devices, expect, test, type Page } from "@playwright/test";
+import jsQR from "jsqr";
 
 // Signs in with real emailed codes (read from the test outbox) and walks through the parent,
 // coach and admin flows against the sample club. Screenshots land in e2e/.results/screens.
@@ -151,7 +153,29 @@ test("coach: register marks a player here; parents can't open it", async ({ page
   await page.getByRole("button", { name: "Mark Yusuf S. here" }).click();
   await expect(page.getByText("Yusuf S. checked in")).toBeVisible();
   await expect(page.getByText("1 of 14 expected")).toBeVisible();
+
+  // A child whose parent said not coming turns up anyway: they're still on the register and can be marked in.
+  const away = page.getByRole("region", { name: /Said not coming/ });
+  await expect(away.getByRole("heading", { name: "Said not coming (2)" })).toBeVisible();
+  await expect(away.getByText("Said not coming", { exact: true }).first()).toBeVisible();
+  await away.getByRole("button", { name: "Mark Adam F. here" }).click();
+  const here = page.getByRole("region", { name: /^Here/ });
+  await expect(here.getByRole("heading", { name: "Here (2)" })).toBeVisible();
+  await expect(here.getByText("Adam F.")).toBeVisible();
+  await expect(page.getByText("2 of 15 expected")).toBeVisible();
+  await expect(away.getByRole("heading", { name: "Said not coming (1)" })).toBeVisible();
   await page.screenshot({ path: shot("coach"), fullPage: true });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.screenshot({ path: shot("coach-dark"), fullPage: true });
+  await page.emulateMedia({ colorScheme: "light" });
+  // Every control on the register is at least 48px tall.
+  for (const button of await page.getByRole("main").getByRole("button").all()) {
+    expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  }
+  await here.getByRole("button", { name: "Undo check-in for Adam F." }).click();
+  await expect(here.getByRole("heading", { name: "Here (1)" })).toBeVisible();
+  await expect(away.getByRole("button", { name: "Mark Adam F. here" })).toBeVisible();
+  await expect(page.getByText("1 of 14 expected")).toBeVisible();
 
   // The shop is the club's to run: coaches don't see it and are sent back to the overview.
   await page.goto("/admin");
@@ -445,4 +469,114 @@ test("privacy: anyone can read the notice from the sign-in screen", async ({ pag
   await page.goto(href!);
   await expect(page.getByRole("heading", { name: "Your rights" })).toBeVisible();
   await page.screenshot({ path: shot("privacy"), fullPage: true });
+});
+
+/** A one-frame Y4M video of a picture on white, for Chromium's fake camera (greyscale is enough for a QR code). */
+type Picture = { data: number[]; width: number; height: number };
+
+function cameraVideo(png: Picture, width = 640, height = 480): Buffer {
+  const y = Buffer.alloc(width * height, 255);
+  const left = Math.floor((width - png.width) / 2);
+  const top = Math.floor((height - png.height) / 2);
+  for (let row = 0; row < png.height; row++) {
+    for (let col = 0; col < png.width; col++) {
+      const i = (row * png.width + col) * 4;
+      y[(top + row) * width + left + col] = Math.round(0.299 * png.data[i] + 0.587 * png.data[i + 1] + 0.114 * png.data[i + 2]);
+    }
+  }
+  const chroma = Buffer.alloc((width / 2) * (height / 2) * 2, 128);
+  return Buffer.concat([Buffer.from(`YUV4MPEG2 W${width} H${height} F10:1 Ip A1:1 C420jpeg\nFRAME\n`), y, chroma]);
+}
+
+// Runs last: it adds a session today, which changes what the register shows.
+test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped signal) and can undo it", async ({ page, playwright }) => {
+  // The parent's pass (Musa's mother; each address may only ask for five codes an hour).
+  await signIn(page, "sara@example.com");
+  await page.goto("/pass");
+  await expect(page.getByRole("heading", { name: "Gate passes" })).toBeVisible();
+  const qr = page.getByRole("img", { name: "QR code that checks Musa in" });
+  await expect(qr).toBeVisible();
+  await page.screenshot({ path: shot("pass"), fullPage: true });
+  // The pass as the parent's screen draws it (its QR picture, 300px across, on white).
+  const picture: Picture = await qr.evaluate(async (el) => {
+    const svg = el.querySelector("svg")!;
+    const img = new Image();
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 300;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, 300, 300);
+    ctx.drawImage(img, 0, 0, 300, 300);
+    return { data: Array.from(ctx.getImageData(0, 0, 300, 300).data), width: 300, height: 300 };
+  });
+  expect(jsQR(new Uint8ClampedArray(picture.data), picture.width, picture.height)?.data).toMatch(/^DSP\.[0-9a-f-]{36}\./);
+  const video = resolve("e2e/.results/musa-pass.y4m");
+  writeFileSync(video, cameraVideo(picture));
+
+  // The coach's phone, with that pass held up to its camera. (By now Coach Hamza runs the U7s only, so the new session is theirs.)
+  const browser = await playwright.chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined,
+    args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", `--use-file-for-fake-video-capture=${video}`],
+  });
+  try {
+    const context = await browser.newContext({
+      ...devices["Pixel 7"],
+      viewport: { width: 390, height: 844 },
+      baseURL: "http://localhost:3100",
+      permissions: ["camera"],
+      extraHTTPHeaders: { "x-forwarded-for": "10.0.1.1" },
+    });
+    const coach = await context.newPage();
+    await signIn(coach, "coach@deensquad.test");
+    // Today's session, so the pass checks the child in whatever day the suite runs.
+    await coach.goto("/admin/sessions");
+    await coach.getByLabel("Title").fill("Gate test");
+    await coach.getByLabel("Date", { exact: true }).fill(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date()));
+    await coach.getByLabel("Starts").fill("00:00");
+    await coach.getByLabel("Finishes").fill("23:59");
+    await coach.getByRole("button", { name: "Add sessions" }).click();
+    await expect(coach.getByText("Sessions added.")).toBeVisible();
+    await coach.goto("/coach?group=U7");
+    const gateTest = coach.getByRole("navigation", { name: "Today's sessions" }).getByRole("link", { name: /Gate test/ });
+    if (await gateTest.count()) await gateTest.click();
+    await expect(coach.getByRole("heading", { name: "Gate test register" })).toBeVisible();
+    const here = coach.getByRole("region", { name: /^Here/ });
+    await expect(here.getByRole("heading", { name: "Here (0)" })).toBeVisible();
+
+    // No signal at the gate: the scanner says so (not "not a pass") and offers to try again.
+    const offline = (url: URL) => url.pathname === "/coach";
+    await coach.route(offline, (route) => (route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue()));
+    await coach.getByRole("button", { name: "Scan passes" }).click();
+    const scanner = coach.getByRole("dialog", { name: "Scan gate passes" });
+    await expect(scanner.getByText("No signal – not checked in yet")).toBeVisible({ timeout: 15_000 });
+    await expect(scanner.getByText("That isn't a Deen Squad pass.")).toHaveCount(0);
+    expect((await scanner.getByRole("button", { name: "Try again" }).boundingBox())!.height).toBeGreaterThanOrEqual(48);
+    await coach.screenshot({ path: shot("coach-scan-no-signal") });
+
+    await coach.unroute(offline);
+    await scanner.getByRole("button", { name: "Try again" }).click();
+    await expect(scanner.getByText("Musa S.")).toBeVisible();
+    await expect(scanner.getByText(/U7 · (Checked in|Already checked in)/)).toBeVisible();
+    await coach.screenshot({ path: shot("coach-scan") });
+    await scanner.getByRole("button", { name: "Close the scanner" }).click();
+
+    await expect(here.getByRole("heading", { name: "Here (1)" })).toBeVisible();
+    await expect(here.getByText(/Pass scanned/)).toBeVisible();
+    await here.getByRole("button", { name: "Undo check-in for Musa S." }).click();
+    await expect(here.getByRole("heading", { name: "Here (0)" })).toBeVisible();
+
+    // A tap that fails without signal lands on the club's error page, which can try again.
+    await coach.route(offline, (route) => (route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue()));
+    await coach.getByRole("button", { name: "Mark Musa S. here" }).click();
+    await expect(coach.getByRole("heading", { name: "Something went wrong" })).toBeVisible();
+    await coach.screenshot({ path: shot("error") });
+    await coach.unroute(offline);
+    await coach.getByRole("button", { name: "Try again" }).click();
+    await expect(coach.getByRole("heading", { name: "Gate test register" })).toBeVisible();
+    await context.close();
+  } finally {
+    await browser.close();
+  }
 });

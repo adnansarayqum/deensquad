@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
-import { Check, QrCode, TriangleAlert, X } from "lucide-react";
+import { Check, QrCode, RotateCcw, TriangleAlert, WifiOff, X } from "lucide-react";
 import type { ScanResult } from "@/lib/staff/checkin";
 import { scanPass } from "@/lib/staff/actions";
 
@@ -12,15 +12,32 @@ const reasonText = {
   unknown_child: "This pass is for a child who is no longer at the club.",
 } as const;
 
+/** What the scanner shows: the server's answer, or that the answer never came back (no signal or a server fault). */
+type Shown = ScanResult | { ok: false; reason: "no_signal"; token: string };
+
 /** Full-screen camera scanner for family gate passes. Each pass checks the family in straight away. */
 export function PassScanner() {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ScanResult | null>(null);
+  const [result, setResult] = useState<Shown | null>(null);
+  const [retrying, setRetrying] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const busy = useRef(false);
   const last = useRef<{ token: string; at: number } | null>(null);
+
+  // A failed request isn't a bad pass: say so and keep the pass to try again.
+  const send = useCallback(async (token: string) => {
+    busy.current = true;
+    try {
+      setResult(await scanPass(token));
+    } catch {
+      setResult({ ok: false, reason: "no_signal", token });
+    }
+    setTimeout(() => {
+      busy.current = false;
+    }, 1500);
+  }, []);
 
   const stop = useCallback(() => {
     const stream = video.current?.srcObject as MediaStream | null;
@@ -57,17 +74,9 @@ export function PassScanner() {
           const now = Date.now();
           // Ignore the same pass held up for a few seconds after it was scanned.
           if (code?.data && !(last.current?.token === code.data && now - last.current.at < 6000)) {
-            busy.current = true;
             last.current = { token: code.data, at: now };
             navigator.vibrate?.(80);
-            try {
-              setResult(await scanPass(code.data));
-            } catch {
-              setResult({ ok: false, reason: "not_a_pass" });
-            }
-            setTimeout(() => {
-              busy.current = false;
-            }, 1500);
+            await send(code.data);
           }
         }
         frame = requestAnimationFrame(tick);
@@ -79,7 +88,7 @@ export function PassScanner() {
       cancelAnimationFrame(frame);
       stop();
     };
-  }, [open, stop]);
+  }, [open, stop, send]);
 
   if (!open) {
     return (
@@ -98,6 +107,12 @@ export function PassScanner() {
     );
   }
 
+  const retry = async (token: string) => {
+    setRetrying(true);
+    last.current = { token, at: Date.now() };
+    await send(token);
+    setRetrying(false);
+  };
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Scan gate passes" className="fixed inset-0 z-50 flex flex-col bg-pitch-deep text-on-pitch">
@@ -124,6 +139,20 @@ export function PassScanner() {
           <p className="rounded-app bg-orange-tint p-4 text-[15px] text-ink">{error}</p>
         ) : !result ? (
           <p className="text-center text-[15px] text-on-pitch-muted">Hold the parent&apos;s pass inside the box.</p>
+        ) : !result.ok && result.reason === "no_signal" ? (
+          <div className="flex flex-col gap-3 rounded-app bg-orange-tint p-4 text-ink">
+            <div className="flex items-center gap-3">
+              <WifiOff aria-hidden size={28} className="shrink-0 text-kit-orange" />
+              <p className="flex flex-col">
+                <span className="text-[17px] font-bold">No signal – not checked in yet</span>
+                <span className="text-[14px]">The pass is fine. The app couldn&apos;t reach the club, so try again or use Mark here.</span>
+              </p>
+            </div>
+            <button type="button" disabled={retrying} onClick={() => retry(result.token)} className="btn-chunky btn-grass w-full">
+              <RotateCcw aria-hidden size={20} />
+              {retrying ? "Trying…" : "Try again"}
+            </button>
+          </div>
         ) : !result.ok ? (
           <div className="flex items-center gap-3 rounded-app bg-orange-tint p-4 text-ink">
             <TriangleAlert aria-hidden size={28} className="shrink-0 text-kit-orange" />

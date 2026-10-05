@@ -15,6 +15,8 @@ export type RegisterRow = {
   shirtNumber: number | null;
   answer: Availability | null;
   checkedInAt: string | null;
+  /** How they were checked in: their gate pass or a coach's Mark here. */
+  method: "qr" | "manual" | null;
   flags: RegisterFlag[];
 };
 
@@ -74,11 +76,12 @@ export async function loadRegister(
     payment: PaymentState;
     answer: Availability | null;
     checked_in_at: Date | null;
+    method: "qr" | "manual" | null;
     unread_news: boolean;
     kit_ready: boolean;
   }>(
     `select p.id, p.first_name, p.last_name, p.shirt_number, p.photo_consent,
-       coalesce(ps.state, 'missing')::text as payment, a.answer::text as answer, at.checked_in_at,
+       coalesce(ps.state, 'missing')::text as payment, a.answer::text as answer, at.checked_in_at, at.method,
        -- last rung of the chase ladder: nobody in the family has read a message that's been waiting two days or more
        exists (
          select 1 from announcements an
@@ -113,6 +116,7 @@ export async function loadRegister(
       shirtNumber: r.shirt_number,
       answer: r.answer,
       checkedInAt: r.checked_in_at ? iso(r.checked_in_at) : null,
+      method: r.checked_in_at ? r.method : null,
       flags: [
         ...(r.payment === "missing" || r.payment === "overdue" ? (["no_payment_plan"] as const) : []),
         ...(r.photo_consent === null ? (["missing_consent"] as const) : []),
@@ -123,6 +127,10 @@ export async function loadRegister(
   };
 }
 
+/**
+ * Splits the squad for the gate. A child whose parent said not coming is still listed (in `away`), so a coach
+ * can mark them in if they turn up; once checked in they count as here and as expected.
+ */
 export function summarise(view: RegisterView) {
   const here = view.rows.filter((r) => r.checkedInAt).sort((a, b) => b.checkedInAt!.localeCompare(a.checkedInAt!));
   const away = view.rows.filter((r) => !r.checkedInAt && r.answer === "away");
