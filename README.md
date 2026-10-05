@@ -8,7 +8,7 @@ The parent app and club admin for **The Deen Squad Football Academy**: a phone-f
 | **Coaches** | Scan each child's gate pass (on their parent's phone) with the phone camera to check them in. Gate register: who's expected, who's here, who needs a word (no payment plan or photo consent). Post news and see who hasn't read it. |
 | **Admins** | Import families from a spreadsheet, email invites, fix family details, record payment status, schedule sessions, chase unread news on WhatsApp, add coaches. |
 
-Live at https://parent-app-production-4b29.up.railway.app
+Live at https://app.thedeensquadfootballacademy.co.uk
 
 ## Run it
 
