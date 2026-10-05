@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AdminTitle, Section } from "@/components/admin/bits";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { saveProduct } from "@/lib/shop/actions";
 import { formatPence, loadProducts, type Product } from "@/lib/shop/data";
@@ -84,7 +84,7 @@ function ProductFields({ p }: { p?: Product }) {
 }
 
 export default async function ShopProductsPage() {
-  const user = await requireStaff();
+  const user = await requireAdmin();
   const products = await asUser(user.id, (tx) => loadProducts(tx, { includeHidden: true }));
   return (
     <>

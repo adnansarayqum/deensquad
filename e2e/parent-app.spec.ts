@@ -152,6 +152,14 @@ test("coach: register marks a player here; parents can't open it", async ({ page
   await expect(page.getByText("Yusuf S. checked in")).toBeVisible();
   await expect(page.getByText("1 of 14 expected")).toBeVisible();
   await page.screenshot({ path: shot("coach"), fullPage: true });
+
+  // The shop is the club's to run: coaches don't see it and are sent back to the overview.
+  await page.goto("/admin");
+  await expect(page.getByRole("navigation", { name: "Club admin" }).getByRole("link", { name: "Shop" })).toHaveCount(0);
+  await page.goto("/admin/shop");
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.goto("/admin/shop/products");
+  await expect(page).toHaveURL(/\/admin$/);
 });
 
 test("admin: import a family, post news, add a session", async ({ page }) => {

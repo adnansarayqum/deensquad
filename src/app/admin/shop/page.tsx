@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminTitle, Section } from "@/components/admin/bits";
 import { OrderStatusPill } from "@/components/shop/OrderStatusPill";
-import { requireStaff } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { setOrderStatus } from "@/lib/shop/actions";
 import { formatPence, loadOrdersAdmin, loadSupplierTotals, type Order, type OrderStatus } from "@/lib/shop/data";
@@ -42,7 +42,7 @@ function nextSteps(o: Order): { status: OrderStatus; label: string; primary?: bo
 }
 
 export default async function AdminShopPage({ searchParams }: PageProps<"/admin/shop">) {
-  const user = await requireStaff();
+  const user = await requireAdmin();
   const { view } = await searchParams;
   const past = view === "past";
   const { orders, supplier } = await asUser(user.id, async (tx) => ({

@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireParent, requireStaff } from "../auth/session";
+import { requireAdmin, requireParent } from "../auth/session";
 import { UUID } from "../auth/tokens";
 import { appUrl } from "../config";
 import { asSystem, asUser, isDemo } from "../db";
@@ -97,7 +97,7 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
 
   let orderId: string;
   try {
-    [{ id: orderId }] = await asUser(user.id, (tx) => tx.query<{ id: string }>(`select place_order($1::jsonb, $2) as id`, [JSON.stringify(basket), payBy]));
+    [{ id: orderId }] = await asUser(user.id, (tx) => tx.query<{ id: string }>(`select place_order($1::text::jsonb, $2) as id`, [JSON.stringify(basket), payBy]));
   } catch (error) {
     console.error("[shop] place_order:", error instanceof Error ? error.message : error);
     await writeBasket([]);
@@ -173,7 +173,7 @@ export async function payAgain(formData: FormData): Promise<void> {
 export type ProductFormState = { error?: string; saved?: boolean };
 
 export async function saveProduct(_prev: ProductFormState, formData: FormData): Promise<ProductFormState> {
-  const user = await requireStaff();
+  const user = await requireAdmin();
   const id = formData.get("id");
   const name = cleanText(formData.get("name"), 80);
   const price = Number(String(formData.get("price") ?? "").replace(/[£\s]/g, ""));
@@ -240,7 +240,7 @@ const NEXT: Record<string, string[]> = {
 };
 
 export async function setOrderStatus(formData: FormData): Promise<void> {
-  const user = await requireStaff();
+  const user = await requireAdmin();
   const id = formData.get("order");
   const status = String(formData.get("status"));
   if (typeof id !== "string" || !UUID.test(id) || !(status in NEXT)) return;
