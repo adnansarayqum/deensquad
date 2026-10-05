@@ -44,6 +44,19 @@ describe("the gate register", () => {
     expect(s.notHere.some((r) => r.id === DEV_IDS.yusuf)).toBe(false);
   });
 
+  it("opens a linked future session even when there is a session today", async () => {
+    const [next] = await t.asUser(coach, (tx) =>
+      tx.query<{ id: string }>(`select id from sessions where starts_at > $1 and cancelled_at is null order by starts_at limit 1`, [new Date("2026-10-10T00:00:00Z")]),
+    );
+    const linked = (await t.asUser(coach, (tx) => loadRegister(tx, { now: atGate, sessionId: next.id, group: "U10" })))!;
+    expect(linked.session.id).toBe(next.id);
+    // Without a link, today's session opens as before; an unknown id falls back to today's too.
+    const plain = (await register("U10"))!;
+    expect(plain.session.id).not.toBe(next.id);
+    const unknown = (await t.asUser(coach, (tx) => loadRegister(tx, { now: atGate, sessionId: "00000000-0000-0000-0000-000000000000", group: "U10" })))!;
+    expect(unknown.session.id).toBe(plain.session.id);
+  });
+
   it("still keeps a group coach to their own groups", async () => {
     const view = (await register("U10", ["U7"]))!;
     expect(view.group).toBe("U7");

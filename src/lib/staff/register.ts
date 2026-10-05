@@ -53,11 +53,14 @@ export async function loadRegister(
   const allowed = opts.allowed;
   const mine = (s: Session): Session => (allowed ? { ...s, ageGroups: s.ageGroups.filter((g) => allowed.includes(g)) } : s);
   const todays = (await loadRegisterSessions(tx, opts.now)).map(mine).filter((s) => s.ageGroups.length > 0);
-  let session: Session | undefined = todays.find((s) => s.id === opts.sessionId) ?? todays[0];
+  // A linked session (e.g. from the admin dashboard) wins, even on a day with its own sessions; otherwise today's first.
+  let session: Session | undefined = todays.find((s) => s.id === opts.sessionId);
   if (!session && typeof opts.sessionId === "string") {
     const [row] = await tx.query<SessionRow>(`select ${SESSION_COLUMNS} from sessions s where s.id::text = $1`, [opts.sessionId]);
-    session = row ? mine(toSession(row)) : undefined;
+    const linked = row ? mine(toSession(row)) : undefined;
+    if (linked && linked.ageGroups.length > 0) session = linked;
   }
+  session ??= todays[0];
   if (!session || session.ageGroups.length === 0) return null;
 
   const counts = await tx.query<{ age_group: AgeGroup; n: number }>(
