@@ -647,6 +647,91 @@ function cameraVideo(png: Picture, width = 640, height = 480): Buffer {
   return Buffer.concat([Buffer.from(`YUV4MPEG2 W${width} H${height} F10:1 Ip A1:1 C420jpeg\nFRAME\n`), y, chroma]);
 }
 
+test("tournament squads: the admin picks two U10s and messages them; only their families see it", async ({ browser, page }) => {
+  test.skip(!existsSync(ADMIN_STATE), "run with the earlier tests: needs their saved sign-in");
+  const adminContext = await browser.newContext({
+    ...devices["Pixel 7"],
+    viewport: { width: 390, height: 844 },
+    baseURL: "http://localhost:3100",
+    storageState: ADMIN_STATE,
+  });
+  const admin = await adminContext.newPage();
+  await admin.goto("/admin/sessions");
+  await admin.getByLabel("Title").fill("County Cup");
+  await admin.getByLabel("Kind").selectOption("tournament");
+  // After this week's Friday, so it's asked about beside the next training.
+  await admin.getByLabel("Date", { exact: true }).fill(new Date(Date.now() + 12 * 86400000).toISOString().slice(0, 10));
+  await admin.getByLabel("Starts").fill("09:00");
+  await admin.getByLabel("Finishes").fill("13:00");
+  for (const g of ["U6", "U7", "U12", "U15"]) await admin.getByLabel(g, { exact: true }).uncheck();
+  await admin.getByRole("button", { name: "Add sessions" }).click();
+  await expect(admin.getByText("Sessions added.")).toBeVisible();
+  await admin.getByRole("link", { name: /^Pick squad for County Cup/ }).click();
+  await expect(admin.getByRole("heading", { name: "County Cup squad" })).toBeVisible();
+  const sessionId = admin.url().match(/\/admin\/sessions\/([0-9a-f-]{36})\/squad$/)![1];
+
+  const picker = admin.getByRole("form", { name: "Pick the squad" });
+  // Every U10 (the sample club's, plus those added by the import and sign-up tests).
+  const total = Number((await picker.getByText(/^0 of \d+ selected$/).textContent())!.match(/of (\d+)/)![1]);
+  expect(total).toBeGreaterThanOrEqual(16);
+  await picker.getByRole("button", { name: "Select all" }).click();
+  await expect(picker.getByText(`${total} of ${total} selected`)).toBeVisible();
+  await picker.getByRole("button", { name: "Clear" }).click();
+  await picker.getByLabel("Bilal R").check();
+  await picker.getByLabel("Hamza T").check();
+  await expect(picker.getByText(`2 of ${total} selected`)).toBeVisible();
+  expect((await picker.getByText("Bilal R").locator("xpath=ancestor::label").boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  await picker.getByRole("button", { name: "Save squad" }).click();
+  await expect(picker.getByText("Squad saved.")).toBeVisible();
+  await expect(picker.getByText("Not answered")).toHaveCount(2);
+
+  await admin.getByLabel("Headline").fill("County Cup: meet at 9am");
+  await admin.getByLabel("Message").fill("Bring water and the away kit.");
+  await admin.getByRole("button", { name: "Send to the squad's parents" }).click();
+  await expect(admin.getByText("Posted. Parents see it at the top of Club news.")).toBeVisible();
+  await expect(admin.getByText(/Squad · County Cup/)).toBeVisible();
+  await expect(admin.getByText("0 of 2 read")).toBeVisible();
+  await expect(admin.getByText("Parent R", { exact: true })).toBeVisible();
+  await expect(admin.getByText("Parent K", { exact: true })).toHaveCount(0);
+
+  // Bilal's parent is asked, and answers yes.
+  await signIn(page, "parent2@example.com");
+  await page.goto("/friday");
+  const question = page.getByRole("group", { name: /^Can Bilal play in County Cup on / });
+  await expect(question).toBeVisible();
+  await question.getByRole("button", { name: "Yes" }).click();
+  await expect(page.getByText("Saved. The coach can see Bilal can play.")).toBeVisible();
+  await page.screenshot({ path: shot("parent-squad-invite"), fullPage: true });
+  await page.goto("/news");
+  await expect(page.getByRole("heading", { name: "County Cup: meet at 9am" })).toBeVisible();
+
+  // Ahmed (U10, not picked): no tournament, no message. (A fresh browser, so no late cookie from Bilal's parent.)
+  const otherContext = await browser.newContext({ ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: "http://localhost:3100" });
+  const other = await otherContext.newPage();
+  await signIn(other, "parent1@example.com");
+  await other.goto("/friday");
+  await expect(other.getByRole("heading", { name: /Is Ahmed coming/ })).toBeVisible();
+  await expect(other.getByText(/County Cup/)).toHaveCount(0);
+  await other.goto("/news");
+  await expect(other.getByRole("heading", { name: "Club news" })).toBeVisible();
+  await expect(other.getByText(/County Cup/)).toHaveCount(0);
+  await otherContext.close();
+
+  // The admin sees the answer, and the register lists only the squad.
+  await admin.goto(`/admin/sessions/${sessionId}/squad`);
+  await expect(admin.getByText("Confirmed", { exact: true })).toBeVisible();
+  await expect(admin.getByText("2 picked · 1 confirmed · 0 can't play · 1 not answered")).toBeVisible();
+  await admin.screenshot({ path: shot("admin-squad"), fullPage: true });
+  await admin.goto("/admin/sessions");
+  await expect(admin.getByText("Squad: 2 picked")).toBeVisible();
+  await admin.goto(`/coach?session=${sessionId}`);
+  await expect(admin.getByRole("heading", { name: "County Cup register" })).toBeVisible();
+  await expect(admin.getByRole("button", { name: /^Mark .+ here$/ })).toHaveCount(2);
+  await expect(admin.getByRole("button", { name: "Mark Bilal R. here" })).toBeVisible();
+  await expect(admin.getByRole("button", { name: "Mark Hamza T. here" })).toBeVisible();
+  await adminContext.close();
+});
+
 // Runs last: it adds a session today, which changes what the register shows.
 test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped signal) and can undo it", async ({ page, playwright }) => {
   // The parent's pass (Musa's mother; each address may only ask for five codes an hour).
