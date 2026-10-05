@@ -7,7 +7,7 @@ import { loadNewsList } from "@/lib/admin/data";
 import { TOPICS } from "@/lib/admin/topics";
 import { WritingHelp } from "@/components/writing/WritingHelp";
 import { aiConfigured } from "@/lib/ai/claude";
-import { isGroupCoach, requireStaff, staffGroups } from "@/lib/auth/session";
+import { coachLimit, isGroupCoach, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { postedLabel } from "@/lib/dates";
 
@@ -17,7 +17,7 @@ export default async function AdminNewsPage() {
   const user = await requireStaff();
   const limited = isGroupCoach(user.staff);
   const myGroups = staffGroups(user.staff);
-  const news = await asUser(user.id, (tx) => loadNewsList(tx));
+  const news = await asUser(user.id, (tx) => loadNewsList(tx, 50, coachLimit(user.staff)));
   const now = new Date();
 
   return (

@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { isGroupCoach, requireAdmin, requireStaff, staffGroups } from "../auth/session";
+import { coachLimit, isGroupCoach, requireAdmin, requireStaff, staffGroups } from "../auth/session";
 import { UUID, normaliseEmail } from "../auth/tokens";
 import { appUrl } from "../config";
 import { londonTime } from "../dates";
@@ -12,6 +12,8 @@ import { AGE_GROUPS, isAgeGroup, type AgeGroup } from "../domain";
 import { canSendEmail } from "../email/send";
 import { cleanBody, cleanPhone, cleanText, dialable } from "../validate";
 import { applyImport, planImport, type ImportProblem, type ImportSummary } from "./import";
+import { overlaps, within } from "./scope";
+import { cancelSession, removeSession } from "./sessions";
 import { runChase } from "../chase/run";
 import { sendInvites } from "./invites";
 import { TOPICS } from "./topics";
@@ -157,13 +159,19 @@ export async function setPayment(formData: FormData): Promise<void> {
   const child = id(formData.get("child"));
   const state = formData.get("state");
   if (!child || !["active", "missing", "overdue", "self_reported"].includes(String(state))) return;
-  await asUser(user.id, (tx) =>
-    tx.query(
+  const mine = coachLimit(user.staff);
+  await asUser(user.id, async (tx) => {
+    if (mine) {
+      // A coach with their own groups sets payment only for children in those groups.
+      const [p] = await tx.query<{ age_group: string }>(`select age_group::text as age_group from players where id = $1`, [child]);
+      if (!p || !within([p.age_group], mine)) return;
+    }
+    await tx.query(
       `insert into payment_status (player_id, state, updated_at) values ($1, $2::payment_state, now())
        on conflict (player_id) do update set state = excluded.state, updated_at = now()`,
       [child, state],
-    ),
-  );
+    );
+  });
   refresh();
 }
 
@@ -273,7 +281,17 @@ export async function deleteNews(formData: FormData): Promise<void> {
   const user = await requireStaff();
   const news = id(formData.get("id"));
   if (!news || formData.get("confirm") !== "yes") return;
-  await asUser(user.id, (tx) => tx.query(`delete from announcements where id = $1`, [news]));
+  const mine = coachLimit(user.staff);
+  const deleted = await asUser(user.id, async (tx) => {
+    if (mine) {
+      // A coach with their own groups deletes only messages for those groups alone, never "every family".
+      const [a] = await tx.query<{ audience: string[] | null }>(`select audience::text[] as audience from announcements where id = $1`, [news]);
+      if (!a || !within(a.audience, mine)) return false;
+    }
+    await tx.query(`delete from announcements where id = $1`, [news]);
+    return true;
+  });
+  if (!deleted) return;
   redirect("/admin/news");
 }
 
@@ -283,12 +301,18 @@ export async function chaseOnWhatsApp(formData: FormData): Promise<void> {
   const news = id(formData.get("news"));
   const guardian = id(formData.get("guardian"));
   if (!news || !guardian) return;
+  const mine = coachLimit(user.staff);
   const found = await asUser(user.id, async (tx) => {
-    const [row] = await tx.query<{ first_name: string; phone: string | null; title: string }>(
-      `select g.first_name, g.phone, a.title from guardians g, announcements a where g.id = $1 and a.id = $2`,
-      [guardian, news],
+    const [row] = await tx.query<{ first_name: string; phone: string | null; title: string; audience: string[] | null; in_my_groups: boolean }>(
+      `select g.first_name, g.phone, a.title, a.audience::text[] as audience,
+         exists (select 1 from player_guardians pg join players p on p.id = pg.player_id
+                 where pg.guardian_id = g.id and ($3::text[] is null or p.age_group::text = any ($3::text[]))) as in_my_groups
+       from guardians g, announcements a where g.id = $1 and a.id = $2`,
+      [guardian, news, mine],
     );
     if (!row?.phone) return null;
+    // A coach with their own groups chases only their groups' parents about messages that reached them.
+    if (mine && !(overlaps(row.audience, mine) && row.in_my_groups)) return null;
     await tx.query(`insert into announcement_chases (announcement_id, guardian_id, channel) values ($1, $2, 'whatsapp')`, [news, guardian]);
     return row;
   });
@@ -318,6 +342,8 @@ export async function addSessions(_prev: FormState, formData: FormData): Promise
   if (!title) return { error: "Add a title, like Training." };
   if (!venue) return { error: "Add the venue." };
   if (groups.length === 0) return { error: "Choose at least one age group." };
+  const mine = coachLimit(user.staff);
+  if (mine && groups.some((g) => !mine.includes(g))) return { error: `You can manage your own groups only: ${mine.join(", ")}.` };
   if (!first) return { error: "Choose the date." };
   if (untilText && !until) return { error: "Choose a valid end date for the repeats." };
   if (!start || !end) return { error: "Add start and finish times." };
@@ -359,7 +385,8 @@ export async function setSessionCancelled(formData: FormData): Promise<void> {
   const session = id(formData.get("id"));
   if (!session) return;
   const cancel = formData.get("cancel") === "yes";
-  await asUser(user.id, (tx) => tx.query(`update sessions set cancelled_at = ${cancel ? "now()" : "null"} where id = $1`, [session]));
+  // A coach with their own groups changes only sessions for those groups alone (no-op otherwise).
+  await asUser(user.id, (tx) => cancelSession(tx, session, cancel, coachLimit(user.staff)));
   refresh();
 }
 
@@ -367,8 +394,8 @@ export async function deleteSession(formData: FormData): Promise<void> {
   const user = await requireStaff();
   const session = id(formData.get("id"));
   if (!session) return;
-  // Only sessions nobody has been checked in to, so attendance history is never lost.
-  await asUser(user.id, (tx) => tx.query(`delete from sessions s where s.id = $1 and not exists (select 1 from attendance a where a.session_id = s.id)`, [session]));
+  // Only sessions nobody has been checked in to, and for a group coach only their own groups' sessions.
+  await asUser(user.id, (tx) => removeSession(tx, session, coachLimit(user.staff)));
   refresh();
 }
 

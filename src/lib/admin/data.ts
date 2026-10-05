@@ -3,6 +3,7 @@ import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { AGE_GROUPS, type AgeGroup, type PaymentState, type Session, type StaffRole } from "../domain";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
+import { overlaps } from "./scope";
 
 // Queries for the club admin. They run as a member of staff (row level security on: staff see the club).
 
@@ -222,10 +223,13 @@ const toNews = (r: NewsDbRow): NewsRow => ({
   readCount: Math.min(r.read_count, r.audience_count),
 });
 
-export async function loadNewsList(tx: Queryable, limit = 50): Promise<NewsRow[]> {
+/** Recent messages; `groups` (a group coach's own) keeps those whose audience overlaps them (see `overlaps` in scope.ts). */
+export async function loadNewsList(tx: Queryable, limit = 50, groups: readonly AgeGroup[] | null = null): Promise<NewsRow[]> {
   const rows = await tx.query<NewsDbRow>(
-    `select ${NEWS_COLUMNS} from announcements a left join staff_names sn on sn.id = a.posted_by order by a.posted_at desc limit $1`,
-    [limit],
+    `select ${NEWS_COLUMNS} from announcements a left join staff_names sn on sn.id = a.posted_by
+     where $2::text[] is null or a.audience is null or cardinality(a.audience) = 0 or a.audience::text[] && $2::text[]
+     order by a.posted_at desc limit $1`,
+    [limit, groups ? [...groups] : null],
   );
   return rows.map(toNews);
 }
@@ -242,12 +246,21 @@ export type UnreadGuardian = {
   chased: string[];
 };
 
-export async function loadNewsDetail(tx: Queryable, id: string): Promise<{ news: NewsRow; unread: UnreadGuardian[] } | null> {
+/**
+ * One message and the parents who haven't read it. `groups` (a group coach's own) hides a message
+ * that doesn't reach them and lists only parents with a child in those groups.
+ */
+export async function loadNewsDetail(
+  tx: Queryable,
+  id: string,
+  groups: readonly AgeGroup[] | null = null,
+): Promise<{ news: NewsRow; unread: UnreadGuardian[] } | null> {
   const [row] = await tx.query<NewsDbRow>(
     `select ${NEWS_COLUMNS} from announcements a left join staff_names sn on sn.id = a.posted_by where a.id = $1`,
     [id],
   );
   if (!row) return null;
+  if (groups && !overlaps(row.audience, groups)) return null;
   const unread = await tx.query<{
     id: string;
     first_name: string;
@@ -271,10 +284,11 @@ export async function loadNewsDetail(tx: Queryable, id: string): Promise<{ news:
      join player_guardians pg on pg.guardian_id = g.id
      join players p on p.id = pg.player_id
      where ($2::text[] is null or p.age_group::text = any ($2::text[]))
+       and ($3::text[] is null or p.age_group::text = any ($3::text[]))
        and not exists (select 1 from announcement_reads r where r.announcement_id = $1 and r.guardian_id = g.id)
      group by g.id
      order by 7, g.last_name, g.first_name`,
-    [id, row.audience],
+    [id, row.audience, groups ? [...groups] : null],
   );
   return {
     news: toNews(row),
@@ -293,16 +307,23 @@ export async function loadNewsDetail(tx: Queryable, id: string): Promise<{ news:
 
 export type AdminSession = Session & { attended: number; coming: number; away: number };
 
-export async function loadSessionsAdmin(tx: Queryable, now: Date): Promise<{ upcoming: AdminSession[]; recent: AdminSession[]; lastVenue: string | null }> {
+/** Upcoming and recent sessions; `groups` (a group coach's own) keeps those that include one of them. */
+export async function loadSessionsAdmin(
+  tx: Queryable,
+  now: Date,
+  groups: readonly AgeGroup[] | null = null,
+): Promise<{ upcoming: AdminSession[]; recent: AdminSession[]; lastVenue: string | null }> {
   const cols = `${SESSION_COLUMNS},
     (select count(*)::int from attendance a where a.session_id = s.id) as attended,
     (select count(*)::int from availability v where v.session_id = s.id and v.answer = 'coming') as coming,
     (select count(*)::int from availability v where v.session_id = s.id and v.answer = 'away') as away`;
   type Row = SessionRow & { attended: number; coming: number; away: number };
   const map = (r: Row): AdminSession => ({ ...toSession(r), attended: r.attended, coming: r.coming, away: r.away });
+  const mine = `($2::text[] is null or s.age_groups::text[] && $2::text[])`;
+  const limit = groups ? [...groups] : null;
   const [upcoming, recent, venue] = await Promise.all([
-    tx.query<Row>(`select ${cols} from sessions s where s.ends_at > $1 order by s.starts_at limit 60`, [now]),
-    tx.query<Row>(`select ${cols} from sessions s where s.ends_at <= $1 order by s.starts_at desc limit 6`, [now]),
+    tx.query<Row>(`select ${cols} from sessions s where s.ends_at > $1 and ${mine} order by s.starts_at limit 60`, [now, limit]),
+    tx.query<Row>(`select ${cols} from sessions s where s.ends_at <= $1 and ${mine} order by s.starts_at desc limit 6`, [now, limit]),
     tx.query<{ venue: string }>(`select venue from sessions order by created_at desc limit 1`),
   ]);
   return { upcoming: upcoming.map(map), recent: recent.map(map), lastVenue: venue[0]?.venue ?? null };

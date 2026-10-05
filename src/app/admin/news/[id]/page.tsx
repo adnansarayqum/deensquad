@@ -6,8 +6,9 @@ import { Notice, ReadBar, Section } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
 import { chaseOnWhatsApp, deleteNews } from "@/lib/admin/actions";
 import { loadNewsDetail } from "@/lib/admin/data";
+import { within } from "@/lib/admin/scope";
 import { UUID } from "@/lib/auth/tokens";
-import { requireStaff } from "@/lib/auth/session";
+import { coachLimit, requireStaff } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { postedLabel, shortDay, clock } from "@/lib/dates";
 import { LADDER } from "@/lib/chase/ladder";
@@ -22,9 +23,12 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
   const { id } = await params;
   const flags = await searchParams;
   if (!UUID.test(id)) notFound();
-  const detail = await asUser(user.id, (tx) => loadNewsDetail(tx, id));
+  const mine = coachLimit(user.staff);
+  const detail = await asUser(user.id, (tx) => loadNewsDetail(tx, id, mine));
   if (!detail) notFound();
   const { news, unread } = detail;
+  // A group coach can delete only messages that went to their own groups alone.
+  const canDelete = !mine || within(news.audience, mine);
   const chase = unread.filter((u) => !u.partnerRead);
   const covered = unread.filter((u) => u.partnerRead);
   const posted = new Date(news.postedAt).getTime();
@@ -121,19 +125,21 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
         </Section>
       ) : null}
 
-      <details className="rounded-app border-2 border-line bg-paper px-4 py-3">
-        <summary className="cursor-pointer text-[15px] font-bold">Delete this message</summary>
-        <form action={deleteNews} className="mt-3 flex flex-col gap-3">
-          <input type="hidden" name="id" value={news.id} />
-          <label className="flex min-h-11 items-center gap-3 text-[15px] font-bold">
-            <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--kit-orange)]" />
-            Yes, delete it for every parent
-          </label>
-          <button type="submit" className="btn-chunky btn-paper self-start">
-            Delete
-          </button>
-        </form>
-      </details>
+      {canDelete ? (
+        <details className="rounded-app border-2 border-line bg-paper px-4 py-3">
+          <summary className="cursor-pointer text-[15px] font-bold">Delete this message</summary>
+          <form action={deleteNews} className="mt-3 flex flex-col gap-3">
+            <input type="hidden" name="id" value={news.id} />
+            <label className="flex min-h-11 items-center gap-3 text-[15px] font-bold">
+              <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--kit-orange)]" />
+              Yes, delete it for every parent
+            </label>
+            <button type="submit" className="btn-chunky btn-paper self-start">
+              Delete
+            </button>
+          </form>
+        </details>
+      ) : null}
     </>
   );
 }

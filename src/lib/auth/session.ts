@@ -27,6 +27,11 @@ export function isGroupCoach(staff: { role: StaffRole; ageGroups: AgeGroup[] }):
   return staff.role === "coach" && staff.ageGroups.length > 0;
 }
 
+/** A group coach's own groups, or null for admins and coaches with no groups ticked (no limit). See `src/lib/admin/scope.ts`. */
+export function coachLimit(staff: { role: StaffRole; ageGroups: AgeGroup[] }): AgeGroup[] | null {
+  return isGroupCoach(staff) ? staffGroups(staff) : null;
+}
+
 /** The signed-in person for this request, or null. Checked against the database once per request. */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;

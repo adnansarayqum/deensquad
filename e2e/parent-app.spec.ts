@@ -300,15 +300,46 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
   await coachGroups.getByLabel("U7").check();
   await coachGroups.getByRole("button", { name: "Save groups" }).click();
   await expect(coachGroups.getByLabel("U7")).toBeChecked();
+  // A U10-only message and a U10-only session that the U7 coach shouldn't see.
+  await page.goto("/admin/news");
+  const kitHref = await page.getByRole("link", { name: /New away kit/ }).getAttribute("href");
+  expect(kitHref).toMatch(/^\/admin\/news\/[0-9a-f-]{36}$/);
+  await page.goto("/admin/sessions");
+  await page.getByLabel("Title").fill("U10 friendly");
+  // Months away, so it doesn't become the next session in later tests.
+  await page.getByLabel("Date", { exact: true }).fill(new Date(Date.now() + 200 * 86400000).toISOString().slice(0, 10));
+  for (const g of ["U6", "U7", "U12", "U15"]) await page.getByLabel(g, { exact: true }).uncheck();
+  await page.getByRole("button", { name: "Add sessions" }).click();
+  await expect(page.getByText("Sessions added.")).toBeVisible();
+  await expect(page.getByText(/U10 friendly/).first()).toBeVisible();
 
   await switchUser(page);
   await signIn(page, "coach@deensquad.test");
   await page.goto("/admin/news");
   await expect(page.getByLabel("Every family")).toHaveCount(0);
   await expect(page.getByLabel("U10")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /New away kit/ })).toHaveCount(0);
+  expect((await page.goto(kitHref!))?.status()).toBe(404);
+  // A message to every family: the unread list holds only parents with a child in U7.
+  await page.goto("/admin/news");
+  await page.getByRole("link", { name: /Winter timings/ }).click();
+  await expect(page.getByText("Parent E", { exact: true })).toBeVisible();
+  await expect(page.getByText("Parent K", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Delete this message")).toHaveCount(0);
+
   await page.goto("/admin/families");
   await expect(page.getByText("Musa Sample")).toBeVisible();
   await expect(page.getByText("Yusuf Sample")).toHaveCount(0);
+  expect((await page.goto("/admin/families/20000000-0000-4000-8000-000000000001"))?.status()).toBe(404);
+
+  await page.goto("/admin/sessions");
+  await expect(page.getByText(/Autumn Cup/)).toHaveCount(0);
+  await expect(page.getByText(/U10 friendly/)).toHaveCount(0);
+  await expect(page.getByLabel("U10", { exact: true })).toHaveCount(0);
+  // The club-wide training is listed, but only admins can cancel a joint session.
+  const comingUp = page.getByRole("region", { name: "Coming up" });
+  await expect(comingUp.getByText(/· Training /).first()).toBeVisible();
+  await expect(comingUp.getByRole("button", { name: "Cancel" })).toHaveCount(0);
 
   await page.goto("/coach/awards");
   await page.getByRole("link", { name: /Musa Sample/ }).click();

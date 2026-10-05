@@ -4,17 +4,19 @@ import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
 import { addSessions, deleteSession, setSessionCancelled } from "@/lib/admin/actions";
 import { loadSessionsAdmin, type AdminSession } from "@/lib/admin/data";
-import { requireStaff } from "@/lib/auth/session";
+import { within } from "@/lib/admin/scope";
+import { coachLimit, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { clock, londonDate, nextFridaySession, shortDay } from "@/lib/dates";
-import { AGE_GROUPS } from "@/lib/domain";
+import type { AgeGroup } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Sessions" };
 
 export default async function SessionsPage() {
   const user = await requireStaff();
   const now = new Date();
-  const { upcoming, recent, lastVenue } = await asUser(user.id, (tx) => loadSessionsAdmin(tx, now));
+  const mine = coachLimit(user.staff);
+  const { upcoming, recent, lastVenue } = await asUser(user.id, (tx) => loadSessionsAdmin(tx, now, mine));
   const friday = londonDate(nextFridaySession(now).start);
   const firstDate = `${friday.year}-${String(friday.month).padStart(2, "0")}-${String(friday.day).padStart(2, "0")}`;
 
@@ -75,7 +77,7 @@ export default async function SessionsPage() {
           <fieldset>
             <legend className="field-label">Age groups</legend>
             <div className="flex flex-wrap gap-2">
-              {AGE_GROUPS.map((g) => (
+              {staffGroups(user.staff).map((g) => (
                 <label key={g} className="flex min-h-11 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
                   <input type="checkbox" name="groups" value={g} defaultChecked className="h-4 w-4 accent-[var(--grass)]" />
                   <span className="text-sm font-extrabold">{g}</span>
@@ -107,13 +109,15 @@ export default async function SessionsPage() {
         </StatefulForm>
       </Section>
 
-      <SessionList title="Coming up" sessions={upcoming} editable />
-      {recent.length ? <SessionList title="Recent" sessions={recent} /> : null}
+      <SessionList title="Coming up" sessions={upcoming} mine={mine} editable />
+      {recent.length ? <SessionList title="Recent" sessions={recent} mine={mine} /> : null}
     </>
   );
 }
 
-function SessionList({ title, sessions, editable = false }: { title: string; sessions: AdminSession[]; editable?: boolean }) {
+function SessionList({ title, sessions, mine, editable = false }: { title: string; sessions: AdminSession[]; mine: AgeGroup[] | null; editable?: boolean }) {
+  // A group coach changes only sessions for their own groups; joint sessions are left to admins.
+  const canChange = (s: AdminSession) => editable && (!mine || within(s.ageGroups, mine));
   return (
     <section aria-label={title} className="flex flex-col gap-2">
       <h2 className="text-label text-ink-muted uppercase">{title}</h2>
@@ -133,7 +137,7 @@ function SessionList({ title, sessions, editable = false }: { title: string; ses
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {s.cancelled ? <Pill tone="action">Cancelled</Pill> : null}
-            {editable ? (
+            {canChange(s) ? (
               <form action={setSessionCancelled}>
                 <input type="hidden" name="id" value={s.id} />
                 <input type="hidden" name="cancel" value={s.cancelled ? "no" : "yes"} />
@@ -142,7 +146,7 @@ function SessionList({ title, sessions, editable = false }: { title: string; ses
                 </button>
               </form>
             ) : null}
-            {editable && s.attended === 0 ? (
+            {canChange(s) && s.attended === 0 ? (
               <form action={deleteSession}>
                 <input type="hidden" name="id" value={s.id} />
                 <button type="submit" className="min-h-11 px-2 text-sm font-bold text-ink-muted underline">

@@ -7,7 +7,7 @@ import { Pill } from "@/components/ui";
 import { removeChild, resendInvite, saveGuardian, setPayment, unlinkGuardian, updateChild } from "@/lib/admin/actions";
 import { loadChild } from "@/lib/admin/data";
 import { UUID } from "@/lib/auth/tokens";
-import { requireStaff } from "@/lib/auth/session";
+import { coachLimit, requireStaff } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { AGE_GROUPS, type PaymentState } from "@/lib/domain";
 
@@ -27,6 +27,9 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
   if (!UUID.test(id)) notFound();
   const child = await asUser(user.id, (tx) => loadChild(tx, id));
   if (!child) notFound();
+  // A coach with their own groups sees only those children.
+  const mine = coachLimit(user.staff);
+  if (mine && !mine.includes(child.ageGroup)) notFound();
   const isAdmin = user.staff.role === "admin";
 
   return (
