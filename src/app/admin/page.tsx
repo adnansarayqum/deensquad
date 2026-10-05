@@ -1,32 +1,44 @@
 import { Download } from "lucide-react";
-import { EXPORTS } from "@/lib/exports/reports";
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { AdminTitle, Notice, ReadBar, Section } from "@/components/admin/bits";
-import { loadNewsList, loadOverview, loadSessionsAdmin } from "@/lib/admin/data";
-import { requireStaff } from "@/lib/auth/session";
+import { ColumnChart, Figure, PercentBar, StackedBar } from "@/components/admin/charts";
+import { CHANNELS, loadDashboard, type Channel, type Dashboard } from "@/lib/admin/dashboard";
+import { TODO_NEEDS } from "@/lib/admin/needs";
+import { coachLimit, requireStaff } from "@/lib/auth/session";
 import { asUser, isDemo } from "@/lib/db";
 import { clock, shortDay } from "@/lib/dates";
 import { emailConfigured } from "@/lib/email/send";
+import { EXPORTS } from "@/lib/exports/reports";
+import { formatPence } from "@/lib/shop/data";
 
 export const metadata: Metadata = { title: "Overview" };
 
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const dayMonth = (iso: string) => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short" }).format(new Date(iso));
+
+const TODO_LABEL: Record<(typeof TODO_NEEDS)[number], string> = {
+  contacts: "no emergency contact",
+  payment: "no payment plan",
+  contract: "contract not signed",
+  consent: "no photo answer",
+};
+
+const CHANNEL_LABEL: Record<Channel, string> = {
+  app: "App notifications",
+  email: "Emails",
+  sms: "Text messages",
+  whatsapp: "WhatsApp",
+  gate: "Flagged at the gate",
+};
+
 export default async function AdminHome() {
   const user = await requireStaff();
-  const now = new Date();
-  const [overview, news, sessions] = await asUser(user.id, (tx) =>
-    Promise.all([loadOverview(tx), loadNewsList(tx, 1), loadSessionsAdmin(tx, now)]),
-  );
-  const latest = news[0];
-  const next = sessions.upcoming.find((s) => !s.cancelled);
   const isAdmin = user.staff.role === "admin";
-
-  const stats = [
-    { label: "players", value: overview.players, href: "/admin/families" },
-    { label: `of ${overview.guardians} parents signed in`, value: overview.signedIn, href: "/admin/families" },
-    { label: "no payment plan", value: overview.noPayment, href: "/admin/families", warn: overview.noPayment > 0 },
-    { label: "no photo consent", value: overview.noConsent, href: "/admin/families", warn: overview.noConsent > 0 },
-  ];
+  const limit = coachLimit(user.staff);
+  const d = await asUser(user.id, (tx) => loadDashboard(tx, { now: new Date(), limit, withShop: isAdmin }));
+  const empty = d.players === 0;
 
   return (
     <>
@@ -39,7 +51,7 @@ export default async function AdminHome() {
         </Notice>
       ) : null}
 
-      {overview.players === 0 && isAdmin ? (
+      {empty && isAdmin ? (
         <Section title="Get started">
           <ol className="flex list-decimal flex-col gap-2 pl-5 text-[15px] leading-[22px]">
             <li>
@@ -65,18 +77,16 @@ export default async function AdminHome() {
         </Section>
       ) : null}
 
-      <dl className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        {stats.map((s) => (
-          <Link key={s.label} href={s.href} className="flex flex-col-reverse rounded-app border-2 border-line bg-paper p-3">
-            <dt className="text-[13px] font-bold text-ink-muted">{s.label}</dt>
-            <dd className={`font-display text-[40px] leading-none tabular-nums ${s.warn ? "text-kit-orange" : "text-ink"}`}>{s.value}</dd>
-          </Link>
-        ))}
-      </dl>
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <AttendanceSection d={d} limited={limit !== null} />
+        <FamiliesSection d={d} limited={limit !== null} />
+        <PaymentsSection d={d} />
+        <NewsSection d={d} />
+      </div>
 
       {isAdmin ? (
         <Section title="Download spreadsheets" aside={<span className="text-sm text-ink-muted">Open in Excel or Google Sheets</span>}>
-          <ul className="grid gap-2 sm:grid-cols-2">
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {Object.entries(EXPORTS).map(([kind, e]) => (
               <li key={kind}>
                 <a href={`/api/admin/export/${kind}`} download className="flex h-full items-start gap-3 rounded-app border-2 border-line bg-paper p-3">
@@ -91,61 +101,263 @@ export default async function AdminHome() {
           </ul>
         </Section>
       ) : null}
-
-      {overview.notInvited > 0 && isAdmin ? (
-        <Notice tone="action">
-          {overview.notInvited} {overview.notInvited === 1 ? "parent hasn't" : "parents haven't"} been invited yet.{" "}
-          <Link href="/admin/families" className="font-bold underline">
-            Send invites
-          </Link>
-        </Notice>
-      ) : null}
-
-      <Section
-        title="Latest message"
-        aside={
-          <Link href="/admin/news" className="text-sm font-bold text-grass-text underline">
-            Post news
-          </Link>
-        }
-      >
-        {latest ? (
-          <Link href={`/admin/news/${latest.id}`} className="flex flex-col gap-2">
-            <span className="text-[13px] text-ink-muted">
-              {latest.topic} · {latest.audience ? latest.audience.join(", ") : "Everyone"} · {shortDay(latest.postedAt)}
-            </span>
-            <span className="text-base font-bold">{latest.title}</span>
-            {latest.requiresAck ? <ReadBar read={latest.readCount} total={latest.audienceCount} /> : null}
-          </Link>
-        ) : (
-          <p className="text-[15px] text-ink-muted">Nothing posted yet.</p>
-        )}
-      </Section>
-
-      <Section
-        title="Next session"
-        aside={
-          <Link href="/admin/sessions" className="text-sm font-bold text-grass-text underline">
-            Sessions
-          </Link>
-        }
-      >
-        {next ? (
-          <div className="flex flex-col gap-1">
-            <span className="text-base font-bold">
-              {shortDay(next.startsAt)} · {next.title} {clock(next.startsAt)}
-            </span>
-            <span className="text-[15px] text-ink-muted">
-              {next.ageGroups.join(", ")} · {next.venue}
-            </span>
-            <span className="text-[15px]">
-              <b className="tabular-nums">{next.coming}</b> coming · <b className="tabular-nums">{next.away}</b> away
-            </span>
-          </div>
-        ) : (
-          <p className="text-[15px] text-ink-muted">No sessions coming up.</p>
-        )}
-      </Section>
     </>
+  );
+}
+
+function Sub({ children }: { children: ReactNode }) {
+  return <h3 className="text-label text-ink-muted uppercase">{children}</h3>;
+}
+
+function Empty({ children }: { children: ReactNode }) {
+  return <p className="text-[15px] text-ink-muted">{children}</p>;
+}
+
+function AttendanceSection({ d, limited }: { d: Dashboard; limited: boolean }) {
+  const next = d.attendance.next.filter((g) => g.squad > 0);
+  const season = d.attendance.season.filter((g) => g.squad > 0);
+  const noChildren = limited ? "No children in your groups yet." : "No children yet.";
+  return (
+    <Section
+      title="Attendance"
+      aside={
+        <Link href="/admin/sessions" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+          Sessions
+        </Link>
+      }
+    >
+      <Sub>Next session</Sub>
+      {next.length === 0 ? (
+        <Empty>{noChildren}</Empty>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {next.map((g) => (
+            <li key={g.group} className="flex flex-col gap-1">
+              <p className="text-[15px]">
+                <b>{g.group}</b>{" "}
+                <span className="text-ink-muted">
+                  {g.session ? `· ${shortDay(g.session.startsAt)} · ${g.session.title} ${clock(g.session.startsAt)}` : "· No session coming up"}
+                </span>
+              </p>
+              {g.session ? (
+                <StackedBar
+                  label={`${g.group}, ${shortDay(g.session.startsAt)}`}
+                  segments={[
+                    { label: "coming", value: g.coming, tone: "done", href: `/coach?group=${g.group}` },
+                    { label: "not coming", value: g.away, tone: "neutral", href: `/coach?group=${g.group}` },
+                    { label: "not answered", value: g.unanswered, tone: "rest", href: `/coach?group=${g.group}` },
+                  ]}
+                />
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Sub>This season (from 1 August)</Sub>
+      {season.length === 0 ? (
+        <Empty>{noChildren}</Empty>
+      ) : (
+        <table className="w-full text-[14px]">
+          <caption className="sr-only">Sessions held and average attendance this season, by age group</caption>
+          <thead>
+            <tr className="text-left text-label text-ink-muted uppercase">
+              <th scope="col" className="py-1 pr-2 font-bold">
+                Group
+              </th>
+              <th scope="col" className="py-1 pr-2 text-right font-bold">
+                Held
+              </th>
+              <th scope="col" className="py-1 font-bold">
+                Average attendance
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {season.map((g) => (
+              <tr key={g.group} className="border-t border-line">
+                <th scope="row" className="py-2 pr-2 text-left font-bold">
+                  {g.group}
+                </th>
+                <td className="py-2 pr-2 text-right tabular-nums">
+                  <Link href="/admin/sessions" aria-label={`${g.held} ${g.group} ${g.held === 1 ? "session" : "sessions"} held`} className="inline-flex min-h-12 items-center justify-end font-bold underline decoration-line underline-offset-4">
+                    {g.held}
+                  </Link>
+                </td>
+                <td className="py-2">
+                  {g.averagePct === null ? (
+                    <span className="text-ink-muted">No sessions yet</span>
+                  ) : (
+                    <PercentBar pct={g.averagePct} label={`${g.group}: ${g.averagePct}% of the squad of ${g.squad} checked in on average`} />
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <Sub>Checked in at the last {d.attendance.recent.length || 8} sessions</Sub>
+      {d.attendance.recent.length === 0 ? (
+        <Empty>No sessions held yet.</Empty>
+      ) : (
+        <ColumnChart
+          title={`Children checked in at the last ${plural(d.attendance.recent.length, "session", "sessions")}`}
+          unit="checked in"
+          columns={d.attendance.recent.map((s) => ({
+            key: s.id,
+            value: s.checkedIn,
+            label: dayMonth(s.startsAt),
+            detail: `${shortDay(s.startsAt)} ${s.title}`,
+            href: "/admin/sessions",
+          }))}
+        />
+      )}
+    </Section>
+  );
+}
+
+function FamiliesSection({ d, limited }: { d: Dashboard; limited: boolean }) {
+  const f = d.families;
+  return (
+    <Section
+      title="Families and to-dos"
+      aside={
+        <Link href="/admin/families" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+          Families
+        </Link>
+      }
+    >
+      <Sub>{plural(f.parents, "parent", "parents")} in the app</Sub>
+      {f.parents === 0 ? (
+        <Empty>{limited ? "No parents in your groups yet." : "No parents yet."}</Empty>
+      ) : (
+        <StackedBar
+          label="Parents"
+          segments={[
+            { label: "signed in", value: f.signedIn, tone: "done", href: "/admin/families" },
+            { label: "invited, not signed in", value: f.invited, tone: "neutral", href: "/admin/families?need=signin" },
+            { label: "not invited", value: f.notInvited, tone: "action", href: "/admin/families?need=invite" },
+          ]}
+        />
+      )}
+
+      <Sub>Children with to-dos left ({plural(d.players, "child", "children")})</Sub>
+      <ul className="grid grid-cols-2 gap-2">
+        {TODO_NEEDS.map((n) => (
+          <li key={n}>
+            <Figure value={f.todo[n]} label={TODO_LABEL[n]} href={`/admin/families?need=${n}`} action={f.todo[n] > 0} />
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+function PaymentsSection({ d }: { d: Dashboard }) {
+  const p = d.payments;
+  return (
+    <Section title={d.shop ? "Payments and shop" : "Payments"}>
+      <Sub>Monthly plans (TeamFeePay)</Sub>
+      {d.players === 0 ? (
+        <Empty>No children yet.</Empty>
+      ) : (
+        <StackedBar
+          label="Monthly plans"
+          segments={[
+            { label: "active", value: p.active, tone: "done", href: "/admin/families" },
+            { label: "to check", value: p.self_reported, tone: "neutral", href: "/admin/families?need=check" },
+            { label: "overdue", value: p.overdue, tone: "action", href: "/admin/families?need=overdue" },
+            { label: "no plan yet", value: p.missing, tone: "rest", href: "/admin/families?need=missing" },
+          ]}
+        />
+      )}
+
+      {d.shop ? (
+        <>
+          <Sub>Shop orders</Sub>
+          <ul className="grid grid-cols-3 gap-2">
+            <li>
+              <Figure value={d.shop.awaitingPayment} label="waiting for payment" href="/admin/shop" />
+            </li>
+            <li>
+              <Figure value={d.shop.toOrder} label="paid, to order from the supplier" href="/admin/shop" action={d.shop.toOrder > 0} />
+            </li>
+            <li>
+              <Figure value={d.shop.ready} label="ready to collect" href="/admin/shop" />
+            </li>
+          </ul>
+          <Sub>Paid sales</Sub>
+          <ul className="grid grid-cols-2 gap-2">
+            <li>
+              <Figure value={formatPence(d.shop.monthPence)} label="this month" href="/admin/shop?view=past" />
+            </li>
+            <li>
+              <Figure value={formatPence(d.shop.seasonPence)} label="this season (from 1 August)" href="/admin/shop?view=past" />
+            </li>
+          </ul>
+        </>
+      ) : null}
+    </Section>
+  );
+}
+
+function NewsSection({ d }: { d: Dashboard }) {
+  const n = d.news;
+  return (
+    <Section
+      title="News and reminders"
+      aside={
+        <Link href="/admin/news" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+          Post news
+        </Link>
+      }
+    >
+      <Sub>Messages to read and acknowledge</Sub>
+      {n.recent.length === 0 ? (
+        <Empty>Nothing posted that asks parents to tap &ldquo;I&apos;ve read this&rdquo; yet.</Empty>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {n.recent.map((m) => {
+            const unread = m.total - m.read;
+            return (
+              <li key={m.id} className="flex flex-col gap-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-x-3">
+                  <Link href={`/admin/news/${m.id}`} className="inline-flex min-h-12 min-w-0 items-center text-[15px] font-bold underline decoration-line underline-offset-4">
+                    {m.title}
+                  </Link>
+                  <Link
+                    href={`/admin/news/${m.id}`}
+                    className={`inline-flex min-h-12 items-center text-[14px] font-bold ${unread > 0 ? "text-kit-orange" : "text-grass-text"}`}
+                  >
+                    {unread > 0 ? `${unread} not read` : "Everyone has read it"}
+                  </Link>
+                </div>
+                <ReadBar read={m.read} total={m.total} />
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <Sub>Reminders sent in the last 7 days</Sub>
+      <ul className="grid grid-cols-2 gap-x-4 sm:grid-cols-3">
+        {CHANNELS.map((c) => (
+          <li key={c}>
+            <Link href="/admin/news" aria-label={`${n.reminders[c]} ${CHANNEL_LABEL[c].toLowerCase()}`} className="flex min-h-12 items-center justify-between gap-2 border-b border-line text-[14px]">
+              <span>{CHANNEL_LABEL[c]}</span>
+              <b className="tabular-nums">{n.reminders[c]}</b>
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      <Link href="/admin/news" aria-label={`${n.behind} ${n.behind === 1 ? "parent has" : "parents have"} 2 or more messages unread`} className="flex min-h-12 items-center gap-3 rounded-dash border-2 border-line px-3 py-2 hover:bg-cream">
+        <span className={`font-display text-[36px] leading-none tabular-nums ${n.behind > 0 ? "text-kit-orange" : "text-ink"}`}>{n.behind}</span>
+        <span className={`text-[14px] ${n.behind > 0 ? "font-bold text-kit-orange" : "text-ink-muted"}`}>
+          {n.behind === 1 ? "parent has" : "parents have"} 2 or more messages unread
+        </span>
+      </Link>
+    </Section>
   );
 }

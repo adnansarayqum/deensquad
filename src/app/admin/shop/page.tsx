@@ -107,7 +107,7 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
       </nav>
 
       {orders.length === 0 ? <p className="text-[15px] text-ink-muted">No orders here.</p> : null}
-      <ul className="flex flex-col gap-2">
+      <ul className="grid gap-2 lg:grid-cols-2 lg:items-start">
         {orders.map((o) => (
           <li key={o.id} className="flex flex-col gap-2.5 rounded-app border-2 border-line bg-paper px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">

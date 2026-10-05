@@ -11,7 +11,8 @@ export const metadata: Metadata = { title: "Import families" };
 export default async function ImportPage() {
   await requireAdmin();
   return (
-    <>
+    // Forms and detail read best at phone-to-tablet width, even on a computer.
+    <div className="flex flex-col gap-4 lg:max-w-3xl">
       <Link href="/admin/families" className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
         ← Families
       </Link>
@@ -35,6 +36,6 @@ export default async function ImportPage() {
       </Section>
 
       <ImportForm />
-    </>
+    </div>
   );
 }

@@ -24,93 +24,97 @@ export default async function SessionsPage() {
     <>
       <AdminTitle>Sessions</AdminTitle>
 
-      <Section title="Add sessions">
-        <StatefulForm action={addSessions} submitLabel="Add sessions" savedMessage="Sessions added. Parents can answer straight away.">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label htmlFor="title" className="field-label">
-                Title
-              </label>
-              <input id="title" name="title" defaultValue="Training" maxLength={60} className="field" />
-            </div>
-            <div>
-              <label htmlFor="kind" className="field-label">
-                Kind
-              </label>
-              <select id="kind" name="kind" defaultValue="training" className="field">
-                <option value="training">Training</option>
-                <option value="match">Match</option>
-                <option value="tournament">Tournament</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="date" className="field-label">
-                Date
-              </label>
-              <input id="date" name="date" type="date" defaultValue={firstDate} className="field" />
-            </div>
-            <div>
-              <label htmlFor="until" className="field-label">
-                Repeat every week until <span className="font-normal text-ink-muted">(optional)</span>
-              </label>
-              <input id="until" name="until" type="date" className="field" />
-            </div>
-            <div>
-              <label htmlFor="start" className="field-label">
-                Starts
-              </label>
-              <input id="start" name="start" type="time" defaultValue="18:30" className="field" />
-            </div>
-            <div>
-              <label htmlFor="end" className="field-label">
-                Finishes
-              </label>
-              <input id="end" name="end" type="time" defaultValue="20:00" className="field" />
-            </div>
-          </div>
-          <div>
-            <label htmlFor="venue" className="field-label">
-              Venue
-            </label>
-            <input id="venue" name="venue" defaultValue={lastVenue ?? ""} maxLength={120} className="field" />
-          </div>
-          <fieldset>
-            <legend className="field-label">Age groups</legend>
-            <div className="flex flex-wrap gap-2">
-              {staffGroups(user.staff).map((g) => (
-                <label key={g} className="flex min-h-11 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
-                  <input type="checkbox" name="groups" value={g} defaultChecked className="h-4 w-4 accent-[var(--grass)]" />
-                  <span className="text-sm font-extrabold">{g}</span>
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <Section title="Add sessions">
+          <StatefulForm action={addSessions} submitLabel="Add sessions" savedMessage="Sessions added. Parents can answer straight away.">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="title" className="field-label">
+                  Title
                 </label>
-              ))}
+                <input id="title" name="title" defaultValue="Training" maxLength={60} className="field" />
+              </div>
+              <div>
+                <label htmlFor="kind" className="field-label">
+                  Kind
+                </label>
+                <select id="kind" name="kind" defaultValue="training" className="field">
+                  <option value="training">Training</option>
+                  <option value="match">Match</option>
+                  <option value="tournament">Tournament</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="date" className="field-label">
+                  Date
+                </label>
+                <input id="date" name="date" type="date" defaultValue={firstDate} className="field" />
+              </div>
+              <div>
+                <label htmlFor="until" className="field-label">
+                  Repeat every week until <span className="font-normal text-ink-muted">(optional)</span>
+                </label>
+                <input id="until" name="until" type="date" className="field" />
+              </div>
+              <div>
+                <label htmlFor="start" className="field-label">
+                  Starts
+                </label>
+                <input id="start" name="start" type="time" defaultValue="18:30" className="field" />
+              </div>
+              <div>
+                <label htmlFor="end" className="field-label">
+                  Finishes
+                </label>
+                <input id="end" name="end" type="time" defaultValue="20:00" className="field" />
+              </div>
             </div>
-          </fieldset>
-          <p className="-mb-1 text-sm font-bold">Briefing parents see on the Friday screen (optional)</p>
-          <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label htmlFor="arriveBy" className="field-label">
-                Arrive by
+              <label htmlFor="venue" className="field-label">
+                Venue
               </label>
-              <input id="arriveBy" name="arriveBy" placeholder="6:20pm" maxLength={20} className="field" />
+              <input id="venue" name="venue" defaultValue={lastVenue ?? ""} maxLength={120} className="field" />
             </div>
-            <div>
-              <label htmlFor="kit" className="field-label">
-                Kit
-              </label>
-              <input id="kit" name="kit" placeholder="Green top, shin pads, water" maxLength={120} className="field" />
+            <fieldset>
+              <legend className="field-label">Age groups</legend>
+              <div className="flex flex-wrap gap-2">
+                {staffGroups(user.staff).map((g) => (
+                  <label key={g} className="flex min-h-11 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
+                    <input type="checkbox" name="groups" value={g} defaultChecked className="h-4 w-4 accent-[var(--grass)]" />
+                    <span className="text-sm font-extrabold">{g}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <p className="-mb-1 text-sm font-bold">Briefing parents see on the Friday screen (optional)</p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label htmlFor="arriveBy" className="field-label">
+                  Arrive by
+                </label>
+                <input id="arriveBy" name="arriveBy" placeholder="6:20pm" maxLength={20} className="field" />
+              </div>
+              <div>
+                <label htmlFor="kit" className="field-label">
+                  Kit
+                </label>
+                <input id="kit" name="kit" placeholder="Green top, shin pads, water" maxLength={120} className="field" />
+              </div>
+              <div>
+                <label htmlFor="prayerNote" className="field-label">
+                  Prayer
+                </label>
+                <input id="prayerNote" name="prayerNote" placeholder="Prayer break in the session" maxLength={120} className="field" />
+              </div>
             </div>
-            <div>
-              <label htmlFor="prayerNote" className="field-label">
-                Prayer
-              </label>
-              <input id="prayerNote" name="prayerNote" placeholder="Prayer break in the session" maxLength={120} className="field" />
-            </div>
-          </div>
-        </StatefulForm>
-      </Section>
+          </StatefulForm>
+        </Section>
 
-      <SessionList title="Coming up" sessions={upcoming} mine={mine} editable />
-      {recent.length ? <SessionList title="Recent" sessions={recent} mine={mine} /> : null}
+        <div className="flex flex-col gap-4">
+          <SessionList title="Coming up" sessions={upcoming} mine={mine} editable />
+          {recent.length ? <SessionList title="Recent" sessions={recent} mine={mine} /> : null}
+        </div>
+      </div>
     </>
   );
 }

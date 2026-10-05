@@ -33,7 +33,8 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
   const isAdmin = user.staff.role === "admin";
 
   return (
-    <>
+    // Forms and detail read best at phone-to-tablet width, even on a computer.
+    <div className="flex flex-col gap-4 lg:max-w-3xl">
       <Link href="/admin/families" className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
         ← Families
       </Link>
@@ -184,7 +185,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
           </form>
         </details>
       ) : null}
-    </>
+    </div>
   );
 }
 

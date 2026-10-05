@@ -9,6 +9,10 @@ import jsQR from "jsqr";
 
 const shot = (name: string) => `e2e/.results/screens/${name}.png`;
 const OUTBOX = "e2e/.results/outbox.jsonl";
+// Signed-in browser state saved by earlier tests, so the desktop dashboard test doesn't use up more
+// codes (each address may only ask for five an hour, and the admin has used all five by then).
+const ADMIN_STATE = "e2e/.results/admin-state.json";
+const COACH_STATE = "e2e/.results/coach-state.json";
 
 function latestCode(email: string): string {
   const lines = readFileSync(OUTBOX, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string; text: string });
@@ -210,7 +214,8 @@ test("admin: import a family, post news, add a session", async ({ page }) => {
   await expect(page.getByText(/2 children added/)).toBeVisible();
 
   await page.goto("/admin/families?group=U12");
-  await expect(page.getByText("Zara Khan")).toBeVisible();
+  // The Families page holds a phone list and a computer table; only one of them is on screen.
+  await expect(page.getByText("Zara Khan").filter({ visible: true })).toBeVisible();
   await page.getByRole("button", { name: "Email invites" }).click();
   await expect(page.getByText(/Invites sent to \d+ parents/)).toBeVisible();
   expect(readFileSync(OUTBOX, "utf8")).toContain("sana@example.com");
@@ -354,6 +359,7 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
 
   await switchUser(page);
   await signIn(page, "coach@deensquad.test");
+  await page.context().storageState({ path: COACH_STATE });
   await page.goto("/admin/news");
   await expect(page.getByLabel("Every family")).toHaveCount(0);
   await expect(page.getByLabel("U10")).toHaveCount(0);
@@ -367,7 +373,7 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
   await expect(page.getByText("Delete this message")).toHaveCount(0);
 
   await page.goto("/admin/families");
-  await expect(page.getByText("Musa Sample")).toBeVisible();
+  await expect(page.getByText("Musa Sample").filter({ visible: true })).toBeVisible();
   await expect(page.getByText("Yusuf Sample")).toHaveCount(0);
   expect((await page.goto("/admin/families/20000000-0000-4000-8000-000000000001"))?.status()).toBe(404);
 
@@ -462,11 +468,101 @@ test("writing help, downloads and badges: AI tidies a draft, an admin downloads 
   await page.getByRole("button", { name: "Award On time ×5" }).click();
   await expect(page.getByRole("button", { name: "Take back On time ×5" })).toBeVisible();
   await page.screenshot({ path: shot("badges"), fullPage: true });
+  await page.context().storageState({ path: ADMIN_STATE });
 
   await switchUser(page);
   await signIn(page, "parent1@example.com");
   const res = await page.request.get("/api/admin/export/families");
   expect(res.status()).toBe(403);
+});
+
+test("admin dashboard: a computer gets the sidebar, four sections and a Families table; phones keep the header; a U7 coach sees only U7", async ({ browser }) => {
+  const desktop = { viewport: { width: 1280, height: 800 }, baseURL: "http://localhost:3100" };
+
+  // The admin on a computer.
+  const adminContext = await browser.newContext({ ...desktop, storageState: ADMIN_STATE });
+  const page = await adminContext.newPage();
+  await page.goto("/admin");
+  const sidebar = page.getByRole("complementary", { name: "Club admin menu" });
+  await expect(sidebar).toBeVisible();
+  await expect(sidebar.getByRole("navigation", { name: "Club admin" }).getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+  await expect(sidebar.getByRole("link", { name: "Shop" })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page.locator("header")).toBeHidden();
+  for (const name of ["Attendance", "Families and to-dos", "Payments and shop", "News and reminders"]) {
+    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole("img", { name: /^U10, .*: \d+ coming, \d+ not coming, \d+ not answered$/ })).toBeVisible();
+  await expect(page.getByRole("list", { name: /Children checked in at the last/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /\d+ ready to collect/ })).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: /Pitch closed|parents have read it/ }).first()).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("NaN");
+  // Every bar and figure on the overview is at least 48px tall to tap.
+  for (const link of await page.getByRole("main").getByRole("link").all()) {
+    if (await link.isVisible()) expect((await link.boundingBox())!.height, await link.innerText()).toBeGreaterThanOrEqual(48);
+  }
+  await page.screenshot({ path: shot("admin-dashboard-desktop"), fullPage: true });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.screenshot({ path: shot("admin-dashboard-desktop-dark"), fullPage: true });
+  await page.emulateMedia({ colorScheme: "light" });
+
+  // A to-do count opens Families filtered to those children, as a table with one row per child.
+  const contract = page.getByRole("link", { name: /^\d+ contract not signed$/ });
+  const missing = Number((await contract.innerText()).match(/\d+/)![0]);
+  expect(missing).toBeGreaterThan(0);
+  await contract.click();
+  await expect(page).toHaveURL(/\/admin\/families\?need=contract$/);
+  const table = page.getByRole("table", { name: /^Children/ });
+  await expect(table).toBeVisible();
+  await expect(table.getByRole("row")).toHaveCount(missing + 1);
+  await expect(page.getByRole("status").filter({ hasText: "contract not signed" })).toContainText(`${missing} children`);
+  await expect(table.getByRole("rowheader", { name: "Musa Sample" })).toHaveCount(0); // Sara signed it for Musa
+  await page.screenshot({ path: shot("admin-families-desktop"), fullPage: true });
+  // Search by name (every child).
+  await page.getByLabel("Show").selectOption("");
+  await page.getByLabel("Child or parent name").fill("zara");
+  await page.getByRole("button", { name: "Find" }).click();
+  await expect(page).toHaveURL(/q=zara/);
+  await expect(table.getByRole("row")).toHaveCount(2);
+  await expect(table.getByRole("rowheader", { name: "Zara Khan" })).toBeVisible();
+  await expect(table.getByRole("row").nth(1)).toContainText("U12");
+  await adminContext.close();
+
+  // The same admin on a phone: the pitch header and pill navigation, no sidebar.
+  const phoneContext = await browser.newContext({ ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: desktop.baseURL, storageState: ADMIN_STATE });
+  const phone = await phoneContext.newPage();
+  await phone.goto("/admin");
+  await expect(phone.getByRole("complementary", { name: "Club admin menu" })).toHaveCount(0);
+  await expect(phone.locator("header")).toBeVisible();
+  const pills = phone.locator("header").getByRole("navigation", { name: "Club admin" }).getByRole("link");
+  await expect(pills).toHaveCount(8);
+  const [first, second] = [(await pills.nth(0).boundingBox())!, (await pills.nth(1).boundingBox())!];
+  expect(second.y).toBe(first.y); // side by side in one scrolling row
+  expect(second.x).toBeGreaterThan(first.x);
+  await expect(phone.locator("header").getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(phone.getByRole("heading", { name: "Families and to-dos" })).toBeVisible();
+  await phone.screenshot({ path: shot("admin-dashboard-phone"), fullPage: true });
+  await phoneContext.close();
+
+  // Coach Hamza (U7 only since the coach groups test) on a computer: U7 numbers only, no shop.
+  const coachContext = await browser.newContext({ ...desktop, storageState: COACH_STATE });
+  const coach = await coachContext.newPage();
+  await coach.goto("/admin");
+  await expect(coach.getByRole("complementary", { name: "Club admin menu" })).toBeVisible();
+  await expect(coach.getByRole("link", { name: "Shop" })).toHaveCount(0);
+  await expect(coach.getByRole("heading", { name: "Payments", exact: true })).toBeVisible();
+  await expect(coach.getByRole("heading", { name: "Payments and shop" })).toHaveCount(0);
+  await expect(coach.getByText(/ready to collect|Paid sales/)).toHaveCount(0);
+  const main = coach.locator("main");
+  await expect(main).not.toContainText(/U6|U10|U12|U15/);
+  await expect(coach.getByRole("img", { name: /^U7, / })).toBeVisible();
+  // The five U7s: Musa's parents have finished his To-do, the other four haven't started.
+  await expect(main.getByRole("heading", { name: "Children with to-dos left (5 children)" })).toBeVisible();
+  await expect(coach.getByRole("link", { name: "4 contract not signed" })).toBeVisible();
+  await expect(coach.getByRole("link", { name: "4 no emergency contact" })).toBeVisible();
+  await coach.getByRole("link", { name: "4 no emergency contact" }).click();
+  await expect(coach.getByRole("table", { name: /^Children/ }).getByRole("row")).toHaveCount(5);
+  await coachContext.close();
 });
 
 test("privacy: anyone can read the notice from the sign-in screen", async ({ page }) => {

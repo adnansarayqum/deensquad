@@ -15,7 +15,8 @@ const pounds = (pence: number | null) => (pence === null ? "" : (pence / 100).to
 function ProductFields({ p }: { p?: Product }) {
   const key = p?.id ?? "new";
   return (
-    <>
+    // Forms and detail read best at phone-to-tablet width, even on a computer.
+    <div className="flex flex-col gap-4 lg:max-w-3xl">
       {p ? <input type="hidden" name="id" value={p.id} /> : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
@@ -79,7 +80,7 @@ function ProductFields({ p }: { p?: Product }) {
         <input type="checkbox" name="active" defaultChecked={p ? p.active : true} className="h-5 w-5 accent-[var(--grass)]" />
         <span className="text-[15px] font-bold">On sale</span>
       </label>
-    </>
+    </div>
   );
 }
 

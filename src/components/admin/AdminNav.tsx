@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function AdminNav({ isAdmin }: { isAdmin: boolean }) {
+/** The admin sections: pills across the phone header, or a list down the desktop sidebar. */
+export function AdminNav({ isAdmin, layout = "pills" }: { isAdmin: boolean; layout?: "pills" | "sidebar" }) {
   const path = usePathname();
   const items = [
     { href: "/admin", label: "Overview" },
@@ -15,10 +16,37 @@ export function AdminNav({ isAdmin }: { isAdmin: boolean }) {
     ...(isAdmin ? [{ href: "/admin/shop", label: "Shop" }] : []),
     ...(isAdmin ? [{ href: "/admin/staff", label: "Staff" }] : []),
   ];
+  const isActive = (href: string) => (href === "/admin" ? path === "/admin" : path.startsWith(href));
+
+  if (layout === "sidebar") {
+    return (
+      <nav aria-label="Club admin">
+        <ul className="flex flex-col gap-1">
+          {items.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex min-h-12 items-center rounded-dash px-3 text-[15px] font-extrabold ${
+                    active ? "bg-floodlight text-on-gold" : "text-on-pitch hover:bg-pitch-deep"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    );
+  }
+
   return (
     <nav aria-label="Club admin" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
       {items.map((item) => {
-        const active = item.href === "/admin" ? path === "/admin" : path.startsWith(item.href);
+        const active = isActive(item.href);
         return (
           <Link
             key={item.href}

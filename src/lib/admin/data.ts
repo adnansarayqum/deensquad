@@ -3,6 +3,7 @@ import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { AGE_GROUPS, type AgeGroup, type PaymentState, type Session, type StaffRole } from "../domain";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
+import { NEEDS, type Need } from "./needs";
 import { overlaps } from "./scope";
 
 // Queries for the club admin. They run as a member of staff (row level security on: staff see the club).
@@ -47,8 +48,21 @@ export type FamilyRow = {
   guardians: FamilyGuardian[];
 };
 
-/** Every family, or one age group's; `within` limits a coach to their own groups. */
-export async function loadFamilies(tx: Queryable, group: AgeGroup | null, within: readonly AgeGroup[] = AGE_GROUPS): Promise<FamilyRow[]> {
+/** Escapes a search for use inside an ILIKE pattern (backslash is Postgres's default escape). */
+export function likePattern(search: string): string {
+  return `%${search.replace(/[\\%_]/g, "\\$&")}%`;
+}
+
+/**
+ * Every family, or one age group's; `within` limits a coach to their own groups. `need` keeps the
+ * children still missing that step (see needs.ts) and `search` matches a child's or parent's name.
+ */
+export async function loadFamilies(
+  tx: Queryable,
+  group: AgeGroup | null,
+  within: readonly AgeGroup[] = AGE_GROUPS,
+  { need = null, search = null }: { need?: Need | null; search?: string | null } = {},
+): Promise<FamilyRow[]> {
   const rows = await tx.query<{
     id: string;
     first_name: string;
@@ -74,9 +88,13 @@ export async function loadFamilies(tx: Queryable, group: AgeGroup | null, within
      left join player_guardians pg on pg.player_id = p.id
      left join guardians g on g.id = pg.guardian_id
      where ($1::text is null or p.age_group::text = $1) and p.age_group::text = any ($2::text[])
+       and ${need ? NEEDS[need].where : "true"}
+       and ($4::text is null or p.first_name || ' ' || p.last_name ilike $4 or exists (
+         select 1 from player_guardians spg join guardians sg on sg.id = spg.guardian_id
+         where spg.player_id = p.id and sg.first_name || ' ' || sg.last_name ilike $4))
      group by p.id, fg.payment, fg.in_app, fg.emergency_contacts
      order by p.age_group, p.last_name, p.first_name`,
-    [group, [...within], CONTRACT.id],
+    [group, [...within], CONTRACT.id, search?.trim() ? likePattern(search.trim()) : null],
   );
   return rows.map((r) => ({
     id: r.id,

@@ -41,7 +41,8 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
   const chaseLabel: Record<string, string> = { app: "Notified", email: "Emailed", sms: "Texted", whatsapp: "WhatsApp", gate: "At the gate" };
 
   return (
-    <>
+    // Forms and detail read best at phone-to-tablet width, even on a computer.
+    <div className="flex flex-col gap-4 lg:max-w-3xl">
       <Link href="/admin/news" className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
         ← News
       </Link>
@@ -140,6 +141,6 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
           </form>
         </details>
       ) : null}
-    </>
+    </div>
   );
 }

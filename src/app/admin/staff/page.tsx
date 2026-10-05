@@ -24,7 +24,7 @@ export default async function StaffPage() {
         and can also import families, send invites and manage staff.
       </p>
 
-      <ul className="flex flex-col gap-2">
+      <ul className="grid gap-2 lg:grid-cols-2 lg:items-start">
         {staff.map((s) => (
           <li
             key={s.id}
