@@ -17,6 +17,8 @@ export function loadMigrations(dir = join(process.cwd(), "db", "migrations")): M
 export async function migrate(db: Database, migrations: Migration[] = loadMigrations()): Promise<string[]> {
   return db.transaction(async (tx) => {
     await tx.query("select pg_advisory_xact_lock(727274)");
+    // As in scripts/migrate.mjs: give up after 5 s waiting for a table lock rather than queue behind it.
+    await tx.query("set local lock_timeout = '5s'");
     await tx.query(
       "create table if not exists public.schema_migrations (name text primary key, applied_at timestamptz not null default now())",
     );

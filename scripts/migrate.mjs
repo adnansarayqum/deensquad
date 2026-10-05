@@ -19,6 +19,9 @@ const sql = postgres(url, { max: 1, connect_timeout: 15, onnotice: () => {} });
 try {
   const ran = await sql.begin(async (tx) => {
     await tx`select pg_advisory_xact_lock(727274)`;
+    // Fail fast if a migration has to wait for a table lock (e.g. a long query on the live app):
+    // the deploy fails its health check and the old version keeps serving, instead of everything queueing behind it.
+    await tx`set local lock_timeout = '5s'`;
     await tx`create table if not exists public.schema_migrations (name text primary key, applied_at timestamptz not null default now())`;
     const applied = new Set((await tx`select name from public.schema_migrations`).map((r) => r.name));
     const done = [];
