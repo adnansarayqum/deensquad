@@ -16,9 +16,35 @@ export function sortNews(news: AnnouncementView[]): AnnouncementView[] {
   return [...news].sort((a, b) => Number(a.read) - Number(b.read) || b.postedAt.localeCompare(a.postedAt));
 }
 
-/** The first session that hasn't finished for this child's age group (cancelled ones included, so parents see them). */
+/** Whether a session is this child's: their group's, or a squad session they're picked for. */
+export function sessionIsFor(child: Child, session: Session): boolean {
+  return session.squad ? session.squad.includes(child.id) : session.ageGroups.includes(child.ageGroup);
+}
+
+/** The first session that hasn't finished for this child (cancelled ones included, so parents see them). */
 export function nextSessionFor(child: Child, sessions: Session[]): Session | undefined {
-  return sessions.find((s) => s.ageGroups.includes(child.ageGroup));
+  return sessions.find((s) => sessionIsFor(child, s));
+}
+
+/** "Can Yusuf play in Autumn Cup on Sat 17 Oct?" for a squad session; "Is Yusuf coming?" otherwise. */
+export function availabilityQuestion(name: string, session: Session, day: string): string {
+  return session.squad ? `Can ${name} play in ${session.title} on ${day}?` : `Is ${name} coming? ${day}`;
+}
+
+export type SquadInvite = { child: Child; session: Session; answer: Availability | undefined };
+
+/**
+ * Squad sessions further ahead than each child's next session, one per picked child, so the family is asked
+ * as soon as the child is picked rather than only once it's the next session. Cancelled ones are left out.
+ */
+export function squadInvites(week: ChildWeek[], sessions: Session[], answers: Map<string, Availability>): SquadInvite[] {
+  return sessions.flatMap((session) =>
+    session.squad && !session.cancelled
+      ? week
+          .filter((w) => session.squad!.includes(w.child.id) && w.session?.id !== session.id)
+          .map((w) => ({ child: w.child, session, answer: answers.get(answerKey(session.id, w.child.id)) }))
+      : [],
+  );
 }
 
 export type ChildWeek = {
@@ -49,7 +75,7 @@ export function buildWeek(
 export function weekSummary(week: ChildWeek[]): string {
   const open = week.filter((w) => w.session && !w.session.cancelled);
   const unanswered = open.filter((w) => !w.answer).map((w) => w.child.firstName);
-  if (unanswered.length === 1) return `Is ${unanswered[0]} coming?`;
+  if (unanswered.length === 1) return open.find((w) => !w.answer)?.session?.squad ? `Can ${unanswered[0]} play?` : `Is ${unanswered[0]} coming?`;
   if (unanswered.length > 1) return `Are ${joinNames(unanswered)} coming?`;
   const coming = open.filter((w) => w.answer === "coming").map((w) => w.child.firstName);
   const away = open.filter((w) => w.answer === "away").map((w) => w.child.firstName);

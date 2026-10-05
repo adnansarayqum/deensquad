@@ -21,7 +21,7 @@ import {
   type Family,
   type SquadCounts,
 } from "./data";
-import { buildChecklist, buildWeek, computeStats, nextSessionFor, sortNews } from "./views";
+import { buildChecklist, buildWeek, computeStats, nextSessionFor, sortNews, squadInvites } from "./views";
 
 // One loader per parent screen. Each checks the session, then reads as that parent (row level security on).
 
@@ -42,11 +42,12 @@ export const getShell = cache(async () => {
 
 async function loadWeek(userId: string, family: Family, now: Date) {
   return asUser(userId, async (tx) => {
-    const sessions = await loadUpcomingSessions(tx, familyGroups(family), now);
+    const sessions = await loadUpcomingSessions(tx, family.children, now);
     const firsts = family.children.map((c) => ({ child: c, session: nextSessionFor(c, sessions) }));
+    // Answers for each child's next session and for any squad session they're picked for.
     const answers = await loadAnswers(
       tx,
-      [...new Set(firsts.flatMap((f) => (f.session ? [f.session.id] : [])))],
+      [...new Set([...firsts.flatMap((f) => (f.session ? [f.session.id] : [])), ...sessions.filter((s) => s.squad).map((s) => s.id)])],
       family.children.map((c) => c.id),
     );
     const counts = new Map<string, SquadCounts>();
@@ -54,7 +55,8 @@ async function loadWeek(userId: string, family: Family, now: Date) {
       const key = session ? answerKey(session.id, child.ageGroup) : null;
       if (session && key && !counts.has(key)) counts.set(key, await loadSquadCounts(tx, session.id, child.ageGroup));
     }
-    return { sessions, week: buildWeek(family.children, sessions, answers, counts) };
+    const week = buildWeek(family.children, sessions, answers, counts);
+    return { sessions, week, invites: squadInvites(week, sessions, answers) };
   });
 }
 
@@ -71,8 +73,8 @@ export async function getNewsPage() {
 
 export async function getFridayPage() {
   const { user, family } = await getFamily();
-  const { sessions, week } = await loadWeek(user.id, family, new Date());
-  const shown = new Set(week.flatMap((w) => (w.session ? [w.session.id] : [])));
+  const { sessions, week, invites } = await loadWeek(user.id, family, new Date());
+  const shown = new Set([...week.flatMap((w) => (w.session ? [w.session.id] : [])), ...invites.map((i) => i.session.id)]);
   const groups = familyGroups(family);
   const [plans, sheets] = await asUser(user.id, (tx) => Promise.all([loadPlans(tx, [...shown], groups), loadPracticeSheets(tx, groups, 3)]));
   // Only the plan for each child's own group at the session they're going to.
@@ -80,6 +82,7 @@ export async function getFridayPage() {
   return {
     family,
     week,
+    invites,
     upcoming: sessions.filter((s) => !shown.has(s.id)).slice(0, 4),
     plans: plans.filter((p) => wanted.has(`${p.sessionId}|${p.ageGroup}`)),
     latestSheet: sheets[0] ?? null,

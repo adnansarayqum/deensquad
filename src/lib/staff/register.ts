@@ -3,6 +3,7 @@ import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { isAgeGroup, type AgeGroup, type Availability, type PaymentState, type Session } from "../domain";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
+import { newsReaches } from "../squads/sql";
 
 // The coach's gate register for one session and one age group. Runs as staff (row level security on).
 
@@ -63,9 +64,11 @@ export async function loadRegister(
   session ??= todays[0];
   if (!session || session.ageGroups.length === 0) return null;
 
+  // For a tournament squad session, only the squad counts (and is listed below).
   const counts = await tx.query<{ age_group: AgeGroup; n: number }>(
-    `select age_group::text as age_group, count(*)::int as n from players where age_group = any($1::text[]::age_group[]) group by age_group`,
-    [session.ageGroups],
+    `select p.age_group::text as age_group, count(*)::int as n from players p, sessions s
+     where s.id = $2 and p.age_group = any($1::text[]::age_group[]) and squad_allows(s.id, p.id) group by p.age_group`,
+    [session.ageGroups, session.id],
   );
   const groups = session.ageGroups.filter((g) => counts.some((c) => c.age_group === g && c.n > 0));
   const group = isAgeGroup(opts.group) && session.ageGroups.includes(opts.group) ? opts.group : (groups[0] ?? session.ageGroups[0]);
@@ -89,7 +92,7 @@ export async function loadRegister(
        exists (
          select 1 from announcements an
          where an.requires_ack and an.posted_at <= $3::timestamptz - interval '48 hours' and an.posted_at > $3::timestamptz - interval '14 days'
-           and (an.audience is null or p.age_group = any (an.audience))
+           and ${newsReaches("an", "p")}
            and not exists (
              select 1 from announcement_reads r join player_guardians rg on rg.guardian_id = r.guardian_id
              where r.announcement_id = an.id and rg.player_id = p.id
@@ -102,7 +105,7 @@ export async function loadRegister(
      left join payment_status ps on ps.player_id = p.id
      left join availability a on a.player_id = p.id and a.session_id = $1
      left join attendance at on at.player_id = p.id and at.session_id = $1
-     where p.age_group = $2::age_group
+     where p.age_group = $2::age_group and squad_allows($1, p.id)
      order by p.first_name, p.last_name`,
     [session.id, group, opts.now],
   );

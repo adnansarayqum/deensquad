@@ -34,6 +34,11 @@ export type Session = {
   kit: string | null;
   prayerNote: string | null;
   cancelled: boolean;
+  /**
+   * Tournament squads: on a squad session (only picked children see it), which of the family's children
+   * are picked. Absent on an ordinary session, which is for every child in its age groups.
+   */
+  squad?: string[];
 };
 
 export type Availability = "coming" | "away";

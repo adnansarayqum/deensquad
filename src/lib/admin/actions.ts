@@ -14,6 +14,8 @@ import { cleanBody, cleanPhone, cleanText, dialable } from "../validate";
 import { applyImport, planImport, type ImportProblem, type ImportSummary } from "./import";
 import { overlaps, within } from "./scope";
 import { cancelSession, removeSession } from "./sessions";
+import { newsReaches } from "../squads/sql";
+import { canManageSquad, saveSquad } from "../squads/squads";
 import { runChase } from "../chase/run";
 import { sendInvites } from "./invites";
 import { TOPICS } from "./topics";
@@ -249,16 +251,35 @@ export async function removeChild(formData: FormData): Promise<void> {
 
 // News ------------------------------------------------------------------------
 
+/**
+ * Posts a message. With `squadSession` (from a session's Squad page) it goes only to the parents of the children
+ * picked for that session's squad; its audience is the session's groups, so group coaches' views treat it as theirs.
+ */
 export async function postNews(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireStaff();
   const topic = formData.get("topic");
   const title = cleanText(formData.get("title"), 120);
   const body = cleanBody(formData.get("body"), 4000);
-  const everyone = formData.get("audience") === "all";
-  const groups = formData.getAll("groups").filter(isAgeGroup);
+  const squadSession = formData.has("squadSession") ? id(formData.get("squadSession")) : undefined;
+  if (squadSession === null) return { error: "Something went wrong. Reload and try again." };
+  let everyone = formData.get("audience") === "all";
+  let groups = formData.getAll("groups").filter(isAgeGroup);
   if (!TOPICS.includes(topic as (typeof TOPICS)[number])) return { error: "Choose a topic." };
   if (!title) return { error: "Add a headline." };
   if (!body) return { error: "Write the message." };
+  if (squadSession) {
+    const [s] = await asUser(user.id, (tx) =>
+      tx.query<{ age_groups: string[]; picked: number }>(
+        `select age_groups::text[] as age_groups, (select count(*)::int from session_squads q where q.session_id = s.id) as picked
+         from sessions s where s.id = $1`,
+        [squadSession],
+      ),
+    );
+    if (!s || !canManageSquad(s.age_groups, coachLimit(user.staff))) return { error: "Only an admin can message this squad." };
+    if (s.picked === 0) return { error: "Pick the squad first, then message them." };
+    everyone = false;
+    groups = s.age_groups.filter(isAgeGroup);
+  }
   if (!everyone && groups.length === 0) return { error: "Choose who it's for: everyone, or at least one age group." };
   if (isGroupCoach(user.staff)) {
     const mine = staffGroups(user.staff);
@@ -266,8 +287,9 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
   }
   const [row] = await asUser(user.id, (tx) =>
     tx.query<{ id: string }>(
-      `insert into announcements (topic, title, body, audience, requires_ack, posted_by) values ($1, $2, $3, $4::text[]::age_group[], $5, $6) returning id`,
-      [topic, title, body, everyone ? null : groups, formData.get("requiresAck") === "on", user.staff.id],
+      `insert into announcements (topic, title, body, audience, requires_ack, posted_by, squad_session_id)
+       values ($1, $2, $3, $4::text[]::age_group[], $5, $6, $7) returning id`,
+      [topic, title, body, everyone ? null : groups, formData.get("requiresAck") === "on", user.staff.id, squadSession ?? null],
     ),
   );
   // First rung of the chase ladder: notify parents now (unless it's night-time; the hourly run picks it up at 8am).
@@ -303,14 +325,16 @@ export async function chaseOnWhatsApp(formData: FormData): Promise<void> {
   if (!news || !guardian) return;
   const mine = coachLimit(user.staff);
   const found = await asUser(user.id, async (tx) => {
-    const [row] = await tx.query<{ first_name: string; phone: string | null; title: string; audience: string[] | null; in_my_groups: boolean }>(
+    const [row] = await tx.query<{ first_name: string; phone: string | null; title: string; audience: string[] | null; in_my_groups: boolean; reached: boolean }>(
       `select g.first_name, g.phone, a.title, a.audience::text[] as audience,
          exists (select 1 from player_guardians pg join players p on p.id = pg.player_id
-                 where pg.guardian_id = g.id and ($3::text[] is null or p.age_group::text = any ($3::text[]))) as in_my_groups
+                 where pg.guardian_id = g.id and ($3::text[] is null or p.age_group::text = any ($3::text[]))) as in_my_groups,
+         exists (select 1 from player_guardians pg join players p on p.id = pg.player_id where pg.guardian_id = g.id and ${newsReaches("a", "p")}) as reached
        from guardians g, announcements a where g.id = $1 and a.id = $2`,
       [guardian, news, mine],
     );
-    if (!row?.phone) return null;
+    // Only parents the message is for (for a squad message, the squad's parents).
+    if (!row?.phone || !row.reached) return null;
     // A coach with their own groups chases only their groups' parents about messages that reached them.
     if (mine && !(overlaps(row.audience, mine) && row.in_my_groups)) return null;
     await tx.query(`insert into announcement_chases (announcement_id, guardian_id, channel) values ($1, $2, 'whatsapp')`, [news, guardian]);
@@ -397,6 +421,18 @@ export async function deleteSession(formData: FormData): Promise<void> {
   // Only sessions nobody has been checked in to, and for a group coach only their own groups' sessions.
   await asUser(user.id, (tx) => removeSession(tx, session, coachLimit(user.staff)));
   refresh();
+}
+
+/** Saves the tournament squad picked on a session's Squad page (admins any session; a group coach only their own groups'). */
+export async function saveSquadPicks(_prev: FormState, formData: FormData): Promise<FormState> {
+  const user = await requireStaff();
+  const session = id(formData.get("session"));
+  if (!session) return { error: "Something went wrong. Reload and try again." };
+  const players = formData.getAll("player").filter((v): v is string => typeof v === "string" && UUID.test(v));
+  const result = await asUser(user.id, (tx) => saveSquad(tx, session, players, user.staff.id, coachLimit(user.staff)));
+  if (!result.ok) return { error: result.reason === "not_yours" ? "Only an admin can pick the squad for this session." : "That session has gone. Reload and try again." };
+  refresh();
+  return { saved: true };
 }
 
 // Staff -----------------------------------------------------------------------

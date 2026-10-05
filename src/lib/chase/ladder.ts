@@ -1,4 +1,5 @@
 import type { Queryable } from "../db/types";
+import { newsReaches } from "../squads/sql";
 
 // The announcement chase ladder. For each message that asks parents to tap "I've read this":
 //   app    straight away   push notification to parents who turned notifications on
@@ -6,6 +7,7 @@ import type { Queryable } from "../db/types";
 //   sms    after 48 hours  text message (only when a text provider is set up)
 //   gate   by session day  the coach's register flags the child (see staff/register.ts)
 // A parent is never chased once they, or the other parent of the same child, have read it.
+// A message to a tournament squad reaches only the parents of the children in that squad.
 // Nothing is sent between 9pm and 8am London time; due steps go out at the next run after 8am.
 // Every step is logged in announcement_chases, so each runs at most once per parent per message.
 
@@ -55,7 +57,7 @@ export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date,
     `select a.id as announcement_id, a.title, a.body, g.id as guardian_id, g.auth_user_id as user_id, g.first_name, g.email, g.phone,
        array_agg(distinct p.first_name order by p.first_name) as children
      from announcements a
-     join players p on a.audience is null or p.age_group = any (a.audience)
+     join players p on ${newsReaches("a", "p")}
      join player_guardians pg on pg.player_id = p.id
      join guardians g on g.id = pg.guardian_id
      where a.requires_ack

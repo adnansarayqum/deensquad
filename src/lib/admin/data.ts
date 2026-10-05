@@ -3,6 +3,7 @@ import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { AGE_GROUPS, type AgeGroup, type PaymentState, type Session, type StaffRole } from "../domain";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
+import { newsReaches } from "../squads/sql";
 import { NEEDS, type Need } from "./needs";
 import { overlaps } from "./scope";
 
@@ -208,11 +209,14 @@ export type NewsRow = {
   postedBy: string | null;
   audienceCount: number;
   readCount: number;
+  /** A message to a tournament squad: the session it's about (it reaches only the squad's parents). */
+  squad: { sessionId: string; title: string } | null;
 };
 
 const NEWS_COLUMNS = `a.id, a.topic, a.title, a.body, a.audience::text[] as audience, a.requires_ack, a.posted_at, sn.display_name as posted_by,
+  a.squad_session_id, (select ss.title from sessions ss where ss.id = a.squad_session_id) as squad_title,
   (select count(distinct pg.guardian_id)::int from player_guardians pg join players p on p.id = pg.player_id
-    where a.audience is null or p.age_group = any (a.audience)) as audience_count,
+    where ${newsReaches()}) as audience_count,
   (select count(*)::int from announcement_reads r where r.announcement_id = a.id) as read_count`;
 
 type NewsDbRow = {
@@ -226,6 +230,8 @@ type NewsDbRow = {
   posted_by: string | null;
   audience_count: number;
   read_count: number;
+  squad_session_id: string | null;
+  squad_title: string | null;
 };
 
 const toNews = (r: NewsDbRow): NewsRow => ({
@@ -239,6 +245,7 @@ const toNews = (r: NewsDbRow): NewsRow => ({
   postedBy: r.posted_by,
   audienceCount: r.audience_count,
   readCount: Math.min(r.read_count, r.audience_count),
+  squad: r.squad_session_id ? { sessionId: r.squad_session_id, title: r.squad_title ?? "Squad" } : null,
 });
 
 /** Recent messages; `groups` (a group coach's own) keeps those whose audience overlaps them (see `overlaps` in scope.ts). */
@@ -301,12 +308,13 @@ export async function loadNewsDetail(
      from guardians g
      join player_guardians pg on pg.guardian_id = g.id
      join players p on p.id = pg.player_id
-     where ($2::text[] is null or p.age_group::text = any ($2::text[]))
-       and ($3::text[] is null or p.age_group::text = any ($3::text[]))
+     join announcements a on a.id = $1
+     where ${newsReaches()}
+       and ($2::text[] is null or p.age_group::text = any ($2::text[]))
        and not exists (select 1 from announcement_reads r where r.announcement_id = $1 and r.guardian_id = g.id)
      group by g.id
      order by 7, g.last_name, g.first_name`,
-    [id, row.audience, groups ? [...groups] : null],
+    [id, groups ? [...groups] : null],
   );
   return {
     news: toNews(row),
@@ -323,7 +331,8 @@ export async function loadNewsDetail(
   };
 }
 
-export type AdminSession = Session & { attended: number; coming: number; away: number };
+/** `picked`: how many children are in its tournament squad (0 = an ordinary session for the whole groups). */
+export type AdminSession = Session & { attended: number; coming: number; away: number; picked: number };
 
 /** Upcoming and recent sessions; `groups` (a group coach's own) keeps those that include one of them. */
 export async function loadSessionsAdmin(
@@ -333,10 +342,11 @@ export async function loadSessionsAdmin(
 ): Promise<{ upcoming: AdminSession[]; recent: AdminSession[]; lastVenue: string | null }> {
   const cols = `${SESSION_COLUMNS},
     (select count(*)::int from attendance a where a.session_id = s.id) as attended,
-    (select count(*)::int from availability v where v.session_id = s.id and v.answer = 'coming') as coming,
-    (select count(*)::int from availability v where v.session_id = s.id and v.answer = 'away') as away`;
-  type Row = SessionRow & { attended: number; coming: number; away: number };
-  const map = (r: Row): AdminSession => ({ ...toSession(r), attended: r.attended, coming: r.coming, away: r.away });
+    (select count(*)::int from availability v where v.session_id = s.id and v.answer = 'coming' and squad_allows(s.id, v.player_id)) as coming,
+    (select count(*)::int from availability v where v.session_id = s.id and v.answer = 'away' and squad_allows(s.id, v.player_id)) as away,
+    (select count(*)::int from session_squads q where q.session_id = s.id) as picked`;
+  type Row = SessionRow & { attended: number; coming: number; away: number; picked: number };
+  const map = (r: Row): AdminSession => ({ ...toSession(r), attended: r.attended, coming: r.coming, away: r.away, picked: r.picked });
   const mine = `($2::text[] is null or s.age_groups::text[] && $2::text[])`;
   const limit = groups ? [...groups] : null;
   const [upcoming, recent, venue] = await Promise.all([

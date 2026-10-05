@@ -8,6 +8,7 @@ import { asUser } from "../db";
 import { CONTRACT } from "../documents/contract";
 import type { Availability } from "../domain";
 import { cleanPhone, cleanText } from "../validate";
+import { saveAnswer } from "./data";
 
 // Parent Server Actions. Each checks the session, validates its input, then writes as that parent,
 // so row level security (and the database functions) decide whether the write is allowed.
@@ -27,16 +28,7 @@ export async function acknowledgeAnnouncement(announcementId: string): Promise<v
 export async function setAvailability(sessionId: string, playerId: string, answer: Availability): Promise<void> {
   const user = await requireParent();
   if (!UUID.test(sessionId) || !UUID.test(playerId) || (answer !== "coming" && answer !== "away")) return;
-  await asUser(user.id, (tx) =>
-    tx.query(
-      `insert into availability (session_id, player_id, answer, answered_by, answered_at)
-       select s.id, $2, $3::availability_answer, my_guardian_id(), now() from sessions s
-       where s.id = $1 and s.ends_at > now() and s.cancelled_at is null and $2::uuid in (select my_player_ids())
-       on conflict (session_id, player_id) do update
-         set answer = excluded.answer, answered_by = excluded.answered_by, answered_at = excluded.answered_at`,
-      [sessionId, playerId, answer],
-    ),
-  );
+  await asUser(user.id, (tx) => saveAnswer(tx, sessionId, playerId, answer));
   refresh();
 }
 

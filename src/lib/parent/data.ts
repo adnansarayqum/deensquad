@@ -80,6 +80,14 @@ export async function loadFamily(tx: Queryable): Promise<Family | null> {
 
 export type AnnouncementView = Announcement & { read: boolean };
 
+/**
+ * Messages for this family, given its age groups and children as parameters: a squad message only when
+ * one of the children is in that squad, any other when it's for everyone or one of the groups.
+ */
+const familyNews = (groups: string, childIds: string) => `(case when a.squad_session_id is not null
+  then exists (select 1 from session_squads q where q.session_id = a.squad_session_id and q.player_id = any (${childIds}::uuid[]))
+  else a.audience is null or a.audience && ${groups}::text[]::age_group[] end)`;
+
 export async function loadNews(tx: Queryable, family: Family, limit = 50): Promise<AnnouncementView[]> {
   const rows = await tx.query<{
     id: string;
@@ -96,10 +104,10 @@ export async function loadNews(tx: Queryable, family: Family, limit = 50): Promi
        exists (select 1 from announcement_reads r where r.announcement_id = a.id and r.guardian_id = $1) as read
      from announcements a
      left join staff_names sn on sn.id = a.posted_by
-     where a.audience is null or a.audience && $2::text[]::age_group[]
+     where ${familyNews("$2", "$4")}
      order by a.posted_at desc
      limit $3`,
-    [family.guardian.id, familyGroups(family), limit],
+    [family.guardian.id, familyGroups(family), limit, family.children.map((c) => c.id)],
   );
   return rows.map((r) => ({
     id: r.id,
@@ -118,23 +126,33 @@ export async function loadUnreadCount(tx: Queryable, family: Family): Promise<nu
   const [{ n }] = await tx.query<{ n: number }>(
     `select count(*)::int as n from announcements a
      where a.requires_ack
-       and (a.audience is null or a.audience && $2::text[]::age_group[])
+       and ${familyNews("$2", "$3")}
        and not exists (select 1 from announcement_reads r where r.announcement_id = a.id and r.guardian_id = $1)`,
-    [family.guardian.id, familyGroups(family)],
+    [family.guardian.id, familyGroups(family), family.children.map((c) => c.id)],
   );
   return n;
 }
 
-/** Sessions that haven't finished yet for any of the family's age groups, cancelled ones included. */
-export async function loadUpcomingSessions(tx: Queryable, groups: AgeGroup[], now: Date, limit = 20): Promise<Session[]> {
-  if (groups.length === 0) return [];
-  const rows = await tx.query<SessionRow>(
-    `select ${SESSION_COLUMNS} from sessions s
-     where s.ends_at > $1 and s.age_groups && $2::text[]::age_group[]
-     order by s.starts_at limit $3`,
-    [now, groups, limit],
+/**
+ * Sessions that haven't finished yet for the family, cancelled ones included: those for any of their age
+ * groups, except squad sessions, which come only when one of their children is picked (with `squad` set).
+ */
+export async function loadUpcomingSessions(tx: Queryable, children: Child[], now: Date, limit = 20): Promise<Session[]> {
+  if (children.length === 0) return [];
+  const rows = await tx.query<SessionRow & { squad: string[] | null }>(
+    `select ${SESSION_COLUMNS},
+       case when is_squad_session(s.id) then coalesce(
+         (select array_agg(q.player_id::text order by q.player_id) from session_squads q where q.session_id = s.id and q.player_id = any ($3::uuid[])),
+         '{}') end as squad
+     from sessions s
+     where s.ends_at > $1
+       and case when is_squad_session(s.id)
+         then exists (select 1 from session_squads q where q.session_id = s.id and q.player_id = any ($3::uuid[]))
+         else s.age_groups && $2::text[]::age_group[] end
+     order by s.starts_at limit $4`,
+    [now, [...new Set(children.map((c) => c.ageGroup))], children.map((c) => c.id), limit],
   );
-  return rows.map(toSession);
+  return rows.map((r) => (r.squad ? { ...toSession(r), squad: r.squad } : toSession(r)));
 }
 
 export const answerKey = (sessionId: string, playerId: string) => `${sessionId}:${playerId}`;
@@ -146,6 +164,25 @@ export async function loadAnswers(tx: Queryable, sessionIds: string[], childIds:
     [sessionIds, childIds],
   );
   return new Map(rows.map((r) => [answerKey(r.session_id, r.player_id), r.answer]));
+}
+
+/**
+ * A parent's answer for one child and one session. Written only for their own child, for a session that's still
+ * to come and not cancelled, and, for a tournament squad session, only when the child is picked. Returns whether
+ * it was saved. (The checks are explicit as well as in row level security: a parent who is also staff bypasses it.)
+ */
+export async function saveAnswer(tx: Queryable, sessionId: string, playerId: string, answer: Availability): Promise<boolean> {
+  const rows = await tx.query(
+    `insert into availability (session_id, player_id, answer, answered_by, answered_at)
+     select s.id, $2, $3::availability_answer, my_guardian_id(), now() from sessions s
+     where s.id = $1 and s.ends_at > now() and s.cancelled_at is null and $2::uuid in (select my_player_ids())
+       and squad_allows(s.id, $2::uuid)
+     on conflict (session_id, player_id) do update
+       set answer = excluded.answer, answered_by = excluded.answered_by, answered_at = excluded.answered_at
+     returning player_id`,
+    [sessionId, playerId, answer],
+  );
+  return rows.length > 0;
 }
 
 export type SquadCounts = { coming: number; away: number; squad: number };
@@ -196,10 +233,13 @@ export type PlayerFacts = {
 export async function loadPlayerFacts(tx: Queryable, child: Child, now: Date): Promise<PlayerFacts> {
   const [past, attended, badges, notes] = await Promise.all([
     tx.query<{ id: string; starts_at: Date }>(
-      `select id, starts_at from sessions
-       where starts_at < $1 and cancelled_at is null and $2::age_group = any (age_groups) and starts_at >= $3::date
-       order by starts_at desc limit 200`,
-      [now, child.ageGroup, child.joinedOn],
+      `select s.id, s.starts_at from sessions s
+       where s.starts_at < $1 and s.cancelled_at is null and s.starts_at >= $3::date
+         and case when is_squad_session(s.id)
+           then exists (select 1 from session_squads q where q.session_id = s.id and q.player_id = $4)
+           else $2::age_group = any (s.age_groups) end
+       order by s.starts_at desc limit 200`,
+      [now, child.ageGroup, child.joinedOn, child.id],
     ),
     tx.query<{ session_id: string }>(`select session_id from attendance where player_id = $1`, [child.id]),
     tx.query<{ id: string; name: string; icon: Badge["icon"]; earned_on: string | null }>(

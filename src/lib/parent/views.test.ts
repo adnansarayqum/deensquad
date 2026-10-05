@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Child, Session } from "../domain";
-import { buildWeek, computeStats, joinNames, weekSummary } from "./views";
+import { availabilityQuestion, buildWeek, computeStats, joinNames, squadInvites, weekSummary } from "./views";
 
 const child = (id: string, name: string, group: Child["ageGroup"]): Child => ({
   id,
@@ -41,6 +41,27 @@ describe("the week for a family", () => {
     expect(week.map((w) => w.session?.id)).toEqual(["u9", "u7"]);
   });
   it("joins names", () => expect(joinNames(["A", "B", "C"])).toBe("A, B and C"));
+});
+
+describe("tournament squads for a family", () => {
+  const kids = [child("a", "Yusuf", "U10"), child("b", "Ahmed", "U10")];
+  const cup = (startsAt: string): Session => ({ ...session("cup", ["U10"]), kind: "tournament", title: "Spring Cup", startsAt, squad: ["a"] });
+  it("makes a squad session the next one only for the picked child, and asks if they can play", () => {
+    const week = buildWeek(kids, [cup("2026-10-08T09:00:00Z"), session("fri", ["U10"])], new Map(), new Map());
+    expect(week.map((w) => w.session?.id)).toEqual(["cup", "fri"]);
+    expect(weekSummary(week.slice(0, 1))).toBe("Can Yusuf play?");
+    expect(availabilityQuestion("Yusuf", week[0].session!, "Thu 8 Oct")).toBe("Can Yusuf play in Spring Cup on Thu 8 Oct?");
+    expect(availabilityQuestion("Ahmed", week[1].session!, "Fri 9 Oct")).toBe("Is Ahmed coming? Fri 9 Oct");
+    expect(squadInvites(week, [cup("2026-10-08T09:00:00Z"), session("fri", ["U10"])], new Map())).toEqual([]);
+  });
+  it("asks about a later squad session beside the next training, with the answer already given", () => {
+    const sessions = [session("fri", ["U10"]), cup("2026-10-17T09:00:00Z")];
+    const week = buildWeek(kids, sessions, new Map(), new Map());
+    expect(week.map((w) => w.session?.id)).toEqual(["fri", "fri"]);
+    const invites = squadInvites(week, sessions, new Map([["cup:a", "away"]]));
+    expect(invites.map((i) => [i.child.firstName, i.session.id, i.answer])).toEqual([["Yusuf", "cup", "away"]]);
+    expect(squadInvites(week, [session("fri", ["U10"]), { ...cup("2026-10-17T09:00:00Z"), cancelled: true }], new Map())).toEqual([]);
+  });
 });
 
 describe("player stats", () => {

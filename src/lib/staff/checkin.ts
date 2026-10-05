@@ -3,10 +3,12 @@ import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import type { AgeGroup, PaymentState } from "../domain";
 import { readPass } from "../pass/token";
+import { sessionIsFor } from "../squads/sql";
 import type { RegisterFlag } from "./register";
 
 // Checking a child in from their gate pass. Runs as the member of staff scanning (row level security on).
-// The child goes into today's session for their age group.
+// The child goes into today's session for their age group, or a tournament squad session they're picked for
+// (never a squad session they aren't in).
 
 export type ScannedChild = {
   id: string;
@@ -47,10 +49,10 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
 
   const d = londonDate(now);
   const options = await tx.query<{ id: string; title: string; starts_at: Date; ends_at: Date }>(
-    `select id, title, starts_at, ends_at from sessions
-     where starts_at between $1 and $2 and cancelled_at is null and $3::age_group = any (age_groups)
-     order by starts_at, id`,
-    [londonTime(d.year, d.month, d.day, 0, 0), londonTime(d.year, d.month, d.day, 23, 59), c.age_group],
+    `select s.id, s.title, s.starts_at, s.ends_at from sessions s, players p
+     where p.id = $3 and s.starts_at between $1 and $2 and s.cancelled_at is null and ${sessionIsFor("s", "p")}
+     order by s.starts_at, s.id`,
+    [londonTime(d.year, d.month, d.day, 0, 0), londonTime(d.year, d.month, d.day, 23, 59), c.id],
   );
   // The session that's on now, or else the nearest one today. Ties (overlapping sessions) go to the earliest start,
   // then id, as the register picks by default: the sort is stable over the query's order.

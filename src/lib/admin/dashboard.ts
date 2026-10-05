@@ -3,6 +3,7 @@ import { iso } from "../db/types";
 import { londonDate, londonTime } from "../dates";
 import { AGE_GROUPS, type AgeGroup, type PaymentState } from "../domain";
 import { seasonStart } from "../exports/reports";
+import { newsReaches, sessionIsFor } from "../squads/sql";
 import { NEEDS, TODO_NEEDS } from "./needs";
 
 // The numbers on the club admin overview (/admin). Every figure is counted in SQL over the
@@ -65,8 +66,9 @@ export function averagePct(checkedIn: number, held: number, squad: number): numb
   return held > 0 && squad > 0 ? Math.round((checkedIn / (held * squad)) * 100) : null;
 }
 
-// A message reaches a child when it's for everyone (null or empty audience) or for the child's group.
-const reaches = `(a.audience is null or cardinality(a.audience) = 0 or p.age_group = any (a.audience))`;
+// A message reaches a child when it's for everyone (null or empty audience) or for the child's group,
+// or, for a message to a tournament squad, when the child is in that squad.
+const reaches = newsReaches("a", "p");
 
 /**
  * Everything on the overview. `limit` is a group coach's own groups (coachLimit), or null for the
@@ -83,15 +85,19 @@ export async function loadDashboard(
   const [next, seasonRows, recent, family, shop, news, reminders, behind] = await Promise.all([
     tx.query<{ group: AgeGroup; squad: number; id: string | null; title: string | null; starts_at: Date | null; coming: number; away: number }>(
       `select g.grp as "group", s.id, s.title, s.starts_at,
-         (select count(*)::int from players p where p.age_group::text = g.grp) as squad,
+         -- for a tournament squad session, the group's picked children only
+         (select count(*)::int from players p where p.age_group::text = g.grp and (s.id is null or ${sessionIsFor("s", "p")})) as squad,
          (select count(*)::int from availability v join players p on p.id = v.player_id
-           where v.session_id = s.id and p.age_group::text = g.grp and v.answer = 'coming') as coming,
+           where v.session_id = s.id and p.age_group::text = g.grp and v.answer = 'coming' and ${sessionIsFor("s", "p")}) as coming,
          (select count(*)::int from availability v join players p on p.id = v.player_id
-           where v.session_id = s.id and p.age_group::text = g.grp and v.answer = 'away') as away
+           where v.session_id = s.id and p.age_group::text = g.grp and v.answer = 'away' and ${sessionIsFor("s", "p")}) as away
        from unnest($1::text[]) with ordinality as g (grp, ord)
        left join lateral (
-         select s.id, s.title, s.starts_at from sessions s
+         select s.id, s.title, s.starts_at, s.age_groups from sessions s
          where s.ends_at > $2 and s.cancelled_at is null and g.grp = any (s.age_groups::text[])
+           -- a squad session counts for a group only when some of the group are picked
+           and (not is_squad_session(s.id) or exists (
+             select 1 from session_squads q join players qp on qp.id = q.player_id where q.session_id = s.id and qp.age_group::text = g.grp))
          order by s.starts_at, s.created_at limit 1
        ) s on true
        order by g.ord`,
