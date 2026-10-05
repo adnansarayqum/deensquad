@@ -7,6 +7,7 @@ import { requireAdmin, requireParent } from "../auth/session";
 import { UUID } from "../auth/tokens";
 import { appUrl } from "../config";
 import { asSystem, asUser, isDemo } from "../db";
+import type { Queryable } from "../db/types";
 import { readUpload, saveFile } from "../files";
 import { cleanText } from "../validate";
 import { BASKET_COOKIE, addLine, parseBasket, type BasketLine } from "./basket";
@@ -28,6 +29,26 @@ async function writeBasket(basket: BasketLine[]) {
   else store.delete(BASKET_COOKIE);
 }
 
+/**
+ * Why a basket line can't be ordered (the item is off sale, the size or initials aren't offered, or the child isn't
+ * the parent's), or null if it can. The same checks place_order makes, so checkout can drop bad lines first.
+ */
+async function lineProblem(tx: Queryable, line: BasketLine): Promise<string | null> {
+  const [p] = await tx.query<{ sizes: string[]; initials_price_pence: number | null }>(
+    `select sizes, initials_price_pence from shop_products where id = $1 and active`,
+    [line.product],
+  );
+  if (!p) return "This item isn't available any more.";
+  if (p.sizes.length && (!line.size || !p.sizes.includes(line.size))) return "Choose a size.";
+  if (line.initials && (p.initials_price_pence === null || !/^[A-Z]{1,3}$/.test(line.initials.trim().toUpperCase())))
+    return "Initials aren't available on this item.";
+  if (line.player) {
+    const mine = await tx.query(`select 1 where $1::uuid in (select my_player_ids())`, [line.player]);
+    if (!mine.length) return "Choose who it's for.";
+  }
+  return null;
+}
+
 export type AddState = { error?: string; added?: boolean };
 
 export async function addToBasket(_prev: AddState, formData: FormData): Promise<AddState> {
@@ -39,31 +60,18 @@ export async function addToBasket(_prev: AddState, formData: FormData): Promise<
   const quantity = Math.min(20, Math.max(1, Number(formData.get("quantity")) || 1));
   if (typeof product !== "string" || !UUID.test(product)) return { error: "Something went wrong. Reload and try again." };
 
-  const check = await asUser(user.id, async (tx) => {
-    const [p] = await tx.query<{ sizes: string[]; initials_price_pence: number | null }>(
-      `select sizes, initials_price_pence from shop_products where id = $1 and active`,
-      [product],
-    );
-    if (!p) return "This item isn't available any more.";
-    if (p.sizes.length && (!size || !p.sizes.includes(size))) return "Choose a size.";
-    if (initials && p.initials_price_pence === null) return "Initials aren't available on this item.";
-    if (typeof player === "string" && player) {
-      const mine = await tx.query(`select 1 where $1::uuid in (select my_player_ids())`, [player]);
-      if (!mine.length) return "Choose who it's for.";
-    }
-    return null;
-  });
+  const line: BasketLine = {
+    product,
+    player: typeof player === "string" && UUID.test(player) ? player : null,
+    size: size ?? null,
+    initials,
+    quantity,
+  };
+  if (typeof player === "string" && player && !line.player) return { error: "Choose who it's for." };
+  const check = await asUser(user.id, (tx) => lineProblem(tx, line));
   if (check) return { error: check };
 
-  await writeBasket(
-    addLine(await readBasket(), {
-      product,
-      player: typeof player === "string" && UUID.test(player) ? player : null,
-      size: size ?? null,
-      initials,
-      quantity,
-    }),
-  );
+  await writeBasket(addLine(await readBasket(), line));
   return { added: true };
 }
 
@@ -95,13 +103,32 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
   if (payBy !== "card" && payBy !== "bank") return { error: "Choose how you'd like to pay." };
   if (!options.includes(payBy)) return { error: "That way of paying isn't available. Choose another." };
 
+  // Anything that can no longer be ordered comes out of the basket (and nothing is ordered), so the parent can
+  // check what's left and try again instead of starting over.
+  const gone = await asUser(user.id, async (tx) => {
+    const bad: { index: number; name: string | null }[] = [];
+    for (const [index, line] of basket.entries()) {
+      if (!(await lineProblem(tx, line))) continue;
+      const [p] = await tx.query<{ name: string }>(`select name from shop_products where id = $1`, [line.product]);
+      bad.push({ index, name: p?.name ?? null });
+    }
+    return bad;
+  });
+  if (gone.length) {
+    await writeBasket(basket.filter((_, i) => !gone.some((g) => g.index === i)));
+    refresh();
+    const names = [...new Set(gone.map((g) => g.name ?? "An item"))];
+    const what = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+    return { error: `${what} ${names.length === 1 ? "is" : "are"} no longer available, so we took ${names.length === 1 ? "it" : "them"} out. Check your basket and try again.` };
+  }
+
   let orderId: string;
   try {
     [{ id: orderId }] = await asUser(user.id, (tx) => tx.query<{ id: string }>(`select place_order($1::text::jsonb, $2) as id`, [JSON.stringify(basket), payBy]));
   } catch (error) {
+    // Keep the basket: nothing was ordered, and the parent can try again.
     console.error("[shop] place_order:", error instanceof Error ? error.message : error);
-    await writeBasket([]);
-    return { error: "Something in your basket has changed (an item, size or price). Please add it again." };
+    return { error: "We couldn't place your order. Your basket is still here. Please try again." };
   }
   await writeBasket([]);
 
