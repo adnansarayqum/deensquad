@@ -110,8 +110,8 @@ export async function inviteParents(): Promise<void> {
   if (!canSendEmail()) redirect("/admin/families?invite=no-email");
   const base = await inviteBase();
   if (!base) redirect("/admin/families?invite=no-url");
-  const { sent } = await sendInvites({ baseUrl: base });
-  redirect(`/admin/families?invited=${sent}`);
+  const { sent, failed } = await sendInvites({ baseUrl: base });
+  redirect(`/admin/families?invited=${sent}${failed ? `&notSent=${failed}` : ""}`);
 }
 
 export async function resendInvite(formData: FormData): Promise<void> {
@@ -122,8 +122,8 @@ export async function resendInvite(formData: FormData): Promise<void> {
   if (!canSendEmail()) redirect(`/admin/families/${child}?invite=no-email`);
   const base = await inviteBase();
   if (!base) redirect(`/admin/families/${child}?invite=no-url`);
-  await sendInvites({ guardianIds: [guardian], baseUrl: base });
-  redirect(`/admin/families/${child}?invited=1`);
+  const { failed } = await sendInvites({ guardianIds: [guardian], baseUrl: base });
+  redirect(`/admin/families/${child}?${failed ? "invite=failed" : "invited=1"}`);
 }
 
 // Children and parents --------------------------------------------------------

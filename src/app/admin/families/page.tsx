@@ -34,7 +34,11 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
         Families
       </AdminTitle>
 
-      {params.invited ? <Notice>{params.invited === "0" ? "Everyone has already been invited." : `Invites sent to ${params.invited} parents.`}</Notice> : null}
+      {params.invited && params.notSent ? (
+        <Notice tone="action">{`Sent to ${params.invited}. ${params.notSent} not sent – try again later.`}</Notice>
+      ) : params.invited ? (
+        <Notice>{params.invited === "0" ? "Everyone has already been invited." : `Invites sent to ${params.invited} parents.`}</Notice>
+      ) : null}
       {params.invite === "no-email" ? <Notice tone="action">Email isn&apos;t set up yet. Add RESEND_API_KEY in Railway, then send the invites.</Notice> : null}
       {params.invite === "no-url" ? <Notice tone="action">Set APP_URL in Railway to the app&apos;s web address, then send the invites.</Notice> : null}
       {params.removed ? <Notice>Removed.</Notice> : null}

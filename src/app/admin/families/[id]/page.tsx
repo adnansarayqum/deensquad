@@ -52,7 +52,8 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
       </div>
 
       {flags.invited ? <Notice>Invite sent.</Notice> : null}
-      {flags.invite === "no-email" ? <Notice tone="action">Email isn&apos;t set up yet. Add RESEND_API_KEY in Railway.</Notice> : null}
+      {flags.invite === "failed" ? <Notice tone="action">The invite wasn&apos;t sent. Try again later.</Notice> : null}
+      {flags.invite === "no-email" ?<Notice tone="action">Email isn&apos;t set up yet. Add RESEND_API_KEY in Railway.</Notice> : null}
 
       <Section title="Payment" aside={<Pill tone={child.payment === "active" ? "done" : child.payment === "self_reported" ? "gold" : "action"}>{paymentLabel[child.payment]}</Pill>}>
         <p className="text-sm text-ink-muted">Set this after checking TeamFeePay.</p>

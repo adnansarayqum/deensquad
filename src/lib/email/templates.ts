@@ -24,8 +24,10 @@ export function signInEmail(opts: { to: string; code: string; link: string | nul
   const text = [
     "Assalamu alaikum,",
     "",
-    `Your sign-in code is ${code}. It works for 15 minutes.`,
-    link ? `\nOr open this link on the device you want to sign in on:\n${link}` : "",
+    `Your sign-in code is ${code}. Type it into the app. It works for 15 minutes.`,
+    link
+      ? `\nInstead of the code, you can open this link on the device you want to sign in on. Use one or the other: once one is used, the other stops working.\n${link}`
+      : "",
     "",
     "If you didn't ask to sign in, you can ignore this email.",
   ].join("\n");
@@ -34,8 +36,8 @@ export function signInEmail(opts: { to: string; code: string; link: string | nul
     `<p style="margin:0">Assalamu alaikum,</p>
 <p>Your sign-in code is</p>
 <p style="font-size:34px;font-weight:800;letter-spacing:.2em;margin:8px 0 4px">${code}</p>
-<p style="color:#56625a;margin-top:0">It works for 15 minutes.</p>
-${link ? `<p>Or tap below on the phone you want to sign in on.</p>${button(link, "Sign in")}` : ""}
+<p style="color:#56625a;margin-top:0">Type it into the app. It works for 15 minutes.</p>
+${link ? `<p>Instead of the code, you can tap below on the phone you want to sign in on. Use one or the other: once one is used, the other stops working.</p>${button(link, "Sign in")}` : ""}
 <p style="color:#56625a;margin-bottom:0">If you didn't ask to sign in, you can ignore this email.</p>`,
   );
   return { to, subject, text, html };

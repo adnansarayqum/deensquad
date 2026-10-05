@@ -8,6 +8,12 @@ export interface Queryable {
   query<T = Row>(text: string, params?: readonly unknown[]): Promise<T[]>;
   /** Runs a multi-statement script with no parameters (migrations, seeds). */
   script(text: string): Promise<void>;
+  /**
+   * Runs `fn` in a savepoint of this transaction, using the Queryable it's given. If `fn` throws
+   * (including after a failed statement, which would otherwise abort the whole transaction), only
+   * its own writes are undone and the error is rethrown; the rest of the transaction can still commit.
+   */
+  savepoint<T>(fn: (tx: Queryable) => Promise<T>): Promise<T>;
 }
 
 export interface Database {

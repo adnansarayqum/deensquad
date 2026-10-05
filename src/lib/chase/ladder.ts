@@ -110,15 +110,18 @@ export type Senders = {
   pushUsers: (tx: Queryable) => Promise<Set<string>>;
 };
 
-export type LadderResult = { quiet: boolean } & Record<ChaseChannel, number>;
+export type LadderResult = { quiet: boolean; failed: ChaseChannel[] } & Record<ChaseChannel, number>;
 
 /**
  * Runs every due step once. Steps whose channel isn't set up are skipped and stay due,
  * so they go out once it is (until the message is a week old).
  * Holds an advisory lock so two runs can't send the same reminder twice.
+ * Each channel runs in its own savepoint: if one throws, only its writes are undone and the run
+ * carries on, so reminders already sent on other channels stay logged and aren't sent again.
+ * Senders report who they reached rather than throwing, so a partly failed channel still logs those.
  */
 export async function runLadder(tx: Queryable, now: Date, senders: Senders, announcementId?: string): Promise<LadderResult> {
-  const result: LadderResult = { quiet: inQuietHours(now), app: 0, email: 0, sms: 0 };
+  const result: LadderResult = { quiet: inQuietHours(now), failed: [], app: 0, email: 0, sms: 0 };
   if (result.quiet) return result;
   await tx.query("select pg_advisory_xact_lock(727275)");
   const pushUsers = await senders.pushUsers(tx);
@@ -127,9 +130,16 @@ export async function runLadder(tx: Queryable, now: Date, senders: Senders, anno
     if (!send) continue;
     const due = (await dueChases(tx, channel, now, announcementId)).filter((t) => reachable(channel, t, pushUsers));
     if (due.length === 0) continue;
-    const sent = await send(due, tx);
-    await logChases(tx, channel, sent);
-    result[channel] = sent.length;
+    try {
+      result[channel] = await tx.savepoint(async (sp) => {
+        const sent = await send(due, sp);
+        await logChases(sp, channel, sent);
+        return sent.length;
+      });
+    } catch (error) {
+      console.error(`[chase] ${channel} step failed:`, error instanceof Error ? error.message : error);
+      result.failed.push(channel);
+    }
   }
   return result;
 }

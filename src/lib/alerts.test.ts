@@ -2,7 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 const sent: { to: string; subject: string }[] = [];
-vi.mock("./email/send", () => ({ emailConfigured: () => true, sendEmails: async (e: { to: string; subject: string }[]) => void sent.push(...e) }));
+let failing = false;
+vi.mock("./email/send", () => ({
+  emailConfigured: () => true,
+  sendEmails: async (e: { to: string; subject: string }[]) => {
+    if (failing) return { sent: [], failed: e };
+    sent.push(...e);
+    return { sent: e, failed: [] };
+  },
+}));
 
 describe("error alerts", () => {
   it("emails at most once per half hour and drops query strings", async () => {
@@ -14,6 +22,9 @@ describe("error alerts", () => {
     expect(await sendErrorAlert({ message: "again", path: "/news", kind: "render" }, t + 60_000)).toBe(false);
     expect(await sendErrorAlert({ message: "later", path: "/news", kind: "render" }, t + 31 * 60_000)).toBe(true);
     expect(sent.map((s) => s.subject)).toEqual(["Deen Squad app error: /shop/basket", "Deen Squad app error: /news"]);
+    // An alert that Resend refused isn't reported as sent.
+    failing = true;
+    expect(await sendErrorAlert({ message: "lost", path: "/news", kind: "render" }, t + 62 * 60_000)).toBe(false);
     vi.unstubAllEnvs();
   });
 });

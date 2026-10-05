@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
 import { inQuietHours, runLadder, type ChaseTarget, type Senders } from "./ladder";
+import { liveSenders } from "./senders";
 
 // The sample club: the U10 kit message was posted 3 hours before `seeded`, unread by everyone.
 // "Winter timings" (74 hours old, all groups) has been read by Adnan, the other parent of Yusuf and Musa.
@@ -76,5 +77,87 @@ describe("chase ladder", () => {
   it("leaves messages older than a week alone", async () => {
     await run(hoursLater(24 * 8));
     expect(sent.email ?? []).toHaveLength(0);
+  });
+});
+
+describe("chase ladder when sending fails", () => {
+  const count = (sql: string) => t.asSystem(async (tx) => (await tx.query<{ n: number }>(sql))[0].n);
+  const chases = (channel: string) => count(`select count(*)::int as n from announcement_chases where channel::text = '${channel}'`);
+  const reminderLinks = () => count(`select count(*)::int as n from auth.sign_in_requests where purpose = 'invite'`);
+
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("keeps the app reminders it sent when the email step throws, so they don't go again", async () => {
+    const pushes: ChaseTarget[] = [];
+    const failing: Senders = {
+      pushUsers: async () => new Set([adnanUser]),
+      app: async (x) => {
+        pushes.push(...x);
+        return x;
+      },
+      email: async () => {
+        throw new Error("Resend refused the email (429)");
+      },
+    };
+    expect(await run(seeded, failing)).toMatchObject({ app: 1, email: 0, failed: ["email"] });
+    expect(await chases("app")).toBe(1);
+    expect(await run(hoursLater(1), failing)).toMatchObject({ app: 0, failed: ["email"] });
+    expect(await run(hoursLater(2), failing)).toMatchObject({ app: 0 });
+    expect(pushes).toHaveLength(1);
+    expect(await chases("email")).toBe(0);
+  });
+
+  it("survives a failed statement in one step (which would abort the whole transaction)", async () => {
+    const s: Senders = {
+      ...senders(),
+      email: async (_x, tx) => {
+        await tx.query("select 1 / 0");
+        return [];
+      },
+    };
+    expect(await run(seeded, s)).toMatchObject({ app: 1, failed: ["email"] });
+    expect(await chases("app")).toBe(1);
+  });
+
+  describe("live email sender", () => {
+    beforeEach(() => {
+      vi.stubEnv("RESEND_API_KEY", "test");
+      vi.stubEnv("APP_URL", "https://app.test");
+    });
+    const resendOk = () => vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
+
+    it("logs the emails that went and keeps their sign-in links", async () => {
+      resendOk();
+      const before = await reminderLinks();
+      const result = await run(seeded, liveSenders());
+      expect(result.email).toBe(19);
+      expect(await chases("email")).toBe(19);
+      // None of these 19 parents has signed in yet, so each email carried a sign-in link, and it was kept.
+      expect(await reminderLinks()).toBe(before + 19);
+    });
+
+    it("treats a hanging or refused email as not sent, finishes the run, and tries again next time", async () => {
+      const real = AbortSignal.timeout.bind(AbortSignal);
+      vi.spyOn(AbortSignal, "timeout").mockImplementation(() => real(20));
+      vi.stubGlobal("fetch", vi.fn((_u: string, init: RequestInit) => new Promise((_, reject) => init.signal!.addEventListener("abort", () => reject(init.signal!.reason)))));
+      const before = await reminderLinks();
+      expect(await run(seeded, liveSenders())).toMatchObject({ email: 0, failed: [] });
+      expect(await chases("email")).toBe(0);
+      expect(await reminderLinks()).toBe(before); // no links left behind for emails that didn't go
+
+      vi.stubGlobal("fetch", vi.fn(async () => new Response("no", { status: 500 })));
+      expect((await run(hoursLater(1), liveSenders())).email).toBe(0);
+
+      resendOk();
+      expect((await run(hoursLater(2), liveSenders())).email).toBe(19);
+      expect(await chases("email")).toBe(19);
+    });
   });
 });

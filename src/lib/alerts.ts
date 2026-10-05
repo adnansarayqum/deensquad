@@ -39,8 +39,8 @@ export async function sendErrorAlert(error: { message: string; digest?: string; 
     `The full details are in the Railway logs for parent-app.${appUrl() ? ` App: ${appUrl()}` : ""}`,
   ].join("\n");
   try {
-    await sendEmails(to.map((email) => ({ to: email, subject: `Deen Squad app error: ${path}`, text, html: `<pre style="font-family:monospace;white-space:pre-wrap">${text.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!)}</pre>` })));
-    return true;
+    const { sent } = await sendEmails(to.map((email) => ({ to: email, subject: `Deen Squad app error: ${path}`, text, html: `<pre style="font-family:monospace;white-space:pre-wrap">${text.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!)}</pre>` })));
+    return sent.length > 0;
   } catch {
     return false;
   }

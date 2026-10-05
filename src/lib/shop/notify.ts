@@ -24,7 +24,7 @@ export async function notifyNewOrder(orderId: string): Promise<void> {
     const { order, admins } = found;
     const to = shopOrdersEmails().length ? shopOrdersEmails() : admins;
     const base = appUrl();
-    await sendEmails(
+    const { sent } = await sendEmails(
       to.map((email) =>
         newOrderEmail({
           to: email,
@@ -41,6 +41,11 @@ export async function notifyNewOrder(orderId: string): Promise<void> {
         }),
       ),
     );
+    // Nobody got it: release the claim so the next call (payment check, webhook) tries again.
+    if (to.length && sent.length === 0) {
+      console.error("[shop] order email not sent; will try again.");
+      await asSystem((tx) => tx.query(`update shop_orders set notified_at = null where id = $1`, [orderId]));
+    }
   } catch (error) {
     console.error("[shop] order email:", error instanceof Error ? error.message : error);
   }

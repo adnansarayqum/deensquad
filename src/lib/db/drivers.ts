@@ -1,3 +1,4 @@
+import type { TransactionSql } from "postgres";
 import type { Database, Queryable } from "./types";
 
 /** Railway (and any real Postgres): a small postgres.js pool. */
@@ -9,17 +10,18 @@ export async function postgresDatabase(url: string): Promise<Database> {
     connect_timeout: 10,
     onnotice: () => {},
   });
+  // postgres.js remembers any failed statement in a transaction and rolls it all back, even if the
+  // error was caught, so savepoints must go through its own tx.savepoint() rather than raw SQL.
+  const wrap = (tx: TransactionSql): Queryable => ({
+    query: (text, params = []) => tx.unsafe(text, params as never[]) as unknown as Promise<never[]>,
+    script: async (text) => {
+      await tx.unsafe(text);
+    },
+    savepoint: async (fn) => ((await tx.savepoint(async (sp) => ({ value: await fn(wrap(sp)) }))) as { value: never }).value,
+  });
   return {
     async transaction(fn) {
-      const result = await sql.begin(async (tx) => {
-        const q: Queryable = {
-          query: (text, params = []) => tx.unsafe(text, params as never[]) as unknown as Promise<never[]>,
-          script: async (text) => {
-            await tx.unsafe(text);
-          },
-        };
-        return { value: await fn(q) };
-      });
+      const result = await sql.begin(async (tx) => ({ value: await fn(wrap(tx)) }));
       return (result as { value: Awaited<ReturnType<typeof fn>> }).value;
     },
     async exec(text) {
@@ -36,16 +38,33 @@ export async function pgliteDatabase(dataDir?: string): Promise<Database> {
   const { PGlite } = await import("@electric-sql/pglite");
   const db = dataDir ? new PGlite(dataDir) : new PGlite();
   await db.waitReady;
+  let savepoints = 0;
+  type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+  const wrap = (tx: Tx): Queryable => {
+    const q: Queryable = {
+      query: async (text, params = []) => (await tx.query(text, params as unknown[])).rows as never[],
+      script: async (text) => {
+        await tx.exec(text);
+      },
+      async savepoint(fn) {
+        const name = `sp_${++savepoints}`;
+        await tx.query(`savepoint ${name}`);
+        try {
+          const value = await fn(q);
+          await tx.query(`release savepoint ${name}`);
+          return value;
+        } catch (error) {
+          await tx.query(`rollback to savepoint ${name}`);
+          await tx.query(`release savepoint ${name}`);
+          throw error;
+        }
+      },
+    };
+    return q;
+  };
   return {
     transaction(fn) {
-      return db.transaction(async (tx) =>
-        fn({
-          query: async (text, params = []) => (await tx.query(text, params as unknown[])).rows as never[],
-          script: async (text) => {
-            await tx.exec(text);
-          },
-        }),
-      );
+      return db.transaction(async (tx) => fn(wrap(tx)));
     },
     async exec(text) {
       await db.exec(text);

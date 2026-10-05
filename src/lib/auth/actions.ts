@@ -49,12 +49,8 @@ export async function requestCode(_prev: FormState, formData: FormData): Promise
   if (result.ok) {
     const { requestId, code, token } = result.request;
     const base = await baseUrl();
-    try {
-      await sendEmails([signInEmail({ to: email, code: code!, link: base ? `${base}/sign-in/link?token=${token}` : null, appUrl: base })]);
-    } catch (error) {
-      console.error("[sign-in] email failed:", error instanceof Error ? error.message : error);
-      return { error: "We couldn't send the email just now. Try again in a minute." };
-    }
+    const { failed } = await sendEmails([signInEmail({ to: email, code: code!, link: base ? `${base}/sign-in/link?token=${token}` : null, appUrl: base })]);
+    if (failed.length) return { error: "We couldn't send the email just now. Try again in a minute." };
     pending = { id: requestId, to: maskEmail(email), next };
   }
 
@@ -74,12 +70,8 @@ export async function register(_prev: FormState, formData: FormData): Promise<Fo
   if (!result.ok) return { error: "That's a lot of codes in one hour. Wait a little while, then try again." };
   const { requestId, code, token } = result.request;
   const base = await baseUrl();
-  try {
-    await sendEmails([signInEmail({ to: email, code: code!, link: base ? `${base}/sign-in/link?token=${token}` : null, appUrl: base })]);
-  } catch (error) {
-    console.error("[sign-up] email failed:", error instanceof Error ? error.message : error);
-    return { error: "We couldn't send the email just now. Try again in a minute." };
-  }
+  const { failed } = await sendEmails([signInEmail({ to: email, code: code!, link: base ? `${base}/sign-in/link?token=${token}` : null, appUrl: base })]);
+  if (failed.length) return { error: "We couldn't send the email just now. Try again in a minute." };
   const pending: Pending = { id: requestId, to: maskEmail(email), next: "/checklist" };
   (await cookies()).set(PENDING_COOKIE, JSON.stringify(pending), cookieOptions(SIGN_IN_MINUTES * 60));
   redirect("/sign-in/code");
@@ -91,7 +83,7 @@ async function tellClub(email: string, registered: Registered | undefined) {
   try {
     const base = await baseUrl();
     const admins = await asSystem((tx) => tx.query<{ email: string }>(`select email from staff where role = 'admin'`));
-    await sendEmails(
+    const { failed } = await sendEmails(
       admins.map((a) =>
         newFamilyEmail({
           to: a.email,
@@ -103,6 +95,7 @@ async function tellClub(email: string, registered: Registered | undefined) {
         }),
       ),
     );
+    if (failed.length) console.error(`[sign-up] club email not sent to ${failed.length} admin(s).`);
   } catch (error) {
     console.error("[sign-up] club email failed:", error instanceof Error ? error.message : error);
   }
