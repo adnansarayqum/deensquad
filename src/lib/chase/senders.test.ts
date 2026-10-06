@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { testDatabase } from "../../../test/db";
 import { pushToUsers, type PushSend } from "./senders";
 
-// Pushes go out in parallel batches, and only then are devices updated or forgotten, one statement at a time.
+// Pushes go out from 10 workers at once, and only then are devices updated or forgotten, one statement at a time.
 let t: Awaited<ReturnType<typeof testDatabase>>;
 let users: string[];
 const saved = { pub: process.env.VAPID_PUBLIC_KEY, priv: process.env.VAPID_PRIVATE_KEY };
@@ -55,8 +55,32 @@ describe("pushToUsers", () => {
     const reached = await t.asSystem((tx) => pushToUsers(tx, users, payload, send));
     const took = Date.now() - started;
     expect(reached).toEqual(new Set(users));
-    expect(most).toBe(10); // batches of 10, never more at once
+    expect(most).toBe(10); // 10 workers, never more at once
     expect(took).toBeLessThan(2500); // one after another would take 50 x 150 ms = 7.5 s
+  });
+
+  it("a hung push service holds up one worker, not everything sent after it", async () => {
+    // Positions 1, 11 and 21 hang until a short fake timeout, the others answer quickly. With fixed
+    // batches of 10 each hang would hold up its whole batch: three timeouts end to end.
+    const TIMEOUT = 600;
+    const hung = new Set(["https://push.example/0a", "https://push.example/5a", "https://push.example/10a"]);
+    const send: PushSend = async (sub) => {
+      if (hung.has(sub.endpoint)) {
+        await sleep(TIMEOUT);
+        throw new Error("timed out");
+      }
+      await sleep(30);
+    };
+    const subs = await t.asSystem((tx) => tx.query<{ endpoint: string }>(`select endpoint from push_subscriptions where user_id = any($1::uuid[])`, [users]));
+    expect([0, 10, 20].map((i) => subs[i].endpoint)).toEqual([...hung]); // the order pushToUsers reads them in
+    const started = Date.now();
+    const reached = await t.asSystem((tx) => pushToUsers(tx, users, payload, send));
+    const took = Date.now() - started;
+    expect(reached).toEqual(new Set(users)); // each hung device's partner device got through
+    expect(took).toBeGreaterThanOrEqual(TIMEOUT);
+    expect(took).toBeLessThan(2 * TIMEOUT); // batches would take at least 3 x 600 ms
+    const rows = await endpoints();
+    expect(rows.filter((r) => !r.seen).map((r) => r.endpoint).sort()).toEqual([...hung].sort());
   });
 
   it("marks devices reached, forgets gone ones and counts a refused send as not reached", async () => {

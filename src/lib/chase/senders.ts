@@ -30,12 +30,13 @@ export type PushSend = (sub: { endpoint: string; keys: { p256dh: string; auth: s
 const sendWebPush: PushSend = (sub, body) => webpush.sendNotification(sub, body, { TTL: 12 * 3600, timeout: SEND_TIMEOUT_MS });
 
 /** How many devices are sent to at once. */
-export const PUSH_BATCH = 10;
+export const PUSH_WORKERS = 10;
 
 /**
  * Sends to every device of each user; forgets devices the push service says are gone. Returns users reached.
- * Sends go out in parallel batches; the database writes follow one at a time, as one transaction can't run
- * statements in parallel (postgres.js).
+ * Up to PUSH_WORKERS sends are in flight at once, each worker taking the next device as soon as its last send
+ * settles, so one slow push service holds up one worker rather than a whole batch. The database writes follow,
+ * one at a time, as one transaction can't run statements in parallel (postgres.js).
  */
 export async function pushToUsers(tx: Queryable, userIds: string[], payload: PushPayload, send: PushSend = sendWebPush): Promise<Set<string>> {
   const reached = new Set<string>();
@@ -45,25 +46,36 @@ export async function pushToUsers(tx: Queryable, userIds: string[], payload: Pus
   }
   const subs = await tx.query<Subscription>(`select id, user_id, endpoint, p256dh, auth from push_subscriptions where user_id = any($1::uuid[])`, [userIds]);
   const body = JSON.stringify(payload);
+  const results: PromiseSettledResult<unknown>[] = new Array(subs.length);
+  let next = 0;
+  // Only the network calls are caught: a failed statement must abort the transaction, not be swallowed.
+  const worker = async () => {
+    while (next < subs.length) {
+      const i = next++;
+      const s = subs[i];
+      results[i] = await Promise.resolve()
+        .then(() => send({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body))
+        .then(
+        (value) => ({ status: "fulfilled", value }) as const,
+        (reason: unknown) => ({ status: "rejected", reason }) as const,
+      );
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(PUSH_WORKERS, subs.length) }, worker));
   const ok: string[] = [];
   const gone: string[] = [];
-  for (let i = 0; i < subs.length; i += PUSH_BATCH) {
-    const batch = subs.slice(i, i + PUSH_BATCH);
-    // Only the network calls are caught: a failed statement must abort the transaction, not be swallowed.
-    const results = await Promise.allSettled(batch.map((s) => send({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body)));
-    results.forEach((result, j) => {
-      const s = batch[j];
-      if (result.status === "fulfilled") {
-        reached.add(s.user_id);
-        ok.push(s.id);
-        return;
-      }
-      const error = result.reason;
-      const status = (error as { statusCode?: number } | undefined)?.statusCode;
-      if (status === 404 || status === 410) gone.push(s.id);
-      else console.error("[push] failed:", status ?? (error instanceof Error ? error.message : error));
-    });
-  }
+  results.forEach((result, i) => {
+    const s = subs[i];
+    if (result.status === "fulfilled") {
+      reached.add(s.user_id);
+      ok.push(s.id);
+      return;
+    }
+    const error = result.reason;
+    const status = (error as { statusCode?: number } | undefined)?.statusCode;
+    if (status === 404 || status === 410) gone.push(s.id);
+    else console.error("[push] failed:", status ?? (error instanceof Error ? error.message : error));
+  });
   for (const id of ok) await tx.query(`update push_subscriptions set last_success_at = now() where id = $1`, [id]);
   for (const id of gone) await tx.query(`delete from push_subscriptions where id = $1`, [id]);
   return reached;
