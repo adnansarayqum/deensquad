@@ -5,6 +5,8 @@ import { expect, type Browser, type BrowserContext, type BrowserContextOptions, 
 
 export const shot = (name: string) => `e2e/.results/screens/${name}.png`;
 export const OUTBOX = "e2e/.results/outbox.jsonl";
+/** The second server's (analytics on, port 3101; playwright.config.ts) emails. */
+export const ANALYTICS_OUTBOX = "e2e/.results/outbox-analytics.jsonl";
 // Signed-in browser state saved by earlier tests, so the desktop dashboard test doesn't use up more
 // codes (each address may only ask for five an hour, and the admin has used all five by then).
 export const ADMIN_STATE = "e2e/.results/admin-state.json";
@@ -13,8 +15,8 @@ export const COACH_STATE = "e2e/.results/coach-state.json";
 export const GATE_PARENT_STATE = "e2e/.results/gate-parent-state.json";
 // All three are deleted at the start of every run (e2e/global-setup.ts).
 
-export function latestCode(email: string): string {
-  const lines = readFileSync(OUTBOX, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string; text: string });
+export function latestCode(email: string, outbox = OUTBOX): string {
+  const lines = readFileSync(outbox, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string; text: string });
   const mail = lines.filter((m) => m.to === email).at(-1);
   const code = mail?.subject.match(/^(\d{6})/)?.[1];
   if (!code) throw new Error(`No code emailed to ${email}`);
@@ -27,12 +29,12 @@ export async function switchUser(page: Page) {
   await page.context().clearCookies();
 }
 
-export async function signIn(page: Page, email: string) {
+export async function signIn(page: Page, email: string, outbox = OUTBOX) {
   await page.goto("/sign-in");
   await page.getByLabel("Email address").fill(email);
   await page.getByRole("button", { name: "Email me a code" }).click();
   await expect(page).toHaveURL(/\/sign-in\/code$/);
-  await page.getByLabel("6-digit code").fill(latestCode(email));
+  await page.getByLabel("6-digit code").fill(latestCode(email, outbox));
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).not.toHaveURL(/\/sign-in/);
 }
