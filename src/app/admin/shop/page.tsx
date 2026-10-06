@@ -4,6 +4,7 @@ import { Download } from "lucide-react";
 import { AdminTitle, Notice, Section } from "@/components/admin/bits";
 import { OrderStatusPill } from "@/components/shop/OrderStatusPill";
 import { requireAdmin } from "@/lib/auth/session";
+import { emailConfigured } from "@/lib/email/send";
 import { asUser } from "@/lib/db";
 import { setOrderStatus } from "@/lib/shop/actions";
 import { formatPence, loadOrdersAdmin, loadSupplierTotals, type Order, type OrderStatus } from "@/lib/shop/data";
@@ -69,7 +70,7 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
       >
         Shop
       </AdminTitle>
-      {cancelled ? <Notice>Order cancelled. The parent has been emailed.</Notice> : null}
+      {cancelled ? <Notice>{emailConfigured() ? "Order cancelled. The parent will be emailed." : "Order cancelled."}</Notice> : null}
 
       {paymentOptions().length < 2 ? (
         <p className="rounded-app bg-gold-tint px-3.5 py-3 text-[15px] leading-[22px]">

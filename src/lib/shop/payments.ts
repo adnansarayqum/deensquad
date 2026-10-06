@@ -1,5 +1,7 @@
 import "server-only";
 
+import { after } from "next/server";
+import { enqueue } from "../background";
 import { asSystem } from "../db";
 import { notifyNewOrder, notifyParentOrder } from "./notify";
 import { getCheckout, sumupConfigured } from "./sumup";
@@ -22,9 +24,19 @@ export async function confirmSumupPayment(checkoutId: string): Promise<boolean> 
     return rows[0]?.id ?? null;
   });
   if (paid) {
-    await notifyNewOrder(paid);
-    // The parent's receipt. Both never throw; the order is paid whatever happens to the emails.
-    await notifyParentOrder(paid, "paid");
+    // The club's email and the parent's receipt (neither throws; the order is paid whatever happens to them).
+    const send = async () => {
+      await notifyNewOrder(paid);
+      await notifyParentOrder(paid, "paid");
+    };
+    // Both callers (the order page and the SumUp webhook) are requests, where after() is allowed, so the emails go
+    // once the response has been sent, one task at a time, like the admin and checkout paths. Outside a request
+    // after() throws; then they're sent inline.
+    try {
+      after(() => enqueue("order paid emails", send));
+    } catch {
+      await send();
+    }
   }
   return Boolean(paid);
 }

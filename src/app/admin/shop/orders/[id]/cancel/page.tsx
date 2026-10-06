@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { AdminTitle } from "@/components/admin/bits";
 import { UUID } from "@/lib/auth/tokens";
 import { requireAdmin } from "@/lib/auth/session";
+import { emailConfigured } from "@/lib/email/send";
 import { asUser } from "@/lib/db";
 import { setOrderStatus } from "@/lib/shop/actions";
 import { formatPence, loadOrder } from "@/lib/shop/data";
@@ -42,7 +43,7 @@ export default async function CancelOrderPage({ params }: PageProps<"/admin/shop
               </li>
             ))}
           </ul>
-          <p className="text-[15px] font-bold">The parent will be emailed. This can&apos;t be undone.</p>
+          <p className="text-[15px] font-bold">{emailConfigured() ? "The parent will be emailed. " : ""}This can&apos;t be undone.</p>
           {order.paidAt ? (
             <p className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px]">
               This order is paid ({formatPence(order.totalPence)}), so refund it separately{order.payBy === "card" ? " in SumUp" : " by bank transfer"}.
