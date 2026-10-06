@@ -15,10 +15,18 @@ export default async function CodePage() {
     <AuthShell
       title="Check your email"
       intro={
-        <>
-          If <span className="font-bold text-on-pitch">{pending.to}</span> is the address the club has for you, a code is on its way. It
-          works for 15 minutes.
-        </>
+        pending.signUp ? (
+          <>
+            We&apos;ve emailed a 6-digit code to <span className="font-bold text-on-pitch">{pending.to}</span>. Enter it to finish joining.
+            Your family isn&apos;t added until you do. It works for 15 minutes.
+          </>
+        ) : (
+          // Deliberately the same for any address, so this screen never tells anyone who is a member.
+          <>
+            We&apos;ve sent a code to <span className="font-bold text-on-pitch">{pending.to}</span> if it&apos;s on the club&apos;s list. It
+            works for 15 minutes.
+          </>
+        )
       }
     >
       <CodeForm />

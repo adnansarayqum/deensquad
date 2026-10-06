@@ -78,7 +78,7 @@ export async function register(_prev: FormState, formData: FormData): Promise<Fo
   const base = await baseUrl();
   const { failed } = await sendEmails([signInEmail({ to: email, code: code!, link: base ? `${base}/sign-in/link?token=${token}` : null, appUrl: base })]);
   if (failed.length) return { error: "We couldn't send the email just now. Try again in a minute." };
-  const pending: Pending = { id: requestId, to: maskEmail(email), next: "/checklist" };
+  const pending: Pending = { id: requestId, to: maskEmail(email), next: "/checklist", signUp: true };
   (await cookies()).set(PENDING_COOKIE, JSON.stringify(pending), cookieOptions(SIGN_IN_MINUTES * 60));
   redirect("/sign-in/code");
 }

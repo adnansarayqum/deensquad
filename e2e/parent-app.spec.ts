@@ -90,6 +90,7 @@ test("an unknown email gets the same screen and no email", async ({ page }) => {
   await page.getByLabel("Email address").fill("stranger@example.org");
   await page.getByRole("button", { name: "Email me a code" }).click();
   await expect(page).toHaveURL(/\/sign-in\/code$/);
+  await expect(page.getByText("We've sent a code to s•••@example.org if it's on the club's list.", { exact: false })).toBeVisible();
   expect(readFileSync(OUTBOX, "utf8")).not.toContain("stranger@example.org");
 });
 
@@ -465,6 +466,7 @@ test("sign-up: a new parent registers their child, proves their email and lands 
   await page.goto("/sign-in");
   await page.getByRole("link", { name: "Sign up" }).click();
   await expect(page).toHaveURL(/\/sign-up$/);
+  await expect(page.getByRole("region", { name: "About the club" }).getByText(/Training is on Fridays at Bobby Moore Sports Hub/)).toBeVisible();
   await page.getByLabel("First name").first().fill("Hana");
   await page.getByLabel("Last name").first().fill("Rahman");
   await page.getByLabel("Email address").fill("hana@example.com");
@@ -486,6 +488,7 @@ test("sign-up: a new parent registers their child, proves their email and lands 
   await page.screenshot({ path: shot("sign-up"), fullPage: true });
   await page.getByRole("button", { name: "Sign up" }).click();
   await expect(page).toHaveURL(/\/sign-in\/code$/);
+  await expect(page.getByText(/We've emailed a 6-digit code to h•••@example.com\. Enter it to finish joining\. Your family isn't added until you do\./)).toBeVisible();
   await page.getByLabel("6-digit code").fill(latestCode("hana@example.com"));
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/checklist$/);

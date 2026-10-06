@@ -34,6 +34,7 @@ Variables on `parent-app`:
 | `RESEND_API_KEY`, `EMAIL_FROM` | Sending sign-in codes and invites through [Resend](https://resend.com). Until set, only admin sign-in emails work: the code is printed in the Railway logs. |
 | `APP_URL` | Optional. The app's web address for emailed links (defaults to the Railway domain) |
 | `TEAMFEEPAY_URL` | Link on the payments step. Until set, parents are told "The club will tell you how to pay" and can't tap "I've set it up" |
+| `CLUB_INFO_TEXT` | Optional. A short "About the club" box at the top of the sign-up page (plain text: venue, usual times, how to start). Not shown until set |
 | `CLUB_FEE_TEXT` | What the club charges, shown on the payments step and its To-do row, e.g. `£30 a month per child, paid by direct debit through TeamFeePay`. Until set, parents see "Ask the club about fees" |
 | `CLUB_EMAIL` | Contact address in the privacy notice (`/privacy`); `PRIVACY_URL` replaces the built-in notice with another page |
 | `SUMUP_API_KEY`, `SUMUP_MERCHANT_CODE` | Card payments in the club shop (SumUp hosted checkout) |
