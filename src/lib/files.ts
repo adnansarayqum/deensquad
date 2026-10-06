@@ -55,6 +55,14 @@ export async function saveFile(tx: Queryable, upload: Upload, staffId: string | 
 
 export type FileRef = { id: string; name: string; mime: string; size: number };
 
+/**
+ * What parents see an attachment called: "Session plan (PDF)", "Practice sheet (photo)". The coach's own file
+ * name ("Copy of WhatsApp Image.pdf") is kept for Download only.
+ */
+export function attachmentTitle(kind: "plan" | "sheet", f: Pick<FileRef, "mime">): string {
+  return `${kind === "plan" ? "Session plan" : "Practice sheet"} (${f.mime === "application/pdf" ? "PDF" : "photo"})`;
+}
+
 export function fileLabel(f: FileRef): string {
   const kind = f.mime === "application/pdf" ? "PDF" : "Photo";
   const size = f.size >= 1024 * 1024 ? `${(f.size / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB`;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fileTooBig, oversizeFile, readUpload } from "./files";
+import { attachmentTitle, fileTooBig, oversizeFile, readUpload } from "./files";
 
 const file = (bytes: number[], name = "x", size?: number) => {
   const f = new File([new Uint8Array(bytes)], name);
@@ -29,5 +29,13 @@ describe("uploads", () => {
     expect(oversizeFile(form)).toBeNull();
     form.set("file", file([0x25], "scan.pdf", 9.5 * MB));
     expect(oversizeFile(form)?.name).toBe("scan.pdf");
+  });
+});
+
+describe("what parents see an attachment called", () => {
+  it("names the plan or sheet and whether it's a PDF or a photo, never the coach's file name", () => {
+    expect(attachmentTitle("plan", { mime: "application/pdf" })).toBe("Session plan (PDF)");
+    expect(attachmentTitle("sheet", { mime: "image/jpeg" })).toBe("Practice sheet (photo)");
+    expect(attachmentTitle("sheet", { mime: "application/pdf" })).toBe("Practice sheet (PDF)");
   });
 });

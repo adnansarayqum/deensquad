@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { BackHeader } from "@/components/BackHeader";
 import { Attachment } from "@/components/plans/Attachment";
 import { Card, Pill } from "@/components/ui";
+import { attachmentTitle } from "@/lib/files";
 import { getPracticePage } from "@/lib/parent/load";
 
 export const metadata: Metadata = { title: "Practise at home" };
@@ -26,7 +27,7 @@ export default async function PracticePage() {
               {s.ageGroups.length ? <Pill tone="neutral">{s.ageGroups.join(", ")}</Pill> : null}
             </div>
             {s.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{s.body}</p> : null}
-            {s.file ? <Attachment file={s.file} from="/practice" /> : null}
+            {s.file ? <Attachment file={s.file} label={attachmentTitle("sheet", s.file)} from="/practice" /> : null}
             <p className="text-[13px] text-ink-muted">{[s.from, day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</p>
           </Card>
         ))}

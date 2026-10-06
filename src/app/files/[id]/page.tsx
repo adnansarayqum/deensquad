@@ -7,7 +7,7 @@ import { AppHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { UUID } from "@/lib/auth/tokens";
 import { asUser } from "@/lib/db";
-import { fileLabel } from "@/lib/files";
+import { attachmentTitle, fileLabel } from "@/lib/files";
 import { backPath } from "@/lib/viewer";
 
 export const metadata: Metadata = { title: "Attachment" };
@@ -19,10 +19,18 @@ export default async function FilePage({ params, searchParams }: PageProps<"/fil
   const user = await requireUser();
   if (!UUID.test(id)) notFound();
   const [file] = await asUser(user.id, (tx) =>
-    tx.query<{ id: string; name: string; mime: string; size: number }>(`select id, name, mime, size from club_files where id = $1`, [id]),
+    tx.query<{ id: string; name: string; mime: string; size: number; kind: "plan" | "sheet" | null }>(
+      `select f.id, f.name, f.mime, f.size,
+         case when exists (select 1 from session_plans sp where sp.file_id = f.id) then 'plan'
+              when exists (select 1 from practice_sheets ps where ps.file_id = f.id) then 'sheet' end as kind
+       from club_files f where f.id = $1`,
+      [id],
+    ),
   );
   if (!file) notFound();
 
+  // A plan or sheet is titled by what it is; the coach's file name is kept for Download.
+  const title = file.kind ? attachmentTitle(file.kind, file) : file.name;
   const back = backPath(from, user.guardian ? "/friday" : "/coach");
   const src = `/api/files/${file.id}`;
   const downloadHref = `${src}?download=1`;
@@ -40,11 +48,11 @@ export default async function FilePage({ params, searchParams }: PageProps<"/fil
             Download
           </a>
         </div>
-        <h1 className="text-[20px] leading-[26px] font-extrabold break-words">{file.name}</h1>
+        <h1 className="text-[20px] leading-[26px] font-extrabold break-words">{title}</h1>
         <p className="text-sm text-on-pitch-muted">{fileLabel(file)}</p>
       </AppHeader>
       <main className="flex flex-col gap-3 px-4 pt-4">
-        <FileViewer src={src} downloadHref={downloadHref} name={file.name} mime={file.mime} />
+        <FileViewer src={src} downloadHref={downloadHref} name={title} mime={file.mime} />
       </main>
     </div>
   );
