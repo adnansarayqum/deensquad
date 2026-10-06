@@ -687,11 +687,8 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await expect(unreadable.getByRole("button", { name: "Try again" })).toHaveCount(0);
   await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveURL(/\/coach\/practice$/);
-  await page
-    .getByRole("heading", { name: "Broken file check" })
-    .locator("xpath=ancestor::*[.//button[normalize-space()='Remove']][1]")
-    .getByRole("button", { name: "Remove" })
-    .click();
+  // Each sheet's Remove is named for the sheet.
+  await page.getByRole("button", { name: "Remove Broken file check" }).click();
   await expect(page.getByRole("heading", { name: "Broken file check" })).toHaveCount(0);
 
   await page.getByLabel("Title").fill("Keepy-uppy challenge");
@@ -725,6 +722,9 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await expect(page.getByRole("heading", { name: "Session plan (PDF)" })).toBeVisible();
   const fileId = viewer.match(/\/files\/([0-9a-f-]{36})/)![1];
   await expect(page.getByText("2 pages", { exact: true })).toBeVisible();
+  // A screen reader gets each page's words after its picture (the pages are drawn as pictures).
+  await expect(page.locator("main figure").nth(0).locator(".sr-only")).toHaveText("Warm-up: rondos");
+  await expect(page.locator("main figure").nth(1).locator(".sr-only")).toHaveText("Main: passing on the move");
   await expect(page.getByRole("img", { name: "Page 1 of 2" })).toHaveAttribute("data-drawn", "drawn");
   const firstPage = (await page.getByRole("img", { name: "Page 1 of 2" }).boundingBox())!;
   expect(firstPage.width).toBeGreaterThan(300);

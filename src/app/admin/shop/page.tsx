@@ -165,7 +165,11 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
                     <form key={step.status} action={setOrderStatus}>
                       <input type="hidden" name="order" value={o.id} />
                       <input type="hidden" name="status" value={step.status} />
-                      <button type="submit" className={`btn-chunky btn-small ${step.primary ? "btn-grass" : "btn-paper"}`}>
+                      <button
+                        type="submit"
+                        className={`btn-chunky btn-small ${step.primary ? "btn-grass" : "btn-paper"}`}
+                        aria-label={`${step.label}: order ${o.reference}`}
+                      >
                         {step.label}
                       </button>
                     </form>

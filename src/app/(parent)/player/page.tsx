@@ -195,7 +195,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
               </Link>
             </div>
           ) : (
-            <span className="text-ink-muted">Signed in as {user.email}</span>
+            <span className="min-w-0 text-ink-muted [overflow-wrap:anywhere]">Signed in as {user.email}</span>
           )}
           <a href="/privacy" className="inline-flex min-h-11 items-center font-bold text-ink-muted underline">
             Privacy

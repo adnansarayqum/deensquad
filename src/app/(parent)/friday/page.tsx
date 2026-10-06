@@ -68,7 +68,7 @@ export default async function FridayPage() {
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold">
               <QrCode aria-hidden size={24} />
             </span>
-            <span className="flex flex-1 flex-col">
+            <span className="flex min-w-0 flex-1 flex-col break-words">
               <span className="text-[15px] font-bold">{family.children.length > 1 ? "Attendance QR codes" : "Attendance QR code"}</span>
               <span className="text-[13px] text-on-pitch-muted">{family.children.length > 1 ? "One for each child. Show it to the coach when you arrive" : `Show it to the coach to check ${family.children[0].firstName} in`}</span>
             </span>
@@ -296,12 +296,13 @@ function Briefing({ session, labelled }: { session: Session; labelled: boolean }
       </h2>
       <ul className="flex flex-col gap-3 text-[15px]">
         {shown.map(({ icon: Icon, text, extra }) => (
-          <li key={text} className="flex items-center gap-3 whitespace-pre-line">
+          <li key={text} className="flex flex-wrap items-center gap-3 whitespace-pre-line">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-gold-tint text-gold-text">
               <Icon aria-hidden size={20} />
             </span>
-            <span className="min-w-0 flex-1">{text}</span>
-            {extra}
+            <span className="min-w-0 flex-1 break-words">{text}</span>
+            {/* Under the text when the screen is very narrow (200% zoom), so it never sits on top of it. */}
+            {extra ? <span className="max-[239px]:basis-full max-[239px]:pl-12">{extra}</span> : null}
           </li>
         ))}
       </ul>

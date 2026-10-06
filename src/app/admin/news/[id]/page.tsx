@@ -103,7 +103,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
                     <form action={chaseOnWhatsApp}>
                       <input type="hidden" name="news" value={news.id} />
                       <input type="hidden" name="guardian" value={u.id} />
-                      <button type="submit" className="btn-chunky btn-paper btn-small">
+                      <button type="submit" className="btn-chunky btn-paper btn-small" aria-label={`WhatsApp ${u.name}`}>
                         <MessageCircle aria-hidden size={16} />
                         WhatsApp
                       </button>

@@ -92,7 +92,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                   <form action={resendInvite}>
                     <input type="hidden" name="guardian" value={g.id} />
                     <input type="hidden" name="child" value={child.id} />
-                    <button type="submit" className="btn-chunky btn-paper btn-small">
+                    <button type="submit" className="btn-chunky btn-paper btn-small" aria-label={`${g.invited ? "Send invite again" : "Send invite"} to ${g.firstName}`}>
                       {g.invited ? "Send invite again" : "Send invite"}
                     </button>
                   </form>

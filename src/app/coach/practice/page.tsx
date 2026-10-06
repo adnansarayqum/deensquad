@@ -92,7 +92,7 @@ export default async function StaffPracticePage() {
             {user.staff.role === "admin" || s.postedById === user.staff.id ? (
               <form action={deletePracticeSheet}>
                 <input type="hidden" name="sheet" value={s.id} />
-                <button type="submit" className="min-h-11 px-1 font-bold underline">
+                <button type="submit" className="min-h-11 px-1 font-bold underline" aria-label={`Remove ${s.title}`}>
                   Remove
                 </button>
               </form>

@@ -47,7 +47,8 @@ export function TabBar({ unread, playerLabel }: { unread: number; playerLabel: s
                 }`}
               >
                 <Icon aria-hidden size={24} strokeWidth={2} />
-                <span className="max-w-full truncate px-0.5">{label}</span>
+                {/* At very narrow widths (200% zoom on a phone) the labels would be cut off, so only the icons show; the label stays as the name. */}
+                <span className="max-w-full truncate px-0.5 max-[239px]:sr-only">{label}</span>
                 {segment === "news" && unread > 0 ? (
                   <span className="absolute top-1 right-[calc(50%-22px)] grid h-5 min-w-5 place-items-center rounded-pill bg-kit-orange px-1 text-[11px] font-bold text-on-orange">
                     {unread}

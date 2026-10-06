@@ -75,7 +75,11 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
                 {isAdmin || a.fromId === user.staff.id ? (
                   <form action={removeAward}>
                     <input type="hidden" name="award" value={a.id} />
-                    <button type="submit" className="min-h-11 px-2 text-sm font-bold text-ink-muted underline">
+                    <button
+                      type="submit"
+                      className="min-h-11 px-2 text-sm font-bold text-ink-muted underline"
+                      aria-label={`Undo ${[a.stars ? "star" : null, a.points ? `${a.points} ${a.points === 1 ? "point" : "points"}` : null].filter(Boolean).join(" and ")}, ${day.format(new Date(a.givenAt))}`}
+                    >
                       Undo
                     </button>
                   </form>

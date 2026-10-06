@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Download, FileWarning } from "lucide-react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { pageCount, renderScale } from "@/lib/viewer";
+import { pageCount, pageText, renderScale } from "@/lib/viewer";
 
 type Props = { src: string; downloadHref: string; name: string; mime: string };
 
@@ -79,6 +79,8 @@ function PdfViewer({ src, downloadHref, name, retry }: Props & { retry: () => vo
     };
   }, [src]);
 
+  const texts = usePageTexts(state.status === "ready" ? state.loaded : null);
+
   if (state.status === "loading") return <Loading label={`Opening ${name}`} />;
   if (state.status === "error") return <Failed failure={state.failure} retry={retry} downloadHref={downloadHref} />;
   const { doc, sizes } = state.loaded;
@@ -87,15 +89,67 @@ function PdfViewer({ src, downloadHref, name, retry }: Props & { retry: () => vo
       <p className="text-[13px] font-bold text-ink-muted" aria-live="polite">
         {pageCount(sizes.length)}
       </p>
+      {texts === "none" ? <p className="sr-only">This file has no readable text. Download it to open in another app.</p> : null}
       {sizes.map((size, i) => (
-        <PdfPage key={i} doc={doc} number={i + 1} width={size.width} height={size.height} total={sizes.length} />
+        <PdfPage
+          key={i}
+          doc={doc}
+          number={i + 1}
+          width={size.width}
+          height={size.height}
+          total={sizes.length}
+          text={Array.isArray(texts) ? texts[i] : ""}
+        />
       ))}
     </div>
   );
 }
 
+/**
+ * The words on each page, for screen readers (the pages themselves are drawn as pictures). "none" when the file has
+ * no text layer (a scan or a photo saved as PDF) or PDF.js couldn't read it; null while it's still being read.
+ */
+function usePageTexts(loaded: Loaded | null): string[] | "none" | null {
+  const [texts, setTexts] = useState<string[] | "none" | null>(null);
+  useEffect(() => {
+    if (!loaded) return;
+    let cancelled = false;
+    (async () => {
+      const pages: string[] = [];
+      for (let i = 1; i <= loaded.doc.numPages; i++) pages.push(pageText(await (await loaded.doc.getPage(i)).getTextContent()));
+      return pages;
+    })().then(
+      (pages) => !cancelled && setTexts(pages.some((t) => t.length > 0) ? pages : "none"),
+      (error: unknown) => {
+        if (cancelled) return;
+        console.error(error);
+        setTexts("none");
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [loaded]);
+  return texts;
+}
+
 /** One page, drawn when it comes near the screen so a long PDF doesn't fill a phone's memory up front. */
-function PdfPage({ doc, number, width, height, total }: { doc: PDFDocumentProxy; number: number; width: number; height: number; total: number }) {
+function PdfPage({
+  doc,
+  number,
+  width,
+  height,
+  total,
+  text,
+}: {
+  doc: PDFDocumentProxy;
+  number: number;
+  width: number;
+  height: number;
+  total: number;
+  /** The page's words, read out after the page's picture; empty while they're being read or if it has none. */
+  text: string;
+}) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [drawn, setDrawn] = useState<"waiting" | "drawn" | "failed">("waiting");
 
@@ -149,6 +203,7 @@ function PdfPage({ doc, number, width, height, total }: { doc: PDFDocumentProxy;
         className="block h-auto w-full"
         style={{ aspectRatio: `${width} / ${height}` }}
       />
+      {text ? <div className="sr-only whitespace-pre-line">{text}</div> : null}
       {drawn === "failed" ? (
         <figcaption className="absolute inset-0 grid place-items-center p-4 text-center text-[15px] text-ink-muted">
           Page {number} couldn&apos;t be shown. Download the file to see it.

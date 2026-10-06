@@ -247,7 +247,7 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
               Not now
             </button>
           ) : (
-            <button type="button" onClick={dismiss} className="min-h-11 px-4 text-[14px] text-ink-muted underline underline-offset-2">
+            <button type="button" onClick={dismiss} className="min-h-12 px-4 text-[14px] text-ink-muted underline underline-offset-2">
               Continue in browser
             </button>
           )}
