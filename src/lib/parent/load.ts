@@ -5,7 +5,7 @@ import { requireParent } from "../auth/session";
 import { loadAwards } from "../awards/data";
 import { loadPlans, loadPracticeSheets } from "../plans/data";
 import { asUser } from "../db";
-import type { Child } from "../domain";
+import type { Child, Session } from "../domain";
 import {
   answerKey,
   familyGroups,
@@ -74,7 +74,12 @@ export async function getNewsPage() {
 export async function getFridayPage() {
   const { user, family } = await getFamily();
   const { sessions, week, invites } = await loadWeek(user.id, family, new Date());
-  const shown = new Set([...week.flatMap((w) => (w.session ? [w.session.id] : [])), ...invites.map((i) => i.session.id)]);
+  const cancelled = uniqueById(week.flatMap((w) => w.cancelled));
+  const shown = new Set([
+    ...week.flatMap((w) => (w.session ? [w.session.id] : [])),
+    ...invites.map((i) => i.session.id),
+    ...cancelled.map((s) => s.id),
+  ]);
   const groups = familyGroups(family);
   const [plans, sheets] = await asUser(user.id, (tx) => Promise.all([loadPlans(tx, [...shown], groups), loadPracticeSheets(tx, groups, 3)]));
   // Only the plan for each child's own group at the session they're going to.
@@ -82,11 +87,17 @@ export async function getFridayPage() {
   return {
     family,
     week,
+    /** Cancelled sessions before a child's next one, shown as notices above it. */
+    cancelled,
     invites,
     upcoming: sessions.filter((s) => !shown.has(s.id)).slice(0, 4),
     plans: plans.filter((p) => wanted.has(`${p.sessionId}|${p.ageGroup}`)),
     latestSheet: sheets[0] ?? null,
   };
+}
+
+function uniqueById(sessions: Session[]): Session[] {
+  return [...new Map(sessions.map((s) => [s.id, s])).values()].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 }
 
 export async function getPracticePage() {

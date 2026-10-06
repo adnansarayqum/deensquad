@@ -23,7 +23,9 @@ const session = (id: string, groups: Child["ageGroup"][], cancelled = false): Se
   arriveBy: null,
   kit: null,
   prayerNote: null,
+  notes: null,
   cancelled,
+  cancelReason: null,
 });
 
 describe("the week for a family", () => {
@@ -39,6 +41,22 @@ describe("the week for a family", () => {
   it("gives each child their own group's session", () => {
     const week = buildWeek(kids, [session("u9", ["U10"]), session("u7", ["U7"])], new Map(), new Map());
     expect(week.map((w) => w.session?.id)).toEqual(["u9", "u7"]);
+  });
+  it("skips a cancelled session to the next one and lists the cancellation beside it", () => {
+    const later = { ...session("next", ["U10", "U7"]), startsAt: "2026-10-16T17:30:00Z", endsAt: "2026-10-16T19:00:00Z" };
+    const off = { ...session("off", ["U10", "U7"], true), cancelReason: "Pitch waterlogged" };
+    const week = buildWeek(kids, [off, later], new Map([["next:a", "coming"]]), new Map());
+    expect(week.map((w) => [w.session?.id, w.cancelled.map((s) => s.id)])).toEqual([
+      ["next", ["off"]],
+      ["next", ["off"]],
+    ]);
+    expect(week[0].answer).toBe("coming");
+    expect(weekSummary(week)).toBe("Is Musa coming?");
+  });
+  it("still lists a cancellation when there's no later session", () => {
+    const week = buildWeek(kids.slice(0, 1), [session("off", ["U10"], true)], new Map(), new Map());
+    expect(week[0].session).toBeUndefined();
+    expect(week[0].cancelled.map((s) => s.id)).toEqual(["off"]);
   });
   it("joins names", () => expect(joinNames(["A", "B", "C"])).toBe("A, B and C"));
 });

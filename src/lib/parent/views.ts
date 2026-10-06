@@ -21,9 +21,17 @@ export function sessionIsFor(child: Child, session: Session): boolean {
   return session.squad ? session.squad.includes(child.id) : session.ageGroups.includes(child.ageGroup);
 }
 
-/** The first session that hasn't finished for this child (cancelled ones included, so parents see them). */
+/**
+ * The first session that hasn't finished for this child and isn't cancelled. A cancelled one never hides the
+ * next one: parents can still answer and see its plan (the cancellation shows beside it, see `cancelledBefore`).
+ */
 export function nextSessionFor(child: Child, sessions: Session[]): Session | undefined {
-  return sessions.find((s) => sessionIsFor(child, s));
+  return sessions.find((s) => sessionIsFor(child, s) && !s.cancelled);
+}
+
+/** This child's cancelled sessions before their next one (all of them if there's no next one). Sessions are in date order. */
+export function cancelledBefore(child: Child, sessions: Session[], next: Session | undefined): Session[] {
+  return sessions.filter((s) => s.cancelled && sessionIsFor(child, s) && (!next || s.startsAt < next.startsAt));
 }
 
 /** "Can Yusuf play in Autumn Cup on Sat 17 Oct?" for a squad session; "Is Yusuf coming?" otherwise. */
@@ -49,7 +57,10 @@ export function squadInvites(week: ChildWeek[], sessions: Session[], answers: Ma
 
 export type ChildWeek = {
   child: Child;
+  /** Their next session that's going ahead. */
   session: Session | undefined;
+  /** Their cancelled sessions before it. */
+  cancelled: Session[];
   answer: Availability | undefined;
   counts: SquadCounts | undefined;
 };
@@ -65,6 +76,7 @@ export function buildWeek(
     return {
       child,
       session,
+      cancelled: cancelledBefore(child, sessions, session),
       answer: session ? answers.get(answerKey(session.id, child.id)) : undefined,
       counts: session ? counts.get(answerKey(session.id, child.ageGroup)) : undefined,
     };

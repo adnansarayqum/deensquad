@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpen, CalendarX, ChevronRight, ClipboardList, Clock, MoonStar, QrCode, Shirt } from "lucide-react";
+import { BookOpen, CalendarX, ChevronRight, ClipboardList, Clock, Info, MoonStar, QrCode, Shirt } from "lucide-react";
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
 import { Attachment } from "@/components/plans/Attachment";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
@@ -14,7 +14,7 @@ import type { SessionPlan } from "@/lib/plans/data";
 export const metadata: Metadata = { title: "Friday" };
 
 export default async function FridayPage() {
-  const { family, week, invites, upcoming, plans, latestSheet } = await getFridayPage();
+  const { family, week, cancelled, invites, upcoming, plans, latestSheet } = await getFridayPage();
   const single = week.length === 1 ? week[0] : null;
   const sessions = uniqueSessions(week);
 
@@ -26,11 +26,7 @@ export default async function FridayPage() {
             {shortDay(single.session.startsAt)} · {single.child.ageGroup}s
           </p>
           <h1 className="font-display text-[48px] leading-[0.92] tracking-[0.02em]">
-            {single.session.cancelled
-              ? `${single.session.title} cancelled`
-              : single.session.squad
-                ? `Can ${single.child.firstName} play?`
-                : `Is ${single.child.firstName} coming?`}
+            {single.session.squad ? `Can ${single.child.firstName} play?` : `Is ${single.child.firstName} coming?`}
           </h1>
           <p className="text-sm text-on-pitch-muted">
             {single.session.squad ? `${single.session.title} · ` : ""}
@@ -62,20 +58,21 @@ export default async function FridayPage() {
           <Card className="p-4 text-[15px] leading-[22px]">No players are linked to your email yet. Ask the club to add your child.</Card>
         ) : null}
 
+        {/* A cancelled session never hides the next one: it shows here, and the next one is asked about below. */}
+        {cancelled.map((s) => (
+          <Cancelled key={s.id} session={s} />
+        ))}
+
         {single ? (
           single.session ? (
-            single.session.cancelled ? (
-              <Cancelled session={single.session} />
-            ) : (
-              <AvailabilityPicker
-                sessionId={single.session.id}
-                playerId={single.child.id}
-                answer={single.answer}
-                childName={single.child.firstName}
-                question={availabilityQuestion(single.child.firstName, single.session, shortDay(single.session.startsAt))}
-                squad={Boolean(single.session.squad)}
-              />
-            )
+            <AvailabilityPicker
+              sessionId={single.session.id}
+              playerId={single.child.id}
+              answer={single.answer}
+              childName={single.child.firstName}
+              question={availabilityQuestion(single.child.firstName, single.session, shortDay(single.session.startsAt))}
+              squad={Boolean(single.session.squad)}
+            />
           ) : (
             <NoSession name={single.child.firstName} />
           )
@@ -87,7 +84,7 @@ export default async function FridayPage() {
           <InviteCard key={`${i.session.id}:${i.child.id}`} invite={i} />
         ))}
 
-        {sessions.filter((s) => !s.cancelled).map((s) => (
+        {sessions.map((s) => (
           <Briefing key={s.id} session={s} labelled={sessions.length > 1} />
         ))}
 
@@ -108,7 +105,7 @@ export default async function FridayPage() {
           </Link>
         ) : null}
 
-        {single?.session && !single.session.cancelled && single.counts ? (
+        {single?.session && single.counts ? (
           <Headcount group={single.child.ageGroup} counts={single.counts} squad={Boolean(single.session.squad)} />
         ) : null}
 
@@ -126,6 +123,8 @@ export default async function FridayPage() {
                   <span className="text-[13px] text-ink-muted">
                     {clock(s.startsAt)} · {s.venue}
                   </span>
+                  {s.cancelled && s.cancelReason ? <span className="text-[13px]">{s.cancelReason}</span> : null}
+                  {!s.cancelled && s.notes ? <span className="line-clamp-2 text-[13px] whitespace-pre-line">{s.notes}</span> : null}
                 </div>
                 {s.cancelled ? <Pill tone="action">Cancelled</Pill> : <Pill tone="neutral">{s.ageGroups.join(", ")}</Pill>}
               </Card>
@@ -151,7 +150,7 @@ function ChildCard({ week: w }: { week: ChildWeek }) {
         <h2 className="text-[19px] font-extrabold">
           {name} <span className="text-[15px] font-bold text-ink-muted">· {w.child.ageGroup}s</span>
         </h2>
-        {w.counts && w.session && !w.session.cancelled ? (
+        {w.counts && w.session ? (
           <span className="text-[13px] text-ink-muted tabular-nums">
             {w.counts.coming} of {w.counts.squad} coming
           </span>
@@ -163,19 +162,15 @@ function ChildCard({ week: w }: { week: ChildWeek }) {
             {w.session.squad ? `${w.session.title} · ` : ""}
             {shortDay(w.session.startsAt)} · {clock(w.session.startsAt)}–{clock(w.session.endsAt)} · {w.session.venue}
           </p>
-          {w.session.cancelled ? (
-            <p className="rounded-xl bg-orange-tint px-3 py-2.5 text-[15px] font-bold text-ink">This session is cancelled.</p>
-          ) : (
-            <AvailabilityPicker
-              sessionId={w.session.id}
-              playerId={w.child.id}
-              answer={w.answer}
-              childName={name}
-              question={availabilityQuestion(name, w.session, shortDay(w.session.startsAt))}
-              squad={Boolean(w.session.squad)}
-              compact
-            />
-          )}
+          <AvailabilityPicker
+            sessionId={w.session.id}
+            playerId={w.child.id}
+            answer={w.answer}
+            childName={name}
+            question={availabilityQuestion(name, w.session, shortDay(w.session.startsAt))}
+            squad={Boolean(w.session.squad)}
+            compact
+          />
         </>
       ) : (
         <p className="text-[15px] text-ink-muted">No session scheduled for {name}&apos;s group yet.</p>
@@ -198,6 +193,7 @@ function InviteCard({ invite: { child, session, answer } }: { invite: SquadInvit
         {clock(session.startsAt)}–{clock(session.endsAt)} · {session.venue}
         {session.arriveBy ? ` · arrive ${session.arriveBy}` : ""}
       </p>
+      {session.notes ? <p className="-mt-1.5 text-sm whitespace-pre-line">{session.notes}</p> : null}
       <AvailabilityPicker sessionId={session.id} playerId={child.id} answer={answer} childName={child.firstName} question={question} squad compact />
     </Card>
   );
@@ -209,6 +205,7 @@ function Briefing({ session, labelled }: { session: Session; labelled: boolean }
       ? { icon: Clock, text: [session.arriveBy ? `Arrive ${session.arriveBy}` : null, session.prayerNote].filter(Boolean).join(" · ") }
       : null,
     session.kit ? { icon: Shirt, text: session.kit } : null,
+    session.notes ? { icon: Info, text: session.notes } : null,
   ].filter((r): r is { icon: typeof Clock; text: string } => r !== null);
   if (rows.length === 0) return null;
   return (
@@ -218,7 +215,7 @@ function Briefing({ session, labelled }: { session: Session; labelled: boolean }
       </h2>
       <ul className="flex flex-col gap-3 text-[15px]">
         {rows.map(({ icon: Icon, text }) => (
-          <li key={text} className="flex items-center gap-3">
+          <li key={text} className="flex items-center gap-3 whitespace-pre-line">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-gold-tint text-gold-text">
               <Icon aria-hidden size={20} />
             </span>
@@ -250,14 +247,19 @@ function Headcount({ group, counts, squad }: { group: string; counts: SquadCount
   );
 }
 
+/** "Cancelled: Training, Fri 9 Oct" with the reason staff gave, if any. */
 function Cancelled({ session }: { session: Session }) {
   return (
-    <div className="flex items-center gap-3 rounded-app border-2 border-kit-orange bg-paper p-4">
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-orange-tint text-kit-orange">
-        <CalendarX aria-hidden size={24} />
+    <div className="flex items-center gap-3 rounded-app border-2 border-kit-orange bg-paper p-3.5">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-orange-tint text-kit-orange">
+        <CalendarX aria-hidden size={22} />
       </span>
-      <p className="text-[15px] leading-[22px]">
-        <span className="font-bold">{shortDay(session.startsAt)} is cancelled.</span> Check club news for details.
+      <p className="flex flex-col text-[15px] leading-[22px]">
+        <span className="font-bold">
+          Cancelled: {session.title}, {shortDay(session.startsAt)}
+          {session.squad ? "" : ` · ${session.ageGroups.join(", ")}`}
+        </span>
+        {session.cancelReason ? <span>{session.cancelReason}</span> : null}
       </p>
     </div>
   );

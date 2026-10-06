@@ -35,7 +35,7 @@ const toChild = (r: ChildRow): Child => ({
 });
 
 export const SESSION_COLUMNS = `s.id, s.kind::text as kind, s.title, s.starts_at, s.ends_at, s.venue, s.age_groups::text[] as age_groups,
-  s.arrive_by, s.kit, s.prayer_note, s.cancelled_at is not null as cancelled`;
+  s.arrive_by, s.kit, s.prayer_note, s.notes, s.cancelled_at is not null as cancelled, s.cancel_reason`;
 
 export type SessionRow = {
   id: string;
@@ -48,7 +48,9 @@ export type SessionRow = {
   arrive_by: string | null;
   kit: string | null;
   prayer_note: string | null;
+  notes: string | null;
   cancelled: boolean;
+  cancel_reason: string | null;
 };
 
 export const toSession = (r: SessionRow): Session => ({
@@ -62,7 +64,9 @@ export const toSession = (r: SessionRow): Session => ({
   arriveBy: r.arrive_by,
   kit: r.kit,
   prayerNote: r.prayer_note,
+  notes: r.notes,
   cancelled: r.cancelled,
+  cancelReason: r.cancelled ? r.cancel_reason : null,
 });
 
 export function familyGroups(family: Family): AgeGroup[] {

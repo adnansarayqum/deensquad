@@ -33,7 +33,11 @@ export type Session = {
   arriveBy: string | null;
   kit: string | null;
   prayerNote: string | null;
+  /** Notes for parents (travel, where to meet). */
+  notes: string | null;
   cancelled: boolean;
+  /** Why it was cancelled, when staff gave a reason. */
+  cancelReason: string | null;
   /**
    * Tournament squads: on a squad session (only picked children see it), which of the family's children
    * are picked. Absent on an ordinary session, which is for every child in its age groups.
