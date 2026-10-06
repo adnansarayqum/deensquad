@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { reportClientError } from "@/lib/observability/report";
 
 // Shown when a page or action fails (a server fault, or no signal mid-tap). No error details reach the screen:
 // in production Next.js hides server messages anyway, and the digest lets the club match the server log.
 export default function ErrorPage({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
     console.error(error);
+    reportClientError(error);
   }, [error]);
 
   return (

@@ -5,6 +5,10 @@ import "@fontsource/dm-sans/500.css";
 import "@fontsource/dm-sans/700.css";
 import "@fontsource/dm-sans/800.css";
 import "./globals.css";
+import { MonitoringUser } from "@/components/observability/MonitoringUser";
+import { getCurrentUser } from "@/lib/auth/session";
+import { SENTRY_CLIENT_ON } from "@/lib/observability/config";
+import { monitoringUser } from "@/lib/observability/user";
 
 export const metadata: Metadata = {
   title: { default: "Deen Squad", template: "%s · Deen Squad" },
@@ -27,7 +31,13 @@ export const viewport: Viewport = {
 const INSTALL_PROMPT_SCRIPT =
   'addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__dsInstallPrompt=e;dispatchEvent(new Event("ds-installprompt"))});addEventListener("appinstalled",function(){window.__dsInstallPrompt=null})';
 
+/** Tells the browser's error reports who is signed in (opaque id and parent/coach/admin only). */
+async function SignedInMonitoringUser() {
+  return <MonitoringUser user={monitoringUser(await getCurrentUser())} />;
+}
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  // Browser error reports (Sentry) are off unless the app was built with them: see src/lib/observability/config.ts.
   return (
     <html lang="en-GB" className="h-full antialiased">
       <head>
@@ -37,7 +47,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             Next's own bundle has loaded, which can be too late. */}
         <script dangerouslySetInnerHTML={{ __html: INSTALL_PROMPT_SCRIPT }} />
       </head>
-      <body className="min-h-full bg-cream text-ink">{children}</body>
+      <body className="min-h-full bg-cream text-ink">
+        {children}
+        {SENTRY_CLIENT_ON ? <SignedInMonitoringUser /> : null}
+      </body>
     </html>
   );
 }

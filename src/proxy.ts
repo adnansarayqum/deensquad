@@ -5,6 +5,9 @@ import { SESSION_COOKIE, cookieOptions } from "@/lib/auth/cookies";
 // checks the session against the database (src/lib/auth/session.ts) before touching data.
 
 const PUBLIC = [/^\/sign-in(\/|$)/, /^\/sign-up$/, /^\/privacy$/, /^\/api\/health$/, /^\/api\/cron\//, /^\/api\/sumup\//];
+// Sentry's tunnel (next.config.ts): browser error reports, including from the sign-in screens, are posted to
+// /monitoring and passed on to Sentry. Only when the app was built with Sentry; otherwise it's like any other path.
+if (process.env.NEXT_PUBLIC_SENTRY_DSN) PUBLIC.push(/^\/monitoring\/?$/);
 const SESSION_SECONDS = 90 * 86400;
 
 export function proxy(request: NextRequest) {
