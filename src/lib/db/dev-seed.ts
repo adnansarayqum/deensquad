@@ -32,18 +32,23 @@ export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
   );
   const coachStaffId = await one(`select id from staff where email = $1`, [DEV_EMAILS.coach]);
 
+  // Everyone joined ten weeks before `now`, before the sample sessions and news (which are dated from `now`),
+  // so the season's attendance and the chase ladder count them.
+  const joinedAt = addDays(now, -70);
+  const joinedOn = joinedAt.toISOString().slice(0, 10);
+
   // The two-parent, two-child family.
   await tx.query(
-    `insert into guardians (id, first_name, last_name, email, phone) values
-       ($1, 'Adnan', 'Sample', $3, '07700 900001'),
-       ($2, 'Sara', 'Sample', $4, '07700 900002')`,
-    [DEV_IDS.adnan, DEV_IDS.sara, DEV_EMAILS.parent, DEV_EMAILS.secondParent],
+    `insert into guardians (id, first_name, last_name, email, phone, created_at) values
+       ($1, 'Adnan', 'Sample', $3, '07700 900001', $5),
+       ($2, 'Sara', 'Sample', $4, '07700 900002', $5)`,
+    [DEV_IDS.adnan, DEV_IDS.sara, DEV_EMAILS.parent, DEV_EMAILS.secondParent, joinedAt],
   );
   await tx.query(
     `insert into players (id, first_name, last_name, date_of_birth, shirt_number, age_group, position, joined_on, photo_consent, photo_consent_recorded_at) values
-       ($1, 'Yusuf', 'Sample', '2018-03-14', 7, 'U10', 'Midfielder', '2026-09-05', true, now()),
-       ($2, 'Musa', 'Sample', '2020-06-02', 3, 'U7', null, '2026-09-05', null, null)`,
-    [DEV_IDS.yusuf, DEV_IDS.musa],
+       ($1, 'Yusuf', 'Sample', '2018-03-14', 7, 'U10', 'Midfielder', $3, true, now()),
+       ($2, 'Musa', 'Sample', '2020-06-02', 3, 'U7', null, $3, null, null)`,
+    [DEV_IDS.yusuf, DEV_IDS.musa, joinedOn],
   );
   for (const player of [DEV_IDS.yusuf, DEV_IDS.musa]) {
     await tx.query(`insert into player_guardians (player_id, guardian_id, relationship) values ($1, $2, 'father'), ($1, $3, 'mother')`, [
@@ -59,12 +64,12 @@ export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
   for (const [i, { n, group }] of all.entries()) {
     const [first, last] = n.split(" ");
     const playerId = await one(
-      `insert into players (first_name, last_name, shirt_number, age_group, joined_on) values ($1, $2, $3, $4::age_group, '2026-09-05') returning id`,
-      [first, last, (i % 20) + 1 === 7 ? 18 : (i % 20) + 1, group],
+      `insert into players (first_name, last_name, shirt_number, age_group, joined_on) values ($1, $2, $3, $4::age_group, $5) returning id`,
+      [first, last, (i % 20) + 1 === 7 ? 18 : (i % 20) + 1, group, joinedOn],
     );
     const guardianId = await one(
-      `insert into guardians (first_name, last_name, email, phone) values ('Parent', $1, $2, $3) returning id`,
-      [last, `parent${i + 1}@example.com`, `07700 9001${String(i).padStart(2, "0")}`],
+      `insert into guardians (first_name, last_name, email, phone, created_at) values ('Parent', $1, $2, $3, $4) returning id`,
+      [last, `parent${i + 1}@example.com`, `07700 9001${String(i).padStart(2, "0")}`, joinedAt],
     );
     await tx.query(`insert into player_guardians (player_id, guardian_id) values ($1, $2)`, [playerId, guardianId]);
     squad.push({ id: playerId!, group });

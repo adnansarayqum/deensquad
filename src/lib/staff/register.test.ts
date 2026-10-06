@@ -87,6 +87,23 @@ describe("the gate register", () => {
   });
 });
 
+describe("the unread news flag at the gate", () => {
+  it("isn't raised for a child whose parents were all added after the message was posted", async () => {
+    await t.asSystem(async (tx) => {
+      const [{ id: child }] = await tx.query<{ id: string }>(`insert into players (first_name, last_name, age_group) values ('Late', 'Comer', 'U10') returning id`);
+      const [{ id: parent }] = await tx.query<{ id: string }>(
+        `insert into guardians (first_name, last_name, email, created_at) values ('Lena', 'Comer', 'lena@example.com', $1) returning id`,
+        [friday],
+      );
+      await tx.query(`insert into player_guardians (player_id, guardian_id) values ($1, $2)`, [child, parent]);
+    });
+    const rows = (await register("U10"))!.rows;
+    // "Winter timings" (club-wide, three days old) is unread by Bilal's family, who were here when it went out.
+    expect(rows.find((r) => r.firstName === "Bilal")!.flags).toContain("unread_news");
+    expect(rows.find((r) => r.firstName === "Late")!.flags).not.toContain("unread_news");
+  });
+});
+
 describe("the needs-a-word summary", () => {
   it("counts children, and each flag once per child", () => {
     expect(flagSummary([{ flags: [] }])).toBeNull();

@@ -65,6 +65,29 @@ describe("chase ladder", () => {
     expect(sent.email.filter((x) => x.announcementId === kit.id).map((x) => x.firstName)).not.toContain("Adnan");
   });
 
+  it("doesn't chase a parent added after the message was posted (they can still read it in News)", async () => {
+    // A family imported an hour after `seeded`: after both unread messages were posted.
+    await t.asSystem(async (tx) => {
+      const [{ id: child }] = await tx.query<{ id: string }>(`insert into players (first_name, last_name, age_group) values ('Late', 'Comer', 'U10') returning id`);
+      const [{ id: parent }] = await tx.query<{ id: string }>(
+        `insert into guardians (first_name, last_name, email, phone, created_at) values ('Lena', 'Comer', 'lena@example.com', '07700 900999', $1) returning id`,
+        [hoursLater(1)],
+      );
+      await tx.query(`insert into player_guardians (player_id, guardian_id) values ($1, $2)`, [child, parent]);
+    });
+    const lena = await t.signIn("lena@example.com");
+    await run(hoursLater(2), senders([adnanUser, lena], true));
+    await run(hoursLater(25), senders([adnanUser, lena], true));
+    await run(hoursLater(51), senders([adnanUser, lena], true));
+    for (const channel of ["app", "email", "sms"]) {
+      expect(names(sent[channel]), channel).not.toContain("Lena");
+      expect(sent[channel]?.length ?? 0, channel).toBeGreaterThan(0); // the ladder still ran for everyone else
+    }
+    // Lena still sees both messages in News.
+    const news = await t.asUser(lena, (tx) => tx.query<{ title: string }>(`select title from announcements order by posted_at desc`));
+    expect(news.map((n) => n.title)).toContain("New away kit: sizes needed by Friday");
+  });
+
   it("texts after 48 hours only when texting is set up", async () => {
     await run(hoursLater(50));
     expect(sent.sms).toBeUndefined();

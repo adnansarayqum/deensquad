@@ -104,6 +104,11 @@ export async function loadRegister(
          select 1 from announcements an
          where an.requires_ack and an.posted_at <= $3::timestamptz - interval '48 hours' and an.posted_at > $3::timestamptz - interval '14 days'
            and ${newsReaches("an", "p")}
+           -- not about a message posted before any of the child's parents were added (see the chase ladder)
+           and exists (
+             select 1 from player_guardians fg join guardians fgg on fgg.id = fg.guardian_id
+             where fg.player_id = p.id and fgg.created_at <= an.posted_at
+           )
            and not exists (
              select 1 from announcement_reads r join player_guardians rg on rg.guardian_id = r.guardian_id
              where r.announcement_id = an.id and rg.player_id = p.id

@@ -6,7 +6,8 @@ import { newsReaches } from "../squads/sql";
 //   email  after 24 hours  reminder email
 //   sms    after 48 hours  text message (only when a text provider is set up)
 //   gate   by session day  the coach's register flags the child (see staff/register.ts)
-// A parent is never chased once they, or the other parent of the same child, have read it.
+// A parent is never chased once they, or the other parent of the same child, have read it, nor about a
+// message posted before they were added to the app (guardians.created_at).
 // A message to a tournament squad reaches only the parents of the children in that squad.
 // An urgent message (announcements.urgent: a session cancelled, restored or changed) is emailed at post
 // time as well as pushed, instead of after 24 hours; its text still waits 48 hours.
@@ -66,6 +67,8 @@ export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date,
        and a.posted_at <= $1::timestamptz - make_interval(hours => case when a.urgent and $3 = 'email' then 0 else $5::int end)
        and a.posted_at > $2
        and ($4::uuid is null or a.id = $4)
+       -- a parent added after the message was posted (a new import or sign-up) can read it in News, but isn't chased
+       and g.created_at <= a.posted_at
        -- this parent hasn't read it, and nobody who shares a child with them has either
        and not exists (
          select 1 from announcement_reads r
