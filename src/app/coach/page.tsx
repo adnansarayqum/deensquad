@@ -1,23 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarClock, ChevronLeft, ClipboardList, Star } from "lucide-react";
-import { CheckInButton, UndoCheckInButton } from "@/components/CheckInButton";
+import { UndoCheckInButton } from "@/components/CheckInButton";
 import { PassScanner } from "@/components/PassScanner";
-import { Pill, Progress } from "@/components/ui";
+import { FlagPills, RegisterLists, type GateRow } from "@/components/RegisterLists";
+import { Progress } from "@/components/ui";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { clock, shortDay } from "@/lib/dates";
 import { registerClosedMessage, registerOpen } from "@/lib/staff/checkin";
-import { loadRegister, summarise, type RegisterFlag } from "@/lib/staff/register";
+import { FLAG_WORDS, flagSummary } from "@/lib/staff/flags";
+import { ALL_GROUPS, loadRegister, summarise, type RegisterRow } from "@/lib/staff/register";
 
 export const metadata: Metadata = { title: "Register" };
 
-const flagText: Record<RegisterFlag, string> = {
-  no_payment_plan: "No payment plan",
-  missing_consent: "No photo consent yet",
-  unread_news: "Hasn't read club news",
-  kit_ready: "Kit order ready to collect",
-};
+const gate = (r: RegisterRow): GateRow => ({
+  id: r.id,
+  firstName: r.firstName,
+  lastInitial: r.lastInitial,
+  ageGroup: r.ageGroup,
+  answer: r.answer,
+  checkedIn: r.checkedInAt ? `${r.method === "qr" ? "QR code scanned" : "Marked here"} · ${clock(r.checkedInAt)}` : null,
+  flags: r.flags,
+});
 
 export default async function CoachRegisterPage({ searchParams }: PageProps<"/coach">) {
   const user = await requireStaff();
@@ -50,6 +55,8 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
 
   const { session, todays, group, groups } = view;
   const s = summarise(view);
+  const all = group === ALL_GROUPS;
+  const needsAWord = flagSummary(s.flagged);
   // On a day without a session the register shows the next one read-only: Mark here, Undo and scanning open on its day.
   const open = registerOpen(session.startsAt, now);
   const link = (q: { session?: string; group?: string }) =>
@@ -87,14 +94,14 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
         ) : null}
         {groups.length > 1 ? (
           <nav aria-label="Age groups" className="flex flex-wrap gap-2">
-            {groups.map((g) => (
+            {[...groups, ALL_GROUPS].map((g) => (
               <Link
                 key={g}
                 href={link({ group: g })}
                 aria-current={g === group ? "page" : undefined}
                 className={`inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-sm font-extrabold ${g === group ? "bg-floodlight text-on-gold" : "bg-pitch text-on-pitch"}`}
               >
-                {g}
+                {g === ALL_GROUPS ? "All groups" : g}
               </Link>
             ))}
           </nav>
@@ -106,16 +113,6 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
           </p>
         )}
         <PassScanner disabled={!open} />
-        <div className="flex flex-wrap gap-x-5">
-          <Link href="/coach/awards" className="inline-flex min-h-12 items-center gap-1.5 text-sm font-bold text-floodlight">
-            <Star aria-hidden size={16} fill="currentColor" strokeWidth={0} />
-            Points and stars
-          </Link>
-          <Link href="/coach/plans" className="inline-flex min-h-12 items-center gap-1.5 text-sm font-bold text-floodlight">
-            <ClipboardList aria-hidden size={16} />
-            Session plans
-          </Link>
-        </div>
       </header>
 
       {s.latest.length > 0 ? (
@@ -125,13 +122,16 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-grass font-display text-[22px] text-on-grass">
                 {r.shirtNumber ?? r.firstName[0]}
               </span>
-              <span className="flex flex-1 flex-col">
+              <span className="flex min-w-0 flex-1 flex-col items-start">
                 <span className="text-[15px] font-bold">
                   {r.firstName} {r.lastInitial}. checked in
                 </span>
                 <span className="text-[13px] text-ink-muted">
-                  {group}s · {clock(r.checkedInAt!)}
+                  {r.ageGroup}s · {clock(r.checkedInAt!)}
                 </span>
+                {r.flags.length ? (
+                  <span className="text-[13px] font-bold text-kit-orange">Needs a word: {r.flags.map((f) => FLAG_WORDS[f]).join(" · ")}</span>
+                ) : null}
               </span>
               <UndoCheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} disabled={!open} />
             </div>
@@ -139,23 +139,9 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
         </section>
       ) : null}
 
-      {s.flagged.map((r) => (
-        <div key={r.id} className="mx-4 mt-2.5 flex items-center gap-3 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 py-3 text-ink">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-kit-orange font-display text-[22px] text-on-orange">
-            {r.shirtNumber ?? r.firstName[0]}
-          </span>
-          <span className="flex flex-1 flex-col">
-            <span className="text-[15px] font-bold">
-              {r.firstName} {r.lastInitial}. needs a word
-            </span>
-            <span className="text-[13px] text-ink-muted">{r.flags.map((f) => flagText[f]).join(" · ")}</span>
-          </span>
-        </div>
-      ))}
-
       <main className="mt-3.5 flex flex-1 flex-col gap-3 rounded-t-[24px] bg-cream px-4 pt-[18px] pb-[max(env(safe-area-inset-bottom),24px)] text-ink">
         <div className="flex items-baseline justify-between">
-          <h2 className="font-display text-[30px] leading-none text-ink">{group}s</h2>
+          <h2 className="font-display text-[30px] leading-none text-ink">{all ? "All groups" : `${group}s`}</h2>
           <p className="text-sm text-ink-muted">
             <span className="font-display text-[26px] text-ink tabular-nums">{s.here.length}</span> of {s.expectedTotal} expected
           </p>
@@ -164,70 +150,36 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
         {view.rows.length === 0 ? (
           <p className="text-[15px] text-ink-muted">No players in the {group}s yet. Import families in the club admin.</p>
         ) : (
-          <>
-            <p className="mt-1 text-label text-ink-muted uppercase">{s.notHere.length > 0 ? "Not here yet" : "Everyone expected is here"}</p>
-            <ul className="flex flex-col gap-2.5">
-              {s.notHere.map((r) => (
-                <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-line bg-paper py-2.5 pr-3 pl-3.5">
-                  <span className="flex flex-col">
-                    <span className="text-[15px] font-bold">
-                      {r.firstName} {r.lastInitial}.
-                    </span>
-                    <span className="text-[13px] text-ink-muted">{r.answer === "coming" ? "Said they're coming" : "No answer"}</span>
-                  </span>
-                  <CheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} disabled={!open} />
-                </li>
-              ))}
-            </ul>
-
-            {s.away.length > 0 ? (
-              <section aria-labelledby="register-away" className="mt-2 flex flex-col gap-2.5">
-                <h3 id="register-away" className="text-label text-ink-muted uppercase">
-                  Said not coming ({s.away.length})
-                </h3>
-                <p className="text-[13px] text-ink-muted">If one of them turns up, mark them here.</p>
-                <ul className="flex flex-col gap-2.5">
-                  {s.away.map((r) => (
-                    <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-line bg-cream py-2.5 pr-3 pl-3.5">
-                      <span className="flex flex-col items-start gap-1">
-                        <span className="text-[15px] font-bold">
-                          {r.firstName} {r.lastInitial}.
-                        </span>
-                        <Pill tone="neutral">Said not coming</Pill>
+          <RegisterLists sessionId={session.id} open={open} showGroup={all} notHere={s.notHere.map(gate)} away={s.away.map(gate)} here={s.here.map(gate)}>
+            {needsAWord ? (
+              // One line for everyone already in who needs a word; the names (and their pills in Here) are a tap away.
+              <details className="mt-2 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 text-ink">
+                <summary className="flex min-h-12 cursor-pointer items-center py-2 text-[15px] font-bold">{needsAWord}</summary>
+                <ul className="flex flex-col gap-2 pb-3">
+                  {s.flagged.map((r) => (
+                    <li key={r.id} className="flex flex-col items-start gap-1">
+                      <span className="text-[15px] font-bold">
+                        {r.firstName} {r.lastInitial}.{all ? ` · ${r.ageGroup}` : ""}
                       </span>
-                      <CheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} disabled={!open} />
+                      <FlagPills flags={r.flags} />
                     </li>
                   ))}
                 </ul>
-              </section>
+              </details>
             ) : null}
-
-            <section aria-labelledby="register-here" className="mt-2 flex flex-col gap-2.5">
-              <h3 id="register-here" className="text-label text-ink-muted uppercase">
-                Here ({s.here.length})
-              </h3>
-              {s.here.length === 0 ? (
-                <p className="text-[13px] text-ink-muted">{open ? "Nobody checked in yet. Scan a QR code or tap Mark here." : "Nobody checked in yet."}</p>
-              ) : (
-                <ul className="flex flex-col gap-2.5">
-                  {s.here.map((r) => (
-                    <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-grass-tint py-2 pr-2 pl-3.5">
-                      <span className="flex flex-col">
-                        <span className="text-[15px] font-bold">
-                          {r.firstName} {r.lastInitial}.
-                        </span>
-                        <span className="text-[13px] text-ink-muted">
-                          {r.method === "qr" ? "QR code scanned" : "Marked here"} · {clock(r.checkedInAt!)}
-                        </span>
-                      </span>
-                      <UndoCheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} disabled={!open} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </>
+          </RegisterLists>
         )}
+        {/* Not needed at the gate, so below the lists. */}
+        <div className="mt-2 flex flex-wrap gap-x-5">
+          <Link href="/coach/awards" className="inline-flex min-h-12 items-center gap-1.5 text-sm font-bold text-grass-text">
+            <Star aria-hidden size={16} fill="currentColor" strokeWidth={0} />
+            Points and stars
+          </Link>
+          <Link href="/coach/plans" className="inline-flex min-h-12 items-center gap-1.5 text-sm font-bold text-grass-text">
+            <ClipboardList aria-hidden size={16} />
+            Session plans
+          </Link>
+        </div>
       </main>
     </div>
   );

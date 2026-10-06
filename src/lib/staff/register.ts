@@ -4,15 +4,21 @@ import { iso } from "../db/types";
 import { isAgeGroup, type AgeGroup, type Availability, type PaymentState, type Session } from "../domain";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
 import { newsReaches } from "../squads/sql";
+import type { RegisterFlag } from "./flags";
 
-// The coach's gate register for one session and one age group. Runs as staff (row level security on).
+export type { RegisterFlag } from "./flags";
 
-export type RegisterFlag = "no_payment_plan" | "missing_consent" | "unread_news" | "kit_ready";
+// The coach's gate register for one session and one age group, or for all of the session's groups the coach
+// can see at once ("all"). Runs as staff (row level security on).
+
+/** The register's "All groups" tab. */
+export const ALL_GROUPS = "all";
 
 export type RegisterRow = {
   id: string;
   firstName: string;
   lastInitial: string;
+  ageGroup: AgeGroup;
   shirtNumber: number | null;
   answer: Availability | null;
   checkedInAt: string | null;
@@ -24,7 +30,9 @@ export type RegisterRow = {
 export type RegisterView = {
   session: Session;
   todays: Session[];
-  group: AgeGroup;
+  /** The group shown, or "all" for every group in `groups` together. */
+  group: AgeGroup | typeof ALL_GROUPS;
+  /** The session's groups (that the coach can see) with children in them; "All groups" is offered when there are two or more. */
   groups: AgeGroup[];
   rows: RegisterRow[];
 };
@@ -71,12 +79,15 @@ export async function loadRegister(
     [session.ageGroups, session.id],
   );
   const groups = session.ageGroups.filter((g) => counts.some((c) => c.age_group === g && c.n > 0));
-  const group = isAgeGroup(opts.group) && session.ageGroups.includes(opts.group) ? opts.group : (groups[0] ?? session.ageGroups[0]);
+  const one = isAgeGroup(opts.group) && session.ageGroups.includes(opts.group) ? opts.group : (groups[0] ?? session.ageGroups[0]);
+  const group = opts.group === ALL_GROUPS && groups.length > 1 ? ALL_GROUPS : one;
+  const listed = group === ALL_GROUPS ? groups : [group];
 
   const rows = await tx.query<{
     id: string;
     first_name: string;
     last_name: string;
+    age_group: AgeGroup;
     shirt_number: number | null;
     photo_consent: boolean | null;
     payment: PaymentState;
@@ -86,7 +97,7 @@ export async function loadRegister(
     unread_news: boolean;
     kit_ready: boolean;
   }>(
-    `select p.id, p.first_name, p.last_name, p.shirt_number, p.photo_consent,
+    `select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number, p.photo_consent,
        coalesce(ps.state, 'missing')::text as payment, a.answer::text as answer, at.checked_in_at, at.method,
        -- last rung of the chase ladder: nobody in the family has read a message that's been waiting two days or more
        exists (
@@ -105,20 +116,21 @@ export async function loadRegister(
      left join payment_status ps on ps.player_id = p.id
      left join availability a on a.player_id = p.id and a.session_id = $1
      left join attendance at on at.player_id = p.id and at.session_id = $1
-     where p.age_group = $2::age_group and squad_allows($1, p.id)
+     where p.age_group = any ($2::text[]::age_group[]) and squad_allows($1, p.id)
      order by p.first_name, p.last_name`,
-    [session.id, group, opts.now],
+    [session.id, listed, opts.now],
   );
 
   return {
     session,
     todays,
     group,
-    groups: groups.length ? groups : [group],
+    groups: groups.length ? groups : [one],
     rows: rows.map((r) => ({
       id: r.id,
       firstName: r.first_name,
       lastInitial: r.last_name[0] ?? "",
+      ageGroup: r.age_group,
       shirtNumber: r.shirt_number,
       answer: r.answer,
       checkedInAt: r.checked_in_at ? iso(r.checked_in_at) : null,
@@ -143,7 +155,8 @@ export function summarise(view: RegisterView) {
   const notHere = view.rows.filter((r) => !r.checkedInAt && r.answer !== "away");
   return {
     here,
-    latest: here.slice(0, 2),
+    /** The last one in, at the top with its Undo (one card, so the list still to arrive stays on the first screen). */
+    latest: here.slice(0, 1),
     flagged: here.filter((r) => r.flags.length > 0),
     notHere,
     away,

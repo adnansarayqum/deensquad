@@ -5,8 +5,8 @@ import jsQR from "jsqr";
 import { Check, QrCode, RotateCcw, TriangleAlert, WifiOff, X } from "lucide-react";
 import type { ScanResult } from "@/lib/staff/checkin";
 import { scanPass } from "@/lib/staff/actions";
+import { FLAG_WORDS } from "@/lib/staff/flags";
 
-const flagText = { no_payment_plan: "No payment plan", missing_consent: "No photo consent", unread_news: "Hasn't read news", kit_ready: "Kit ready to collect" } as const;
 const reasonText = {
   not_a_pass: "That isn't a Deen Squad attendance QR code.",
   unknown_child: "This QR code is for a child who is no longer at the club.",
@@ -188,7 +188,7 @@ function ChildResult({ child: c }: { child: Extract<ScanResult, { ok: true }>["c
           {c.ageGroup} ·{" "}
           {c.status === "checked_in" ? "Checked in" : c.status === "already_here" ? "Already checked in" : "No session for this group today"}
         </span>
-        {here && c.flags.length ? <span className="text-[14px]">Needs a word: {c.flags.map((f) => flagText[f]).join(", ")}</span> : null}
+        {here && c.flags.length ? <span className="text-[14px]">Needs a word: {c.flags.map((f) => FLAG_WORDS[f]).join(", ")}</span> : null}
       </span>
     </div>
   );

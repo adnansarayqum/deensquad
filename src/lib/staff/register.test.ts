@@ -3,7 +3,8 @@ import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
 import { passToken } from "../pass/token";
 import { checkInByPass } from "./checkin";
-import { loadRegister, summarise } from "./register";
+import { flagSummary } from "./flags";
+import { ALL_GROUPS, loadRegister, summarise } from "./register";
 
 // A Friday: the sample club's training (6:30pm, every age group) is today. Two U10s (Adam F. and Ilyas C.) said not coming.
 const friday = new Date("2026-10-09T17:00:00Z");
@@ -64,5 +65,39 @@ describe("the gate register", () => {
     expect(view.rows.every((r) => r.method === null)).toBe(true);
     expect(view.rows.map((r) => r.firstName)).toContain("Musa");
     expect(view.rows.map((r) => r.firstName)).not.toContain("Yusuf");
+  });
+
+  it("lists every group of the session together on All groups, each child with their group", async () => {
+    const view = (await register(ALL_GROUPS))!;
+    expect(view.group).toBe(ALL_GROUPS);
+    expect(view.groups).toEqual(["U7", "U10"]);
+    const groupOf = new Map(view.rows.map((r) => [r.firstName, r.ageGroup]));
+    expect(groupOf.get("Musa")).toBe("U7");
+    expect(groupOf.get("Yusuf")).toBe("U10");
+    // Sorted by first name across the groups.
+    const names = view.rows.map((r) => `${r.firstName} ${r.lastInitial}`);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+    expect(summarise(view).expectedTotal).toBe(view.rows.length - 2);
+  });
+
+  it("offers All groups only with two or more groups: a coach of one group gets their group", async () => {
+    const view = (await register(ALL_GROUPS, ["U7"]))!;
+    expect(view.group).toBe("U7");
+    expect(view.rows.every((r) => r.ageGroup === "U7")).toBe(true);
+  });
+});
+
+describe("the needs-a-word summary", () => {
+  it("counts children, and each flag once per child", () => {
+    expect(flagSummary([{ flags: [] }])).toBeNull();
+    expect(flagSummary([{ flags: ["kit_ready"] }, { flags: [] }])).toBe("1 child needs a word (1 kit ready)");
+    expect(
+      flagSummary([
+        { flags: ["no_payment_plan", "unread_news"] },
+        { flags: ["no_payment_plan"] },
+        { flags: ["kit_ready"] },
+        { flags: ["missing_consent"] },
+      ]),
+    ).toBe("4 children need a word (2 no payment plan, 1 no photo consent, 1 unread news, 1 kit ready)");
   });
 });
