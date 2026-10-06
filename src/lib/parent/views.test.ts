@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Child, Session } from "../domain";
-import { availabilityQuestion, buildWeek, computeStats, joinNames, sessionsToday, squadInvites, weekSummary } from "./views";
+import type { AnswerRecord } from "./data";
+import { answeredLine, availabilityQuestion, buildWeek, computeStats, joinNames, sessionsToday, squadInvites, weekSummary } from "./views";
 
 const child = (id: string, name: string, group: Child["ageGroup"]): Child => ({
   id,
@@ -65,6 +66,30 @@ describe("the week for a family", () => {
     expect(week[0].cancelled.map((s) => s.id)).toEqual(["off"]);
   });
   it("joins names", () => expect(joinNames(["A", "B", "C"])).toBe("A, B and C"));
+});
+
+describe("who answered", () => {
+  const kids = [child("a", "Yusuf", "U10")];
+  const now = new Date("2026-10-08T12:00:00Z"); // Thursday in London
+  const bySara: AnswerRecord = { answer: "away", by: { id: "g-sara", name: "Sara" }, at: "2026-10-06T13:02:00Z" };
+  it("carries who gave the answer onto the child's week and squad invites", () => {
+    const sessions = [session("fri", ["U10"]), { ...session("cup", ["U10"]), kind: "tournament" as const, startsAt: "2026-10-17T09:00:00Z", squad: ["a"] }];
+    const records = new Map<string, AnswerRecord>([["fri:a", bySara], ["cup:a", { ...bySara, answer: "coming" }]]);
+    const answers = new Map([...records].map(([k, r]) => [k, r.answer]));
+    const week = buildWeek(kids, sessions, answers, new Map(), records);
+    expect(week[0].answered).toBe(bySara);
+    expect(squadInvites(week, sessions, answers, records)[0].answered?.answer).toBe("coming");
+  });
+  it("names the other parent, or says you, with the day and time", () => {
+    expect(answeredLine(bySara, "g-adnan", now)).toBe("Not this week · answered by Sara, Tue 14:02");
+    expect(answeredLine(bySara, "g-sara", now)).toBe("Not this week · answered by you, Tue 14:02");
+    expect(answeredLine({ ...bySara, answer: "coming", at: "2026-10-08T08:12:00Z" }, "g-adnan", now)).toBe("Coming · answered by Sara, today 09:12");
+    expect(answeredLine({ ...bySara, answer: "coming" }, "g-adnan", now, true)).toBe("Can play · answered by Sara, Tue 14:02");
+  });
+  it("shows no name when the answer has no guardian (older answers) or theirs can't be seen", () => {
+    expect(answeredLine({ ...bySara, by: null }, "g-adnan", now)).toBe("Not this week · answered Tue 14:02");
+    expect(answeredLine({ ...bySara, by: { id: "g-gone", name: null } }, "g-adnan", now)).toBe("Not this week · answered Tue 14:02");
+  });
 });
 
 describe("tournament squads for a family", () => {

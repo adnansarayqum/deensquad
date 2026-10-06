@@ -161,13 +161,24 @@ export async function loadUpcomingSessions(tx: Queryable, children: Child[], now
 
 export const answerKey = (sessionId: string, playerId: string) => `${sessionId}:${playerId}`;
 
-export async function loadAnswers(tx: Queryable, sessionIds: string[], childIds: string[]): Promise<Map<string, Availability>> {
+/** An answer as saved: which guardian gave it (their first name, if this parent can see it) and when. */
+export type AnswerRecord = { answer: Availability; by: { id: string; name: string | null } | null; at: string };
+
+export async function loadAnswers(tx: Queryable, sessionIds: string[], childIds: string[]): Promise<Map<string, AnswerRecord>> {
   if (sessionIds.length === 0 || childIds.length === 0) return new Map();
-  const rows = await tx.query<{ session_id: string; player_id: string; answer: Availability }>(
-    `select session_id, player_id, answer::text as answer from availability where session_id = any($1::uuid[]) and player_id = any($2::uuid[])`,
+  // The guardian's name is read under row level security: a parent sees the guardians who share their children.
+  const rows = await tx.query<{ session_id: string; player_id: string; answer: Availability; answered_by: string | null; name: string | null; answered_at: Date }>(
+    `select v.session_id, v.player_id, v.answer::text as answer, v.answered_by, g.first_name as name, v.answered_at
+     from availability v left join guardians g on g.id = v.answered_by
+     where v.session_id = any($1::uuid[]) and v.player_id = any($2::uuid[])`,
     [sessionIds, childIds],
   );
-  return new Map(rows.map((r) => [answerKey(r.session_id, r.player_id), r.answer]));
+  return new Map(
+    rows.map((r) => [
+      answerKey(r.session_id, r.player_id),
+      { answer: r.answer, by: r.answered_by ? { id: r.answered_by, name: r.name } : null, at: iso(r.answered_at) },
+    ]),
+  );
 }
 
 /**

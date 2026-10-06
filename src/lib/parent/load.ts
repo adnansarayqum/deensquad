@@ -45,18 +45,19 @@ async function loadWeek(userId: string, family: Family, now: Date) {
     const sessions = await loadUpcomingSessions(tx, family.children, now);
     const firsts = family.children.map((c) => ({ child: c, session: nextSessionFor(c, sessions) }));
     // Answers for each child's next session and for any squad session they're picked for.
-    const answers = await loadAnswers(
+    const records = await loadAnswers(
       tx,
       [...new Set([...firsts.flatMap((f) => (f.session ? [f.session.id] : [])), ...sessions.filter((s) => s.squad).map((s) => s.id)])],
       family.children.map((c) => c.id),
     );
+    const answers = new Map([...records].map(([key, r]) => [key, r.answer]));
     const counts = new Map<string, SquadCounts>();
     for (const { child, session } of firsts) {
       const key = session ? answerKey(session.id, child.ageGroup) : null;
       if (session && key && !counts.has(key)) counts.set(key, await loadSquadCounts(tx, session.id, child.ageGroup));
     }
-    const week = buildWeek(family.children, sessions, answers, counts);
-    return { sessions, week, invites: squadInvites(week, sessions, answers) };
+    const week = buildWeek(family.children, sessions, answers, counts, records);
+    return { sessions, week, invites: squadInvites(week, sessions, answers, records) };
   });
 }
 

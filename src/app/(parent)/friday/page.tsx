@@ -10,7 +10,7 @@ import { clock, shortDay } from "@/lib/dates";
 import type { Session } from "@/lib/domain";
 import type { SquadCounts } from "@/lib/parent/data";
 import { getFamily, getFridayPage } from "@/lib/parent/load";
-import { availabilityQuestion, sessionsToday, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
+import { answeredLine, availabilityQuestion, sessionsToday, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
 import { cachedPasses, passCards, type PassCard } from "@/lib/pass/cards";
 import type { SessionPlan } from "@/lib/plans/data";
 
@@ -21,7 +21,11 @@ export default async function FridayPage() {
   const single = week.length === 1 ? week[0] : null;
   // Every child's QR code is kept on the phone for no signal; on a session day, today's children's codes are shown here too.
   const cards = await passCards(family.children);
-  const today = sessionsToday(week, new Date());
+  const now = new Date();
+  const today = sessionsToday(week, now);
+  /** "Coming · answered by Sara, Tue 14:02" (or "by you") under an answer that's already been given. */
+  const answered = (w: { answered?: ChildWeek["answered"]; session?: Session }) =>
+    w.answered ? answeredLine(w.answered, family.guardian.id, now, Boolean(w.session?.squad)) : undefined;
   const todayCards = cards.filter((c) => today.some((t) => t.child.id === c.id));
   const sessions = uniqueSessions(week);
 
@@ -82,16 +86,17 @@ export default async function FridayPage() {
               childName={single.child.firstName}
               question={availabilityQuestion(single.child.firstName, single.session, shortDay(single.session.startsAt))}
               squad={Boolean(single.session.squad)}
+              answered={answered(single)}
             />
           ) : (
             <NoSession name={single.child.firstName} />
           )
         ) : (
-          week.map((w) => <ChildCard key={w.child.id} week={w} />)
+          week.map((w) => <ChildCard key={w.child.id} week={w} answered={answered(w)} />)
         )}
 
         {invites.map((i) => (
-          <InviteCard key={`${i.session.id}:${i.child.id}`} invite={i} />
+          <InviteCard key={`${i.session.id}:${i.child.id}`} invite={i} answered={answered(i)} />
         ))}
 
         {sessions.map((s) => (
@@ -179,7 +184,7 @@ function uniqueSessions(week: ChildWeek[]): Session[] {
   return [...seen.values()];
 }
 
-function ChildCard({ week: w }: { week: ChildWeek }) {
+function ChildCard({ week: w, answered }: { week: ChildWeek; answered?: string }) {
   const name = w.child.firstName;
   return (
     <Card className="flex flex-col gap-3 p-4">
@@ -206,6 +211,7 @@ function ChildCard({ week: w }: { week: ChildWeek }) {
             childName={name}
             question={availabilityQuestion(name, w.session, shortDay(w.session.startsAt))}
             squad={Boolean(w.session.squad)}
+            answered={answered}
             compact
           />
         </>
@@ -217,7 +223,7 @@ function ChildCard({ week: w }: { week: ChildWeek }) {
 }
 
 /** A squad session further ahead than the child's next session: the family is asked straight away. */
-function InviteCard({ invite: { child, session, answer } }: { invite: SquadInvite }) {
+function InviteCard({ invite: { child, session, answer }, answered }: { invite: SquadInvite; answered?: string }) {
   const question = availabilityQuestion(child.firstName, session, shortDay(session.startsAt));
   return (
     <Card tone="gold" className="flex flex-col gap-3 p-4">
@@ -231,7 +237,7 @@ function InviteCard({ invite: { child, session, answer } }: { invite: SquadInvit
         {session.arriveBy ? ` · arrive ${session.arriveBy}` : ""}
       </p>
       {session.notes ? <p className="-mt-1.5 text-sm whitespace-pre-line">{session.notes}</p> : null}
-      <AvailabilityPicker sessionId={session.id} playerId={child.id} answer={answer} childName={child.firstName} question={question} squad compact />
+      <AvailabilityPicker sessionId={session.id} playerId={child.id} answer={answer} childName={child.firstName} question={question} squad answered={answered} compact />
     </Card>
   );
 }

@@ -1,8 +1,8 @@
 // Pure functions that turn the family's data into exactly what each parent screen shows.
 
-import { londonDate, sameLondonDay } from "../dates";
+import { londonDate, postedLabel, sameLondonDay } from "../dates";
 import type { Availability, Child, ChecklistItemId, PaymentState, Session } from "../domain";
-import type { AnnouncementView, ChecklistFacts, SquadCounts } from "./data";
+import type { AnnouncementView, AnswerRecord, ChecklistFacts, SquadCounts } from "./data";
 import { answerKey } from "./data";
 
 /** "Yusuf", "Yusuf and Musa", "Yusuf, Musa and Isa". */
@@ -39,18 +39,26 @@ export function availabilityQuestion(name: string, session: Session, day: string
   return session.squad ? `Can ${name} play in ${session.title} on ${day}?` : `Is ${name} coming? ${day}`;
 }
 
-export type SquadInvite = { child: Child; session: Session; answer: Availability | undefined };
+export type SquadInvite = { child: Child; session: Session; answer: Availability | undefined; answered?: AnswerRecord };
 
 /**
  * Squad sessions further ahead than each child's next session, one per picked child, so the family is asked
  * as soon as the child is picked rather than only once it's the next session. Cancelled ones are left out.
  */
-export function squadInvites(week: ChildWeek[], sessions: Session[], answers: Map<string, Availability>): SquadInvite[] {
+export function squadInvites(
+  week: ChildWeek[],
+  sessions: Session[],
+  answers: Map<string, Availability>,
+  records?: Map<string, AnswerRecord>,
+): SquadInvite[] {
   return sessions.flatMap((session) =>
     session.squad && !session.cancelled
       ? week
           .filter((w) => session.squad!.includes(w.child.id) && w.session?.id !== session.id)
-          .map((w) => ({ child: w.child, session, answer: answers.get(answerKey(session.id, w.child.id)) }))
+          .map((w) => {
+            const key = answerKey(session.id, w.child.id);
+            return { child: w.child, session, answer: answers.get(key), answered: records?.get(key) };
+          })
       : [],
   );
 }
@@ -62,6 +70,8 @@ export type ChildWeek = {
   /** Their cancelled sessions before it. */
   cancelled: Session[];
   answer: Availability | undefined;
+  /** Who gave that answer and when (from `loadAnswers`), when known. */
+  answered?: AnswerRecord;
   counts: SquadCounts | undefined;
 };
 
@@ -70,6 +80,7 @@ export function buildWeek(
   sessions: Session[],
   answers: Map<string, Availability>,
   counts: Map<string, SquadCounts>,
+  records?: Map<string, AnswerRecord>,
 ): ChildWeek[] {
   return children.map((child) => {
     const session = nextSessionFor(child, sessions);
@@ -78,9 +89,22 @@ export function buildWeek(
       session,
       cancelled: cancelledBefore(child, sessions, session),
       answer: session ? answers.get(answerKey(session.id, child.id)) : undefined,
+      answered: session ? records?.get(answerKey(session.id, child.id)) : undefined,
       counts: session ? counts.get(answerKey(session.id, child.ageGroup)) : undefined,
     };
   });
+}
+
+/**
+ * The line under an answer already given, so parents who share a child can see who said what:
+ * "Coming · answered by Sara, Tue 14:02", "Not this week · answered by you, today 09:12". An answer saved
+ * without a guardian (or by one this parent can no longer see) shows no name: "Coming · answered Tue 14:02".
+ */
+export function answeredLine(record: AnswerRecord, viewerGuardianId: string, now: Date, squad = false): string {
+  const label = squad ? (record.answer === "coming" ? "Can play" : "Can't play") : record.answer === "coming" ? "Coming" : "Not this week";
+  const when = postedLabel(record.at, now).replace(/^(Today|Yesterday)/, (w) => w.toLowerCase());
+  const who = record.by ? (record.by.id === viewerGuardianId ? "you" : record.by.name) : null;
+  return who ? `${label} · answered by ${who}, ${when}` : `${label} · answered ${when}`;
 }
 
 /** One line for the news header: "Is Yusuf coming?", "Yusuf is coming", "Are Yusuf and Musa coming?". */

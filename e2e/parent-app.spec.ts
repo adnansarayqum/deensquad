@@ -112,7 +112,7 @@ test("news: a parent of two acknowledges the kit message", async ({ page }) => {
   await expect(page.getByText("You're all caught up")).toBeVisible();
 });
 
-test("friday: each child gets their own answer and headcount", async ({ page }) => {
+test("friday: each child gets their own answer and headcount", async ({ page, browser }) => {
   await signIn(page, "adnan@example.com");
   await page.goto("/friday");
   await expect(page.getByRole("heading", { name: "Who's coming?" })).toBeVisible();
@@ -134,6 +134,37 @@ test("friday: each child gets their own answer and headcount", async ({ page }) 
   await expect(page.getByText("Saved. Coach knows Musa is away this week.")).toBeVisible();
   await expect(page.getByText("That didn't save. Check your signal and try again.")).toHaveCount(0);
   await page.screenshot({ path: shot("friday"), fullPage: true });
+
+  // A fresh load shows who answered, not "Saved".
+  await page.reload();
+  await expect(page.getByText(/^Coming · answered by you, today \d\d:\d\d$/)).toBeVisible();
+  await expect(page.getByText(/^Saved\./)).toHaveCount(0);
+
+  // Sara shares the children: she sees Adnan's answers by name, changes Yusuf's, and only she is told "Saved".
+  const saraContext = await newContext(browser, {
+    ...devices["Pixel 7"],
+    viewport: { width: 390, height: 844 },
+    baseURL: "http://localhost:3100",
+    extraHTTPHeaders: { "x-forwarded-for": "10.0.2.1" },
+  });
+  const sara = await saraContext.newPage();
+  await signIn(sara, "sara@example.com");
+  await sara.goto("/friday");
+  await expect(sara.getByText(/^Coming · answered by Adnan, today /)).toBeVisible();
+  await expect(sara.getByText(/^Not this week · answered by Adnan, today /)).toBeVisible();
+  await expect(sara.getByText(/^Saved\./)).toHaveCount(0);
+  await sara.getByRole("group", { name: /Is Yusuf coming/ }).getByRole("button", { name: "Not this week" }).click();
+  await expect(sara.getByText("Saved. Coach knows Yusuf is away this week.")).toBeVisible();
+  await saraContext.close();
+
+  await page.reload();
+  await expect(page.getByText(/^Not this week · answered by Sara, today /).first()).toBeVisible();
+  await expect(yusuf.getByRole("button", { name: "Not this week" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText(/^Saved\./)).toHaveCount(0);
+  await page.screenshot({ path: shot("friday-answered-by"), fullPage: true });
+  // Adnan puts it back.
+  await yusuf.getByRole("button", { name: "Coming" }).click();
+  await expect(page.getByText("Saved. Coach can see Yusuf is coming.")).toBeVisible();
 
   await page.getByRole("link", { name: "News" }).click();
   await expect(page.getByText(/Yusuf coming · Musa away/)).toBeVisible();

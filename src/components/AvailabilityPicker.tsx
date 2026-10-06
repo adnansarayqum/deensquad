@@ -15,6 +15,7 @@ export function AvailabilityPicker({
   question,
   compact = false,
   squad = false,
+  answered,
 }: {
   sessionId: string;
   playerId: string;
@@ -25,8 +26,13 @@ export function AvailabilityPicker({
   compact?: boolean;
   /** A tournament squad invite: the same answers, worded as "can play" and "can't play". */
   squad?: boolean;
+  /** Who gave the saved answer and when ("Coming · answered by Sara, Tue 14:02"), shown until this person taps. */
+  answered?: string;
 }) {
   const [optimistic, setOptimistic] = useOptimistic(answer);
+  // "Saved…" is only for the person who just tapped here; anyone else (another parent sharing the child, or this
+  // parent on a later visit) sees who answered instead.
+  const [tapped, setTapped] = useState(false);
   const [pending, startTransition] = useTransition();
   // A tap that didn't save, and the answer it was for (Try again sends it again). The buttons go back to the saved answer.
   const [failed, setFailed] = useState<{ problem: Problem; value: Availability } | null>(null);
@@ -34,6 +40,7 @@ export function AvailabilityPicker({
   const choose = (value: Availability) =>
     startTransition(async () => {
       setFailed(null);
+      setTapped(true);
       setOptimistic(value);
       const problem = await tapAction(() => setAvailability(sessionId, playerId, value));
       if (problem) return setFailed({ problem, value });
@@ -73,7 +80,9 @@ export function AvailabilityPicker({
       <p className="text-center text-sm text-ink-muted" aria-live="polite">
         {pending
           ? "Saving…"
-          : coming
+          : !tapped && answered && optimistic
+            ? answered
+            : coming
             ? squad
               ? `Saved. The coach can see ${childName} can play.`
               : `Saved. Coach can see ${childName} is coming.`
