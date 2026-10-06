@@ -147,7 +147,9 @@ export function planImport(csvText: string, now = new Date()): ImportPlan {
       problems.push(age === null ? why : `${why}, and ${who} is ${age} by date of birth, outside the club's groups`);
     } else if (!listed) {
       rowChecks.push({ line, message: `${who} was put in ${ageGroup} by date of birth (${groupText ? `"${groupText}" isn't an age group` : "no age group given"}).` });
-    } else if (age !== null && byBirth !== listed) {
+    } else if (age !== null && listed !== groupForAge(age) && listed !== groupForAge(age + 1)) {
+      // Tolerant while the club's age rule is unconfirmed: a child's group may follow their age on 31 August
+      // or the FA's "under X on 31 August" (one year up), so only a group that fits neither is flagged.
       rowChecks.push({ line, message: `${who} is ${age} by date of birth but listed in ${listed}. Check before importing.` });
     }
 

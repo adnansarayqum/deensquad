@@ -82,6 +82,32 @@ describe("planning an import", () => {
     ]);
   });
 
+  it("flags a group only when it fits neither the child's age on 31 August nor a year up", () => {
+    // [date of birth, age on 31 August 2026, listed group, flagged?]
+    const cases: [string, number, string, boolean][] = [
+      ["02/06/2020", 6, "U7", false], // Musa in the sample club: "under 7 on 31 August"
+      ["02/06/2020", 6, "U6", false],
+      ["02/06/2020", 6, "U10", true],
+      ["01/10/2020", 5, "U7", true], // 5 or 6 both mean U6
+      ["01/05/2019", 7, "U10", false], // a year up is 8: U10
+      ["01/05/2016", 10, "U12", false],
+      ["01/05/2016", 10, "U15", true],
+      ["01/05/2014", 12, "U15", false],
+      ["01/05/2011", 15, "U15", false],
+      ["01/05/2018", 8, "U7", true],
+    ];
+    const csv = ["Child first name,Child last name,Date of birth,Age group,Parent first name,Parent email"];
+    cases.forEach(([dob, , group], i) => csv.push(`Kid${i},Test,${dob},${group},Pat,pat${i}@example.com`));
+    const plan = planImport(csv.join("\n"), now);
+    expect(plan.errors).toEqual([]);
+    cases.forEach(([dob, age, group, flagged], i) => {
+      const check = plan.checks.find((c) => c.line === i + 2);
+      expect(ageOnCutOff(plan.rows[i].child.dateOfBirth!, now), dob).toBe(age);
+      expect(Boolean(check), `${age} in ${group}`).toBe(flagged);
+      if (check) expect(check.message).toBe(`Kid${i} is ${age} by date of birth but listed in ${group}. Check before importing.`);
+    });
+  });
+
   it("takes a sheet with dates of birth and no age group column", () => {
     const plan = planImport("Child name,DOB,Parent name,Email\nAisha Iqbal,14/03/2018,Ruksana Iqbal,ruksana@example.com", now);
     expect(plan.errors).toEqual([]);
