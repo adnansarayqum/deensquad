@@ -4,7 +4,7 @@ import { iso } from "../db/types";
 import { AGE_GROUPS, type AgeGroup, type PaymentState, type Session, type StaffRole } from "../domain";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
 import { newsReaches } from "../squads/sql";
-import { NEEDS, type Need } from "./needs";
+import { behindOnNews, needWhere, type Need } from "./needs";
 import { overlaps, within as allWithin } from "./scope";
 
 // Queries for the club admin. They run as a member of staff (row level security on: staff see the club).
@@ -68,7 +68,7 @@ export function familyWhere(
   const [g, w, s] = [first, first + 1, first + 2].map((n) => `$${n}`);
   return {
     sql: `(${g}::text is null or p.age_group::text = ${g}) and p.age_group::text = any (${w}::text[])
-       and ${need ? NEEDS[need].where : "true"}
+       and ${need ? needWhere(need, `${w}::text[]`) : "true"}
        and (${s}::text is null or p.first_name || ' ' || p.last_name ilike ${s} or exists (
          select 1 from player_guardians spg join guardians sg on sg.id = spg.guardian_id
          where spg.player_id = p.id and sg.first_name || ' ' || sg.last_name ilike ${s}))`,
@@ -85,6 +85,21 @@ export async function countUninvited(tx: Queryable, filter: FamilyFilter, within
     `select count(distinct g.id)::int as n from guardians g
      join player_guardians pg on pg.guardian_id = g.id join players p on p.id = pg.player_id
      where ${UNINVITED} and ${where.sql}`,
+    where.params,
+  );
+  return row.n;
+}
+
+/**
+ * Parents behind on news (see behindOnNews) with a child in the filtered list. With no group or search, the same
+ * number as the overview's "haven't tapped I've read this on 2 or more messages".
+ */
+export async function countBehindOnNews(tx: Queryable, filter: FamilyFilter, within: readonly AgeGroup[] = AGE_GROUPS): Promise<number> {
+  const where = familyWhere(filter, within, 1);
+  const [row] = await tx.query<{ n: number }>(
+    `select count(distinct g.id)::int as n from guardians g
+     join player_guardians pg on pg.guardian_id = g.id join players p on p.id = pg.player_id
+     where ${where.sql} and ${behindOnNews("g", "$2::text[]")}`,
     where.params,
   );
   return row.n;
@@ -159,6 +174,8 @@ export type ChildDetail = {
   attended: number;
   guardians: (FamilyGuardian & { firstName: string; lastName: string; otherChildren: string[] })[];
   contacts: { id: string; name: string; phone: string; relationship: string | null }[];
+  /** This season's club contract (CONTRACT.id): who agreed it and when, or null if nobody has yet. */
+  contract: { signedAt: string; parentName: string } | null;
 };
 
 export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail | null> {
@@ -182,7 +199,7 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
     [id],
   );
   if (!p) return null;
-  const [guardians, contacts] = await Promise.all([
+  const [guardians, contacts, agreements] = await Promise.all([
     tx.query<{
       id: string;
       first_name: string;
@@ -203,6 +220,10 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
       `select id, name, phone, relationship from emergency_contacts where player_id = $1 order by created_at`,
       [id],
     ),
+    tx.query<{ signed_at: Date; parent_name: string }>(`select signed_at, parent_name from agreements where player_id = $1 and document = $2`, [
+      id,
+      CONTRACT.id,
+    ]),
   ]);
   return {
     id: p.id,
@@ -228,6 +249,7 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
       otherChildren: g.other_children ?? [],
     })),
     contacts,
+    contract: agreements[0] ? { signedAt: iso(agreements[0].signed_at), parentName: agreements[0].parent_name } : null,
   };
 }
 

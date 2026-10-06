@@ -56,9 +56,10 @@ export async function loadSquad(
     attended: number;
   }>(
     // Picked children stay listed even if they've since moved to another group, so they can be taken out.
-    // Attendance: the season's finished sessions for each child (the same "register taken" rule as the dashboard).
+    // Attendance: the season's finished sessions for each child since they joined (the same "register taken" and
+    // joined_on rules as the dashboard).
     `with taken as (
-       select s.id, s.age_groups, g.age_group
+       select s.id, s.starts_at, s.age_groups, g.age_group
        from sessions s cross join lateral unnest(s.age_groups) as g(age_group)
        where s.starts_at >= $3 and s.ends_at <= $4 and s.cancelled_at is null
          and exists (select 1 from attendance t join players tp on tp.id = t.player_id where t.session_id = s.id and tp.age_group = g.age_group)
@@ -68,6 +69,8 @@ export async function loadSquad(
        from players p
        join taken s on s.age_group = p.age_group and ${sessionIsFor("s", "p")}
        left join attendance t on t.session_id = s.id and t.player_id = p.id
+       -- only sessions since the child joined (or that they came to), as on the overview
+       where p.joined_on <= (s.starts_at at time zone 'Europe/London')::date or t.player_id is not null
        group by p.id
      )
      select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number,

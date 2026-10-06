@@ -21,6 +21,8 @@ const paymentLabel: Record<PaymentState, string> = {
   overdue: "Payment overdue",
 };
 
+const signedOn = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
+
 export default async function ChildPage({ params, searchParams }: PageProps<"/admin/families/[id]">) {
   const user = await requireStaff();
   const { id } = await params;
@@ -130,6 +132,16 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
           <div>
             <dt className="text-sm text-ink-muted">Photo consent</dt>
             <dd className="font-bold">{child.photoConsent === null ? "Not answered" : child.photoConsent ? "Photos are fine" : "No photos"}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-ink-muted">Club contract</dt>
+            <dd className="font-bold">
+              {child.contract ? (
+                `Signed ${signedOn.format(new Date(child.contract.signedAt))} by ${child.contract.parentName}`
+              ) : (
+                <Pill tone="action">Not signed</Pill>
+              )}
+            </dd>
           </div>
           <div>
             <dt className="text-sm text-ink-muted">Emergency contacts</dt>

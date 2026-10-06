@@ -192,7 +192,7 @@ function AttendanceSection({ d, limited }: { d: Dashboard; limited: boolean }) {
                   {g.averagePct === null ? (
                     <span className="text-ink-muted">Register not used yet</span>
                   ) : (
-                    <PercentBar pct={g.averagePct} label={`${g.group}: ${g.averagePct}% of the squad of ${g.squad} checked in on average`} />
+                    <PercentBar pct={g.averagePct} label={`${g.group}: ${g.averagePct}% of the children in the group on the day checked in on average`} />
                   )}
                 </td>
               </tr>
@@ -353,7 +353,7 @@ function NewsSection({ d }: { d: Dashboard }) {
       <ul className="grid grid-cols-2 gap-x-4 sm:grid-cols-3">
         {CHANNELS.map((c) => (
           <li key={c}>
-            <Link href="/admin/news" aria-label={`${n.reminders[c]} ${CHANNEL_LABEL[c].toLowerCase()}`} className="flex min-h-12 items-center justify-between gap-2 border-b border-line text-[14px]">
+            <Link href="/admin/families?need=unread" aria-label={`${n.reminders[c]} ${CHANNEL_LABEL[c].toLowerCase()}`} className="flex min-h-12 items-center justify-between gap-2 border-b border-line text-[14px]">
               <span>{CHANNEL_LABEL[c]}</span>
               <b className="tabular-nums">{n.reminders[c]}</b>
             </Link>
@@ -361,7 +361,7 @@ function NewsSection({ d }: { d: Dashboard }) {
         ))}
       </ul>
 
-      <Link href="/admin/news" aria-label={`${n.behind} ${BEHIND_TEXT(n.behind)}`} className="flex min-h-12 items-center gap-3 rounded-dash border-2 border-line px-3 py-2 hover:bg-cream">
+      <Link href="/admin/families?need=unread" aria-label={`${n.behind} ${BEHIND_TEXT(n.behind)}`} className="flex min-h-12 items-center gap-3 rounded-dash border-2 border-line px-3 py-2 hover:bg-cream">
         <span className={`font-display text-[36px] leading-none tabular-nums ${n.behind > 0 ? "text-kit-orange" : "text-ink"}`}>{n.behind}</span>
         <span className={`text-[14px] ${n.behind > 0 ? "font-bold text-kit-orange" : "text-ink-muted"}`}>
           {BEHIND_TEXT(n.behind)}

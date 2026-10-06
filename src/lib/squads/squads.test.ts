@@ -238,6 +238,26 @@ describe("picking the squad", () => {
     expect(of("Musa").held).toBeLessThanOrEqual(2);
   });
 
+  it("counts a child's season only from when they joined", async () => {
+    // A child who joined today has had no sessions yet; Bilal, moved to joining on the latest register, one.
+    const [latest] = await t.asSystem((tx) =>
+      tx.query<{ day: string }>(
+        `select (s.starts_at at time zone 'Europe/London')::date::text as day from sessions s
+         where s.ends_at <= now() and exists (select 1 from attendance a where a.session_id = s.id and a.player_id = $1)
+         order by s.starts_at desc limit 1`,
+        [DEV_IDS.yusuf],
+      ),
+    );
+    await t.asSystem(async (tx) => {
+      await tx.query(`insert into players (first_name, last_name, age_group, joined_on) values ('New', 'Joiner', 'U10', current_date)`);
+      await tx.query(`update players set joined_on = $1::date where first_name = 'Bilal'`, [latest.day]);
+    });
+    const view = (await t.asUser(admin, (tx) => loadSquad(tx, cup, null)))!;
+    const of = (name: string) => view.children.find((c) => c.firstName === name)!.season;
+    expect(of("New")).toEqual({ attended: 0, held: 0 });
+    expect(of("Bilal")).toEqual({ attended: 0, held: 1 });
+  });
+
   it("lists only the squad on the register", async () => {
     const now = new Date();
     const view = (await t.asUser(admin, (tx) => loadRegister(tx, { now, sessionId: cup, group: "U10" })))!;

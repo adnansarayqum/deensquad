@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronRight, Upload } from "lucide-react";
 import { AdminTitle, Notice } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
-import { countUninvited, loadFamilies, type FamilyRow } from "@/lib/admin/data";
+import { countBehindOnNews, countUninvited, loadFamilies, type FamilyRow } from "@/lib/admin/data";
 import { familiesFilter, familiesHref, familiesInviteHref, familiesScope, familyChildHref } from "@/lib/admin/families-link";
 import { NEEDS, type Need } from "@/lib/admin/needs";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
@@ -23,10 +23,12 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
   const { group, need, q } = filter;
   const isAdmin = user.staff.role === "admin";
   // Invites go to the parents of the children in this list, so the banner counts just those.
-  const [families, notInvited] = await asUser(user.id, (tx) =>
+  const [families, notInvited, behind] = await asUser(user.id, (tx) =>
     Promise.all([
       loadFamilies(tx, group, mine, { need, search: q || null }),
       isAdmin ? countUninvited(tx, { group, need, search: q || null }, mine) : Promise.resolve(0),
+      // "Unread" is about parents: the overview counts them, so the list says how many as well as their children.
+      need === "unread" ? countBehindOnNews(tx, { group, need, search: q || null }, mine) : Promise.resolve(null),
     ]),
   );
   const filtered = need !== null || q !== "";
@@ -118,11 +120,19 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
 
       {filtered ? (
         <p role="status" className="flex flex-wrap items-center gap-x-3 text-[15px]">
-          <span>
-            <b className="tabular-nums">{families.length}</b> {families.length === 1 ? "child" : "children"}
-            {need ? ` · ${NEEDS[need].label.toLowerCase()}` : ""}
-            {q ? ` · matching “${q}”` : ""}
-          </span>
+          {behind !== null ? (
+            <span>
+              <b className="tabular-nums">{behind}</b> {behind === 1 ? "parent hasn't" : "parents haven't"} tapped &ldquo;I&apos;ve read this&rdquo; on 2 or
+              more messages · their {families.length === 1 ? "child" : `${families.length} children`}
+              {q ? ` · matching “${q}”` : ""}
+            </span>
+          ) : (
+            <span>
+              <b className="tabular-nums">{families.length}</b> {families.length === 1 ? "child" : "children"}
+              {need ? ` · ${NEEDS[need].label.toLowerCase()}` : ""}
+              {q ? ` · matching “${q}”` : ""}
+            </span>
+          )}
           <Link href={familiesHref({ group, need: null, q: "" })} className="inline-flex min-h-11 items-center font-bold text-grass-text underline">
             Show everyone
           </Link>

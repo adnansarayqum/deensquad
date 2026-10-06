@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
 import { averagePct, loadDashboard, monthStart } from "./dashboard";
-import { loadFamilies } from "./data";
+import { countBehindOnNews, loadFamilies } from "./data";
+import { applyImport, planImport } from "./import";
 import { TODO_NEEDS } from "./needs";
 
 // A Monday in October: the six seeded past Fridays (28 Aug to 2 Oct) all fall in this season.
@@ -89,6 +90,60 @@ describe("admin overview numbers", () => {
     expect(d.families.todo.payment).toBe(20);
   });
 
+  it("keeps past attendance when new children join", async () => {
+    const { t, admin } = await seeded(OCTOBER);
+    const season = async () => (await t.asUser(admin, (tx) => loadDashboard(tx, { now: OCTOBER, limit: null, withShop: false }))).attendance.season;
+    const before = (await season()).find((g) => g.group === "U10")!;
+    expect(before).toMatchObject({ squad: 16, held: 5, checkedIn: 5, expected: 80, averagePct: 6 });
+
+    // An import adds 40 U10s today, after every past session (and one checked in at a past session still counts).
+    const csv = ["Child first name,Child last name,Age group,Parent first name,Parent email"];
+    for (let i = 1; i <= 40; i++) csv.push(`New${i},Child,U10,Parent,new${i}@example.com`);
+    await t.asUser(admin, (tx) => applyImport(tx, planImport(csv.join("\n"), OCTOBER)));
+    const after = (await season()).find((g) => g.group === "U10")!;
+    expect(after).toMatchObject({ squad: 56, held: 5, checkedIn: 5, expected: 80, averagePct: 6 });
+
+    // A child who joined part-way through counts only from then: Bilal joined before the last two Fridays and came to one.
+    const [bilal] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from players where first_name = 'Bilal'`));
+    const recent = await t.asSystem((tx) =>
+      tx.query<{ id: string; day: string }>(
+        `select id, (starts_at at time zone 'Europe/London')::date::text as day from sessions where ends_at <= $1 order by starts_at desc limit 2`,
+        [OCTOBER],
+      ),
+    );
+    await t.asSystem(async (tx) => {
+      await tx.query(`update players set joined_on = $2::date where id = $1`, [bilal.id, recent[1].day]);
+      await tx.query(`insert into attendance (session_id, player_id) values ($1, $2)`, [recent[0].id, bilal.id]);
+    });
+    // 6 check-ins over 16 places at each of the last two Fridays and 15 at the three before: 6 / 77.
+    expect((await season()).find((g) => g.group === "U10")).toMatchObject({ held: 5, checkedIn: 6, expected: 77, averagePct: 8 });
+  });
+
+  it("matches the parents behind on news to the Families list it links to", async () => {
+    const { t, admin } = await seeded(OCTOBER);
+    // A parent added after every message was posted isn't behind (and isn't chased); they can still read them.
+    await t.asUser(admin, (tx) => applyImport(tx, planImport("Child name,Age group,Parent name,Email\nLate Comer,U10,Lena Comer,lena@example.com", OCTOBER)));
+    const d = await t.asUser(admin, (tx) => loadDashboard(tx, { now: OCTOBER, limit: null, withShop: false }));
+    expect(d.news.behind).toBe(20);
+    expect(await t.asUser(admin, (tx) => countBehindOnNews(tx, { group: null, need: "unread", search: null }))).toBe(20);
+    const children = await t.asUser(admin, (tx) => loadFamilies(tx, null, undefined, { need: "unread" }));
+    // Every child but Late Comer: Yusuf and Musa through Sara, the rest through their one parent each.
+    expect(children).toHaveLength(21);
+    expect(children.map((c) => c.firstName)).not.toContain("Late");
+
+    // A U7 coach: the same rule over their own groups.
+    const u7 = await t.asUser(admin, (tx) => loadDashboard(tx, { now: OCTOBER, limit: ["U7"], withShop: false }));
+    expect(await t.asUser(admin, (tx) => countBehindOnNews(tx, { group: null, need: "unread", search: null }, ["U7"]))).toBe(u7.news.behind);
+
+    // Reading one more message takes a parent off both.
+    const [winter] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from announcements where title like 'Winter%'`));
+    const [p1] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from guardians where email = 'parent16@example.com'`)); // a U7 parent: two messages unread
+    await t.asSystem((tx) => tx.query(`insert into announcement_reads (announcement_id, guardian_id) values ($1, $2)`, [winter.id, p1.id]));
+    const again = await t.asUser(admin, (tx) => loadDashboard(tx, { now: OCTOBER, limit: null, withShop: false }));
+    expect(again.news.behind).toBe(19);
+    expect(await t.asUser(admin, (tx) => countBehindOnNews(tx, { group: null, need: "unread", search: null }))).toBe(19);
+  });
+
   it("starts the season on 1 August", async () => {
     const { t, admin } = await seeded(AUGUST);
     const d = await t.asUser(admin, (tx) => loadDashboard(tx, { now: AUGUST, limit: null, withShop: false }));
@@ -105,8 +160,8 @@ describe("admin overview numbers", () => {
     const t = await testDatabase();
     await t.asSystem(async (tx) => {
       await tx.query(`insert into staff (email, display_name, role) values ('owner@deensquad.test', 'Owner', 'admin')`);
-      await tx.query(`insert into players (first_name, last_name, age_group) select 'Child', n::text, 'U12' from generate_series(1, 10) n`);
-      await tx.query(`insert into players (first_name, last_name, age_group) values ('Solo', 'One', 'U15'), ('Solo', 'Two', 'U15')`);
+      await tx.query(`insert into players (first_name, last_name, age_group, joined_on) select 'Child', n::text, 'U12', '2026-08-01' from generate_series(1, 10) n`);
+      await tx.query(`insert into players (first_name, last_name, age_group, joined_on) values ('Solo', 'One', 'U15', '2026-08-01'), ('Solo', 'Two', 'U15', '2026-08-01')`);
       // Three finished U12/U15 sessions this season: 5, 7 and 0 U12s checked in; no U15 ever.
       for (const [day, n] of [["2026-09-04", 5], ["2026-09-11", 7], ["2026-09-18", 0]] as const) {
         const [{ id }] = await tx.query<{ id: string }>(
@@ -140,8 +195,9 @@ describe("admin overview numbers", () => {
     expect(d.shop).toEqual({ awaitingPayment: 0, toOrder: 0, ready: 0, monthPence: 0, seasonPence: 0 });
     expect(d.news).toEqual({ recent: [], reminders: { app: 0, email: 0, sms: 0, whatsapp: 0, gate: 0 }, behind: 0 });
     expect(JSON.stringify(d)).not.toMatch(/NaN|Infinity/);
-    expect(averagePct(0, 0, 0)).toBeNull();
-    expect(averagePct(3, 2, 0)).toBeNull();
+    expect(averagePct(0, 0)).toBeNull();
+    expect(averagePct(3, 0)).toBeNull();
+    expect(averagePct(3, 4)).toBe(75);
   });
 
   it("limits a U7 coach to the U7s", async () => {

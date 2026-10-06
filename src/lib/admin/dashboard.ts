@@ -4,7 +4,7 @@ import { londonDate, londonTime } from "../dates";
 import { AGE_GROUPS, type AgeGroup, type PaymentState } from "../domain";
 import { seasonStart } from "../exports/reports";
 import { newsReaches, sessionIsFor } from "../squads/sql";
-import { NEEDS, TODO_NEEDS } from "./needs";
+import { NEEDS, TODO_NEEDS, behindOnNews } from "./needs";
 
 // The numbers on the club admin overview (/admin). Every figure is counted in SQL over the
 // children in `groups` (a group coach's own, or every group), so a coach never sees another
@@ -29,7 +29,12 @@ export type SeasonGroup = {
    */
   held: number;
   checkedIn: number;
-  /** Checked in ÷ (sessions held × squad size), as a whole percentage. Null when there's nothing to divide by. */
+  /**
+   * Over those sessions, how many children were in the group on the day: those who'd joined by then
+   * (players.joined_on), plus anyone checked in. Children added later (a new import) don't lower past sessions.
+   */
+  expected: number;
+  /** Checked in ÷ expected, as a whole percentage. Null when there's nothing to divide by. */
   averagePct: number | null;
 };
 
@@ -62,8 +67,8 @@ export function monthStart(now: Date): Date {
   return londonTime(d.year, d.month, 1, 0, 0);
 }
 
-export function averagePct(checkedIn: number, held: number, squad: number): number | null {
-  return held > 0 && squad > 0 ? Math.round((checkedIn / (held * squad)) * 100) : null;
+export function averagePct(checkedIn: number, expected: number): number | null {
+  return expected > 0 ? Math.round((checkedIn / expected) * 100) : null;
 }
 
 // A message reaches a child when it's for everyone (null or empty audience) or for the child's group,
@@ -103,16 +108,20 @@ export async function loadDashboard(
        order by g.ord`,
       [groups, now],
     ),
-    tx.query<{ group: AgeGroup; squad: number; held: number; checked_in: number }>(
+    tx.query<{ group: AgeGroup; squad: number; held: number; checked_in: number; expected: number }>(
       `select g.grp as "group",
          (select count(*)::int from players p where p.age_group::text = g.grp) as squad,
          (count(s.id) filter (where c.n > 0))::int as held,
-         coalesce(sum(c.n), 0)::int as checked_in
+         coalesce(sum(c.n), 0)::int as checked_in,
+         coalesce(sum(c.expected) filter (where c.n > 0), 0)::int as expected
        from unnest($1::text[]) with ordinality as g (grp, ord)
        left join sessions s on g.grp = any (s.age_groups::text[]) and s.starts_at >= $2 and s.ends_at <= $3 and s.cancelled_at is null
+       -- each session against the group as it was that day: children who'd joined by then, and anyone checked in
        left join lateral (
-         select count(*)::int as n from attendance a join players p on p.id = a.player_id
-         where a.session_id = s.id and p.age_group::text = g.grp
+         select count(a.player_id)::int as n, count(*)::int as expected
+         from players p left join attendance a on a.session_id = s.id and a.player_id = p.id
+         where p.age_group::text = g.grp
+           and (p.joined_on <= (s.starts_at at time zone 'Europe/London')::date or a.player_id is not null)
        ) c on true
        group by g.grp, g.ord
        order by g.ord`,
@@ -177,17 +186,8 @@ export async function loadDashboard(
        group by c.channel`,
       [groups, weekAgo, now],
     ),
-    tx.query<{ n: number }>(
-      `select count(*)::int as n from guardians g
-       where (
-         select count(*) from announcements a
-         where a.requires_ack and a.posted_at <= $2
-           and exists (select 1 from player_guardians pg join players p on p.id = pg.player_id
-                       where pg.guardian_id = g.id and p.age_group::text = any ($1::text[]) and ${reaches})
-           and not exists (select 1 from announcement_reads r where r.announcement_id = a.id and r.guardian_id = g.id)
-       ) >= 2`,
-      [groups, now],
-    ),
+    // The same rule as the Families list's "unread" filter, which this figure links to.
+    tx.query<{ n: number }>(`select count(*)::int as n from guardians g where ${behindOnNews("g", "$1::text[]")}`, [groups]),
   ]);
 
   const f = family[0];
@@ -208,7 +208,8 @@ export async function loadDashboard(
         squad: r.squad,
         held: r.held,
         checkedIn: r.checked_in,
-        averagePct: averagePct(r.checked_in, r.held, r.squad),
+        expected: r.expected,
+        averagePct: averagePct(r.checked_in, r.expected),
       })),
       recent: recent.reverse().map((r) => ({ id: r.id, title: r.title, startsAt: iso(r.starts_at), checkedIn: r.checked_in })),
     },
