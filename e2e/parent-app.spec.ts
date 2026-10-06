@@ -467,7 +467,8 @@ test("shop: a parent orders kit for a child and pays by transfer; the club is to
   const session = await addSessionToday(page, "Kit test", ["U10"]);
   await page.goto(`/coach?session=${session}&group=U10`);
   await page.getByRole("button", { name: "Mark Yusuf S. here" }).click();
-  await expect(page.getByText(/Kit order ready to collect/)).toBeVisible();
+  await expect(page.getByRole("region", { name: /^Here/ }).getByText("Kit ready", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^1 child needs a word \(.*1 kit ready\)$/)).toBeVisible();
   await page.getByRole("region", { name: /^Here/ }).getByRole("button", { name: "Undo check-in for Yusuf S." }).click();
   await expect(page.getByRole("button", { name: "Mark Yusuf S. here" })).toBeVisible();
   await deleteSessionToday(page, "Kit test");
@@ -550,6 +551,8 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
   await page.goto("/admin/news");
   await page.getByRole("link", { name: /Winter timings/ }).click();
   await expect(page.getByText("Parent E", { exact: true })).toBeVisible();
+  // The read count is for the coach's groups too, so it agrees with the list under it.
+  await expect(page.getByText(/^Your groups: \d+ of \d+ read$/)).toBeVisible();
   await expect(page.getByText("Parent K", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Delete this message")).toHaveCount(0);
 
@@ -623,6 +626,9 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   const pdf = makePdf(["Warm-up: rondos", "Main: passing on the move"]);
   await signIn(page, "admin@deensquad.test");
   await page.goto("/coach/plans");
+  // Groups with no children (U6) aren't listed.
+  await expect(page.getByRole("link", { name: /U10/ }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /^U6\b/ })).toHaveCount(0);
   await page.getByRole("link", { name: /U10/ }).first().click();
   const plan = page.getByLabel("What you'll work on");
   await plan.fill("Warm-up: rondos\nMain: passing on the move");
@@ -676,7 +682,7 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   // The coach opens the sheet's photo in the app's viewer (same window) and comes back.
   await page.getByRole("link", { name: /keepy-uppy\.png/ }).first().click();
   await expect(page).toHaveURL(/\/files\/[0-9a-f-]{36}\?from=%2Fcoach%2Fpractice$/);
-  await expect(page.getByRole("img", { name: "keepy-uppy.png" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Practice sheet (photo)" })).toBeVisible();
   await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveURL(/\/coach\/practice$/);
 
@@ -687,11 +693,14 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await expect(page.getByText("Main: passing on the move")).toBeVisible();
   await page.screenshot({ path: shot("friday-plan"), fullPage: true });
   // The plan opens inside the app, drawn page by page, with a way back (the installed app has no browser back).
-  const fullPlan = page.getByRole("link", { name: /Full plan/ });
+  // Named for what it is, not the coach's file name (kept for Download).
+  const fullPlan = page.getByRole("link", { name: /Session plan \(PDF\)/ });
+  await expect(page.getByText("u10-plan.pdf")).toHaveCount(0);
   await expect(fullPlan).not.toHaveAttribute("target", "_blank");
   await fullPlan.click();
   await expect(page).toHaveURL(/\/files\/[0-9a-f-]{36}\?from=%2Ffriday$/);
   const viewer = page.url();
+  await expect(page.getByRole("heading", { name: "Session plan (PDF)" })).toBeVisible();
   const fileId = viewer.match(/\/files\/([0-9a-f-]{36})/)![1];
   await expect(page.getByText("2 pages", { exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "Page 1 of 2" })).toHaveAttribute("data-drawn", "drawn");
@@ -730,8 +739,9 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
 
   await page.getByRole("link", { name: /Practise at home/ }).click();
   await expect(page.getByRole("heading", { name: "Keepy-uppy challenge" })).toBeVisible();
-  await page.getByRole("link", { name: /keepy-uppy\.png/ }).click();
-  await expect(page.getByRole("img", { name: "keepy-uppy.png" })).toBeVisible();
+  await expect(page.getByText("keepy-uppy.png")).toHaveCount(0);
+  await page.getByRole("link", { name: /Practice sheet \(photo\)/ }).click();
+  await expect(page.getByRole("img", { name: "Practice sheet (photo)" })).toBeVisible();
 
   // Someone with the link but no sign-in gets sent to sign in, not the file or the viewer.
   const stranger = await playwright.request.newContext({ baseURL: "http://localhost:3100" });
@@ -1239,6 +1249,11 @@ test("staff roles: an admin makes a coach an admin, who then sees the shop, and 
 
   await coach.goto("/admin");
   await expect(coach.getByRole("link", { name: "Shop", exact: true })).toHaveCount(0);
+  // Greeted by name, not by "Coach"; on a phone every section is on screen without scrolling sideways.
+  await expect(coach.getByRole("heading", { name: "Assalamu alaikum, Hamza" })).toBeVisible();
+  for (const name of ["Plans", "Points and stars"]) {
+    await expect(coach.getByRole("navigation", { name: "Club admin" }).getByRole("link", { name })).toBeInViewport({ ratio: 1 });
+  }
 
   await admin.goto("/admin/staff");
   // The only admin can't be made a coach (nor change their own role).
@@ -1262,4 +1277,119 @@ test("staff roles: an admin makes a coach an admin, who then sees the shop, and 
   await expect(coach.getByRole("link", { name: "Shop", exact: true })).toHaveCount(0);
   await adminContext.close();
   await coachContext.close();
+});
+
+test("gate register: with 12 children in, the list still to arrive starts on the first screen; search and All groups", async ({ browser }) => {
+  test.skip(!existsSync(ADMIN_STATE), "run with the earlier tests: needs their saved sign-in");
+  const context = await newContext(browser, { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: "http://localhost:3100", storageState: ADMIN_STATE });
+  const page = await context.newPage();
+  // Fourteen new U15s, as imported: no payment plan or photo consent yet, so every one needs a word at the gate.
+  const names = ["Adam", "Bilal", "Dawud", "Faris", "Hamza", "Idris", "Jibril", "Khalid", "Luqman", "Nuh", "Omar", "Rayan", "Sulaiman", "Zayd"];
+  await page.goto("/admin/families/import");
+  await page.getByText("Or paste the rows").click();
+  await page
+    .locator("textarea[name=csv]")
+    .fill(["Child first name,Child last name,Age group,Parent first name,Parent email", ...names.map((n, i) => `${n},Layout,U15,Parent,layout${i}@example.com`)].join("\n"));
+  await page.getByRole("button", { name: "Check the file" }).click();
+  await page.getByRole("button", { name: "Import 14 rows" }).click();
+  await expect(page.getByText(/14 children added/)).toBeVisible();
+
+  // Today, for U12 (Zara, from the import test) and U15: not the sample families' groups, so later tests are unchanged.
+  const session = await addSessionToday(page, "Gate layout", ["U12", "U15"]);
+  await page.goto(`/coach?session=${session}&group=U15`);
+  const notHere = page.getByRole("region", { name: /^Not here yet/ });
+  const here = page.getByRole("region", { name: /^Here/ });
+  for (let i = 1; i <= 12; i++) {
+    await notHere.getByRole("button", { name: /^Mark .+ here$/ }).first().click();
+    await expect(here.getByRole("heading", { name: `Here (${i})` })).toBeVisible();
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  // One summary line for all twelve, with the names a tap away; each child's flags are on their own row.
+  await expect(page.getByText(/^12 children need a word \(12 no payment plan, 12 no photo consent\b/)).toBeVisible();
+  await expect(here.getByRole("listitem").filter({ hasText: "Adam L." }).getByText("No payment plan", { exact: true })).toBeVisible();
+  const heading = notHere.getByRole("heading", { name: "Not here yet (2)" });
+  await expect(heading).toBeVisible();
+  await page.screenshot({ path: shot("coach-register-busy") });
+  expect((await heading.boundingBox())!.y).toBeLessThan(700);
+
+  // Search narrows every list as you type.
+  const search = page.getByLabel("Find a child");
+  await search.fill("zay");
+  await expect(notHere.getByRole("button", { name: /^Mark .+ here$/ })).toHaveCount(1);
+  await expect(notHere.getByRole("button", { name: "Mark Zayd L. here" })).toBeVisible();
+  await expect(here.getByRole("listitem")).toHaveCount(0);
+  await search.fill("adam l");
+  await expect(here.getByRole("listitem")).toHaveCount(1);
+  await expect(notHere.getByRole("button", { name: /^Mark .+ here$/ })).toHaveCount(0);
+  await search.fill("");
+  await expect(here.getByRole("listitem")).toHaveCount(12);
+
+  // All groups: both groups' children in one list, each with their group; Mark here and Undo work the same.
+  await page.getByRole("navigation", { name: "Age groups" }).getByRole("link", { name: "All groups" }).click();
+  await expect(page.getByRole("heading", { name: "All groups", level: 2 })).toBeVisible();
+  const zara = notHere.getByRole("listitem").filter({ hasText: "Zara K." });
+  await expect(zara.getByText("U12", { exact: true })).toBeVisible();
+  await expect(notHere.getByRole("listitem").filter({ hasText: "Zayd L." }).getByText("U15", { exact: true })).toBeVisible();
+  await zara.getByRole("button", { name: "Mark Zara K. here" }).click();
+  await expect(here.getByRole("heading", { name: "Here (13)" })).toBeVisible();
+  await expect(here.getByRole("listitem").filter({ hasText: "Zara K." }).getByText("U12", { exact: true })).toBeVisible();
+  await page.screenshot({ path: shot("coach-register-all-groups"), fullPage: true });
+
+  // Undo every check-in, then the session can go.
+  while ((await here.getByRole("button", { name: /^Undo check-in for / }).count()) > 0) {
+    const n = await here.getByRole("button", { name: /^Undo check-in for / }).count();
+    await here.getByRole("button", { name: /^Undo check-in for / }).first().click();
+    await expect(here.getByRole("heading", { name: `Here (${n - 1})` })).toBeVisible();
+  }
+  await deleteSessionToday(page, "Gate layout");
+  await context.close();
+});
+
+test("squad page on a phone: Save stays on screen, and a group filter keeps the other groups' picks", async ({ browser }) => {
+  test.skip(!existsSync(ADMIN_STATE), "run with the earlier tests: needs their saved sign-in");
+  const context = await newContext(browser, { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: "http://localhost:3100", storageState: ADMIN_STATE });
+  const page = await context.newPage();
+  await page.goto("/admin/sessions");
+  await page.getByLabel("Title").fill("Filter Cup");
+  await page.getByLabel("Kind").selectOption("tournament");
+  // Months away, so it never becomes anyone's next session.
+  await page.getByLabel("Date", { exact: true }).fill(new Date(Date.now() + 250 * 86400000).toISOString().slice(0, 10));
+  for (const g of ["U6", "U7", "U15"]) await page.getByLabel(g, { exact: true }).uncheck();
+  await page.getByRole("button", { name: "Add sessions" }).click();
+  await expect(page.getByText(/^Added 1 session\./)).toBeVisible();
+  await page.getByRole("link", { name: /^Pick squad for Filter Cup/ }).click();
+  const picker = page.getByRole("form", { name: "Pick the squad" });
+
+  // Save is on screen straight away, without scrolling, and stays there while the list scrolls.
+  const save = picker.getByRole("button", { name: /^Save squad \(\d+ picked\)$/ });
+  await expect(save).toBeInViewport({ ratio: 1 });
+  await page.screenshot({ path: shot("admin-squad-phone") });
+
+  await picker.getByLabel("Bilal R").check();
+  await expect(save).toHaveAccessibleName("Save squad (1 picked)");
+  // Each child shows their attendance this season.
+  await expect(picker.getByText(/^U10 · .*(\d+ of \d+ sessions? this season|No register taken yet this season)$/).first()).toBeVisible();
+  // Only U12: Bilal (U10) is hidden but still picked.
+  await picker.getByRole("button", { name: "U12 only" }).click();
+  await expect(picker.getByLabel("Bilal R")).toBeHidden();
+  await picker.getByLabel("Zara K").check();
+  await expect(picker.getByText(/^2 of \d+ selected$/)).toBeVisible();
+  await page.getByLabel("Find a child").fill("zar");
+  await page.mouse.wheel(0, 2000);
+  await expect(save).toBeInViewport({ ratio: 1 });
+  await save.click();
+  await expect(picker.getByText("Squad saved.")).toBeVisible();
+  await page.reload();
+  await expect(picker.getByLabel("Bilal R")).toBeChecked();
+  await expect(picker.getByLabel("Zara K")).toBeChecked();
+
+  // Picking nobody and deleting it leaves the club as it was.
+  await picker.getByRole("button", { name: "Clear" }).click();
+  await picker.getByRole("button", { name: "Save squad (0 picked)" }).click();
+  await expect(picker.getByText("Squad saved.")).toBeVisible();
+  await page.goto("/admin/sessions");
+  await page.getByRole("link", { name: /^Delete Filter Cup / }).click();
+  await page.getByRole("button", { name: "Delete session" }).click();
+  await expect(page.getByText("Deleted.")).toBeVisible();
+  await context.close();
 });

@@ -327,6 +327,8 @@ test("a parent who is also on the staff never gets the gate", async ({ browser }
   const page = await phone.newPage();
   await signIn(page, "parent5@example.com");
   await expect(page.getByRole("dialog", GATE)).toBeVisible();
+  // A parent only: no way into the club tools.
+  await expect(page.getByRole("link", { name: "Coach tools" })).toHaveCount(0);
 
   // The club adds them as a coach.
   const adminContext = await context(browser, { ...PIXEL, storageState: ADMIN_STATE });
@@ -344,5 +346,11 @@ test("a parent who is also on the staff never gets the gate", async ({ browser }
   await expect(later.getByRole("heading", { name: "Club news" })).toBeVisible();
   await settled(later);
   await expect(later.getByRole("dialog", GATE)).toHaveCount(0);
+  // The way to their coach tools is at the top of News (and Players), and the register leads back.
+  await later.getByRole("link", { name: "Coach tools" }).click();
+  await expect(later).toHaveURL(/\/coach$/);
+  await later.getByRole("link", { name: "Parent view" }).click();
+  await expect(later).toHaveURL(/\/player$/);
+  await expect(later.getByRole("link", { name: "Coach tools" })).toBeVisible();
   await phone.close();
 });
