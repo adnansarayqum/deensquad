@@ -453,14 +453,34 @@ test("shop: a parent orders kit for a child and pays by transfer; the club is to
 
   const mails = readFileSync(OUTBOX, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string });
   expect(mails.some((m) => m.to === "admin@deensquad.test" && m.subject === `New kit order ${reference} from Adnan Sample`)).toBe(true);
+  // The parent gets their own confirmation with the bank details and reference (sent just after the page).
+  const parentMails = () =>
+    readFileSync(OUTBOX, "utf8")
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l) as { to: string; subject: string; text: string })
+      .filter((m) => m.to === "adnan@example.com");
+  await expect.poll(() => parentMails().filter((m) => m.subject === `Your kit order ${reference}`).length).toBe(1);
+  const placed = parentMails().find((m) => m.subject === `Your kit order ${reference}`)!;
+  expect(placed.text).toContain(`Reference: ${reference}`);
+  expect(placed.text).toContain("We'll email you when it's ready.");
+  await expect(page.getByRole("list", { name: "Order progress" })).toContainText("Placed");
+  await expect(page.getByRole("list", { name: "Order progress" })).toContainText("Not paid yet");
 
   await switchUser(page);
   await signIn(page, "admin@deensquad.test");
   await page.goto("/admin/shop");
+  // The supplier's spreadsheet is on the shop page itself.
+  await expect(page.getByRole("link", { name: "Download for the supplier (CSV)" })).toHaveAttribute("href", "/api/admin/export/orders");
   await page.getByRole("button", { name: "Transfer received" }).click();
   await expect(page.getByRole("cell", { name: "Deen Squad full zip hoodie" })).toBeVisible();
+  // The supplier table names the initials to print, not just how many.
+  await expect(page.getByRole("cell", { name: "YS", exact: true })).toBeVisible();
+  await expect.poll(() => parentMails().filter((m) => m.subject === `Payment received for order ${reference}`).length).toBe(1);
   await page.getByRole("button", { name: "Ready for Friday" }).first().click();
   await expect(page.getByRole("button", { name: "Handed over" })).toBeVisible();
+  await expect.poll(() => parentMails().filter((m) => m.subject === "Kit ready to collect on Friday").length).toBe(1);
+  expect(parentMails().find((m) => m.subject === "Kit ready to collect on Friday")!.text).toContain(`Yusuf's kit from order ${reference} is ready`);
   await page.screenshot({ path: shot("admin-shop"), fullPage: true });
 
   // The coach is told at the gate once Yusuf is checked in (on a session today, so the register is open).
@@ -682,7 +702,9 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   // The coach opens the sheet's photo in the app's viewer (same window) and comes back.
   await page.getByRole("link", { name: /keepy-uppy\.png/ }).first().click();
   await expect(page).toHaveURL(/\/files\/[0-9a-f-]{36}\?from=%2Fcoach%2Fpractice$/);
-  await expect(page.getByRole("img", { name: "Practice sheet (photo)" })).toBeVisible();
+  // Staff see the file name they uploaded; parents (below) see "Practice sheet (photo)".
+  await expect(page.getByRole("heading", { name: "keepy-uppy.png" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "keepy-uppy.png" })).toBeVisible();
   await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveURL(/\/coach\/practice$/);
 
