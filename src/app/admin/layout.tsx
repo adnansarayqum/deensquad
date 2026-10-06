@@ -28,7 +28,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </Link>
             {user.guardian ? (
               <Link href="/news" className="flex min-h-12 items-center rounded-dash px-3 hover:bg-pitch-deep">
-                Parent app
+                Parent view
               </Link>
             ) : null}
             <SignOutForm>
@@ -50,7 +50,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               <div className="flex items-center gap-4 text-sm font-bold text-on-pitch-muted">
                 {user.guardian ? (
                   <Link href="/news" className="inline-flex min-h-11 items-center">
-                    Parent app
+                    Parent view
                   </Link>
                 ) : null}
                 <Link href="/coach" className="inline-flex min-h-11 items-center">

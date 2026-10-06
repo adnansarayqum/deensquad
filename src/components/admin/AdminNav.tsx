@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-/** The admin sections: pills across the phone header, or a list down the desktop sidebar. */
+/** The admin sections: wrapping pills in the phone header, or a list down the desktop sidebar. */
 export function AdminNav({ isAdmin, layout = "pills" }: { isAdmin: boolean; layout?: "pills" | "sidebar" }) {
   const path = usePathname();
   const items = [
@@ -44,7 +44,8 @@ export function AdminNav({ isAdmin, layout = "pills" }: { isAdmin: boolean; layo
   }
 
   return (
-    <nav aria-label="Club admin" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+    // Wraps onto a second line rather than scrolling sideways, so Plans and Points and stars are never off screen.
+    <nav aria-label="Club admin" className="flex flex-wrap gap-1.5 pb-1">
       {items.map((item) => {
         const active = isActive(item.href);
         return (

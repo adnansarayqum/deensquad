@@ -5,6 +5,7 @@ import { ChevronRight, Flame, QrCode } from "lucide-react";
 import { AcknowledgeButton } from "@/components/AcknowledgeButton";
 import { NotificationsCard } from "@/components/NotificationsCard";
 import { ReadFocus } from "@/components/ReadFocus";
+import { StaffSwitch } from "@/components/StaffSwitch";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { clock, postedLabel, shortDay } from "@/lib/dates";
 import { getNewsPage } from "@/lib/parent/load";
@@ -26,6 +27,7 @@ export default async function NewsPage() {
   return (
     <>
       <AppHeader>
+        <StaffSwitch />
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Image src="/crest.png" alt="Deen Squad crest" width={44} height={44} className="rounded-[10px]" priority />

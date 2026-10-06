@@ -9,6 +9,7 @@ import { TODO_NEEDS } from "@/lib/admin/needs";
 import { coachLimit, requireStaff } from "@/lib/auth/session";
 import { asUser, isDemo } from "@/lib/db";
 import { clock, shortDay } from "@/lib/dates";
+import { greetingName } from "@/lib/greeting";
 import { emailConfigured } from "@/lib/email/send";
 import { EXPORTS } from "@/lib/exports/reports";
 import { formatPence } from "@/lib/shop/data";
@@ -45,7 +46,7 @@ export default async function AdminHome() {
 
   return (
     <>
-      <AdminTitle>Assalamu alaikum, {user.staff.displayName.split(" ")[0]}</AdminTitle>
+      <AdminTitle>Assalamu alaikum, {greetingName(user.staff.displayName)}</AdminTitle>
 
       {isAdmin && !emailConfigured() && process.env.NODE_ENV === "production" && !isDemo() ? (
         <Notice tone="action">

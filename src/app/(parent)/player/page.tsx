@@ -5,6 +5,7 @@ import { Card } from "@/components/ui";
 import type { Badge } from "@/lib/domain";
 import { getFamily, getPlayerPage } from "@/lib/parent/load";
 import { SignOutForm } from "@/components/SignOutForm";
+import { StaffSwitch } from "@/components/StaffSwitch";
 
 export const metadata: Metadata = { title: "Player" };
 
@@ -18,6 +19,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
       {child && stats ? (
         <header className="relative overflow-hidden rounded-b-[24px] bg-pitch-deep px-4 pt-[max(env(safe-area-inset-top),20px)] pb-5 text-on-pitch">
           <div aria-hidden className="stripes-v absolute inset-0 opacity-60" />
+          <StaffSwitch on="pitch-deep" className="pt-4" />
           {family.children.length > 1 ? (
             <nav aria-label="Choose a child" className="relative flex flex-wrap gap-2 pt-4">
               {family.children.map((c) => (
@@ -59,6 +61,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         </header>
       ) : (
         <header className="rounded-b-[24px] bg-pitch-deep px-4 pt-[max(env(safe-area-inset-top),20px)] pb-5 text-on-pitch">
+          <StaffSwitch on="pitch-deep" className="pt-4" />
           <h1 className="pt-6 font-display text-[44px] leading-[0.95]">Players</h1>
         </header>
       )}
