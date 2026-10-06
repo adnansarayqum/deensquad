@@ -100,7 +100,7 @@ export default async function AdminNewsPage() {
                 {n.postedBy ? ` · ${n.postedBy}` : ""}
               </span>
               <span className="text-base font-bold">{n.title}</span>
-              {n.requiresAck ? <ReadBar read={n.readCount} total={n.audienceCount} /> : null}
+              {n.requiresAck ? <ReadBar read={n.readCount} total={n.audienceCount} groupsOnly={n.groupsOnly} /> : null}
             </Link>
           ))}
         </section>

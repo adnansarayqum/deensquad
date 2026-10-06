@@ -34,9 +34,9 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
   const posted = new Date(news.postedAt).getTime();
   const at = (hours: number) => new Date(posted + hours * 3600_000).toISOString();
   const steps = [
-    { label: "App notification", when: "when posted", ready: pushConfigured(), setup: "needs VAPID keys" },
-    { label: "Email reminder", when: `${shortDay(at(LADDER.email.afterHours))} ${clock(at(LADDER.email.afterHours))}`, ready: canSendEmail(), setup: "needs Resend" },
-    { label: "Text reminder", when: `${shortDay(at(LADDER.sms.afterHours))} ${clock(at(LADDER.sms.afterHours))}`, ready: smsConfigured(), setup: "needs a Twilio account" },
+    { label: "App notification", when: "when posted", ready: pushConfigured() },
+    { label: "Email reminder", when: `${shortDay(at(LADDER.email.afterHours))} ${clock(at(LADDER.email.afterHours))}`, ready: canSendEmail() },
+    { label: "Text reminder", when: `${shortDay(at(LADDER.sms.afterHours))} ${clock(at(LADDER.sms.afterHours))}`, ready: smsConfigured() },
   ];
   const chaseLabel: Record<string, string> = { app: "Notified", email: "Emailed", sms: "Texted", whatsapp: "WhatsApp", gate: "At the gate" };
 
@@ -54,7 +54,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
           {news.postedBy ? ` · ${news.postedBy}` : ""}
         </p>
         <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
-        {news.requiresAck ? <ReadBar read={news.readCount} total={news.audienceCount} /> : <p className="text-sm text-ink-muted">No read receipts asked for.</p>}
+        {news.requiresAck ? <ReadBar read={news.readCount} total={news.audienceCount} groupsOnly={news.groupsOnly} /> : <p className="text-sm text-ink-muted">No read receipts asked for.</p>}
       </Section>
 
       {news.requiresAck ? (
@@ -69,7 +69,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
                 <span>
                   <b>{s.label}</b> · {s.when}
                 </span>
-                {s.ready ? <Pill tone="done">On</Pill> : <Pill tone="neutral">Off · {s.setup}</Pill>}
+                {s.ready ? <Pill tone="done">On</Pill> : <Pill tone="neutral">Not set up yet</Pill>}
               </li>
             ))}
           </ol>

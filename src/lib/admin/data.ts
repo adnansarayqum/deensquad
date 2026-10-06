@@ -240,20 +240,24 @@ export type NewsRow = {
   requiresAck: boolean;
   postedAt: string;
   postedBy: string | null;
+  /** Parents it reaches and how many have read it: for a group coach, only parents with a child in their groups. */
   audienceCount: number;
   readCount: number;
+  /** True when the counts are a group coach's own groups only ("Your groups: 1 of 25 read"). */
+  groupsOnly: boolean;
   /** A message to a tournament squad: the session it's about (it reaches only the squad's parents). */
   squad: { sessionId: string; title: string } | null;
 };
 
-const NEWS_COLUMNS = `a.id, a.topic, a.title, a.body, a.audience::text[] as audience, a.requires_ack, a.posted_at, sn.display_name as posted_by,
+/** `groups` is the SQL parameter holding a group coach's own groups (null: the whole club), which limits the counts. */
+const newsColumns = (groups: string) => `a.id, a.topic, a.title, a.body, a.audience::text[] as audience, a.requires_ack, a.posted_at, sn.display_name as posted_by,
   a.squad_session_id, (select ss.title from sessions ss where ss.id = a.squad_session_id) as squad_title,
   (select count(distinct pg.guardian_id)::int from player_guardians pg join players p on p.id = pg.player_id
-    where ${newsReaches()}) as audience_count,
+    where ${newsReaches()} and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))) as audience_count,
   -- parents who've read it and still have a child it reaches (a squad message follows the squad as it changes)
   (select count(distinct r.guardian_id)::int from announcement_reads r
     join player_guardians pg on pg.guardian_id = r.guardian_id join players p on p.id = pg.player_id
-    where r.announcement_id = a.id and ${newsReaches()}) as read_count`;
+    where r.announcement_id = a.id and ${newsReaches()} and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))) as read_count`;
 
 type NewsDbRow = {
   id: string;
@@ -270,7 +274,7 @@ type NewsDbRow = {
   squad_title: string | null;
 };
 
-const toNews = (r: NewsDbRow): NewsRow => ({
+const toNews = (r: NewsDbRow, groups: readonly AgeGroup[] | null): NewsRow => ({
   id: r.id,
   topic: r.topic,
   title: r.title,
@@ -281,18 +285,19 @@ const toNews = (r: NewsDbRow): NewsRow => ({
   postedBy: r.posted_by,
   audienceCount: r.audience_count,
   readCount: Math.min(r.read_count, r.audience_count),
+  groupsOnly: groups !== null,
   squad: r.squad_session_id ? { sessionId: r.squad_session_id, title: r.squad_title ?? "Squad" } : null,
 });
 
 /** Recent messages; `groups` (a group coach's own) keeps those whose audience overlaps them (see `overlaps` in scope.ts). */
 export async function loadNewsList(tx: Queryable, limit = 50, groups: readonly AgeGroup[] | null = null): Promise<NewsRow[]> {
   const rows = await tx.query<NewsDbRow>(
-    `select ${NEWS_COLUMNS} from announcements a left join staff_names sn on sn.id = a.posted_by
+    `select ${newsColumns("$2")} from announcements a left join staff_names sn on sn.id = a.posted_by
      where $2::text[] is null or a.audience is null or cardinality(a.audience) = 0 or a.audience::text[] && $2::text[]
      order by a.posted_at desc limit $1`,
     [limit, groups ? [...groups] : null],
   );
-  return rows.map(toNews);
+  return rows.map((r) => toNews(r, groups));
 }
 
 export type UnreadGuardian = {
@@ -317,8 +322,8 @@ export async function loadNewsDetail(
   groups: readonly AgeGroup[] | null = null,
 ): Promise<{ news: NewsRow; unread: UnreadGuardian[] } | null> {
   const [row] = await tx.query<NewsDbRow>(
-    `select ${NEWS_COLUMNS} from announcements a left join staff_names sn on sn.id = a.posted_by where a.id = $1`,
-    [id],
+    `select ${newsColumns("$2")} from announcements a left join staff_names sn on sn.id = a.posted_by where a.id = $1`,
+    [id, groups ? [...groups] : null],
   );
   if (!row) return null;
   if (groups && !overlaps(row.audience, groups)) return null;
@@ -353,7 +358,7 @@ export async function loadNewsDetail(
     [id, groups ? [...groups] : null],
   );
   return {
-    news: toNews(row),
+    news: toNews(row, groups),
     unread: unread.map((u) => ({
       id: u.id,
       name: `${u.first_name} ${u.last_name}`,

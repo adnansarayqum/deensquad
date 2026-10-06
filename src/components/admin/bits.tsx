@@ -31,13 +31,13 @@ export function Section({ title, children, aside }: { title: string; children: R
 }
 
 /** Read-receipt bar: how many of the audience have tapped "I've read this". */
-export function ReadBar({ read, total }: { read: number; total: number }) {
+export function ReadBar({ read, total, groupsOnly = false }: { read: number; total: number; /** A group coach's groups only. */ groupsOnly?: boolean }) {
   const pct = total ? Math.round((read / total) * 100) : 0;
   return (
     <div className="flex items-center gap-2.5">
       <div
         role="progressbar"
-        aria-label={`${read} of ${total} parents have read it`}
+        aria-label={`${read} of ${total} parents${groupsOnly ? " in your groups" : ""} have read it`}
         aria-valuemin={0}
         aria-valuemax={total}
         aria-valuenow={read}
@@ -46,6 +46,7 @@ export function ReadBar({ read, total }: { read: number; total: number }) {
         <div className="h-full rounded-pill bg-grass" style={{ width: `${pct}%` }} />
       </div>
       <span className="shrink-0 text-sm font-bold tabular-nums">
+        {groupsOnly ? "Your groups: " : ""}
         {read} of {total} read
       </span>
     </div>
