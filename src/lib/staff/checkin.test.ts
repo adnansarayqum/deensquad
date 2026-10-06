@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
 import { passToken, readPass } from "../pass/token";
-import { checkInByPass } from "./checkin";
+import { checkInByPass, markHere, registerOpen } from "./checkin";
 
 // A Friday: the sample club's training (6:30pm, every age group) is today.
 const friday = new Date("2026-10-09T17:00:00Z"); // 6pm in London
@@ -79,5 +79,46 @@ describe("scanning a pass", () => {
     expect(await t.asUser(coach, (tx) => checkInByPass(tx, "hello", atGate))).toEqual({ ok: false, reason: "not_a_pass" });
     const parent = await t.signIn(DEV_EMAILS.parent);
     await expect(t.asUser(parent, (tx) => checkInByPass(tx, passToken(DEV_IDS.yusuf), atGate))).rejects.toThrow(/row-level security/);
+  });
+});
+
+describe("Mark here", () => {
+  const fridaySession = () =>
+    t.asSystem(async (tx) => (await tx.query<{ id: string }>(`select id from sessions where starts_at::date = '2026-10-09'`))[0].id);
+  const attendance = (session: string) =>
+    t.asSystem((tx) => tx.query<{ player_id: string }>(`select player_id from attendance where session_id = $1`, [session]));
+
+  it("is open only on the session's own day in London", () => {
+    const start = "2026-10-09T17:30:00.000Z"; // Fri 6:30pm
+    expect(registerOpen(start, new Date("2026-10-06T10:00:00Z"))).toBe(false); // the Tuesday before
+    expect(registerOpen(start, new Date("2026-10-08T23:30:00Z"))).toBe(true); // 00:30 Friday in London
+    expect(registerOpen(start, new Date("2026-10-09T22:59:00Z"))).toBe(true); // 23:59 Friday in London
+    expect(registerOpen(start, new Date("2026-10-09T23:01:00Z"))).toBe(false); // Saturday in London
+  });
+
+  it("refuses a session that isn't today, writes nothing, and leaves earlier check-ins alone", async () => {
+    const session = await fridaySession();
+    await t.asSystem((tx) => tx.query(`insert into attendance (session_id, player_id) values ($1, $2)`, [session, DEV_IDS.musa]));
+    const tuesday = new Date("2026-10-06T10:00:00Z");
+    expect(await t.asUser(coach, (tx) => markHere(tx, session, DEV_IDS.yusuf, tuesday))).toEqual({
+      error: "Opens on Fri 9 Oct. You can mark children here on the day.",
+    });
+    const saturday = new Date("2026-10-10T10:00:00Z");
+    expect(await t.asUser(coach, (tx) => markHere(tx, session, DEV_IDS.yusuf, saturday))).toEqual({
+      error: "This session was on Fri 9 Oct. Children can only be marked here on the day.",
+    });
+    expect(await attendance(session)).toEqual([{ player_id: DEV_IDS.musa }]);
+  });
+
+  it("checks the child in on the day", async () => {
+    const session = await fridaySession();
+    expect(await t.asUser(coach, (tx) => markHere(tx, session, DEV_IDS.yusuf, atGate))).toEqual({});
+    expect(await attendance(session)).toEqual([{ player_id: DEV_IDS.yusuf }]);
+  });
+
+  it("refuses a session that's gone", async () => {
+    expect(await t.asUser(coach, (tx) => markHere(tx, "30000000-0000-4000-8000-0000000000ee", DEV_IDS.yusuf, atGate))).toEqual({
+      error: "That session isn't on the register any more. Reload the page.",
+    });
   });
 });

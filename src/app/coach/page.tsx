@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, ClipboardList, Star } from "lucide-react";
+import { CalendarClock, ChevronLeft, ClipboardList, Star } from "lucide-react";
 import { CheckInButton, UndoCheckInButton } from "@/components/CheckInButton";
 import { PassScanner } from "@/components/PassScanner";
 import { Pill, Progress } from "@/components/ui";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { clock, shortDay } from "@/lib/dates";
+import { registerClosedMessage, registerOpen } from "@/lib/staff/checkin";
 import { loadRegister, summarise, type RegisterFlag } from "@/lib/staff/register";
 
 export const metadata: Metadata = { title: "Register" };
@@ -49,6 +50,8 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
 
   const { session, todays, group, groups } = view;
   const s = summarise(view);
+  // On a day without a session the register shows the next one read-only: Mark here and scanning open on its day.
+  const open = registerOpen(session.startsAt, now);
   const link = (q: { session?: string; group?: string }) =>
     `/coach?${new URLSearchParams({ session: q.session ?? session.id, ...(q.group ? { group: q.group } : {}) })}`;
 
@@ -96,7 +99,13 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
             ))}
           </nav>
         ) : null}
-        <PassScanner />
+        {open ? null : (
+          <p className="flex items-center gap-3 rounded-app bg-pitch px-3.5 py-3 text-[15px] leading-[22px] text-on-pitch">
+            <CalendarClock aria-hidden size={22} className="shrink-0 text-floodlight" />
+            {registerClosedMessage(session.startsAt, now)}
+          </p>
+        )}
+        <PassScanner disabled={!open} />
         <div className="flex flex-wrap gap-x-5">
           <Link href="/coach/awards" className="inline-flex min-h-12 items-center gap-1.5 text-sm font-bold text-floodlight">
             <Star aria-hidden size={16} fill="currentColor" strokeWidth={0} />
@@ -166,7 +175,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
                     </span>
                     <span className="text-[13px] text-ink-muted">{r.answer === "coming" ? "Said they're coming" : "No answer"}</span>
                   </span>
-                  <CheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} />
+                  <CheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} disabled={!open} />
                 </li>
               ))}
             </ul>
@@ -186,7 +195,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
                         </span>
                         <Pill tone="neutral">Said not coming</Pill>
                       </span>
-                      <CheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} />
+                      <CheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} disabled={!open} />
                     </li>
                   ))}
                 </ul>
@@ -198,7 +207,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
                 Here ({s.here.length})
               </h3>
               {s.here.length === 0 ? (
-                <p className="text-[13px] text-ink-muted">Nobody checked in yet. Scan a QR code or tap Mark here.</p>
+                <p className="text-[13px] text-ink-muted">{open ? "Nobody checked in yet. Scan a QR code or tap Mark here." : "Nobody checked in yet."}</p>
               ) : (
                 <ul className="flex flex-col gap-2.5">
                   {s.here.map((r) => (

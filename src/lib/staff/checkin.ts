@@ -1,4 +1,4 @@
-import { londonDate, londonTime } from "../dates";
+import { londonDate, londonTime, shortDay } from "../dates";
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import type { AgeGroup, PaymentState } from "../domain";
@@ -92,4 +92,34 @@ function distance(s: { starts_at: Date; ends_at: Date }, now: Date): number {
   const end = new Date(s.ends_at).getTime();
   const t = now.getTime();
   return t >= start && t <= end ? 0 : Math.min(Math.abs(start - t), Math.abs(end - t));
+}
+
+/**
+ * Attendance is recorded only on the session's own day (London time), so a practice tap on a Tuesday can't
+ * check a child into Friday's session. The register shows the next session read-only until then.
+ */
+export function registerOpen(startsAt: string, now: Date): boolean {
+  const a = londonDate(new Date(startsAt));
+  const b = londonDate(now);
+  return a.year === b.year && a.month === b.month && a.day === b.day;
+}
+
+/** Why Mark here is off for a session that isn't today. */
+export function registerClosedMessage(startsAt: string, now: Date): string {
+  return new Date(startsAt).getTime() > now.getTime()
+    ? `Opens on ${shortDay(startsAt)}. You can mark children here on the day.`
+    : `This session was on ${shortDay(startsAt)}. Children can only be marked here on the day.`;
+}
+
+/** A coach's Mark here: checks the child into that session, only on the session's day. Runs as staff (row level security on). */
+export async function markHere(tx: Queryable, sessionId: string, playerId: string, now: Date): Promise<{ error?: string }> {
+  const [s] = await tx.query<{ starts_at: Date }>(`select starts_at from sessions where id = $1`, [sessionId]);
+  if (!s) return { error: "That session isn't on the register any more. Reload the page." };
+  const startsAt = iso(s.starts_at);
+  if (!registerOpen(startsAt, now)) return { error: registerClosedMessage(startsAt, now) };
+  await tx.query(
+    `insert into attendance (session_id, player_id, method, recorded_by) values ($1, $2, 'manual', auth.uid()) on conflict do nothing`,
+    [sessionId, playerId],
+  );
+  return {};
 }

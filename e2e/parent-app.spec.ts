@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { devices, expect, test } from "@playwright/test";
+import { devices, expect, test, type Page } from "@playwright/test";
 import jsQR from "jsqr";
 import { ADMIN_STATE, COACH_STATE, OUTBOX, latestCode, newContext, shot, signIn, skipInstallGate, switchUser } from "./helpers";
 
@@ -17,6 +17,34 @@ test.beforeAll(() => {
 /** A dropped signal for a page's Server Actions (they post to the page's own address); everything else loads. */
 const noSignal = (path: string) => (url: URL) => url.pathname === path;
 const abortPosts = (route: import("@playwright/test").Route) => (route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue());
+
+/** Today in London as the date field wants it (2026-10-09), and as the app labels it (Fri 9 Oct). */
+const londonToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
+const londonDay = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }).format(new Date());
+
+/**
+ * Adds an all-day session today for some age groups (as staff) and returns its id. The register only opens on a
+ * session's own day, so tests that mark children here make one whatever day the suite runs, then delete it.
+ */
+async function addSessionToday(page: Page, title: string, groups: string[]): Promise<string> {
+  await page.goto("/admin/sessions");
+  await page.getByLabel("Title").fill(title);
+  await page.getByLabel("Date", { exact: true }).fill(londonToday());
+  await page.getByLabel("Starts").fill("00:00");
+  await page.getByLabel("Finishes").fill("23:59");
+  for (const g of ["U6", "U7", "U10", "U12", "U15"]) if (!groups.includes(g)) await page.getByLabel(g, { exact: true }).uncheck();
+  await page.getByRole("button", { name: "Add sessions" }).click();
+  await expect(page.getByText(/^Added 1 session\./)).toBeVisible();
+  return (await page.getByRole("link", { name: `Edit ${title} ${londonDay()}` }).getAttribute("href"))!.split("/")[3];
+}
+
+/** Deletes a session added by `addSessionToday` (undo its check-ins first: a session with attendance is kept). */
+async function deleteSessionToday(page: Page, title: string) {
+  await page.goto("/admin/sessions");
+  await page.getByRole("link", { name: `Delete ${title} ${londonDay()}` }).click();
+  await page.getByRole("button", { name: "Delete session" }).click();
+  await expect(page.getByText("Deleted.")).toBeVisible();
+}
 
 let testNumber = 0;
 test.beforeEach(async ({ context }) => {
@@ -163,23 +191,33 @@ test("player: switch between children and sign out", async ({ page }) => {
 
 test("coach: register marks a player here; parents can't open it", async ({ page }) => {
   await signIn(page, "coach@deensquad.test");
-  await page.goto("/coach");
-  await page.getByRole("link", { name: "U10", exact: true }).click();
-  await expect(page.getByText("0 of 14 expected")).toBeVisible();
+
+  // A session that isn't today (the Autumn Cup is always a fortnight or more away): the register shows it, but
+  // Mark here and scanning stay off until its day.
+  await page.goto("/admin/sessions");
+  const cup = (await page.getByRole("link", { name: /^Edit Autumn Cup / }).getAttribute("href"))!.split("/")[3];
+  await page.goto(`/coach?session=${cup}&group=U10`);
+  await expect(page.getByText(/^Opens on \w{3} \d{1,2} \w{3}\. You can mark children here on the day\.$/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Scan QR codes" })).toBeDisabled();
+  const marks = page.getByRole("button", { name: /^Mark .+ here$/ });
+  await expect(marks.first()).toBeVisible();
+  for (const mark of await marks.all()) await expect(mark).toBeDisabled();
+  await page.screenshot({ path: shot("coach-not-today"), fullPage: true });
+
+  // A U10 session today, so marking works whatever day the suite runs. Deleted at the end.
+  const session = await addSessionToday(page, "Register test", ["U10"]);
+  await page.goto(`/coach?session=${session}&group=U10`);
+  await expect(page.getByRole("heading", { name: "Register test register" })).toBeVisible();
+  await expect(page.getByText(/You can mark children here on the day/)).toHaveCount(0);
+  await expect(page.getByText("0 of 16 expected")).toBeVisible();
   await page.getByRole("button", { name: "Mark Yusuf S. here" }).click();
   await expect(page.getByText("Yusuf S. checked in")).toBeVisible();
-  await expect(page.getByText("1 of 14 expected")).toBeVisible();
-
-  // A child whose parent said not coming turns up anyway: they're still on the register and can be marked in.
-  const away = page.getByRole("region", { name: /Said not coming/ });
-  await expect(away.getByRole("heading", { name: "Said not coming (2)" })).toBeVisible();
-  await expect(away.getByText("Said not coming", { exact: true }).first()).toBeVisible();
-  await away.getByRole("button", { name: "Mark Adam F. here" }).click();
+  await expect(page.getByText("1 of 16 expected")).toBeVisible();
+  await page.getByRole("button", { name: "Mark Adam F. here" }).click();
   const here = page.getByRole("region", { name: /^Here/ });
   await expect(here.getByRole("heading", { name: "Here (2)" })).toBeVisible();
   await expect(here.getByText("Adam F.")).toBeVisible();
-  await expect(page.getByText("2 of 15 expected")).toBeVisible();
-  await expect(away.getByRole("heading", { name: "Said not coming (1)" })).toBeVisible();
+  await expect(page.getByText("2 of 16 expected")).toBeVisible();
   await page.screenshot({ path: shot("coach"), fullPage: true });
   await page.emulateMedia({ colorScheme: "dark" });
   await page.screenshot({ path: shot("coach-dark"), fullPage: true });
@@ -197,8 +235,13 @@ test("coach: register marks a player here; parents can't open it", async ({ page
   expect(box.width).toBeGreaterThanOrEqual(48);
   await undoAdam.click();
   await expect(here.getByRole("heading", { name: "Here (1)" })).toBeVisible();
-  await expect(away.getByRole("button", { name: "Mark Adam F. here" })).toBeVisible();
-  await expect(page.getByText("1 of 14 expected")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Mark Adam F. here" })).toBeEnabled();
+  await expect(page.getByText("1 of 16 expected")).toBeVisible();
+  await here.getByRole("button", { name: "Undo check-in for Yusuf S." }).click();
+  await expect(here.getByRole("heading", { name: "Here (0)" })).toBeVisible();
+
+  // Nothing is attached to it any more, so it can go (the later tests expect today's register to be their own).
+  await deleteSessionToday(page, "Register test");
 
   // The shop is the club's to run: coaches don't see it and are sent back to the overview.
   await page.goto("/admin");
@@ -351,8 +394,14 @@ test("shop: a parent orders kit for a child and pays by transfer; the club is to
   await expect(page.getByRole("button", { name: "Handed over" })).toBeVisible();
   await page.screenshot({ path: shot("admin-shop"), fullPage: true });
 
-  await page.goto("/coach?group=U10");
+  // The coach is told at the gate once Yusuf is checked in (on a session today, so the register is open).
+  const session = await addSessionToday(page, "Kit test", ["U10"]);
+  await page.goto(`/coach?session=${session}&group=U10`);
+  await page.getByRole("button", { name: "Mark Yusuf S. here" }).click();
   await expect(page.getByText(/Kit order ready to collect/)).toBeVisible();
+  await page.getByRole("region", { name: /^Here/ }).getByRole("button", { name: "Undo check-in for Yusuf S." }).click();
+  await expect(page.getByRole("button", { name: "Mark Yusuf S. here" })).toBeVisible();
+  await deleteSessionToday(page, "Kit test");
 });
 
 test("sign-up: a new parent registers their child, proves their email and lands in the app", async ({ page }) => {
