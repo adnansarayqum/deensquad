@@ -141,13 +141,13 @@ export function deletionRequestEmail(opts: { to: string; parentName: string; lin
   const lines = [
     `${parentName} has asked the club to delete their account in the parent app.`,
     "",
-    "Nothing has been deleted yet. Please check with the family, then remove them on Families (or mark the request done on the overview).",
+    "Nothing has been deleted yet. Please check with the family, then remove them on Families (or mark the request done on the overview). If another parent is staying, unlink this parent from each child instead, so the child stays.",
   ];
   const text = [...lines, ...(link ? ["", `Open the overview: ${link}`] : [])].join("\n");
   const html = layout(
     appUrl,
     `<p style="margin:0"><b>${escape(parentName)}</b> has asked the club to delete their account in the parent app.</p>
-<p>Nothing has been deleted yet. Please check with the family, then remove them on Families (or mark the request done on the overview).</p>
+<p>Nothing has been deleted yet. Please check with the family, then remove them on Families (or mark the request done on the overview). If another parent is staying, unlink this parent from each child instead, so the child stays.</p>
 ${link ? button(link, "Open the overview") : ""}`,
   );
   return { to, subject, text, html };

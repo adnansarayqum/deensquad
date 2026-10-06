@@ -120,7 +120,7 @@ function DeletionRequests({ requests }: { requests: NonNullable<Dashboard["delet
         {requests.length === 1 ? "1 family asked to be deleted" : `${requests.length} families asked to be deleted`}
       </h2>
       <p className="text-[15px] leading-[22px] text-ink-muted">
-        Check with the family first. Removing a child on Families deletes parents left with no children, and that closes the request. Tap Done if
+        Check with the family first. Removing a child on Families deletes parents left with no children, and that closes the request. If another parent is staying, unlink this parent from each child instead, so the child stays. Tap Done if
         you&apos;ve dealt with it another way.
       </p>
       <ul className="flex flex-col divide-y-2 divide-line">
