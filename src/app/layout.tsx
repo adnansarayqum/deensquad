@@ -24,9 +24,19 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const INSTALL_PROMPT_SCRIPT =
+  'addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__dsInstallPrompt=e;dispatchEvent(new Event("ds-installprompt"))});addEventListener("appinstalled",function(){window.__dsInstallPrompt=null})';
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en-GB" className="h-full antialiased">
+      <head>
+        {/* Android browsers can offer their install prompt before React has loaded: keep it for the parent
+            screens' "add to home screen" step (src/components/InstallGate.tsx), which hears when one arrives.
+            A plain inline script runs while the page is parsed; next/script's beforeInteractive only runs once
+            Next's own bundle has loaded, which can be too late. */}
+        <script dangerouslySetInnerHTML={{ __html: INSTALL_PROMPT_SCRIPT }} />
+      </head>
       <body className="min-h-full bg-cream text-ink">{children}</body>
     </html>
   );
