@@ -12,7 +12,8 @@ export function ImportForm() {
     return (
       <div className="flex flex-col gap-4">
         <p role="status" className="rounded-app bg-grass-tint px-4 py-3 text-[15px] leading-[22px] font-bold text-grass-text">
-          Imported. {s.childrenAdded} {s.childrenAdded === 1 ? "child" : "children"} added, {s.childrenUpdated} updated. {s.parentsAdded}{" "}
+          Imported. {s.childrenAdded} {s.childrenAdded === 1 ? "child" : "children"} added, {s.childrenUpdated} updated
+          {s.rowsRepeated ? ` (${s.rowsRepeated} repeated ${s.rowsRepeated === 1 ? "row" : "rows"} merged)` : ""}. {s.parentsAdded}{" "}
           {s.parentsAdded === 1 ? "parent" : "parents"} added, {s.parentsUpdated} updated.
         </p>
         <p className="text-[15px] leading-[22px]">Next, send the invites from the Families page. Each parent gets a link to sign in.</p>
@@ -37,6 +38,12 @@ export function ImportForm() {
               {state.summary!.childrenAdded === 1 ? "child" : "children"}, <b>{state.summary!.childrenUpdated}</b> already in the app (will be
               updated), <b>{state.summary!.parentsAdded}</b> new {state.summary!.parentsAdded === 1 ? "parent" : "parents"}.
             </p>
+            {state.summary!.rowsRepeated > 0 ? (
+              <p className="text-[15px] leading-[22px]">
+                <b>{state.summary!.rowsRepeated}</b> {state.summary!.rowsRepeated === 1 ? "row repeats" : "rows repeat"} another row in this sheet
+                (merged).
+              </p>
+            ) : null}
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="text-ink-muted">
@@ -97,6 +104,21 @@ export function ImportForm() {
               </li>
             ))}
           </ul>
+        </div>
+      ) : null}
+      {state.checks && state.checks.length > 0 ? (
+        <div className="flex flex-col gap-2 rounded-app border-2 border-crest-gold bg-gold-tint px-4 py-3">
+          <p className="text-[15px] font-bold">
+            Check {state.checks.length === 1 ? "this" : `these ${state.checks.length}`} before importing
+          </p>
+          <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+            {state.checks.slice(0, 50).map((c) => (
+              <li key={`${c.line}-${c.message}`}>
+                Row {c.line}: {c.message}
+              </li>
+            ))}
+          </ul>
+          {state.checks.length > 50 ? <p className="text-sm text-ink-muted">…and {state.checks.length - 50} more.</p> : null}
         </div>
       ) : null}
       {state.warnings && state.warnings.length > 0 ? (

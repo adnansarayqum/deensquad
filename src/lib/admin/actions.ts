@@ -45,6 +45,8 @@ export type ImportState = {
   error?: string;
   errors?: ImportProblem[];
   warnings?: ImportProblem[];
+  /** To look at before importing: groups that don't match a date of birth, possible duplicates, repeated rows. */
+  checks?: ImportProblem[];
   summary?: ImportSummary;
   sample?: { line: number; child: string; group: AgeGroup; parents: string }[];
   count?: number;
@@ -82,7 +84,7 @@ export async function importFamilies(prev: ImportState, formData: FormData): Pro
     return { stage: "done", summary };
   }
 
-  if (plan.rows.length === 0) return { stage: "start", errors: plan.errors, warnings: plan.warnings, error: "Nothing to import yet." };
+  if (plan.rows.length === 0) return { stage: "start", errors: plan.errors, warnings: plan.warnings, checks: plan.checks, error: "Nothing to import yet." };
   // Work out what would change, then roll it back.
   let summary: ImportSummary;
   try {
@@ -99,6 +101,7 @@ export async function importFamilies(prev: ImportState, formData: FormData): Pro
     csv,
     errors: plan.errors,
     warnings: plan.warnings,
+    checks: [...plan.checks, ...summary.possibleDuplicates].sort((a, b) => a.line - b.line),
     summary,
     count: plan.rows.length,
     sample: plan.rows.slice(0, 8).map((r) => ({

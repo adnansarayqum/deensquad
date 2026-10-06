@@ -18,7 +18,11 @@ export type ImportRow = {
 
 export type ImportProblem = { line: number; message: string };
 
-export type ImportPlan = { rows: ImportRow[]; errors: ImportProblem[]; warnings: ImportProblem[]; columns: string[] };
+/**
+ * `checks` are things to look at before importing (a group that doesn't match the date of birth, a possible
+ * duplicate child, a row that repeats another); `warnings` are smaller notes (a phone or shirt number left out).
+ */
+export type ImportPlan = { rows: ImportRow[]; errors: ImportProblem[]; warnings: ImportProblem[]; checks: ImportProblem[]; columns: string[] };
 
 // Column names we recognise, after lower-casing and turning punctuation into spaces.
 const COLUMNS: Record<string, string[]> = {
@@ -49,13 +53,29 @@ function splitName(full: string | null): { first: string | null; last: string | 
   return { first: parts[0] ?? null, last: parts.length > 1 ? parts.slice(1).join(" ") : null };
 }
 
+/** The club's group for a child of this age: the youngest group that covers it (U10 takes 8, 9 and 10 year olds). */
+export function groupForAge(age: number): AgeGroup | null {
+  if (age < 4) return null;
+  return AGE_GROUPS.find((g) => Number(g.slice(1)) >= age) ?? null;
+}
+
 export function parseAgeGroup(value: string | null): AgeGroup | null {
   if (!value) return null;
   const m = value.match(/(?:u|under)\s*-?\s*(\d{1,2})/i) ?? value.match(/^\s*(\d{1,2})\s*s?\s*$/i);
   if (!m) return null;
-  // "U9" or "9s" means the group that covers that age: U10 takes 8, 9 and 10 year olds.
-  const age = Number(m[1]);
-  return AGE_GROUPS.find((g) => Number(g.slice(1)) >= age && age >= 4) ?? null;
+  // "U9" or "9s" means the group that covers that age.
+  return groupForAge(Number(m[1]));
+}
+
+/**
+ * A child's football age: how old they are on 31 August at the start of the season `now` falls in (UK
+ * youth football's cut-off; the season starts on 1 August). `dateOfBirth` is "YYYY-MM-DD".
+ */
+export function ageOnCutOff(dateOfBirth: string, now = new Date()): number {
+  const year = now.getUTCMonth() >= 7 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
+  const [y, m] = dateOfBirth.split("-").map(Number);
+  // Birthdays after 31 August haven't come round yet on the cut-off date.
+  return year - y - (m > 8 ? 1 : 0);
 }
 
 /** DD/MM/YYYY (UK order), D/M/YYYY, DD-MM-YYYY, DD.MM.YYYY or YYYY-MM-DD → "YYYY-MM-DD". */
@@ -79,7 +99,8 @@ export function planImport(csvText: string, now = new Date()): ImportPlan {
   const table = parseCsv(csvText);
   const errors: ImportProblem[] = [];
   const warnings: ImportProblem[] = [];
-  if (table.length < 2) return { rows: [], errors: [{ line: 1, message: "The file needs a header row and at least one child." }], warnings, columns: [] };
+  const checks: ImportProblem[] = [];
+  if (table.length < 2) return { rows: [], errors: [{ line: 1, message: "The file needs a header row and at least one child." }], warnings, checks, columns: [] };
 
   const header = table[0].map(headerKey);
   const col = (key: keyof typeof COLUMNS) => header.findIndex((h) => COLUMNS[key].includes(h));
@@ -90,10 +111,11 @@ export function planImport(csvText: string, now = new Date()): ImportPlan {
 
   const missing: string[] = [];
   if (at.childFirst < 0 && at.childName < 0) missing.push("child's first name (or child name)");
-  if (at.ageGroup < 0) missing.push("age group");
+  // Without an age group column, every child is placed by their date of birth.
+  if (at.ageGroup < 0 && at.dob < 0) missing.push("age group (or date of birth)");
   if (at.p1Email < 0) missing.push("parent email");
   if (missing.length) {
-    return { rows: [], errors: [{ line: 1, message: `Couldn't find these columns: ${missing.join(", ")}. Use the template's column names.` }], warnings, columns: recognised };
+    return { rows: [], errors: [{ line: 1, message: `Couldn't find these columns: ${missing.join(", ")}. Use the template's column names.` }], warnings, checks, columns: recognised };
   }
 
   const rows: ImportRow[] = [];
@@ -108,13 +130,26 @@ export function planImport(csvText: string, now = new Date()): ImportPlan {
     if (!firstName) problems.push("the child's first name is missing");
     if (!lastName) problems.push("the child's last name is missing");
 
-    const groupText = cell(at.ageGroup, 20);
-    const ageGroup = parseAgeGroup(groupText);
-    if (!ageGroup) problems.push(groupText ? `"${groupText}" isn't one of the app's age groups (${AGE_GROUPS.join(", ")})` : "the age group is missing");
-
     const dobText = cell(at.dob, 20);
     const dateOfBirth = parseDate(dobText, now);
     if (dobText && !dateOfBirth) problems.push(`"${dobText}" isn't a date of birth we can read (use DD/MM/YYYY)`);
+
+    // The sheet's group wins. Without a usable one ("Year 4", blank), the date of birth places the child.
+    const groupText = cell(at.ageGroup, 20);
+    const listed = parseAgeGroup(groupText);
+    const age = dateOfBirth ? ageOnCutOff(dateOfBirth, now) : null;
+    const byBirth = age === null ? null : groupForAge(age);
+    const ageGroup = listed ?? byBirth;
+    const who = firstName ?? "This child";
+    const rowChecks: ImportProblem[] = [];
+    if (!ageGroup) {
+      const why = groupText ? `"${groupText}" isn't one of the app's age groups (${AGE_GROUPS.join(", ")})` : "the age group is missing";
+      problems.push(age === null ? why : `${why}, and ${who} is ${age} by date of birth, outside the club's groups`);
+    } else if (!listed) {
+      rowChecks.push({ line, message: `${who} was put in ${ageGroup} by date of birth (${groupText ? `"${groupText}" isn't an age group` : "no age group given"}).` });
+    } else if (age !== null && byBirth !== listed) {
+      rowChecks.push({ line, message: `${who} is ${age} by date of birth but listed in ${listed}. Check before importing.` });
+    }
 
     const shirtText = cell(at.shirt, 5);
     const shirtNumber = shirtText && /^\d{1,2}$/.test(shirtText) && Number(shirtText) >= 1 ? Number(shirtText) : null;
@@ -153,22 +188,68 @@ export function planImport(csvText: string, now = new Date()): ImportPlan {
       errors.push({ line, message: problems.join("; ").replace(/^./, (c) => c.toUpperCase()) + "." });
       continue;
     }
+    checks.push(...rowChecks);
     rows.push({
       line,
       child: { firstName: firstName!, lastName: lastName!, dateOfBirth, ageGroup: ageGroup!, shirtNumber, position: cell(at.position, 40) },
       parents,
     });
   }
-  return { rows, errors, warnings, columns: recognised };
+  checks.push(...sheetDuplicates(rows));
+  checks.sort((a, b) => a.line - b.line);
+  return { rows, errors, warnings, checks, columns: recognised };
 }
 
-export type ImportSummary = { childrenAdded: number; childrenUpdated: number; parentsAdded: number; parentsUpdated: number; families: number };
+/**
+ * Rows that repeat an earlier row (same child's name, a parent email in common: the import merges them into one
+ * child) and possible duplicates it won't merge: the same name and date of birth under different parent emails,
+ * or the same first name twice in one family.
+ */
+function sheetDuplicates(rows: ImportRow[]): ImportProblem[] {
+  const found: ImportProblem[] = [];
+  const lower = (s: string) => s.toLowerCase();
+  for (const [i, row] of rows.entries()) {
+    const c = row.child;
+    const emails = new Set(row.parents.map((p) => p.email));
+    for (const earlier of rows.slice(0, i)) {
+      const e = earlier.child;
+      const sameFirst = lower(c.firstName) === lower(e.firstName);
+      const sameName = sameFirst && lower(c.lastName) === lower(e.lastName);
+      const sameFamily = earlier.parents.some((p) => emails.has(p.email));
+      const name = `${c.firstName} ${c.lastName}`;
+      let message: string | null = null;
+      if (sameName && sameFamily) message = `Repeats row ${earlier.line} (${name}), so the two are merged into one child.`;
+      else if (sameName && c.dateOfBirth && c.dateOfBirth === e.dateOfBirth)
+        message = `Possible duplicate: ${name} is also on row ${earlier.line} with the same date of birth, under a different parent email.`;
+      else if (sameFirst && sameFamily) message = `Possible duplicate: ${name} and ${e.firstName} ${e.lastName} (row ${earlier.line}) are in the same family.`;
+      if (message) {
+        found.push({ line: row.line, message });
+        break;
+      }
+    }
+  }
+  return found;
+}
+
+export type ImportSummary = {
+  childrenAdded: number;
+  childrenUpdated: number;
+  /** Rows that repeat another row in the same sheet; merged into the child that row added or updated. */
+  rowsRepeated: number;
+  parentsAdded: number;
+  parentsUpdated: number;
+  families: number;
+  /** New children with the same name and date of birth as a child already in the app under other parents. */
+  possibleDuplicates: ImportProblem[];
+};
 
 /** Writes the plan. Runs as an admin, so row level security still applies. */
 export async function applyImport(tx: Queryable, plan: ImportPlan): Promise<ImportSummary> {
-  const summary: ImportSummary = { childrenAdded: 0, childrenUpdated: 0, parentsAdded: 0, parentsUpdated: 0, families: 0 };
+  const summary: ImportSummary = { childrenAdded: 0, childrenUpdated: 0, rowsRepeated: 0, parentsAdded: 0, parentsUpdated: 0, families: 0, possibleDuplicates: [] };
   const seenParents = new Map<string, string>();
   const families = new Set<string>();
+  // Children this import has already added or updated, so a repeated row isn't counted as "already in the app".
+  const touched = new Set<string>();
 
   for (const row of plan.rows) {
     const guardianIds: string[] = [];
@@ -205,8 +286,22 @@ export async function applyImport(tx: Queryable, plan: ImportPlan): Promise<Impo
            shirt_number = coalesce($4, shirt_number), position = coalesce($5, position) where id = $1`,
         [playerId, c.ageGroup, c.dateOfBirth, c.shirtNumber, c.position],
       );
-      summary.childrenUpdated++;
+      if (touched.has(playerId)) summary.rowsRepeated++;
+      else summary.childrenUpdated++;
     } else {
+      if (c.dateOfBirth) {
+        const [same] = await tx.query<{ id: string }>(
+          `select p.id from players p where lower(p.first_name) = lower($1) and lower(p.last_name) = lower($2) and p.date_of_birth = $3::date
+             and not (p.id = any ($4::uuid[])) limit 1`,
+          [c.firstName, c.lastName, c.dateOfBirth, [...touched]],
+        );
+        if (same) {
+          summary.possibleDuplicates.push({
+            line: row.line,
+            message: `Possible duplicate: ${c.firstName} ${c.lastName} is already in the app with the same date of birth, under another parent.`,
+          });
+        }
+      }
       const [p] = await tx.query<{ id: string }>(
         `insert into players (first_name, last_name, date_of_birth, age_group, shirt_number, position)
          values ($1, $2, $3::date, $4::age_group, $5, $6) returning id`,
@@ -215,6 +310,7 @@ export async function applyImport(tx: Queryable, plan: ImportPlan): Promise<Impo
       playerId = p.id;
       summary.childrenAdded++;
     }
+    touched.add(playerId);
     for (const gid of guardianIds) {
       await tx.query(`insert into player_guardians (player_id, guardian_id) values ($1, $2) on conflict do nothing`, [playerId, gid]);
     }

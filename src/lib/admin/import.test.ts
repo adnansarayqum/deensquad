@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS } from "../db/dev-seed";
 import { parseCsv } from "./csv";
-import { applyImport, parseAgeGroup, parseDate, planImport } from "./import";
+import { ageOnCutOff, applyImport, groupForAge, parseAgeGroup, parseDate, planImport } from "./import";
 
 const now = new Date("2026-10-05T12:00:00Z");
 
@@ -43,6 +43,75 @@ describe("planning an import", () => {
     expect(plan.errors.map((e) => e.line)).toEqual([4, 5]);
   });
 
+  it("works out football age on 31 August and the group that covers it", () => {
+    // The 2026/27 season (from 1 August 2026): ages on 31 August 2026.
+    expect(ageOnCutOff("2018-03-14", now)).toBe(8);
+    expect(ageOnCutOff("2018-08-31", now)).toBe(8);
+    expect(ageOnCutOff("2018-09-01", now)).toBe(7);
+    expect(ageOnCutOff("2018-03-14", new Date("2026-07-31T12:00:00Z"))).toBe(7); // still the 2025/26 season
+    expect([3, 4, 6, 7, 8, 10, 11, 12, 13, 15, 16].map(groupForAge)).toEqual([null, "U6", "U6", "U7", "U10", "U10", "U12", "U12", "U15", "U15", null]);
+  });
+
+  it("places a child by date of birth when the group is missing or unreadable, and flags a group that doesn't match", () => {
+    const plan = planImport(
+      [
+        "Child first name,Child last name,Date of birth,Age group,Parent first name,Parent email",
+        "Aisha,Iqbal,14/03/2018,Year 4,Ruksana,ruksana@example.com",
+        "Ilyas,Iqbal,02/06/2019,,Ruksana,ruksana@example.com",
+        "Ali,Khan,14/03/2018,U15,Sana,sana@example.com",
+        "Omar,Khan,14/03/2018,U10,Sana,sana@example.com",
+        "Baby,Khan,01/01/2024,,Sana,sana@example.com",
+        "Nodate,Khan,,Year 4,Sana,sana@example.com",
+      ].join("\n"),
+      now,
+    );
+    expect(plan.rows.map((r) => [r.child.firstName, r.child.ageGroup])).toEqual([
+      ["Aisha", "U10"],
+      ["Ilyas", "U7"],
+      ["Ali", "U15"], // the sheet's group is kept
+      ["Omar", "U10"],
+    ]);
+    expect(plan.checks).toEqual([
+      { line: 2, message: 'Aisha was put in U10 by date of birth ("Year 4" isn\'t an age group).' },
+      { line: 3, message: "Ilyas was put in U7 by date of birth (no age group given)." },
+      { line: 4, message: "Ali is 8 by date of birth but listed in U15. Check before importing." },
+    ]);
+    expect(plan.errors).toEqual([
+      { line: 6, message: "The age group is missing, and Baby is 2 by date of birth, outside the club's groups." },
+      { line: 7, message: `"Year 4" isn't one of the app's age groups (U6, U7, U10, U12, U15).` },
+    ]);
+  });
+
+  it("takes a sheet with dates of birth and no age group column", () => {
+    const plan = planImport("Child name,DOB,Parent name,Email\nAisha Iqbal,14/03/2018,Ruksana Iqbal,ruksana@example.com", now);
+    expect(plan.errors).toEqual([]);
+    expect(plan.rows[0].child.ageGroup).toBe("U10");
+  });
+
+  it("flags repeated rows and possible duplicate children", () => {
+    const plan = planImport(
+      [
+        "Child first name,Child last name,Date of birth,Age group,Parent first name,Parent email,Parent phone",
+        "Zakariya,Khan,01/05/2016,U10,Sana,sana@example.com,+44 7700 900000",
+        "Maryam,Patel,15/10/2017,U10,Hina,hina@example.com,",
+        "Zakariya,Khan,01/05/2016,U10,Sana,sana@example.com,+44 7700 900000",
+        "MARYAM,PATEL,15/10/2017,U10,Hina,HINA@example.com,",
+        "Aisha,Iqbal,14/03/2018,U10,Ruksana,ruksana@gmail.com,",
+        "Aisha,Iqbal,14/03/2018,U10,Ruksana,ruksana@googlemail.com,",
+        "Zakariya,Ahmed,,U10,Sana,sana@example.com,",
+      ].join("\n"),
+      now,
+    );
+    expect(plan.rows).toHaveLength(7);
+    expect(plan.rows[0].parents[0].phone).toBe("07700 900000");
+    expect(plan.checks).toEqual([
+      { line: 4, message: "Repeats row 2 (Zakariya Khan), so the two are merged into one child." },
+      { line: 5, message: "Repeats row 3 (MARYAM PATEL), so the two are merged into one child." },
+      { line: 7, message: "Possible duplicate: Aisha Iqbal is also on row 6 with the same date of birth, under a different parent email." },
+      { line: 8, message: "Possible duplicate: Zakariya Ahmed and Zakariya Khan (row 2) are in the same family." },
+    ]);
+  });
+
   it("says which required columns are missing", () => {
     const plan = planImport("Name,Team\nAli,U10", now);
     expect(plan.errors[0].message).toMatch(/parent email/);
@@ -70,6 +139,25 @@ describe("applying an import", () => {
     expect(kids.map((k) => k.first_name)).toEqual(["Ali"]);
     const sana = await t.signIn("sana@example.com");
     expect(await t.asUser(sana, (tx) => tx.query("select 1 from players"))).toHaveLength(2);
+  });
+
+  it("counts rows that repeat another row in the sheet apart from children already in the app", async () => {
+    const t = await testDatabase({ seed: true, now });
+    const admin = await t.signIn(DEV_EMAILS.admin);
+    const csv = [
+      "Child first name,Child last name,Date of birth,Age group,Parent first name,Parent email",
+      "Zakariya,Khan,01/05/2016,U10,Sana,sana@example.com",
+      "Zakariya,Khan,01/05/2016,U10,Sana,sana@example.com",
+      "MARYAM,PATEL,15/10/2017,U10,Hina,hina@example.com",
+      "Maryam,Patel,15/10/2017,U10,Hina,hina@example.com",
+      // The sample club's Yusuf under a different parent email: imported, but flagged.
+      "Yusuf,Sample,14/03/2018,U10,Adnan,adnan.sample@example.com",
+    ].join("\n");
+    const summary = await t.asUser(admin, (tx) => applyImport(tx, planImport(csv, now)));
+    expect(summary).toMatchObject({ childrenAdded: 3, childrenUpdated: 0, rowsRepeated: 2 });
+    expect(summary.possibleDuplicates).toEqual([
+      { line: 6, message: "Possible duplicate: Yusuf Sample is already in the app with the same date of birth, under another parent." },
+    ]);
   });
 
   it("is refused for a parent", async () => {
