@@ -39,9 +39,9 @@ const toProduct = (r: ProductRow): Product => ({
   pricePence: r.price_pence,
   sizes: r.sizes ?? [],
   initialsPence: r.initials_price_pence,
-  // Only a photo stored in the app is shown. A pasted link waits until it's been copied in (localiseProductImages):
-  // linking straight to another site shows a broken image when that site refuses or the link dies.
-  imageUrl: r.image_file_id ? `/api/files/${r.image_file_id}` : null,
+  // A stored photo is served by the app; a pasted or seeded link is shown until it's been copied in
+  // (localiseProductImages). If that link fails, ProductImage falls back to the crest.
+  imageUrl: r.image_file_id ? `/api/files/${r.image_file_id}` : r.image_url,
   photoPending: !r.image_file_id && Boolean(r.image_url),
   active: r.active,
   sort: r.sort,

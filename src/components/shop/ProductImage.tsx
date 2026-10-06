@@ -22,7 +22,7 @@ export function ProductImage({ src, large = false }: { src: string | null; /** S
       {/* eslint-disable-next-line @next/next/no-img-element -- the club's own crest */}
       <img src="/crest.png" alt="" width={large ? 96 : 64} height={large ? 96 : 64} className="rounded-[14px] opacity-90" />
       {src && !failed ? (
-        // eslint-disable-next-line @next/next/no-img-element -- photos are stored in the app
+        // eslint-disable-next-line @next/next/no-img-element -- stored in the app, or its link until copied in
         <img
           ref={img}
           src={src}

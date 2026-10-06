@@ -1,7 +1,7 @@
 // The club shop's rules, checked as different signed-in people on a real Postgres (PGlite).
 import { beforeAll, describe, expect, it } from "vitest";
 import { DEV_EMAILS, DEV_IDS } from "@/lib/db/dev-seed";
-import { loadMyOrders, loadSupplierTotals } from "@/lib/shop/data";
+import { loadMyOrders, loadProducts, loadSupplierTotals } from "@/lib/shop/data";
 import { testDatabase } from "../test/db";
 
 let t: Awaited<ReturnType<typeof testDatabase>>;
@@ -29,6 +29,24 @@ beforeAll(async () => {
       `select p.id from players p join player_guardians pg on pg.player_id = p.id join guardians g on g.id = pg.guardian_id where g.email = 'parent1@example.com'`,
     ),
   );
+});
+
+describe("product photos", () => {
+  it("shows a photo's link until it's copied in, then the stored copy", async () => {
+    const link = "https://example.com/hoodie.jpg";
+    await t.asSystem((tx) => tx.query(`update shop_products set image_url = $2, image_file_id = null where id = $1`, [hoodie, link]));
+    const pending = (await t.asUser(adnan, (tx) => loadProducts(tx))).find((p) => p.id === hoodie)!;
+    expect(pending).toMatchObject({ imageUrl: link, photoPending: true });
+    await t.asSystem(async (tx) => {
+      const [{ id }] = await tx.query<{ id: string }>(
+        `insert into club_files (name, mime, size, data) values ('hoodie.jpg', 'image/jpeg', 3, '\\x010203'::bytea) returning id`,
+      );
+      await tx.query(`update shop_products set image_file_id = $2, image_url = null where id = $1`, [hoodie, id]);
+    });
+    const stored = (await t.asUser(adnan, (tx) => loadProducts(tx))).find((p) => p.id === hoodie)!;
+    expect(stored.imageUrl).toMatch(/^\/api\/files\/[0-9a-f-]{36}$/);
+    expect(stored.photoPending).toBe(false);
+  });
 });
 
 describe("placing an order", () => {

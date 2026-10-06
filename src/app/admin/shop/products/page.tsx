@@ -55,16 +55,18 @@ function ProductFields({ p }: { p?: Product }) {
           <span className="field-label">Photo</span>
           {p?.imageUrl ? (
             <div className="flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element -- the club's own stored photo */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- the club's own photo (or its link until copied in) */}
               <img src={p.imageUrl} alt="" className="h-16 w-16 rounded-xl border-2 border-line object-cover" />
               <label className="flex min-h-11 items-center gap-2 text-[15px]">
                 <input type="checkbox" name="removePhoto" className="h-5 w-5 accent-[var(--grass)]" />
                 Remove photo
               </label>
             </div>
-          ) : p?.photoPending ? (
+          ) : null}
+          {p?.photoPending ? (
             <p className="rounded-app bg-orange-tint px-3 py-2 text-sm">
-              The photo link couldn&apos;t be copied in yet, so parents see the crest instead. Upload the photo, or paste another link.
+              The photo hasn&apos;t been copied into the app yet, so parents see it from its link (or the crest if the link fails). Upload the photo, or
+              paste another link.
             </p>
           ) : null}
           <input id={`photo-${key}`} name="photo" type="file" accept="image/jpeg,image/png,image/webp" aria-label={p?.imageUrl ? "Replace the photo" : "Add a photo"} className="field py-3 text-[15px]" />
@@ -115,7 +117,10 @@ export default async function ShopProductsPage() {
             <span className="text-[15px] font-bold">
               {p.name} · {formatPence(p.pricePence)}
             </span>
-            {p.active ? <Pill tone="done">On sale</Pill> : <Pill tone="neutral">Hidden</Pill>}
+            <span className="flex flex-wrap justify-end gap-1.5">
+              {p.photoPending ? <Pill tone="action">Photo not copied in</Pill> : null}
+              {p.active ? <Pill tone="done">On sale</Pill> : <Pill tone="neutral">Hidden</Pill>}
+            </span>
           </summary>
           <div className="border-t-2 border-line p-4">
             <StatefulForm action={saveProduct} submitLabel="Save changes" savedMessage="Saved.">
