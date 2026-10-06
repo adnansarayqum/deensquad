@@ -57,6 +57,13 @@ test("no signal at the gate: the codes saved on the phone show for /pass and /fr
     // Idris's parent (a seeded U10 family that signs in nowhere else: each address may only ask for five codes an hour).
     await signIn(page, "parent4@example.com");
 
+    // The app opens on News: on a session day, its first card leads to the QR code.
+    await expect(page.getByRole("heading", { name: "Club news" })).toBeVisible();
+    const qrCard = page.getByRole("main").getByRole("link", { name: /today: show the QR code/ });
+    await expect(qrCard).toBeVisible();
+    await qrCard.click();
+    await expect(page).toHaveURL(/\/pass$/);
+
     // On a session day, Friday has the codes one tap away, in the page itself.
     await page.goto("/friday");
     await page.getByText("Show attendance QR code", { exact: true }).click();

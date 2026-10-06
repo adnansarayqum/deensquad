@@ -7,7 +7,7 @@ import { getShell } from "@/lib/parent/load";
 export default async function ParentLayout({ children }: { children: ReactNode }) {
   const shell = await getShell();
   return (
-    <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-cream pb-[calc(96px+env(safe-area-inset-bottom))]">
+    <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-cream pb-[calc(var(--tab-bar-height,calc(80px+env(safe-area-inset-bottom)))+16px)]">
       {children}
       <InstallGate isStaff={shell.isStaff} />
       <RegisterServiceWorker />

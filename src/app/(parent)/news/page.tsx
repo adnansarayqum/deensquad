@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, Flame } from "lucide-react";
+import { ChevronRight, Flame, QrCode } from "lucide-react";
 import { AcknowledgeButton } from "@/components/AcknowledgeButton";
 import { NotificationsCard } from "@/components/NotificationsCard";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { clock, postedLabel, shortDay } from "@/lib/dates";
 import { getNewsPage } from "@/lib/parent/load";
-import { weekSummary } from "@/lib/parent/views";
+import { sessionsToday, weekSummary } from "@/lib/parent/views";
 
 export const metadata: Metadata = { title: "Club news" };
 
@@ -19,6 +19,8 @@ export default async function NewsPage() {
   const soonest = week
     .flatMap((w) => (w.session ? [w.session] : []))
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
+  // On a session day the app still opens on News: the first thing on it is the way to the QR code.
+  const today = sessionsToday(week, now).sort((a, b) => a.session.startsAt.localeCompare(b.session.startsAt))[0];
 
   return (
     <>
@@ -58,6 +60,23 @@ export default async function NewsPage() {
       </AppHeader>
 
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
+        {today ? (
+          <Link
+            href="/pass"
+            className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold">
+              <QrCode aria-hidden size={24} />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-[15px] font-bold">{today.session.title} today: show the QR code</span>
+              <span className="text-[13px] text-ink-muted">
+                {clock(today.session.startsAt)} · {today.session.venue}
+              </span>
+            </span>
+            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+          </Link>
+        ) : null}
         <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} />
         {family.children.length === 0 ? (
           <Card className="p-4 text-[15px] leading-[22px]">

@@ -1068,6 +1068,22 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
   const video = resolve("e2e/.results/musa-pass.y4m");
   writeFileSync(video, cameraVideo(picture));
 
+  // Large text and 200% zoom (a 195px-wide screen): the tab bar grows and the page makes room for it, so everything
+  // down to the last tip can be scrolled clear of the bar.
+  const clearOfTabBar = async () => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const bar = (await page.getByRole("navigation", { name: "Main" }).boundingBox())!;
+    const tip = (await page.getByText(/This phone keeps a copy/).boundingBox())!;
+    return bar.y - (tip.y + tip.height);
+  };
+  await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  await expect.poll(clearOfTabBar).toBeGreaterThanOrEqual(0);
+  await page.screenshot({ path: shot("pass-large-text") });
+  await page.reload();
+  await page.setViewportSize({ width: 195, height: 422 });
+  await expect.poll(clearOfTabBar).toBeGreaterThanOrEqual(0);
+  await page.screenshot({ path: shot("pass-zoom-200") });
+  await page.setViewportSize({ width: 390, height: 844 });
 
   // The coach's phone, with that pass held up to its camera. (By now Coach Hamza runs the U7s only, so the new session is theirs.)
   const browser = await playwright.chromium.launch({
