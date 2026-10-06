@@ -167,10 +167,13 @@ export type AnswerRecord = { answer: Availability; by: { id: string; name: strin
 
 export async function loadAnswers(tx: Queryable, sessionIds: string[], childIds: string[]): Promise<Map<string, AnswerRecord>> {
   if (sessionIds.length === 0 || childIds.length === 0) return new Map();
-  // The guardian's name is read under row level security: a parent sees the guardians who share their children.
+  // The guardian's name only while they're still linked to the child (a parent who is also staff can read every
+  // guardian under row level security, so that alone isn't enough).
   const rows = await tx.query<{ session_id: string; player_id: string; answer: Availability; answered_by: string | null; name: string | null; answered_at: Date }>(
     `select v.session_id, v.player_id, v.answer::text as answer, v.answered_by, g.first_name as name, v.answered_at
-     from availability v left join guardians g on g.id = v.answered_by
+     from availability v
+     left join guardians g on g.id = v.answered_by
+       and exists (select 1 from player_guardians pg where pg.player_id = v.player_id and pg.guardian_id = g.id)
      where v.session_id = any($1::uuid[]) and v.player_id = any($2::uuid[])`,
     [sessionIds, childIds],
   );

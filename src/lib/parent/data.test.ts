@@ -29,6 +29,23 @@ describe("who answered for a shared child", () => {
     expect(seen.has(answerKey(friday, DEV_IDS.musa))).toBe(false);
   });
 
+  it("shows no name for a guardian no longer linked to the child, even to a viewer who is staff and a parent", async () => {
+    await t.asSystem((tx) =>
+      tx.query(
+        `with g as (insert into guardians (first_name, last_name, email) values ('Staff', 'Parent', $1) returning id)
+         insert into player_guardians (player_id, guardian_id, relationship) select $2, id, 'father' from g`,
+        [DEV_EMAILS.admin, DEV_IDS.yusuf],
+      ),
+    );
+    const staffParent = await t.signIn(DEV_EMAILS.admin);
+    await t.asUser(sara, (tx) => saveAnswer(tx, friday, DEV_IDS.yusuf, "away"));
+    const before = await t.asUser(staffParent, (tx) => loadAnswers(tx, [friday], [DEV_IDS.yusuf]));
+    expect(before.get(answerKey(friday, DEV_IDS.yusuf))?.by).toEqual({ id: DEV_IDS.sara, name: "Sara" });
+    await t.asSystem((tx) => tx.query(`delete from player_guardians where player_id = $1 and guardian_id = $2`, [DEV_IDS.yusuf, DEV_IDS.sara]));
+    const after = await t.asUser(staffParent, (tx) => loadAnswers(tx, [friday], [DEV_IDS.yusuf]));
+    expect(after.get(answerKey(friday, DEV_IDS.yusuf))).toMatchObject({ answer: "away", by: { id: DEV_IDS.sara, name: null } });
+  });
+
   it("shows no name for an answer saved without a guardian", async () => {
     await t.asSystem((tx) => tx.query(`insert into availability (session_id, player_id, answer) values ($1, $2, 'coming')`, [friday, DEV_IDS.musa]));
     const seen = await t.asUser(sara, (tx) => loadAnswers(tx, [friday], [DEV_IDS.musa]));
