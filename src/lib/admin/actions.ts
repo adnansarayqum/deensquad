@@ -8,7 +8,7 @@ import { coachLimit, isGroupCoach, requireAdmin, requireStaff, staffGroups } fro
 import { UUID, normaliseEmail } from "../auth/tokens";
 import { appUrl } from "../config";
 import { londonTime } from "../dates";
-import { asUser } from "../db";
+import { asSystem, asUser } from "../db";
 import { AGE_GROUPS, isAgeGroup, type AgeGroup } from "../domain";
 import { canSendEmail } from "../email/send";
 import { cleanBody, cleanPhone, cleanText, dialable } from "../validate";
@@ -21,6 +21,7 @@ import { canManageSquad, saveSquad } from "../squads/squads";
 import { enqueue } from "../background";
 import { runChase } from "../chase/run";
 import { sendInvites } from "./invites";
+import { deleteLeftoverAccounts, removeChildRecord, unlinkGuardianRecord } from "./remove";
 import { TOPICS } from "./topics";
 
 // Club admin Server Actions. Each checks the role first, then writes as that person,
@@ -230,10 +231,8 @@ export async function unlinkGuardian(formData: FormData): Promise<void> {
   const child = id(formData.get("child"));
   const guardian = id(formData.get("guardian"));
   if (!child || !guardian) return;
-  await asUser(user.id, async (tx) => {
-    await tx.query(`delete from player_guardians where player_id = $1 and guardian_id = $2`, [child, guardian]);
-    await tx.query(`delete from guardians g where g.id = $1 and not exists (select 1 from player_guardians where guardian_id = g.id)`, [guardian]);
-  });
+  const removed = await asUser(user.id, (tx) => unlinkGuardianRecord(tx, child, guardian));
+  await asSystem((tx) => deleteLeftoverAccounts(tx, removed));
   refresh();
 }
 
@@ -241,14 +240,9 @@ export async function removeChild(formData: FormData): Promise<void> {
   const user = await requireAdmin();
   const child = id(formData.get("child"));
   if (!child || formData.get("confirm") !== "yes") return;
-  await asUser(user.id, async (tx) => {
-    const guardians = await tx.query<{ guardian_id: string }>(`select guardian_id from player_guardians where player_id = $1`, [child]);
-    await tx.query(`delete from players where id = $1`, [child]);
-    // Parents with no other children at the club go too.
-    await tx.query(`delete from guardians g where g.id = any($1::uuid[]) and not exists (select 1 from player_guardians where guardian_id = g.id)`, [
-      guardians.map((g) => g.guardian_id),
-    ]);
-  });
+  // Parents with no other children at the club go too, with their sign-ins.
+  const removed = await asUser(user.id, (tx) => removeChildRecord(tx, child));
+  await asSystem((tx) => deleteLeftoverAccounts(tx, removed));
   redirect("/admin/families?removed=1");
 }
 
