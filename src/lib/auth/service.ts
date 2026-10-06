@@ -10,13 +10,16 @@ export const SIGN_IN_MINUTES = 15;
 export const INVITE_DAYS = 7;
 export const MAX_CODE_ATTEMPTS = 5;
 export const SESSION_DAYS = 90;
-export const LIMITS = { perEmailPerHour: 5, perIpPerHour: 30 };
+// Families at one venue often share an internet address (its wifi, or a mobile network), so the per-address
+// limit is generous. Sign-ups (an email the club doesn't have yet) also have a club-wide hourly cap, so a flood
+// of made-up sign-ups can't fill the families list or send hundreds of emails; ordinary sign-ins never count towards it.
+export const LIMITS = { perEmailPerHour: 5, perIpPerHour: 100, signUpsPerHour: 300 };
 
 export type IssuedRequest = { requestId: string; email: string; code: string | null; token: string; expiresAt: Date };
 
 export type IssueResult =
   | { ok: true; request: IssuedRequest }
-  | { ok: false; reason: "unknown" | "rate_limited" };
+  | { ok: false; reason: "unknown" | "rate_limited"; clubWide?: true };
 
 /** Someone the club has added: a parent or a member of staff. */
 export async function isKnownEmail(tx: Queryable, email: string): Promise<boolean> {
@@ -59,6 +62,16 @@ export async function issueSignIn(
       [email, hourAgo, ip ?? ""],
     );
     if (byEmail >= LIMITS.perEmailPerHour || (ip && byIp >= LIMITS.perIpPerHour)) return { ok: false, reason: "rate_limited" };
+    if (registration) {
+      const [{ signUps }] = await tx.query<{ signUps: number }>(
+        `select count(*)::int as "signUps" from auth.sign_in_requests where registration is not null and created_at > $1`,
+        [hourAgo],
+      );
+      if (signUps >= LIMITS.signUpsPerHour) {
+        console.error(`[sign-up] club-wide limit reached: ${signUps} sign-up requests in the past hour. New sign-ups are refused until it drops.`);
+        return { ok: false, reason: "rate_limited", clubWide: true };
+      }
+    }
   }
 
   // Old requests are no use to anyone; keep the table small.

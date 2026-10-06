@@ -71,6 +71,39 @@ describe("sign-in codes", () => {
     const nextHour = await t.asSystem((tx) => issueSignIn(tx, { email: DEV_EMAILS.parent, ip: "9.9.9.9", now: later(70), purpose: "sign_in" }));
     expect(nextHour.ok).toBe(true);
   });
+
+  it("lets about 100 codes an hour come from one address, since families share a venue's wifi", async () => {
+    const emails = await t.asSystem((tx) => tx.query<{ email: string }>(`select email from guardians where email like 'parent%' order by email`));
+    expect(LIMITS.perIpPerHour).toBe(100);
+    await t.asSystem((tx) =>
+      tx.query(
+        `insert into auth.sign_in_requests (email, purpose, link_hash, ip, created_at, expires_at)
+         select 'someone' || n || '@example.com', 'sign_in', 'ip-' || n, '5.5.5.5', $1, $2 from generate_series(1, 99) n`,
+        [later(1), later(16)],
+      ),
+    );
+    const hundredth = await t.asSystem((tx) => issueSignIn(tx, { email: emails[0].email, ip: "5.5.5.5", now: later(2), purpose: "sign_in" }));
+    expect(hundredth.ok).toBe(true);
+    const blocked = await t.asSystem((tx) => issueSignIn(tx, { email: emails[1].email, ip: "5.5.5.5", now: later(3), purpose: "sign_in" }));
+    expect(blocked).toEqual({ ok: false, reason: "rate_limited" });
+  });
+
+  it("refuses sign-up 301 in an hour across the club, while parents the club has can still sign in", async () => {
+    await t.asSystem((tx) =>
+      tx.query(
+        `insert into auth.sign_in_requests (email, purpose, link_hash, ip, created_at, expires_at, registration)
+         select 'new' || n || '@example.org', 'sign_in', 'signup-' || n, 'ip-' || n, $1, $2, '{"firstName":"A","lastName":"B","phone":null,"children":[]}'::jsonb
+         from generate_series(1, $3::int) n`,
+        [later(1), later(16), LIMITS.signUpsPerHour],
+      ),
+    );
+    const registration = { firstName: "Hana", lastName: "Rahman", phone: null, children: [{ firstName: "Ilyas", lastName: "Rahman", dateOfBirth: "2017-05-01", ageGroup: "U10" as const }] };
+    const signUp = await t.asSystem((tx) => issueSignIn(tx, { email: "hana@example.com", ip: "7.7.7.7", now: later(5), purpose: "sign_in", registration }));
+    expect(signUp).toEqual({ ok: false, reason: "rate_limited", clubWide: true });
+    expect((await issue(DEV_EMAILS.parent, later(5))).code).toMatch(/^\d{6}$/);
+    const nextHour = await t.asSystem((tx) => issueSignIn(tx, { email: "hana@example.com", ip: "7.7.7.7", now: later(62), purpose: "sign_in", registration }));
+    expect(nextHour.ok).toBe(true);
+  });
 });
 
 describe("sign-in links", () => {

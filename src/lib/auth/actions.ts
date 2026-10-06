@@ -3,22 +3,23 @@
 import { randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { sendErrorAlert } from "../alerts";
 import { adminEmails, appUrl } from "../config";
 import { asSystem } from "../db";
 import { canSendEmail, sendEmails } from "../email/send";
 import { newFamilyEmail, signInEmail } from "../email/templates";
 import { PENDING_COOKIE, SESSION_COOKIE, cookieOptions, safeNext } from "./cookies";
+import { clientIpFrom } from "./ip";
 import { readPending, type Pending } from "./pending";
 import { parseRegistration, type Registered } from "./registration";
-import { SESSION_DAYS, SIGN_IN_MINUTES, createSession, deleteSession, ensureBootstrapAdmin, issueSignIn, verifyCode, verifyLink } from "./service";
+import { LIMITS, SESSION_DAYS, SIGN_IN_MINUTES, createSession, deleteSession, ensureBootstrapAdmin, issueSignIn, verifyCode, verifyLink } from "./service";
 import { cleanCode, maskEmail, normaliseEmail } from "./tokens";
 
 export type FormState = { error?: string };
 
 
 async function clientIp(): Promise<string | null> {
-  const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null;
+  return clientIpFrom(await headers());
 }
 
 /** Where links in emails point. In development, the address the browser used. */
@@ -67,7 +68,12 @@ export async function register(_prev: FormState, formData: FormData): Promise<Fo
 
   const ip = await clientIp();
   const result = await asSystem((tx) => issueSignIn(tx, { email, ip, now: new Date(), purpose: "sign_in", registration: check.registration }));
-  if (!result.ok) return { error: "That's a lot of codes in one hour. Wait a little while, then try again." };
+  if (!result.ok) {
+    if (result.clubWide) {
+      await sendErrorAlert({ message: `Sign-ups paused: more than ${LIMITS.signUpsPerHour} in the past hour across the club.`, path: "/sign-up", kind: "action" });
+    }
+    return { error: "That's a lot of codes in one hour. Wait a little while, then try again." };
+  }
   const { requestId, code, token } = result.request;
   const base = await baseUrl();
   const { failed } = await sendEmails([signInEmail({ to: email, code: code!, link: base ? `${base}/sign-in/link?token=${token}` : null, appUrl: base })]);
