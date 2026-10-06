@@ -51,8 +51,28 @@ export function scrubUser(user: unknown): MonitoringUser | undefined {
   return { id, segment: segment as Segment };
 }
 
+/**
+ * A clicked or typed-in element as Sentry describes it (`div.card > button.btn-chunky[aria-label="Mark Yusuf here"]`),
+ * cut down to tags and classes: attribute selectors (aria-label, title, alt, name, placeholder, value, ...), ids and
+ * anything quoted can hold a child's name.
+ */
+export function scrubUiSelector(selector: string): string {
+  return selector
+    .replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, "")
+    .replace(/\[[^\]]*\]?/g, "")
+    .replace(/#[^\s.>[]*/g, "")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
 export function scrubBreadcrumb(crumb: Breadcrumb): Breadcrumb {
   const out: Breadcrumb = { ...crumb };
+  // Clicks and typing: the element's tags and classes only, and no extra data.
+  if (typeof out.category === "string" && out.category.startsWith("ui.")) {
+    if (typeof out.message === "string") out.message = scrubUiSelector(out.message);
+    delete out.data;
+    return out;
+  }
   if (typeof out.message === "string") out.message = scrubText(out.message);
   if (out.data) out.data = deepScrub(out.data) as Breadcrumb["data"];
   return out;
@@ -122,10 +142,11 @@ export function scrubSpan<S extends { name: string; attributes: object }>(span: 
 
 const NOISE = [
   /ResizeObserver loop/i,
-  // Lost signal mid-request: Safari says "Load failed", Firefox "NetworkError when attempting to fetch resource", Chrome "Failed to fetch".
-  /^(TypeError: )?Load failed$/i,
+  // Lost signal mid-request: Safari says "Load failed", Firefox "NetworkError when attempting to fetch resource", Chrome "Failed to fetch"
+  // (Sentry can add the host in brackets: "Failed to fetch (app.example)").
+  /^(TypeError: )?Load failed( \(.*\))?$/i,
   /NetworkError when attempting to fetch resource/i,
-  /^(TypeError: )?Failed to fetch$/i,
+  /^(TypeError: )?Failed to fetch( \(.*\))?$/i,
 ];
 const EXTENSION = /^(chrome|moz|safari|safari-web|ms-browser)-extension:\/\//i;
 

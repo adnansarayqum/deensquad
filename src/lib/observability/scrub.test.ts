@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ErrorEvent, Event } from "@sentry/nextjs";
-import { beforeSend, isIgnored, scrubBreadcrumb, scrubEvent, scrubSpan, scrubText } from "./scrub";
+import { beforeSend, isIgnored, scrubBreadcrumb, scrubEvent, scrubSpan, scrubText, scrubUiSelector } from "./scrub";
 
 const ID = "3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b";
 
@@ -83,6 +83,26 @@ describe("scrubBreadcrumb", () => {
     expect(scrubBreadcrumb({ category: "ui.click", message: "button.btn-chunky" })).toEqual({ category: "ui.click", message: "button.btn-chunky" });
     expect(scrubBreadcrumb({ category: "xhr", data: { url: "https://app.example/x?y=1" } }).data).toEqual({ url: "https://app.example/x" });
   });
+
+  it("keeps only tags and classes of a clicked or typed-in element: no labels, titles, values or ids that name a child", () => {
+    const click = scrubBreadcrumb({
+      category: "ui.click",
+      message: `main.flex > div.card > button.btn-chunky.btn-grass[aria-label="Mark Ahmed K. here"]`,
+      data: { textContent: "Mark Ahmed K. here" },
+    });
+    expect(click).toEqual({ category: "ui.click", message: "main.flex > div.card > button.btn-chunky.btn-grass" });
+    const input = scrubBreadcrumb({
+      category: "ui.input",
+      message: `form > input#child-Yusuf-Khan.field[name="Yusuf's initials"][placeholder='e.g. YK'][value="YK"]`,
+    });
+    expect(input.message).toBe("form > input.field");
+    for (const attr of ["aria-label", "title", "alt", "name", "placeholder", "value", "data-sentry-component"]) {
+      expect(scrubUiSelector(`img.photo[${attr}="Sana Khan, U10"]`)).toBe("img.photo");
+    }
+    // A label with a ] in it, an unclosed bracket, and a Tailwind class with brackets.
+    expect(scrubUiSelector(`a.text-[15px][title="Ahmed [U10] K"] > span[title="Bilal`)).toBe("a.text- > span");
+    expect(JSON.stringify(scrubBreadcrumb({ category: "ui.click", message: `li[alt='Musa Ali']` }))).not.toMatch(/Musa|Ali/);
+  });
 });
 
 describe("isIgnored / beforeSend", () => {
@@ -100,6 +120,10 @@ describe("isIgnored / beforeSend", () => {
     expect(isIgnored(err("Load failed"))).toBe(true);
     expect(isIgnored(err("NetworkError when attempting to fetch resource."))).toBe(true);
     expect(isIgnored(err("Failed to fetch"))).toBe(true);
+    // As Chromium's "Failed to fetch" reads once Sentry has added the host.
+    expect(isIgnored(err("Failed to fetch (app.thedeensquadfootballacademy.co.uk)"))).toBe(true);
+    expect(isIgnored(err("TypeError: Load failed (app.example)"))).toBe(true);
+    expect(isIgnored(err("Failed to fetch the order"))).toBe(false);
     expect(isIgnored(err("Cannot read properties of undefined", "chrome-extension://abc/content.js"))).toBe(true);
   });
 
