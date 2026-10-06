@@ -444,6 +444,7 @@ export async function updateSession(_prev: FormState, formData: FormData): Promi
   const parts = [
     "Saved.",
     removed ? `${removed} ${removed === 1 ? "child" : "children"} no longer in its groups came out of the squad.` : null,
+    result.saved.squadEmptied ? "Nobody is left in the squad, so the session is open to all its groups' families again. Pick a squad if it's only for some." : null,
     result.news ? "The families have been told." : null,
   ];
   return { saved: true, message: parts.filter(Boolean).join(" ") };

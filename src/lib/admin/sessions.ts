@@ -23,13 +23,14 @@ export async function cancelSession(
   reason: string | null = null,
 ): Promise<boolean> {
   if (!(await sessionIsMine(tx, id, mine))) return false;
-  await tx.query(
+  // True only when this call actually flipped it, so a double tap or a second tab can't post the notice twice.
+  const flipped = await tx.query(
     cancel
-      ? `update sessions set cancelled_at = coalesce(cancelled_at, now()), cancel_reason = $2 where id = $1`
-      : `update sessions set cancelled_at = null, cancel_reason = null where id = $1`,
+      ? `update sessions set cancelled_at = now(), cancel_reason = $2 where id = $1 and cancelled_at is null returning id`
+      : `update sessions set cancelled_at = null, cancel_reason = null where id = $1 and cancelled_at is not null returning id`,
     cancel ? [id, reason] : [id],
   );
-  return true;
+  return flipped.length > 0;
 }
 
 /** Deletes a session nobody has been checked in to, so attendance history is never lost. */
@@ -134,7 +135,7 @@ export type SessionEdit = {
   notes: string | null;
 };
 
-export type EditResult = { ok: true; squadRemoved: number } | { ok: false; reason: "not_found" | "not_yours" };
+export type EditResult = { ok: true; squadRemoved: number; squadEmptied: boolean } | { ok: false; reason: "not_found" | "not_yours" };
 
 /**
  * Saves a session's details. A group coach edits only sessions whose groups are all theirs, and only to groups
@@ -161,7 +162,9 @@ export async function editSession(tx: Queryable, id: string, edit: SessionEdit, 
   if (removed.length) {
     await tx.query(`delete from availability where session_id = $1 and player_id = any ($2::uuid[])`, [id, removed.map((r) => r.player_id)]);
   }
-  return { ok: true, squadRemoved: removed.length };
+  // Everyone picked came out: with no squad rows the session is open to the whole groups again.
+  const left = removed.length ? await tx.query(`select 1 from session_squads where session_id = $1 limit 1`, [id]) : [1];
+  return { ok: true, squadRemoved: removed.length, squadEmptied: left.length === 0 };
 }
 
 // Telling the families ------------------------------------------------------------

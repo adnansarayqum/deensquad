@@ -58,7 +58,10 @@ describe("a U7 coach changing sessions", () => {
     );
     expect(await t.asUser(coach, (tx) => cancelSession(tx, id, true, ["U7"]))).toBe(true);
     expect(await cancelledAt(id)).not.toBeNull();
+    // A double tap or a second tab changes nothing, so no second notice is posted.
+    expect(await t.asUser(coach, (tx) => cancelSession(tx, id, true, ["U7"]))).toBe(false);
     expect(await t.asUser(coach, (tx) => cancelSession(tx, id, false, ["U7"]))).toBe(true);
+    expect(await t.asUser(coach, (tx) => cancelSession(tx, id, false, ["U7"]))).toBe(false);
     expect(await cancelledAt(id)).toBeNull();
     expect(await t.asUser(coach, (tx) => removeSession(tx, id, ["U7"]))).toBe(true);
     expect(await cancelledAt(id)).toBeUndefined();
@@ -138,7 +141,7 @@ describe("editing a session", () => {
   it("saves the details, keeps answers when the time moves, and parents see the notes", async () => {
     await t.asSystem((tx) => tx.query(`insert into availability (session_id, player_id, answer) values ($1, $2, 'coming')`, [cup, DEV_IDS.yusuf]));
     const result = await t.asUser(admin, (tx) => editSession(tx, cup, edit(), null));
-    expect(result).toEqual({ ok: true, squadRemoved: 0 });
+    expect(result).toEqual({ ok: true, squadRemoved: 0, squadEmptied: false });
     const parent = await t.signIn(DEV_EMAILS.parent);
     const sessions = await t.asUser(parent, async (tx) => loadUpcomingSessions(tx, (await loadFamily(tx))!.children, now));
     const shown = sessions.find((s) => s.id === cup)!;
@@ -158,11 +161,17 @@ describe("editing a session", () => {
         await tx.query(`insert into availability (session_id, player_id, answer) values ($1, $2, 'coming')`, [cup, p]);
       }
     });
-    expect(await t.asUser(admin, (tx) => editSession(tx, cup, edit({ groups: ["U10"] }), null))).toEqual({ ok: true, squadRemoved: 1 });
+    expect(await t.asUser(admin, (tx) => editSession(tx, cup, edit({ groups: ["U10"] }), null))).toEqual({ ok: true, squadRemoved: 1, squadEmptied: false });
     const left = await t.asSystem((tx) =>
       tx.query<{ player_id: string }>(`select player_id from session_squads where session_id = $1 union all select player_id from availability where session_id = $1`, [cup]),
     );
     expect(left.map((r) => r.player_id)).toEqual([DEV_IDS.yusuf, DEV_IDS.yusuf]);
+    // Taking U10 off too empties the squad, which reopens the session to its groups: the result says so.
+    expect(await t.asUser(admin, (tx) => editSession(tx, cup, edit({ groups: ["U12"] }), null))).toEqual({
+      ok: true,
+      squadRemoved: 1,
+      squadEmptied: true,
+    });
   });
 
   it("is refused for a group coach outside their groups, before or after the change", async () => {
@@ -173,7 +182,7 @@ describe("editing a session", () => {
       ),
     );
     expect(await t.asUser(coach, (tx) => editSession(tx, id, edit({ groups: ["U7", "U10"] }), ["U7"]))).toEqual({ ok: false, reason: "not_yours" });
-    expect(await t.asUser(coach, (tx) => editSession(tx, id, edit({ groups: ["U7"], title: "U7 match" }), ["U7"]))).toEqual({ ok: true, squadRemoved: 0 });
+    expect(await t.asUser(coach, (tx) => editSession(tx, id, edit({ groups: ["U7"], title: "U7 match" }), ["U7"]))).toEqual({ ok: true, squadRemoved: 0, squadEmptied: false });
   });
 });
 

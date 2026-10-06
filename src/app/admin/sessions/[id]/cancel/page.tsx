@@ -19,7 +19,7 @@ export default async function CancelSessionPage({ params }: PageProps<"/admin/se
   const session = await asUser(user.id, (tx) => loadAdminSession(tx, id, coachLimit(user.staff)));
   if (!session) notFound();
   const restore = session.cancelled;
-  const who = session.picked ? `the parents of the ${session.picked} children in the squad` : `${session.ageGroups.join(", ")} families`;
+  const who = session.picked ? `the parents of the ${session.picked === 1 ? "1 child" : `${session.picked} children`} in the squad` : `${session.ageGroups.join(", ")} families`;
 
   return (
     <div className="flex flex-col gap-4 lg:max-w-3xl">
