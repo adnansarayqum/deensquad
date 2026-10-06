@@ -5,21 +5,12 @@ import { AdminTitle, Notice } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
 import { inviteParents } from "@/lib/admin/actions";
 import { loadFamilies, loadOverview, type FamilyRow } from "@/lib/admin/data";
-import { NEEDS, isNeed, type Need } from "@/lib/admin/needs";
+import { familiesFilter, familiesHref, familyChildHref } from "@/lib/admin/families-link";
+import { NEEDS, type Need } from "@/lib/admin/needs";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
-import { isAgeGroup, type AgeGroup } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Families" };
-
-function familiesHref({ group, need, q }: { group: AgeGroup | null; need: Need | null; q: string }): string {
-  const params = new URLSearchParams();
-  if (group) params.set("group", group);
-  if (need) params.set("need", need);
-  if (q) params.set("q", q);
-  const query = params.toString();
-  return query ? `/admin/families?${query}` : "/admin/families";
-}
 
 function appStatus(f: FamilyRow): "in" | "invited" | "not" {
   return f.inApp ? "in" : f.guardians.some((g) => g.invited) ? "invited" : "not";
@@ -29,9 +20,8 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
   const user = await requireStaff();
   const params = await searchParams;
   const mine = staffGroups(user.staff);
-  const group = isAgeGroup(params.group) && mine.includes(params.group) ? params.group : null;
-  const need = isNeed(params.need) ? params.need : null;
-  const q = typeof params.q === "string" ? params.q.trim().slice(0, 60) : "";
+  const filter = familiesFilter(params, mine);
+  const { group, need, q } = filter;
   const [families, overview] = await asUser(user.id, (tx) =>
     Promise.all([loadFamilies(tx, group, mine, { need, search: q || null }), loadOverview(tx)]),
   );
@@ -147,7 +137,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
               const status = appStatus(f);
               return (
                 <li key={f.id}>
-                  <Link href={`/admin/families/${f.id}`} className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3">
+                  <Link href={familyChildHref(f.id, filter)} className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-pitch font-display text-[20px] text-on-pitch">
                       {f.shirtNumber ?? f.firstName[0]}
                     </span>
@@ -213,7 +203,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
                   return (
                     <tr key={f.id} className="border-t border-line align-middle hover:bg-cream">
                       <th scope="row" className="px-3 text-left">
-                        <Link href={`/admin/families/${f.id}`} className="flex min-h-12 items-center font-bold underline decoration-line underline-offset-4">
+                        <Link href={familyChildHref(f.id, filter)} className="flex min-h-12 items-center font-bold underline decoration-line underline-offset-4">
                           {f.firstName} {f.lastName}
                         </Link>
                       </th>

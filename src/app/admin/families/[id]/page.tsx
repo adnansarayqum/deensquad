@@ -6,8 +6,9 @@ import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
 import { removeChild, resendInvite, saveGuardian, setPayment, unlinkGuardian, updateChild } from "@/lib/admin/actions";
 import { loadChild } from "@/lib/admin/data";
+import { familiesFilter, familiesHref } from "@/lib/admin/families-link";
 import { UUID } from "@/lib/auth/tokens";
-import { coachLimit, requireStaff } from "@/lib/auth/session";
+import { coachLimit, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { AGE_GROUPS, type PaymentState } from "@/lib/domain";
 
@@ -35,7 +36,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
   return (
     // Forms and detail read best at phone-to-tablet width, even on a computer.
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <Link href="/admin/families" className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
+      <Link href={familiesHref(familiesFilter(flags, staffGroups(user.staff)))} className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
         ← Families
       </Link>
       <div className="flex items-center gap-3">

@@ -730,6 +730,27 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await coachContext.close();
 });
 
+test("families: a filtered list keeps its filter after opening a child and tapping Families, on a phone and a computer", async ({ browser }) => {
+  test.skip(!existsSync(ADMIN_STATE), "run with the earlier tests: needs their saved sign-in");
+  const baseURL = "http://localhost:3100";
+  for (const [name, options] of [
+    ["phone", { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } }],
+    ["computer", { viewport: { width: 1280, height: 800 } }],
+  ] as const) {
+    const context = await browser.newContext({ ...options, baseURL, storageState: ADMIN_STATE });
+    const page = await context.newPage();
+    await page.goto("/admin/families?need=contract");
+    const child = (name === "phone" ? page.locator("main ul") : page.getByRole("table", { name: /^Children/ })).locator('a[href^="/admin/families/"]').first();
+    await expect(child, name).toHaveAttribute("href", /^\/admin\/families\/[0-9a-f-]{36}\?need=contract$/);
+    await child.click();
+    await expect(page, name).toHaveURL(/\/admin\/families\/[0-9a-f-]{36}\?need=contract$/);
+    await page.getByRole("link", { name: "← Families" }).click();
+    await expect(page, name).toHaveURL(/\/admin\/families\?need=contract$/);
+    await expect(page.locator("#need"), name).toHaveValue("contract");
+    await context.close();
+  }
+});
+
 test("privacy: anyone can read the notice from the sign-in screen", async ({ page }) => {
   await page.goto("/sign-in");
   const href = await page.getByRole("link", { name: "How the club uses your information" }).getAttribute("href");
