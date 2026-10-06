@@ -3,6 +3,7 @@
 import { useOptimistic, useTransition } from "react";
 import { Check, X } from "lucide-react";
 import type { Availability } from "@/lib/domain";
+import { track } from "@/lib/analytics";
 import { setAvailability } from "@/lib/parent/actions";
 
 export function AvailabilityPicker({
@@ -31,6 +32,7 @@ export function AvailabilityPicker({
     startTransition(async () => {
       setOptimistic(value);
       await setAvailability(sessionId, playerId, value);
+      track("availability_answered", { answer: value });
     });
 
   const base = `flex ${compact ? "min-h-[64px] flex-row gap-2 text-base" : "min-h-[100px] flex-col gap-1.5 text-[17px]"} flex-1 items-center justify-center rounded-app border-2 font-extrabold transition-transform active:translate-y-1 active:shadow-none`;

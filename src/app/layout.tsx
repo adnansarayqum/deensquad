@@ -5,9 +5,10 @@ import "@fontsource/dm-sans/500.css";
 import "@fontsource/dm-sans/700.css";
 import "@fontsource/dm-sans/800.css";
 import "./globals.css";
+import { Analytics } from "@/components/observability/Analytics";
 import { MonitoringUser } from "@/components/observability/MonitoringUser";
 import { getCurrentUser } from "@/lib/auth/session";
-import { SENTRY_CLIENT_ON } from "@/lib/observability/config";
+import { analyticsConfig, SENTRY_CLIENT_ON } from "@/lib/observability/config";
 import { monitoringUser } from "@/lib/observability/user";
 
 export const metadata: Metadata = {
@@ -37,7 +38,9 @@ async function SignedInMonitoringUser() {
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  // Browser error reports (Sentry) are off unless the app was built with them: see src/lib/observability/config.ts.
+  // Page counting (Plausible or Umami) and browser error reports (Sentry) are each off unless configured:
+  // see src/lib/observability/config.ts. Analytics is read at run time; Sentry in the browser at build time.
+  const analytics = analyticsConfig();
   return (
     <html lang="en-GB" className="h-full antialiased">
       <head>
@@ -50,6 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full bg-cream text-ink">
         {children}
         {SENTRY_CLIENT_ON ? <SignedInMonitoringUser /> : null}
+        {analytics ? <Analytics config={analytics} /> : null}
       </body>
     </html>
   );

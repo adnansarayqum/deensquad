@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Check, Compass, Copy, Ellipsis, EllipsisVertical, SquarePlus } from "lucide-react";
 import { AppHeader } from "@/components/ui";
+import { track } from "@/lib/analytics";
 import { installGateMode, readDismissCount, readSessionDismissed, recordDismiss, type InstallGateMode } from "@/lib/install-gate";
 
 /** The browser's install prompt, stashed on window by the inline script in the root layout. */
@@ -62,7 +63,21 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
   const dismiss = useCallback(() => {
     recordDismiss();
     setView(HIDDEN);
+    track("install_gate_dismissed");
   }, []);
+
+  // Counted once each time it opens (not again when, say, the browser's install prompt turns up meanwhile).
+  const shownMode = open ? view.mode : null;
+  const counted = useRef(false);
+  useEffect(() => {
+    if (!shownMode) {
+      counted.current = false;
+      return;
+    }
+    if (counted.current) return;
+    counted.current = true;
+    track("install_gate_shown", { mode: shownMode });
+  }, [shownMode]);
 
   useEffect(() => {
     if (!open || !dialog.current) return;
@@ -132,7 +147,10 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
     try {
       await event.prompt();
       const { outcome } = await event.userChoice;
-      if (outcome === "accepted") setInstalled(true);
+      if (outcome === "accepted") {
+        setInstalled(true);
+        track("install_prompt_accepted");
+      }
     } catch {
       // The prompt can only be used once; fall through to the manual steps.
     }
