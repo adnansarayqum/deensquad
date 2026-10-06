@@ -353,13 +353,14 @@ function NewsSection({ d }: { d: Dashboard }) {
       <ul className="grid grid-cols-2 gap-x-4 sm:grid-cols-3">
         {CHANNELS.map((c) => (
           <li key={c}>
-            <Link href="/admin/families?need=unread" aria-label={`${n.reminders[c]} ${CHANNEL_LABEL[c].toLowerCase()}`} className="flex min-h-12 items-center justify-between gap-2 border-b border-line text-[14px]">
+            <Link href="/admin/families?need=unread" aria-label={`${n.reminders[c]} ${CHANNEL_LABEL[c].toLowerCase()}. See parents behind on news`} className="flex min-h-12 items-center justify-between gap-2 border-b border-line text-[14px]">
               <span>{CHANNEL_LABEL[c]}</span>
               <b className="tabular-nums">{n.reminders[c]}</b>
             </Link>
           </li>
         ))}
       </ul>
+      <p className="text-[13px] text-ink-muted">Each count opens the parents still behind on news.</p>
 
       <Link href="/admin/families?need=unread" aria-label={`${n.behind} ${BEHIND_TEXT(n.behind)}`} className="flex min-h-12 items-center gap-3 rounded-dash border-2 border-line px-3 py-2 hover:bg-cream">
         <span className={`font-display text-[36px] leading-none tabular-nums ${n.behind > 0 ? "text-kit-orange" : "text-ink"}`}>{n.behind}</span>
