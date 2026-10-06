@@ -29,8 +29,9 @@ export default async function FilePage({ params, searchParams }: PageProps<"/fil
   );
   if (!file) notFound();
 
-  // A plan or sheet is titled by what it is; the coach's file name is kept for Download.
-  const title = file.kind ? attachmentTitle(file.kind, file) : file.name;
+  // Parents see a plan or sheet titled by what it is ("Session plan (PDF)"); staff see the file name they uploaded,
+  // so they can tell their files apart. The file name is always kept for Download.
+  const title = file.kind && !user.staff ? attachmentTitle(file.kind, file) : file.name;
   const back = backPath(from, user.guardian ? "/friday" : "/coach");
   const src = `/api/files/${file.id}`;
   const downloadHref = `${src}?download=1`;

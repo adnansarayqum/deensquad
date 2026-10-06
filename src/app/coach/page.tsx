@@ -9,7 +9,7 @@ import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { clock, shortDay } from "@/lib/dates";
 import { registerClosedMessage, registerOpen } from "@/lib/staff/checkin";
-import { FLAG_WORDS, flagSummary } from "@/lib/staff/flags";
+import { flagSummary } from "@/lib/staff/flags";
 import { ALL_GROUPS, loadRegister, summarise, type RegisterRow } from "@/lib/staff/register";
 
 export const metadata: Metadata = { title: "Register" };
@@ -129,9 +129,6 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
                 <span className="text-[13px] text-ink-muted">
                   {r.ageGroup}s · {clock(r.checkedInAt!)}
                 </span>
-                {r.flags.length ? (
-                  <span className="text-[13px] font-bold text-kit-orange">Needs a word: {r.flags.map((f) => FLAG_WORDS[f]).join(" · ")}</span>
-                ) : null}
               </span>
               <UndoCheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} disabled={!open} />
             </div>
