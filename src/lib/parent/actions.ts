@@ -13,9 +13,12 @@ import { saveAnswer } from "./data";
 // Parent Server Actions. Each checks the session, validates its input, then writes as that parent,
 // so row level security (and the database functions) decide whether the write is allowed.
 
-export async function acknowledgeAnnouncement(announcementId: string): Promise<void> {
+/** A tap's answer: nothing when it saved, or why it couldn't (shown beside the tap; see `TapProblem`). */
+export type TapResult = { error?: string };
+
+export async function acknowledgeAnnouncement(announcementId: string): Promise<TapResult> {
   const user = await requireParent();
-  if (!UUID.test(announcementId)) return;
+  if (!UUID.test(announcementId)) return { error: "That didn't save. Reload the page and try again." };
   await asUser(user.id, (tx) =>
     tx.query(
       `insert into announcement_reads (announcement_id, guardian_id) values ($1, my_guardian_id()) on conflict do nothing`,
@@ -23,13 +26,18 @@ export async function acknowledgeAnnouncement(announcementId: string): Promise<v
     ),
   );
   refresh();
+  return {};
 }
 
-export async function setAvailability(sessionId: string, playerId: string, answer: Availability): Promise<void> {
+export async function setAvailability(sessionId: string, playerId: string, answer: Availability): Promise<TapResult> {
   const user = await requireParent();
-  if (!UUID.test(sessionId) || !UUID.test(playerId) || (answer !== "coming" && answer !== "away")) return;
-  await asUser(user.id, (tx) => saveAnswer(tx, sessionId, playerId, answer));
+  if (!UUID.test(sessionId) || !UUID.test(playerId) || (answer !== "coming" && answer !== "away")) {
+    return { error: "That didn't save. Reload the page and try again." };
+  }
+  const saved = await asUser(user.id, (tx) => saveAnswer(tx, sessionId, playerId, answer));
+  // Refused: the session has finished or been cancelled (or the child isn't in its squad any more). Show the page as it is now.
   refresh();
+  return saved ? {} : { error: "That didn't save. This session has finished or changed, so it can't be answered now." };
 }
 
 export type ContactFormState = { error?: string; saved?: boolean };

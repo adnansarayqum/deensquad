@@ -6,9 +6,13 @@ import { UUID } from "../auth/tokens";
 import { asUser } from "../db";
 import { checkInByPass, type ScanResult } from "./checkin";
 
-export async function checkInPlayer(sessionId: string, playerId: string): Promise<void> {
+/** A tap's answer: nothing when it saved, or why it couldn't (shown beside the tap; see `TapProblem`). */
+export type TapResult = { error?: string };
+const RELOAD = { error: "That didn't save. Reload the page and try again." };
+
+export async function checkInPlayer(sessionId: string, playerId: string): Promise<TapResult> {
   const user = await requireStaff();
-  if (!UUID.test(sessionId) || !UUID.test(playerId)) return;
+  if (!UUID.test(sessionId) || !UUID.test(playerId)) return RELOAD;
   await asUser(user.id, (tx) =>
     tx.query(
       `insert into attendance (session_id, player_id, method, recorded_by) values ($1, $2, 'manual', auth.uid()) on conflict do nothing`,
@@ -16,13 +20,15 @@ export async function checkInPlayer(sessionId: string, playerId: string): Promis
     ),
   );
   refresh();
+  return {};
 }
 
-export async function undoCheckIn(sessionId: string, playerId: string): Promise<void> {
+export async function undoCheckIn(sessionId: string, playerId: string): Promise<TapResult> {
   const user = await requireStaff();
-  if (!UUID.test(sessionId) || !UUID.test(playerId)) return;
+  if (!UUID.test(sessionId) || !UUID.test(playerId)) return RELOAD;
   await asUser(user.id, (tx) => tx.query(`delete from attendance where session_id = $1 and player_id = $2`, [sessionId, playerId]));
   refresh();
+  return {};
 }
 
 /** The gate scanner: checks a child in from their pass and says what happened. */

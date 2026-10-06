@@ -1,10 +1,11 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { Check, X } from "lucide-react";
 import type { Availability } from "@/lib/domain";
 import { track } from "@/lib/analytics";
 import { setAvailability } from "@/lib/parent/actions";
+import { tapAction, TapProblem, type Problem } from "./TapProblem";
 
 export function AvailabilityPicker({
   sessionId,
@@ -27,11 +28,15 @@ export function AvailabilityPicker({
 }) {
   const [optimistic, setOptimistic] = useOptimistic(answer);
   const [pending, startTransition] = useTransition();
+  // A tap that didn't save, and the answer it was for (Try again sends it again). The buttons go back to the saved answer.
+  const [failed, setFailed] = useState<{ problem: Problem; value: Availability } | null>(null);
 
   const choose = (value: Availability) =>
     startTransition(async () => {
+      setFailed(null);
       setOptimistic(value);
-      await setAvailability(sessionId, playerId, value);
+      const problem = await tapAction(() => setAvailability(sessionId, playerId, value));
+      if (problem) return setFailed({ problem, value });
       track("availability_answered", { answer: value });
     });
 
@@ -62,6 +67,9 @@ export function AvailabilityPicker({
           {squad ? "No" : "Not this week"}
         </button>
       </div>
+      {failed && !pending ? (
+        <TapProblem problem={failed.problem} onRetry={() => choose(failed.value)} />
+      ) : (
       <p className="text-center text-sm text-ink-muted" aria-live="polite">
         {pending
           ? "Saving…"
@@ -75,6 +83,7 @@ export function AvailabilityPicker({
                 : `Saved. Coach knows ${childName} is away this week.`
               : `Tap once. ${childName}'s coach sees it straight away.`}
       </p>
+      )}
     </div>
   );
 }

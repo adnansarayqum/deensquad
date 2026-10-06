@@ -14,6 +14,10 @@ test.beforeAll(() => {
   rmSync(COACH_STATE, { force: true });
 });
 
+/** A dropped signal for a page's Server Actions (they post to the page's own address); everything else loads. */
+const noSignal = (path: string) => (url: URL) => url.pathname === path;
+const abortPosts = (route: import("@playwright/test").Route) => (route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue());
+
 let testNumber = 0;
 test.beforeEach(async ({ context }) => {
   await context.clearCookies();
@@ -65,7 +69,14 @@ test("news: a parent of two acknowledges the kit message", async ({ page }) => {
   await expect(page.getByRole("main").getByText("1 unread")).toBeVisible();
   await page.screenshot({ path: shot("news"), fullPage: true });
 
+  // No signal: the tap stays on screen, says it didn't save and offers to try again.
+  await page.route(noSignal("/news"), abortPosts);
   await page.getByRole("button", { name: "I've read this" }).click();
+  await expect(page.getByRole("alert").getByText("No signal. That didn't save.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Club news" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Something went wrong" })).toHaveCount(0);
+  await page.unroute(noSignal("/news"));
+  await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByText("You're all caught up")).toBeVisible();
 });
 
@@ -79,8 +90,16 @@ test("friday: each child gets their own answer and headcount", async ({ page }) 
   await yusuf.getByRole("button", { name: "Coming" }).click();
   await expect(page.getByText("Saved. Coach can see Yusuf is coming.")).toBeVisible();
   await expect(page.getByText("12 of 16 coming")).toBeVisible();
+  // No signal: Musa's answer doesn't save; the screen and its QR link stay, and Try again sends it once back online.
+  await page.route(noSignal("/friday"), abortPosts);
   await musa.getByRole("button", { name: "Not this week" }).click();
+  await expect(page.getByRole("alert").getByText("No signal. That didn't save.")).toBeVisible();
+  await expect(musa.getByRole("button", { name: "Not this week" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("link", { name: /Attendance QR codes/ })).toBeVisible();
+  await page.unroute(noSignal("/friday"));
+  await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByText("Saved. Coach knows Musa is away this week.")).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
   await page.screenshot({ path: shot("friday"), fullPage: true });
 
   await page.getByRole("link", { name: "News" }).click();
@@ -1031,14 +1050,18 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await here.getByRole("button", { name: "Undo check-in for Musa S." }).click();
     await expect(here.getByRole("heading", { name: "Here (0)" })).toBeVisible();
 
-    // A tap that fails without signal lands on the club's error page, which can try again.
+    // A Mark here that fails without signal keeps the register and says so on Musa's row, with Try again.
     await coach.route(offline, (route) => (route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue()));
     await coach.getByRole("button", { name: "Mark Musa S. here" }).click();
-    await expect(coach.getByRole("heading", { name: "Something went wrong" })).toBeVisible();
-    await coach.screenshot({ path: shot("error") });
-    await coach.unroute(offline);
-    await coach.getByRole("button", { name: "Try again" }).click();
+    const musaRow = coach.getByRole("listitem").filter({ hasText: "Musa S." });
+    await expect(musaRow.getByText("No signal. That didn't save.")).toBeVisible();
     await expect(coach.getByRole("heading", { name: "Gate test register" })).toBeVisible();
+    await expect(coach.getByRole("heading", { name: "Something went wrong" })).toHaveCount(0);
+    await coach.screenshot({ path: shot("coach-mark-no-signal") });
+    await coach.unroute(offline);
+    await musaRow.getByRole("button", { name: "Try again" }).click();
+    await expect(here.getByRole("heading", { name: "Here (1)" })).toBeVisible();
+    await expect(here.getByText("Marked here")).toBeVisible();
     await context.close();
   } finally {
     await browser.close();

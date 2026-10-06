@@ -112,7 +112,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
       {s.latest.length > 0 ? (
         <section aria-label="Just checked in">
           {s.latest.map((r) => (
-            <div key={r.id} className="mx-4 mt-3 flex items-center gap-3 rounded-app bg-grass-tint py-2 pr-2 pl-3.5 text-ink">
+            <div key={r.id} className="mx-4 mt-3 flex flex-wrap items-center gap-3 rounded-app bg-grass-tint py-2 pr-2 pl-3.5 text-ink">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-grass font-display text-[22px] text-on-grass">
                 {r.shirtNumber ?? r.firstName[0]}
               </span>
@@ -159,7 +159,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
             <p className="mt-1 text-label text-ink-muted uppercase">{s.notHere.length > 0 ? "Not here yet" : "Everyone expected is here"}</p>
             <ul className="flex flex-col gap-2.5">
               {s.notHere.map((r) => (
-                <li key={r.id} className="flex items-center justify-between gap-3 rounded-2xl border-2 border-line bg-paper py-2.5 pr-3 pl-3.5">
+                <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-line bg-paper py-2.5 pr-3 pl-3.5">
                   <span className="flex flex-col">
                     <span className="text-[15px] font-bold">
                       {r.firstName} {r.lastInitial}.
@@ -179,7 +179,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
                 <p className="text-[13px] text-ink-muted">If one of them turns up, mark them here.</p>
                 <ul className="flex flex-col gap-2.5">
                   {s.away.map((r) => (
-                    <li key={r.id} className="flex items-center justify-between gap-3 rounded-2xl border-2 border-line bg-cream py-2.5 pr-3 pl-3.5">
+                    <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-line bg-cream py-2.5 pr-3 pl-3.5">
                       <span className="flex flex-col items-start gap-1">
                         <span className="text-[15px] font-bold">
                           {r.firstName} {r.lastInitial}.
@@ -202,7 +202,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
               ) : (
                 <ul className="flex flex-col gap-2.5">
                   {s.here.map((r) => (
-                    <li key={r.id} className="flex items-center justify-between gap-3 rounded-2xl bg-grass-tint py-2 pr-2 pl-3.5">
+                    <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-grass-tint py-2 pr-2 pl-3.5">
                       <span className="flex flex-col">
                         <span className="text-[15px] font-bold">
                           {r.firstName} {r.lastInitial}.
