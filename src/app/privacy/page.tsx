@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { getCurrentUser } from "@/lib/auth/session";
+import { smsConfigured } from "@/lib/chase/senders";
 import { clubEmail } from "@/lib/config";
 import { analyticsConfig, sentryConfigured } from "@/lib/observability/config";
 
@@ -33,6 +34,7 @@ export default async function PrivacyPage() {
   // Listed only when they're switched on, so the notice stays true either way.
   const sentry = sentryConfigured();
   const analytics = analyticsConfig();
+  const sms = smsConfigured();
   // Back to the player screen (which links here) when signed in, otherwise to sign in.
   const back = (await getCurrentUser()) ? "/player" : "/sign-in";
   const contact = email ? (
@@ -59,7 +61,14 @@ export default async function PrivacyPage() {
 
         <Part title="What we collect">
           <p>About you, the parent or carer:</p>
-          <List items={["your name, email address and phone number", "which children you look after and your relationship to them", "whether you have read club news, and the date you signed the club contract"]} />
+          <List
+            items={[
+              "your name, email address and phone number",
+              "which children you look after and your relationship to them",
+              "whether you have read club news, and the date you signed the club contract",
+              "if you ask us to delete your account, the date you asked",
+            ]}
+          />
           <p>About your child:</p>
           <List
             items={[
@@ -92,7 +101,8 @@ export default async function PrivacyPage() {
                 <b>To keep in touch</b> (club news, reminders to read important messages, session plans): our legitimate interest in running the club well.
               </>,
               <>
-                <b>Photos</b>: only with your consent, which you can change at any time on your child&apos;s To-do list.
+                <b>Photos</b>: only with your consent, which you can change at any time on your child&apos;s To-do list. Saying yes covers photos shared
+                with parents, in the app and on the club&apos;s social media.
               </>,
             ]}
           />
@@ -124,6 +134,17 @@ export default async function PrivacyPage() {
               </>,
               <>
                 <b>Apple, Google and your browser&apos;s notification service</b> deliver notifications if you turn them on.
+              </>,
+              ...(sms
+                ? [
+                    <>
+                      <b>Twilio</b> sends text messages to your phone number when you haven&apos;t read an important club message after two days.
+                    </>,
+                  ]
+                : []),
+              <>
+                <b>WhatsApp</b> (owned by Meta): a coach or club admin may message you on WhatsApp, for example to ask you to read an important club
+                message. The app opens WhatsApp with your phone number, and the message then goes through WhatsApp, under its own privacy notice.
               </>,
               ...(sentry
                 ? [
@@ -157,6 +178,10 @@ export default async function PrivacyPage() {
             The app&apos;s database and some of the companies above are based in the United States. Where your information is handled outside the UK, we rely
             on the protections UK law requires for international transfers, such as the UK&apos;s data bridge with the US or standard contract terms.
           </p>
+          <p>
+            Every night we make a backup copy of the database, so nothing is lost if something goes wrong. The copies are kept for 30 days in a private
+            storage area run by Railway in the EU (Amsterdam), then deleted.
+          </p>
         </Part>
 
         <Part title="How long we keep it">
@@ -182,6 +207,10 @@ export default async function PrivacyPage() {
               "give you a copy to take elsewhere",
             ]}
           />
+          <p>
+            You can do two of these yourself in the app: on the player screen, under <b>Your data</b>, download a copy of what the app holds about you
+            and your children, or ask us to delete your account.
+          </p>
           <p>To use any of these rights, {contact}. We will reply within one month.</p>
           <p>
             If you are unhappy with how we have used your information, please tell us first so we can put it right. You can also complain to the
