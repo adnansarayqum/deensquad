@@ -3,30 +3,46 @@ import "server-only";
 import { issueSignIn } from "../auth/service";
 import { appUrl } from "../config";
 import { asSystem } from "../db";
+import { AGE_GROUPS } from "../domain";
 import { sendEmails, type Email } from "../email/send";
 import { inviteEmail } from "../email/templates";
+import { UNINVITED, familyWhere, type FamilyFilter } from "./data";
 
 /**
  * Emails each parent a week-long sign-in link. With `guardianIds`, only those parents
- * (a resend); otherwise everyone with an email who hasn't signed in or been invited yet.
+ * (a resend); otherwise everyone with an email who hasn't signed in or been invited yet and has
+ * a child in the Families list as filtered by `filter` (the whole club when it's left out).
  * Runs as the system because it writes sign-in requests; callers check the admin first.
  * Only parents whose email went are marked invited, so trying again reaches just the rest.
  */
-export async function sendInvites(opts: { guardianIds?: string[]; baseUrl?: string | null }): Promise<{ sent: number; failed: number }> {
+export async function sendInvites(opts: {
+  guardianIds?: string[];
+  filter?: FamilyFilter;
+  baseUrl?: string | null;
+}): Promise<{ sent: number; failed: number }> {
   const base = opts.baseUrl ?? appUrl();
   if (!base) throw new Error("Set APP_URL so invite links point at the app.");
   const now = new Date();
 
+  const where = familyWhere(opts.filter ?? { group: null, need: null, search: null }, AGE_GROUPS, 1);
   const invites = await asSystem(async (tx) => {
+    // The email names every child of the parent's, not just those in the filtered list.
     const targets = await tx.query<{ id: string; first_name: string; email: string; children: string[] }>(
-      `select g.id, g.first_name, g.email, array_agg(p.first_name order by p.date_of_birth nulls last, p.first_name) as children
-       from guardians g
-       join player_guardians pg on pg.guardian_id = g.id
-       join players p on p.id = pg.player_id
-       where g.email is not null
-         and ${opts.guardianIds ? "g.id = any($1::uuid[])" : "g.auth_user_id is null and g.invited_at is null"}
-       group by g.id`,
-      opts.guardianIds ? [opts.guardianIds] : [],
+      opts.guardianIds
+        ? `select g.id, g.first_name, g.email, array_agg(p.first_name order by p.date_of_birth nulls last, p.first_name) as children
+           from guardians g
+           join player_guardians pg on pg.guardian_id = g.id
+           join players p on p.id = pg.player_id
+           where g.email is not null and g.id = any($1::uuid[])
+           group by g.id`
+        : `select g.id, g.first_name, g.email, array_agg(p.first_name order by p.date_of_birth nulls last, p.first_name) as children
+           from guardians g
+           join player_guardians pg on pg.guardian_id = g.id
+           join players p on p.id = pg.player_id
+           where ${UNINVITED}
+             and exists (select 1 from player_guardians fpg join players p on p.id = fpg.player_id where fpg.guardian_id = g.id and ${where.sql})
+           group by g.id`,
+      opts.guardianIds ? [opts.guardianIds] : where.params,
     );
     const out: { guardianId: string; requestId: string; email: Email }[] = [];
     for (const t of targets) {

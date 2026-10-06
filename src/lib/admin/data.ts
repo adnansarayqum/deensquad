@@ -5,7 +5,7 @@ import { AGE_GROUPS, type AgeGroup, type PaymentState, type Session, type StaffR
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
 import { newsReaches } from "../squads/sql";
 import { NEEDS, type Need } from "./needs";
-import { overlaps } from "./scope";
+import { overlaps, within as allWithin } from "./scope";
 
 // Queries for the club admin. They run as a member of staff (row level security on: staff see the club).
 
@@ -54,6 +54,42 @@ export function likePattern(search: string): string {
   return `%${search.replace(/[\\%_]/g, "\\$&")}%`;
 }
 
+export type FamilyFilter = { group: AgeGroup | null; need: Need | null; search: string | null };
+
+/**
+ * The Families list's filter as a condition on `players p`, with its parameters numbered from `$first`.
+ * The list, the invite banner's count and the invites themselves all use it, so they always agree.
+ */
+export function familyWhere(
+  { group, need, search }: FamilyFilter,
+  within: readonly AgeGroup[],
+  first: number,
+): { sql: string; params: unknown[] } {
+  const [g, w, s] = [first, first + 1, first + 2].map((n) => `$${n}`);
+  return {
+    sql: `(${g}::text is null or p.age_group::text = ${g}) and p.age_group::text = any (${w}::text[])
+       and ${need ? NEEDS[need].where : "true"}
+       and (${s}::text is null or p.first_name || ' ' || p.last_name ilike ${s} or exists (
+         select 1 from player_guardians spg join guardians sg on sg.id = spg.guardian_id
+         where spg.player_id = p.id and sg.first_name || ' ' || sg.last_name ilike ${s}))`,
+    params: [group, [...within], search?.trim() ? likePattern(search.trim()) : null],
+  };
+}
+
+/** Parents with an email who haven't signed in or had an invite, with a child in the filtered list. */
+export const UNINVITED = `g.email is not null and g.auth_user_id is null and g.invited_at is null`;
+
+export async function countUninvited(tx: Queryable, filter: FamilyFilter, within: readonly AgeGroup[] = AGE_GROUPS): Promise<number> {
+  const where = familyWhere(filter, within, 1);
+  const [row] = await tx.query<{ n: number }>(
+    `select count(distinct g.id)::int as n from guardians g
+     join player_guardians pg on pg.guardian_id = g.id join players p on p.id = pg.player_id
+     where ${UNINVITED} and ${where.sql}`,
+    where.params,
+  );
+  return row.n;
+}
+
 /**
  * Every family, or one age group's; `within` limits a coach to their own groups. `need` keeps the
  * children still missing that step (see needs.ts) and `search` matches a child's or parent's name.
@@ -64,6 +100,7 @@ export async function loadFamilies(
   within: readonly AgeGroup[] = AGE_GROUPS,
   { need = null, search = null }: { need?: Need | null; search?: string | null } = {},
 ): Promise<FamilyRow[]> {
+  const where = familyWhere({ group, need, search }, within, 2);
   const rows = await tx.query<{
     id: string;
     first_name: string;
@@ -79,7 +116,7 @@ export async function loadFamilies(
   }>(
     `select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number, fg.payment::text as payment, fg.in_app,
        p.photo_consent, fg.emergency_contacts as contacts,
-       exists (select 1 from agreements ag where ag.player_id = p.id and ag.document = $3) as agreed,
+       exists (select 1 from agreements ag where ag.player_id = p.id and ag.document = $1) as agreed,
        coalesce(json_agg(json_build_object(
          'id', g.id, 'name', g.first_name || ' ' || g.last_name, 'email', g.email, 'phone', g.phone,
          'inApp', g.auth_user_id is not null, 'invited', g.invited_at is not null
@@ -88,14 +125,10 @@ export async function loadFamilies(
      join family_gaps fg on fg.player_id = p.id
      left join player_guardians pg on pg.player_id = p.id
      left join guardians g on g.id = pg.guardian_id
-     where ($1::text is null or p.age_group::text = $1) and p.age_group::text = any ($2::text[])
-       and ${need ? NEEDS[need].where : "true"}
-       and ($4::text is null or p.first_name || ' ' || p.last_name ilike $4 or exists (
-         select 1 from player_guardians spg join guardians sg on sg.id = spg.guardian_id
-         where spg.player_id = p.id and sg.first_name || ' ' || sg.last_name ilike $4))
+     where ${where.sql}
      group by p.id, fg.payment, fg.in_app, fg.emergency_contacts
      order by p.age_group, p.last_name, p.first_name`,
-    [group, [...within], CONTRACT.id, search?.trim() ? likePattern(search.trim()) : null],
+    [CONTRACT.id, ...where.params],
   );
   return rows.map((r) => ({
     id: r.id,
@@ -337,19 +370,30 @@ export async function loadNewsDetail(
 /** `picked`: how many children are in its tournament squad (0 = an ordinary session for the whole groups). */
 export type AdminSession = Session & { attended: number; coming: number; away: number; picked: number };
 
+const ADMIN_SESSION_COLUMNS = `${SESSION_COLUMNS},
+    (select count(*)::int from attendance a where a.session_id = s.id) as attended,
+    (select count(*)::int from availability v where v.session_id = s.id and v.answer = 'coming' and squad_allows(s.id, v.player_id)) as coming,
+    (select count(*)::int from availability v where v.session_id = s.id and v.answer = 'away' and squad_allows(s.id, v.player_id)) as away,
+    (select count(*)::int from session_squads q where q.session_id = s.id) as picked`;
+type AdminSessionRow = SessionRow & { attended: number; coming: number; away: number; picked: number };
+const toAdminSession = (r: AdminSessionRow): AdminSession => ({ ...toSession(r), attended: r.attended, coming: r.coming, away: r.away, picked: r.picked });
+
+/** One session for its Edit, Cancel or Delete page: null when it isn't there or isn't this member of staff's to change. */
+export async function loadAdminSession(tx: Queryable, id: string, mine: readonly AgeGroup[] | null): Promise<AdminSession | null> {
+  const [row] = await tx.query<AdminSessionRow>(`select ${ADMIN_SESSION_COLUMNS} from sessions s where s.id = $1`, [id]);
+  if (!row || (mine && !allWithin(row.age_groups, mine))) return null;
+  return toAdminSession(row);
+}
+
 /** Upcoming and recent sessions; `groups` (a group coach's own) keeps those that include one of them. */
 export async function loadSessionsAdmin(
   tx: Queryable,
   now: Date,
   groups: readonly AgeGroup[] | null = null,
 ): Promise<{ upcoming: AdminSession[]; recent: AdminSession[]; lastVenue: string | null }> {
-  const cols = `${SESSION_COLUMNS},
-    (select count(*)::int from attendance a where a.session_id = s.id) as attended,
-    (select count(*)::int from availability v where v.session_id = s.id and v.answer = 'coming' and squad_allows(s.id, v.player_id)) as coming,
-    (select count(*)::int from availability v where v.session_id = s.id and v.answer = 'away' and squad_allows(s.id, v.player_id)) as away,
-    (select count(*)::int from session_squads q where q.session_id = s.id) as picked`;
-  type Row = SessionRow & { attended: number; coming: number; away: number; picked: number };
-  const map = (r: Row): AdminSession => ({ ...toSession(r), attended: r.attended, coming: r.coming, away: r.away, picked: r.picked });
+  const cols = ADMIN_SESSION_COLUMNS;
+  type Row = AdminSessionRow;
+  const map = toAdminSession;
   const mine = `($2::text[] is null or s.age_groups::text[] && $2::text[])`;
   const limit = groups ? [...groups] : null;
   const [upcoming, recent, venue] = await Promise.all([

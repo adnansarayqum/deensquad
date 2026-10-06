@@ -3,11 +3,12 @@
 import { useActionState, useEffect, useRef, type ReactNode } from "react";
 import { submitKeepingInput } from "@/components/submitKeepingInput";
 
-type State = { error?: string; saved?: boolean };
+type State = { error?: string; saved?: boolean; message?: string };
 const INITIAL: State = {};
 
 /**
- * A form whose Server Action returns { error } or { saved }; shows either message under the fields.
+ * A form whose Server Action returns { error } or { saved }; shows either message under the fields
+ * (the action's own `message` in place of `savedMessage` when it sends one).
  * Typed input stays after an error; after any other result the form resets (to the saved values on edit forms).
  */
 export function StatefulForm({
@@ -41,7 +42,7 @@ export function StatefulForm({
       ) : null}
       {state.saved && !pending ? (
         <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
-          {savedMessage}
+          {state.message ?? savedMessage}
         </p>
       ) : null}
       <button type="submit" className="btn-chunky btn-grass self-start" disabled={pending}>

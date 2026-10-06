@@ -9,12 +9,13 @@ import { UUID, normaliseEmail } from "../auth/tokens";
 import { appUrl } from "../config";
 import { londonTime } from "../dates";
 import { asSystem, asUser } from "../db";
-import { AGE_GROUPS, isAgeGroup, type AgeGroup } from "../domain";
+import { AGE_GROUPS, isAgeGroup, type AgeGroup, type SessionKind } from "../domain";
 import { canSendEmail } from "../email/send";
 import { cleanBody, cleanPhone, cleanText, dialable } from "../validate";
 import { applyImport, planImport, type ImportProblem, type ImportSummary } from "./import";
 import { overlaps, within } from "./scope";
-import { cancelSession, removeSession } from "./sessions";
+import { familiesFilter, familiesHref, familiesInviteHref } from "./families-link";
+import { addSessionRun, addedSentence, cancelSession, editSession, postSessionNotice, removeSession, type SessionEdit } from "./sessions";
 import { changeStaffRole, removeStaffMember } from "./staff";
 import { newsReaches } from "../squads/sql";
 import { canManageSquad, saveSquad } from "../squads/squads";
@@ -111,13 +112,23 @@ export async function importFamilies(prev: ImportState, formData: FormData): Pro
 
 // Invites ---------------------------------------------------------------------
 
-export async function inviteParents(): Promise<void> {
+/**
+ * Emails invites to the parents not yet invited who have a child in the Families list as filtered (group, need, q;
+ * none = the whole club). Only from the confirmation page (/admin/families/invite), which sends confirm=yes;
+ * anything else goes to that page. Returns to the same list with the result.
+ */
+export async function inviteParents(formData: FormData): Promise<void> {
   await requireAdmin();
-  if (!canSendEmail()) redirect("/admin/families?invite=no-email");
+  const params = Object.fromEntries(["group", "need", "q"].map((k) => [k, typeof formData.get(k) === "string" ? (formData.get(k) as string) : undefined]));
+  const filter = familiesFilter(params, AGE_GROUPS);
+  const list = familiesHref(filter);
+  const back = (query: string) => redirect(`${list}${list.includes("?") ? "&" : "?"}${query}`);
+  if (formData.get("confirm") !== "yes") redirect(familiesInviteHref(filter));
+  if (!canSendEmail()) back("invite=no-email");
   const base = await inviteBase();
-  if (!base) redirect("/admin/families?invite=no-url");
-  const { sent, failed } = await sendInvites({ baseUrl: base });
-  redirect(`/admin/families?invited=${sent}${failed ? `&notSent=${failed}` : ""}`);
+  if (!base) back("invite=no-url");
+  const { sent, failed } = await sendInvites({ filter: { group: filter.group, need: filter.need, search: filter.q || null }, baseUrl: base });
+  back(`invited=${sent}${failed ? `&notSent=${failed}` : ""}`);
 }
 
 export async function resendInvite(formData: FormData): Promise<void> {
@@ -134,7 +145,8 @@ export async function resendInvite(formData: FormData): Promise<void> {
 
 // Children and parents --------------------------------------------------------
 
-export type FormState = { error?: string; saved?: boolean };
+/** `message` replaces the form's usual "saved" line when the result needs saying (e.g. dates skipped). */
+export type FormState = { error?: string; saved?: boolean; message?: string };
 
 export async function updateChild(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireAdmin();
@@ -349,77 +361,127 @@ export async function chaseOnWhatsApp(formData: FormData): Promise<void> {
 
 const TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const KINDS: readonly SessionKind[] = ["training", "match", "tournament"];
 
-export async function addSessions(_prev: FormState, formData: FormData): Promise<FormState> {
-  const user = await requireStaff();
+/** The fields shared by the Add and Edit forms, checked. `date` is the first (or only) date. */
+function sessionFields(formData: FormData, mine: readonly AgeGroup[] | null) {
   const kind = formData.get("kind");
   const title = cleanText(formData.get("title"), 60);
   const venue = cleanText(formData.get("venue"), 120);
   const groups = formData.getAll("groups").filter(isAgeGroup);
-  const first = DATE.exec(String(formData.get("date") ?? ""));
-  const untilText = String(formData.get("until") ?? "");
-  const until = untilText ? DATE.exec(untilText) : null;
+  const date = DATE.exec(String(formData.get("date") ?? ""));
   const start = TIME.exec(String(formData.get("start") ?? ""));
   const end = TIME.exec(String(formData.get("end") ?? ""));
-  if (!["training", "match", "tournament"].includes(String(kind))) return { error: "Choose the kind of session." };
-  if (!title) return { error: "Add a title, like Training." };
-  if (!venue) return { error: "Add the venue." };
-  if (groups.length === 0) return { error: "Choose at least one age group." };
-  const mine = coachLimit(user.staff);
-  if (mine && groups.some((g) => !mine.includes(g))) return { error: `You can manage your own groups only: ${mine.join(", ")}.` };
-  if (!first) return { error: "Choose the date." };
-  if (untilText && !until) return { error: "Choose a valid end date for the repeats." };
-  if (!start || !end) return { error: "Add start and finish times." };
-  if (end[0] <= start[0]) return { error: "The finish time must be after the start time." };
-
-  const day0 = Date.UTC(Number(first[1]), Number(first[2]) - 1, Number(first[3]));
-  const last = until ? Date.UTC(Number(until[1]), Number(until[2]) - 1, Number(until[3])) : day0;
-  if (last < day0) return { error: "The repeat end date is before the first date." };
-  const dates: Date[] = [];
-  for (let t = day0; t <= last; t += 7 * 86400000) dates.push(new Date(t));
-  if (dates.length > 52) return { error: "That's more than a year of weekly sessions. Add one term at a time." };
-
-  await asUser(user.id, async (tx) => {
-    for (const d of dates) {
-      const [y, m, dd] = [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()];
-      await tx.query(
-        `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups, arrive_by, kit, prayer_note)
-         values ($1::session_kind, $2, $3, $4, $5, $6::text[]::age_group[], $7, $8, $9)`,
-        [
-          kind,
-          title,
-          londonTime(y, m, dd, Number(start[1]), Number(start[2])),
-          londonTime(y, m, dd, Number(end[1]), Number(end[2])),
-          venue,
-          AGE_GROUPS.filter((g) => groups.includes(g)),
-          cleanText(formData.get("arriveBy"), 20),
-          cleanText(formData.get("kit"), 120),
-          cleanText(formData.get("prayerNote"), 120),
-        ],
-      );
-    }
-  });
-  refresh();
-  return { saved: true, error: undefined };
+  if (!KINDS.includes(kind as SessionKind)) return { error: "Choose the kind of session." } as const;
+  if (!title) return { error: "Add a title, like Training." } as const;
+  if (!venue) return { error: "Add the venue." } as const;
+  if (groups.length === 0) return { error: "Choose at least one age group." } as const;
+  if (mine && groups.some((g) => !mine.includes(g))) return { error: `You can manage your own groups only: ${mine.join(", ")}.` } as const;
+  if (!date) return { error: "Choose the date." } as const;
+  if (!start || !end) return { error: "Add start and finish times." } as const;
+  if (end[0] <= start[0]) return { error: "The finish time must be after the start time." } as const;
+  const day = Date.UTC(Number(date[1]), Number(date[2]) - 1, Number(date[3]));
+  const at = (t: number, time: RegExpExecArray) => {
+    const d = new Date(t);
+    return londonTime(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), Number(time[1]), Number(time[2]));
+  };
+  return {
+    fields: {
+      kind: kind as SessionKind,
+      title,
+      venue,
+      groups,
+      arriveBy: cleanText(formData.get("arriveBy"), 20),
+      kit: cleanText(formData.get("kit"), 120),
+      prayerNote: cleanText(formData.get("prayerNote"), 120),
+      notes: cleanBody(formData.get("notes"), 500),
+    },
+    day,
+    /** Start and end on the calendar day `t` (UTC midnight). */
+    times: (t: number) => ({ start: at(t, start), end: at(t, end) }),
+  } as const;
 }
 
+export async function addSessions(_prev: FormState, formData: FormData): Promise<FormState> {
+  const user = await requireStaff();
+  const checked = sessionFields(formData, coachLimit(user.staff));
+  if ("error" in checked) return { error: checked.error };
+  const untilText = String(formData.get("until") ?? "");
+  const until = untilText ? DATE.exec(untilText) : null;
+  if (untilText && !until) return { error: "Choose a valid end date for the repeats." };
+  const last = until ? Date.UTC(Number(until[1]), Number(until[2]) - 1, Number(until[3])) : checked.day;
+  if (last < checked.day) return { error: "The repeat end date is before the first date." };
+  const days: number[] = [];
+  for (let t = checked.day; t <= last; t += 7 * 86400000) days.push(t);
+  if (days.length > 52) return { error: "That's more than a year of weekly sessions. Add one term at a time." };
+
+  // Dates that already have this session (same start, a shared group) are skipped, so a term added twice isn't doubled.
+  const result = await asUser(user.id, (tx) => addSessionRun(tx, { ...checked.fields, times: days.map(checked.times) }));
+  refresh();
+  return { saved: true, message: addedSentence(result) };
+}
+
+/** Saves a session's details from its Edit page; optionally tells the families it reaches. */
+export async function updateSession(_prev: FormState, formData: FormData): Promise<FormState> {
+  const user = await requireStaff();
+  const session = id(formData.get("id"));
+  if (!session) return { error: "Something went wrong. Reload and try again." };
+  const checked = sessionFields(formData, coachLimit(user.staff));
+  if ("error" in checked) return { error: checked.error };
+  const edit: SessionEdit = { ...checked.fields, ...checked.times(checked.day) };
+  const tell = formData.get("notify") === "on";
+  const result = await asUser(user.id, async (tx) => {
+    const saved = await editSession(tx, session, edit, coachLimit(user.staff));
+    const news = saved.ok && tell ? await postSessionNotice(tx, session, "changed", user.staff.id) : null;
+    return { saved, news };
+  });
+  if (!result.saved.ok) {
+    return { error: result.saved.reason === "not_yours" ? "Only an admin can change this session." : "That session has gone. Reload and try again." };
+  }
+  if (result.news) chaseNow(result.news);
+  refresh();
+  const removed = result.saved.squadRemoved;
+  const parts = [
+    "Saved.",
+    removed ? `${removed} ${removed === 1 ? "child" : "children"} no longer in its groups came out of the squad.` : null,
+    result.news ? "The families have been told." : null,
+  ];
+  return { saved: true, message: parts.filter(Boolean).join(" ") };
+}
+
+/** Pushes (and, as it's urgent, emails) a session notice once the response has gone (see postNews). */
+function chaseNow(announcementId: string) {
+  after(() => enqueue("chase on post", () => runChase({ announcementId })));
+}
+
+/**
+ * Cancels (with an optional reason) or restores a session, from its Cancel page. With "Tell the families now"
+ * ticked it also posts urgent club news to the families it reaches.
+ */
 export async function setSessionCancelled(formData: FormData): Promise<void> {
   const user = await requireStaff();
   const session = id(formData.get("id"));
   if (!session) return;
   const cancel = formData.get("cancel") === "yes";
+  const reason = cancel ? cleanText(formData.get("reason"), 120) : null;
+  const tell = formData.get("notify") === "on";
   // A coach with their own groups changes only sessions for those groups alone (no-op otherwise).
-  await asUser(user.id, (tx) => cancelSession(tx, session, cancel, coachLimit(user.staff)));
-  refresh();
+  const news = await asUser(user.id, async (tx) => {
+    const changed = await cancelSession(tx, session, cancel, coachLimit(user.staff), reason);
+    return changed && tell ? postSessionNotice(tx, session, cancel ? "cancelled" : "restored", user.staff.id) : null;
+  });
+  if (news) chaseNow(news);
+  redirect(`/admin/sessions?${cancel ? "cancelled" : "restored"}=1${news ? "&told=1" : ""}`);
 }
 
+/** Deletes a session from its Delete page, which says what goes with it and sends confirm=yes. */
 export async function deleteSession(formData: FormData): Promise<void> {
   const user = await requireStaff();
   const session = id(formData.get("id"));
-  if (!session) return;
+  if (!session || formData.get("confirm") !== "yes") return;
   // Only sessions nobody has been checked in to, and for a group coach only their own groups' sessions.
-  await asUser(user.id, (tx) => removeSession(tx, session, coachLimit(user.staff)));
-  refresh();
+  const gone = await asUser(user.id, (tx) => removeSession(tx, session, coachLimit(user.staff)));
+  redirect(gone ? "/admin/sessions?deleted=1" : "/admin/sessions");
 }
 
 /** Saves the tournament squad picked on a session's Squad page (admins any session; a group coach only their own groups'). */

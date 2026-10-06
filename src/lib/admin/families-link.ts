@@ -36,3 +36,15 @@ export function familyChildHref(id: string, filter: FamiliesFilter): string {
   const query = familiesQuery(filter);
   return query ? `/admin/families/${id}?${query}` : `/admin/families/${id}`;
 }
+
+/** The invite confirmation for the parents of the children in this list. */
+export function familiesInviteHref(filter: FamiliesFilter): string {
+  const query = familiesQuery(filter);
+  return query ? `/admin/families/invite?${query}` : "/admin/families/invite";
+}
+
+/** "in U12", "in the club", or "in this list" (any other filter), for the invite banner and confirmation. */
+export function familiesScope({ group, need, q }: FamiliesFilter): string {
+  if (!need && !q) return group ? `in ${group}` : "in the club";
+  return group ? `in this ${group} list` : "in this list";
+}

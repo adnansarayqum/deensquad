@@ -3,9 +3,8 @@ import Link from "next/link";
 import { ChevronRight, Upload } from "lucide-react";
 import { AdminTitle, Notice } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
-import { inviteParents } from "@/lib/admin/actions";
-import { loadFamilies, loadOverview, type FamilyRow } from "@/lib/admin/data";
-import { familiesFilter, familiesHref, familyChildHref } from "@/lib/admin/families-link";
+import { countUninvited, loadFamilies, type FamilyRow } from "@/lib/admin/data";
+import { familiesFilter, familiesHref, familiesInviteHref, familiesScope, familyChildHref } from "@/lib/admin/families-link";
 import { NEEDS, type Need } from "@/lib/admin/needs";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
@@ -22,10 +21,14 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
   const mine = staffGroups(user.staff);
   const filter = familiesFilter(params, mine);
   const { group, need, q } = filter;
-  const [families, overview] = await asUser(user.id, (tx) =>
-    Promise.all([loadFamilies(tx, group, mine, { need, search: q || null }), loadOverview(tx)]),
-  );
   const isAdmin = user.staff.role === "admin";
+  // Invites go to the parents of the children in this list, so the banner counts just those.
+  const [families, notInvited] = await asUser(user.id, (tx) =>
+    Promise.all([
+      loadFamilies(tx, group, mine, { need, search: q || null }),
+      isAdmin ? countUninvited(tx, { group, need, search: q || null }, mine) : Promise.resolve(0),
+    ]),
+  );
   const filtered = need !== null || q !== "";
 
   return (
@@ -46,21 +49,27 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
       {params.invited && params.notSent ? (
         <Notice tone="action">{`Sent to ${params.invited}. ${params.notSent} not sent – try again later.`}</Notice>
       ) : params.invited ? (
-        <Notice>{params.invited === "0" ? "Everyone has already been invited." : `Invites sent to ${params.invited} parents.`}</Notice>
+        <Notice>
+          {params.invited === "0"
+            ? "Everyone in this list has already been invited."
+            : `Invites sent to ${params.invited} ${params.invited === "1" ? "parent" : "parents"}.`}
+        </Notice>
       ) : null}
       {params.invite === "no-email" ? <Notice tone="action">Email isn&apos;t set up yet. Add RESEND_API_KEY in Railway, then send the invites.</Notice> : null}
       {params.invite === "no-url" ? <Notice tone="action">Set APP_URL in Railway to the app&apos;s web address, then send the invites.</Notice> : null}
       {params.removed ? <Notice>Removed.</Notice> : null}
 
-      {isAdmin && overview.notInvited > 0 ? (
-        <form action={inviteParents} className="flex flex-wrap items-center justify-between gap-3 rounded-app bg-gold-tint px-4 py-3">
+      {isAdmin && notInvited > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-app bg-gold-tint px-4 py-3">
           <p className="text-[15px]">
-            <b>{overview.notInvited}</b> {overview.notInvited === 1 ? "parent hasn't" : "parents haven't"} had an invite yet.
+            <b>{notInvited}</b> {notInvited === 1 ? "parent" : "parents"} {familiesScope(filter)} {notInvited === 1 ? "hasn't" : "haven't"} had an invite
+            yet.
           </p>
-          <button type="submit" className="btn-chunky btn-grass btn-small">
+          {/* Opens a confirmation that names the count; nothing is sent from here. */}
+          <Link href={familiesInviteHref(filter)} className="btn-chunky btn-grass btn-small">
             Email invites
-          </button>
-        </form>
+          </Link>
+        </div>
       ) : null}
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">

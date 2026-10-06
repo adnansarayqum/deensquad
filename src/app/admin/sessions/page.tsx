@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AdminTitle, Section } from "@/components/admin/bits";
+import { AdminTitle, Notice, Section } from "@/components/admin/bits";
+import { SessionFields } from "@/components/admin/SessionFields";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
-import { addSessions, deleteSession, setSessionCancelled } from "@/lib/admin/actions";
+import { addSessions } from "@/lib/admin/actions";
 import { loadSessionsAdmin, type AdminSession } from "@/lib/admin/data";
 import { within } from "@/lib/admin/scope";
 import { coachLimit, requireStaff, staffGroups } from "@/lib/auth/session";
@@ -13,8 +14,9 @@ import type { AgeGroup } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Sessions" };
 
-export default async function SessionsPage() {
+export default async function SessionsPage({ searchParams }: PageProps<"/admin/sessions">) {
   const user = await requireStaff();
+  const params = await searchParams;
   const now = new Date();
   const mine = coachLimit(user.staff);
   const { upcoming, recent, lastVenue } = await asUser(user.id, (tx) => loadSessionsAdmin(tx, now, mine));
@@ -25,89 +27,15 @@ export default async function SessionsPage() {
     <>
       <AdminTitle>Sessions</AdminTitle>
 
+      {params.cancelled ? <Notice>{params.told ? "Cancelled. The families have been told." : "Cancelled."}</Notice> : null}
+      {params.restored ? <Notice>{params.told ? "Back on. The families have been told." : "Back on."}</Notice> : null}
+      {params.deleted ? <Notice>Deleted.</Notice> : null}
+
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <Section title="Add sessions">
           <StatefulForm action={addSessions} submitLabel="Add sessions" savedMessage="Sessions added. Parents can answer straight away.">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label htmlFor="title" className="field-label">
-                  Title
-                </label>
-                <input id="title" name="title" defaultValue="Training" maxLength={60} className="field" />
-              </div>
-              <div>
-                <label htmlFor="kind" className="field-label">
-                  Kind
-                </label>
-                <select id="kind" name="kind" defaultValue="training" className="field">
-                  <option value="training">Training</option>
-                  <option value="match">Match</option>
-                  <option value="tournament">Tournament</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="date" className="field-label">
-                  Date
-                </label>
-                <input id="date" name="date" type="date" defaultValue={firstDate} className="field" />
-              </div>
-              <div>
-                <label htmlFor="until" className="field-label">
-                  Repeat every week until <span className="font-normal text-ink-muted">(optional)</span>
-                </label>
-                <input id="until" name="until" type="date" className="field" />
-              </div>
-              <div>
-                <label htmlFor="start" className="field-label">
-                  Starts
-                </label>
-                <input id="start" name="start" type="time" defaultValue="18:30" className="field" />
-              </div>
-              <div>
-                <label htmlFor="end" className="field-label">
-                  Finishes
-                </label>
-                <input id="end" name="end" type="time" defaultValue="20:00" className="field" />
-              </div>
-            </div>
-            <div>
-              <label htmlFor="venue" className="field-label">
-                Venue
-              </label>
-              <input id="venue" name="venue" defaultValue={lastVenue ?? ""} maxLength={120} className="field" />
-            </div>
-            <fieldset>
-              <legend className="field-label">Age groups</legend>
-              <div className="flex flex-wrap gap-2">
-                {staffGroups(user.staff).map((g) => (
-                  <label key={g} className="flex min-h-11 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
-                    <input type="checkbox" name="groups" value={g} defaultChecked className="h-4 w-4 accent-[var(--grass)]" />
-                    <span className="text-sm font-extrabold">{g}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <p className="-mb-1 text-sm font-bold">Briefing parents see on the Friday screen (optional)</p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <label htmlFor="arriveBy" className="field-label">
-                  Arrive by
-                </label>
-                <input id="arriveBy" name="arriveBy" placeholder="6:20pm" maxLength={20} className="field" />
-              </div>
-              <div>
-                <label htmlFor="kit" className="field-label">
-                  Kit
-                </label>
-                <input id="kit" name="kit" placeholder="Green top, shin pads, water" maxLength={120} className="field" />
-              </div>
-              <div>
-                <label htmlFor="prayerNote" className="field-label">
-                  Prayer
-                </label>
-                <input id="prayerNote" name="prayerNote" placeholder="Prayer break in the session" maxLength={120} className="field" />
-              </div>
-            </div>
+            <SessionFields repeat groups={staffGroups(user.staff)} defaults={{ date: firstDate, start: "18:30", end: "20:00", venue: lastVenue ?? "", groups: staffGroups(user.staff) }} />
+            <p className="text-[13px] text-ink-muted">Dates that already have a session at the same time for one of these groups are skipped.</p>
           </StatefulForm>
         </Section>
 
@@ -140,6 +68,7 @@ function SessionList({ title, sessions, mine, editable = false }: { title: strin
               {editable ? `${s.coming} ${s.picked ? "confirmed" : "coming"} · ${s.away} ${s.picked ? "can't play" : "away"}` : `${s.attended} checked in`}
             </span>
             {s.picked ? <span className="text-[13px] font-bold">Squad: {s.picked} picked</span> : null}
+            {s.cancelReason ? <span className="text-[13px]">Reason: {s.cancelReason}</span> : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {s.cancelled ? <Pill tone="action">Cancelled</Pill> : null}
@@ -150,21 +79,28 @@ function SessionList({ title, sessions, mine, editable = false }: { title: strin
               </Link>
             ) : null}
             {canChange(s) ? (
-              <form action={setSessionCancelled}>
-                <input type="hidden" name="id" value={s.id} />
-                <input type="hidden" name="cancel" value={s.cancelled ? "no" : "yes"} />
-                <button type="submit" className="btn-chunky btn-paper btn-small">
-                  {s.cancelled ? "Restore" : "Cancel"}
-                </button>
-              </form>
+              <Link href={`/admin/sessions/${s.id}/edit`} className="btn-chunky btn-paper btn-small" aria-label={`Edit ${s.title} ${shortDay(s.startsAt)}`}>
+                Edit
+              </Link>
             ) : null}
+            {canChange(s) ? (
+              <Link
+                href={`/admin/sessions/${s.id}/cancel`}
+                className="btn-chunky btn-paper btn-small"
+                aria-label={`${s.cancelled ? "Restore" : "Cancel"} ${s.title} ${shortDay(s.startsAt)}`}
+              >
+                {s.cancelled ? "Restore" : "Cancel"}
+              </Link>
+            ) : null}
+            {/* Never once anyone has been checked in, so attendance history is kept. */}
             {canChange(s) && s.attended === 0 ? (
-              <form action={deleteSession}>
-                <input type="hidden" name="id" value={s.id} />
-                <button type="submit" className="min-h-11 px-2 text-sm font-bold text-ink-muted underline">
-                  Delete
-                </button>
-              </form>
+              <Link
+                href={`/admin/sessions/${s.id}/delete`}
+                className="inline-flex min-h-12 items-center px-2 text-sm font-bold text-ink-muted underline"
+                aria-label={`Delete ${s.title} ${shortDay(s.startsAt)}`}
+              >
+                Delete
+              </Link>
             ) : null}
           </div>
         </div>

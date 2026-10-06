@@ -66,6 +66,34 @@ describe("sending invites", () => {
     expect((await inviteLinks())[0].n).toBe(150);
   });
 
+  it("with a filter, emails only the parents of children in that list, and the banner's count matches", async () => {
+    const { countUninvited } = await import("./data");
+    await t.asSystem(async (tx) => {
+      for (let i = 0; i < 3; i++) {
+        const [p] = await tx.query<{ id: string }>(`insert into players (first_name, last_name, age_group) values ('Older', $1, 'U12') returning id`, [`G${i}`]);
+        const [g] = await tx.query<{ id: string }>(`insert into guardians (first_name, last_name, email) values ('Parent', $1, $2) returning id`, [`G${i}`, `u12parent${i}@example.com`]);
+        await tx.query(`insert into player_guardians (player_id, guardian_id) values ($1, $2)`, [p.id, g.id]);
+      }
+      // A U10 parent who also has a U12 child is in the U12 list too.
+      const [p] = await tx.query<{ id: string }>(`insert into players (first_name, last_name, age_group) values ('Sibling', 'F0', 'U12') returning id`);
+      await tx.query(`insert into player_guardians (player_id, guardian_id) select $1, id from guardians where email = 'parent0@example.com'`, [p.id]);
+    });
+    const u12 = { group: "U12" as const, need: null, search: null };
+    expect(await t.asSystem((tx) => countUninvited(tx, u12))).toBe(4);
+    expect(await t.asSystem((tx) => countUninvited(tx, { group: null, need: null, search: null }))).toBe(153);
+
+    const delivered = resend([true]);
+    expect(await sendInvites({ filter: u12, baseUrl: "https://app.test" })).toEqual({ sent: 4, failed: 0 });
+    expect(delivered.sort()).toEqual(["parent0@example.com", "u12parent0@example.com", "u12parent1@example.com", "u12parent2@example.com"]);
+    expect(await invited()).toHaveLength(4);
+    expect(await t.asSystem((tx) => countUninvited(tx, u12))).toBe(0);
+
+    // A name search narrows it further: only that family.
+    const again = resend([true]);
+    expect(await sendInvites({ filter: { group: "U10", need: null, search: "F149" }, baseUrl: "https://app.test" })).toEqual({ sent: 1, failed: 0 });
+    expect(again).toEqual(["parent149@example.com"]);
+  });
+
   it("reports a failed resend instead of throwing", async () => {
     resend([false]);
     const [g] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from guardians limit 1`));

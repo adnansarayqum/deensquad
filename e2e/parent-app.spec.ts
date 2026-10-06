@@ -209,9 +209,28 @@ test("admin: import a family, post news, add a session", async ({ page }) => {
   await page.goto("/admin/families?group=U12");
   // The Families page holds a phone list and a computer table; only one of them is on screen.
   await expect(page.getByText("Zara Khan").filter({ visible: true })).toBeVisible();
-  await page.getByRole("button", { name: "Email invites" }).click();
-  await expect(page.getByText(/Invites sent to \d+ parents/)).toBeVisible();
-  expect(readFileSync(OUTBOX, "utf8")).toContain("sana@example.com");
+  // Invites go only to the parents of the children in the filtered list, and only after a confirmation.
+  await expect(page.getByText("1 parent in U12 hasn't had an invite yet.")).toBeVisible();
+  const before = readFileSync(OUTBOX, "utf8").trim().split("\n").length;
+  await page.getByRole("link", { name: "Email invites" }).click();
+  await expect(page).toHaveURL(/\/admin\/families\/invite\?group=U12$/);
+  await expect(page.getByRole("heading", { name: "Email 1 parent in U12?" })).toBeVisible();
+  // Nothing has gone yet.
+  expect(readFileSync(OUTBOX, "utf8").trim().split("\n")).toHaveLength(before);
+  await page.screenshot({ path: shot("admin-invite-confirm"), fullPage: true });
+  await page.getByRole("button", { name: "Send invites" }).click();
+  await expect(page).toHaveURL(/\/admin\/families\?group=U12&invited=1$/);
+  await expect(page.getByText("Invites sent to 1 parent.")).toBeVisible();
+  const invites = readFileSync(OUTBOX, "utf8")
+    .trim()
+    .split("\n")
+    .slice(before)
+    .map((l) => JSON.parse(l) as { to: string; subject: string })
+    .filter((m) => m.subject.includes("ready"));
+  expect(invites.map((m) => m.to)).toEqual(["sana@example.com"]);
+  // The rest of the club still hasn't been invited.
+  await page.goto("/admin/families");
+  await expect(page.getByText(/^\d+ parents in the club haven't had an invite yet\.$/)).toBeVisible();
 
   await page.goto("/admin/news");
   await page.getByLabel("Headline").fill("Pitch closed on Saturday");
@@ -237,8 +256,11 @@ test("admin: import a family, post news, add a session", async ({ page }) => {
 
   await page.goto("/admin/sessions");
   await page.getByLabel("Title").fill("Cup training");
+  // This Friday and next already have the 6:30pm training for every group, so a two-week run adds nothing.
+  const firstDate = await page.getByLabel("Date", { exact: true }).inputValue();
+  await page.getByLabel(/Repeat every week until/).fill(new Date(Date.parse(firstDate) + 7 * 86400000).toISOString().slice(0, 10));
   await page.getByRole("button", { name: "Add sessions" }).click();
-  await expect(page.getByText("Sessions added.")).toBeVisible();
+  await expect(page.getByText(/^No sessions added\. Skipped 2 that already existed \(\d+ \w+, \d+ \w+\)\.$/)).toBeVisible();
   // A saved form clears, ready for the next one.
   await expect(page.getByLabel("Title")).toHaveValue("Training");
 });
@@ -374,7 +396,7 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
   await page.getByLabel("Date", { exact: true }).fill(new Date(Date.now() + 200 * 86400000).toISOString().slice(0, 10));
   for (const g of ["U6", "U7", "U12", "U15"]) await page.getByLabel(g, { exact: true }).uncheck();
   await page.getByRole("button", { name: "Add sessions" }).click();
-  await expect(page.getByText("Sessions added.")).toBeVisible();
+  await expect(page.getByText(/^Added 1 session\./)).toBeVisible();
   await expect(page.getByText(/U10 friendly/).first()).toBeVisible();
 
   await switchUser(page);
@@ -404,7 +426,8 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
   // The club-wide training is listed, but only admins can cancel a joint session.
   const comingUp = page.getByRole("region", { name: "Coming up" });
   await expect(comingUp.getByText(/· Training /).first()).toBeVisible();
-  await expect(comingUp.getByRole("button", { name: "Cancel" })).toHaveCount(0);
+  await expect(comingUp.getByRole("link", { name: /^Cancel / })).toHaveCount(0);
+  await expect(comingUp.getByRole("link", { name: /^Edit / })).toHaveCount(0);
 
   await page.goto("/coach/awards");
   await page.getByRole("link", { name: /Musa Sample/ }).click();
@@ -781,7 +804,7 @@ test("tournament squads: the admin picks two U10s and messages them; only their 
   await admin.getByLabel("Finishes").fill("13:00");
   for (const g of ["U6", "U7", "U12", "U15"]) await admin.getByLabel(g, { exact: true }).uncheck();
   await admin.getByRole("button", { name: "Add sessions" }).click();
-  await expect(admin.getByText("Sessions added.")).toBeVisible();
+  await expect(admin.getByText(/^Added 1 session\./)).toBeVisible();
   await admin.getByRole("link", { name: /^Pick squad for County Cup/ }).click();
   await expect(admin.getByRole("heading", { name: "County Cup squad" })).toBeVisible();
   const sessionId = admin.url().match(/\/admin\/sessions\/([0-9a-f-]{36})\/squad$/)![1];
@@ -848,6 +871,87 @@ test("tournament squads: the admin picks two U10s and messages them; only their 
   await adminContext.close();
 });
 
+test("session changes: an admin edits a session, cancels it with a reason and tells the families, then deletes it", async ({ browser, page }) => {
+  test.skip(!existsSync(ADMIN_STATE), "run with the earlier tests: needs their saved sign-in");
+  const adminContext = await newContext(browser, {
+    ...devices["Pixel 7"],
+    viewport: { width: 390, height: 844 },
+    baseURL: "http://localhost:3100",
+    storageState: ADMIN_STATE,
+  });
+  const admin = await adminContext.newPage();
+  // A U12 session today, before this Friday's training (Zara, from the import, is the only U12).
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
+  const day = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }).format(new Date());
+  await admin.goto("/admin/sessions");
+  await admin.getByLabel("Title").fill("U12 extra");
+  await admin.getByLabel("Date", { exact: true }).fill(today);
+  await admin.getByLabel("Starts").fill("00:01");
+  await admin.getByLabel("Finishes").fill("23:58");
+  for (const g of ["U6", "U7", "U10", "U15"]) await admin.getByLabel(g, { exact: true }).uncheck();
+  await admin.getByRole("button", { name: "Add sessions" }).click();
+  await expect(admin.getByText(/^Added 1 session\./)).toBeVisible();
+
+  // Edit: the venue and a note for parents.
+  await admin.getByRole("link", { name: `Edit U12 extra ${day}` }).click();
+  await expect(admin.getByRole("heading", { name: "Edit U12 extra" })).toBeVisible();
+  await admin.getByLabel("Venue").fill("Valentines Park");
+  await admin.getByLabel(/Notes for parents/).fill("Meet at the side gate");
+  await admin.getByRole("button", { name: "Save changes" }).click();
+  await expect(admin.getByText("Saved.", { exact: true })).toBeVisible();
+  await expect(admin.getByLabel("Venue")).toHaveValue("Valentines Park");
+
+  await signIn(page, "sana@example.com");
+  await page.goto("/friday");
+  await expect(page.getByRole("group", { name: /Is Zara coming/ })).toBeVisible();
+  await expect(page.getByText("Valentines Park").first()).toBeVisible();
+  await expect(page.getByText("Meet at the side gate").first()).toBeVisible();
+
+  // Cancel, with a reason, telling the families (ticked already).
+  await admin.goto("/admin/sessions");
+  await admin.getByRole("link", { name: `Cancel U12 extra ${day}` }).click();
+  await expect(admin.getByRole("heading", { name: "Cancel U12 extra?" })).toBeVisible();
+  await expect(admin.getByLabel(/Tell the families now/)).toBeChecked();
+  await admin.getByLabel(/Reason/).fill("Pitch waterlogged");
+  await admin.screenshot({ path: shot("admin-session-cancel"), fullPage: true });
+  await admin.getByRole("button", { name: "Cancel session" }).click();
+  await expect(admin.getByText("Cancelled. The families have been told.")).toBeVisible();
+  await expect(admin.getByText("Reason: Pitch waterlogged")).toBeVisible();
+
+  // The parent sees the cancellation with its reason, and is still asked about Zara's next session.
+  await page.goto("/friday");
+  await expect(page.getByText(`Cancelled: U12 extra, ${day} · U12`)).toBeVisible();
+  await expect(page.getByText("Pitch waterlogged")).toBeVisible();
+  await expect(page.getByText("Check club news")).toHaveCount(0);
+  const next = page.getByRole("group", { name: /Is Zara coming/ });
+  await expect(next).toBeVisible();
+  await next.getByRole("button", { name: "Coming" }).click();
+  await expect(page.getByText("Saved. Coach can see Zara is coming.")).toBeVisible();
+  await page.screenshot({ path: shot("parent-friday-cancelled"), fullPage: true });
+  await page.goto("/news");
+  await expect(page.getByRole("heading", { name: `U12 extra on ${day} is cancelled` })).toBeVisible();
+  // Urgent: emailed at once, not after 24 hours (except at night, when nothing is sent until 8am).
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", hourCycle: "h23" }).format(new Date()));
+  if (hour >= 8 && hour < 21) {
+    await expect
+      .poll(() => readFileSync(OUTBOX, "utf8").includes(`Please read: U12 extra on ${day} is cancelled`), { timeout: 15_000 })
+      .toBe(true);
+  }
+
+  // Delete asks first and says what goes with it; "Keep it" leaves it alone.
+  await admin.goto("/admin/sessions");
+  await admin.getByRole("link", { name: `Delete U12 extra ${day}` }).click();
+  await expect(admin.getByRole("heading", { name: "Delete U12 extra?" })).toBeVisible();
+  await expect(admin.getByText("Nothing else is attached to it yet. This can't be undone.")).toBeVisible();
+  await admin.getByRole("link", { name: "Keep it" }).click();
+  await expect(admin.getByText(/U12 extra/).first()).toBeVisible();
+  await admin.getByRole("link", { name: `Delete U12 extra ${day}` }).click();
+  await admin.getByRole("button", { name: "Delete session" }).click();
+  await expect(admin.getByText("Deleted.")).toBeVisible();
+  await expect(admin.getByText(/U12 extra/)).toHaveCount(0);
+  await adminContext.close();
+});
+
 // Runs last: it adds a session today, which changes what the register shows.
 test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped signal) and can undo it", async ({ page, playwright }) => {
   // The parent's pass (Musa's mother; each address may only ask for five codes an hour).
@@ -897,7 +1001,7 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await coach.getByLabel("Starts").fill("00:00");
     await coach.getByLabel("Finishes").fill("23:59");
     await coach.getByRole("button", { name: "Add sessions" }).click();
-    await expect(coach.getByText("Sessions added.")).toBeVisible();
+    await expect(coach.getByText(/^Added 1 session\./)).toBeVisible();
     await coach.goto("/coach?group=U7");
     const gateTest = coach.getByRole("navigation", { name: "Today's sessions" }).getByRole("link", { name: /Gate test/ });
     if (await gateTest.count()) await gateTest.click();
