@@ -225,6 +225,19 @@ describe("picking the squad", () => {
     expect(await sees(adnan, `select 1 from sessions where id = $1`, [cup])).toHaveLength(1);
   });
 
+  it("shows each child's attendance this season, counting only sessions where their group's register was taken", async () => {
+    const view = (await t.asUser(admin, (tx) => loadSquad(tx, cup, null)))!;
+    const of = (name: string) => view.children.find((c) => c.firstName === name)!.season;
+    // Yusuf came to every U10 session with a register (five of the last six Fridays); Bilal to none of them.
+    expect(of("Yusuf").held).toBeGreaterThan(0);
+    expect(of("Yusuf").held).toBeLessThanOrEqual(5);
+    expect(of("Yusuf").attended).toBe(of("Yusuf").held);
+    expect(of("Bilal")).toEqual({ attended: 0, held: of("Yusuf").held });
+    // Musa's U7 register was taken only when he came.
+    expect(of("Musa").attended).toBe(of("Musa").held);
+    expect(of("Musa").held).toBeLessThanOrEqual(2);
+  });
+
   it("lists only the squad on the register", async () => {
     const now = new Date();
     const view = (await t.asUser(admin, (tx) => loadRegister(tx, { now, sessionId: cup, group: "U10" })))!;

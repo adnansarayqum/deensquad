@@ -2,6 +2,8 @@ import type { Queryable } from "../db/types";
 import { AGE_GROUPS, type AgeGroup, type Availability, type Session } from "../domain";
 import { within } from "../admin/scope";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
+import { seasonStart } from "../exports/reports";
+import { sessionIsFor } from "./sql";
 
 // Tournament squads: staff pick which children of a session's age groups play in it. Once anyone is picked,
 // only the picked children's families see the session, answer for it ("Can Yusuf play?") and get messages
@@ -18,6 +20,11 @@ export type SquadChild = {
   picked: boolean;
   /** The family's answer: coming = confirmed, away = can't play. */
   answer: Availability | null;
+  /**
+   * This season (from 1 August): sessions for the child that have finished, weren't cancelled and had the register
+   * taken for their group (anyone from it checked in), and how many of those the child was checked in at.
+   */
+  season: { attended: number; held: number };
 };
 
 export type SquadView = { session: Session; children: SquadChild[]; picked: number };
@@ -28,7 +35,12 @@ export function canManageSquad(sessionGroups: readonly string[], mine: readonly 
 }
 
 /** The session and every child in its age groups (picked or not), or null when it isn't there or isn't theirs. */
-export async function loadSquad(tx: Queryable, sessionId: string, mine: readonly AgeGroup[] | null): Promise<SquadView | null> {
+export async function loadSquad(
+  tx: Queryable,
+  sessionId: string,
+  mine: readonly AgeGroup[] | null,
+  now = new Date(),
+): Promise<SquadView | null> {
   const [row] = await tx.query<SessionRow>(`select ${SESSION_COLUMNS} from sessions s where s.id = $1`, [sessionId]);
   if (!row || !canManageSquad(row.age_groups, mine)) return null;
   const session = toSession(row);
@@ -40,16 +52,34 @@ export async function loadSquad(tx: Queryable, sessionId: string, mine: readonly
     shirt_number: number | null;
     picked: boolean;
     answer: Availability | null;
+    held: number;
+    attended: number;
   }>(
     // Picked children stay listed even if they've since moved to another group, so they can be taken out.
-    `select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number,
-       q.player_id is not null as picked, a.answer::text as answer
+    // Attendance: the season's finished sessions for each child (the same "register taken" rule as the dashboard).
+    `with taken as (
+       select s.id, s.age_groups, g.age_group
+       from sessions s cross join lateral unnest(s.age_groups) as g(age_group)
+       where s.starts_at >= $3 and s.ends_at <= $4 and s.cancelled_at is null
+         and exists (select 1 from attendance t join players tp on tp.id = t.player_id where t.session_id = s.id and tp.age_group = g.age_group)
+     ),
+     season as (
+       select p.id, count(*)::int as held, count(t.player_id)::int as attended
+       from players p
+       join taken s on s.age_group = p.age_group and ${sessionIsFor("s", "p")}
+       left join attendance t on t.session_id = s.id and t.player_id = p.id
+       group by p.id
+     )
+     select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number,
+       q.player_id is not null as picked, a.answer::text as answer,
+       coalesce(se.held, 0) as held, coalesce(se.attended, 0) as attended
      from players p
      left join session_squads q on q.session_id = $1 and q.player_id = p.id
      left join availability a on a.session_id = $1 and a.player_id = p.id
+     left join season se on se.id = p.id
      where p.age_group = any ($2::text[]::age_group[]) or q.player_id is not null
      order by p.first_name, p.last_name`,
-    [sessionId, session.ageGroups],
+    [sessionId, session.ageGroups, seasonStart(now), now],
   );
   const order = (g: AgeGroup) => AGE_GROUPS.indexOf(g);
   const children = rows
@@ -61,6 +91,7 @@ export async function loadSquad(tx: Queryable, sessionId: string, mine: readonly
       shirtNumber: r.shirt_number,
       picked: r.picked,
       answer: r.picked ? r.answer : null,
+      season: { attended: r.attended, held: r.held },
     }))
     .sort((a, b) => order(a.ageGroup) - order(b.ageGroup));
   return { session, children, picked: children.filter((c) => c.picked).length };
