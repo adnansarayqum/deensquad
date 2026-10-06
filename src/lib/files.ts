@@ -5,6 +5,23 @@ import type { Queryable } from "./db/types";
 
 export const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
+/** "That file is 9.5 MB. ..." The size is rounded up, so a file just over the limit never reads as 8.0 MB. */
+export function fileTooBig(bytes: number): string {
+  const mb = Math.ceil((bytes / (1024 * 1024)) * 10) / 10;
+  return `That file is ${mb.toFixed(1)} MB. The limit is 8 MB. Try a photo or a smaller PDF.`;
+}
+
+/**
+ * The first file in a form that's over the limit, checked in the browser before sending: a file over the Server
+ * Action body limit (9 MB, next.config.ts) would otherwise fail the whole request.
+ */
+export function oversizeFile(formData: FormData): File | null {
+  for (const [, value] of formData) {
+    if (typeof value !== "string" && value.size > MAX_FILE_BYTES) return value;
+  }
+  return null;
+}
+
 export type Upload = { name: string; mime: string; data: Uint8Array };
 export type UploadCheck = { ok: true; upload: Upload | null } | { ok: false; error: string };
 
@@ -20,7 +37,7 @@ export function sniff(b: Uint8Array): string | null {
 /** Reads an optional file field. No file chosen is fine (upload: null). */
 export async function readUpload(value: FormDataEntryValue | null): Promise<UploadCheck> {
   if (!value || typeof value === "string" || value.size === 0) return { ok: true, upload: null };
-  if (value.size > MAX_FILE_BYTES) return { ok: false, error: "That file is too big. Keep it under 8 MB." };
+  if (value.size > MAX_FILE_BYTES) return { ok: false, error: fileTooBig(value.size) };
   const data = new Uint8Array(await value.arrayBuffer());
   const mime = sniff(data);
   if (!mime) return { ok: false, error: "Attach a PDF or a photo (JPEG, PNG or WebP)." };

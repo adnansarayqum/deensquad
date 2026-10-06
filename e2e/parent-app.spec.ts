@@ -127,7 +127,7 @@ test("friday: each child gets their own answer and headcount", async ({ page }) 
   await page.unroute(noSignal("/friday"));
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByText("Saved. Coach knows Musa is away this week.")).toBeVisible();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByText("No signal. That didn't save.")).toHaveCount(0);
   await page.screenshot({ path: shot("friday"), fullPage: true });
 
   await page.getByRole("link", { name: "News" }).click();
@@ -553,8 +553,24 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await signIn(page, "admin@deensquad.test");
   await page.goto("/coach/plans");
   await page.getByRole("link", { name: /U10/ }).first().click();
-  await page.getByLabel("What you'll work on").fill("Warm-up: rondos\nMain: passing on the move");
+  const plan = page.getByLabel("What you'll work on");
+  await plan.fill("Warm-up: rondos\nMain: passing on the move");
+  // A scanned sheet over the limit is refused before it's sent, naming its size; the typed plan stays.
+  const scan = Buffer.concat([pdf, Buffer.alloc(Math.round(9.5 * 1024 * 1024) - pdf.length, 0x20)]);
+  await page.getByLabel(/Attach a PDF or photo/).setInputFiles({ name: "scan.pdf", mimeType: "application/pdf", buffer: scan });
+  await page.getByRole("button", { name: "Share with parents" }).click();
+  await expect(page.locator("main").getByRole("alert")).toHaveText("That file is 9.5 MB. The limit is 8 MB. Try a photo or a smaller PDF.");
+  await expect(page.locator("main").getByRole("alert")).not.toContainText(/signal/i);
+  await expect(plan).toHaveValue("Warm-up: rondos\nMain: passing on the move");
+  await page.screenshot({ path: shot("coach-plan-too-big"), fullPage: true });
+  // A save that never comes back keeps the plan too, and doesn't blame the file.
+  const planPage = new URL(page.url()).pathname;
+  await page.route(noSignal(planPage), abortPosts);
   await page.getByLabel(/Attach a PDF or photo/).setInputFiles({ name: "u10-plan.pdf", mimeType: "application/pdf", buffer: pdf });
+  await page.getByRole("button", { name: "Share with parents" }).click();
+  await expect(page.locator("main").getByRole("alert")).toHaveText("That didn't save. Your plan is still here.");
+  await expect(plan).toHaveValue("Warm-up: rondos\nMain: passing on the move");
+  await page.unroute(noSignal(planPage));
   await page.getByRole("button", { name: "Share with parents" }).click();
   await expect(page.getByText(/U10 parents can see it/)).toBeVisible();
   await page.screenshot({ path: shot("coach-plan"), fullPage: true });

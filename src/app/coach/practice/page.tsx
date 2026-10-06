@@ -38,7 +38,7 @@ export default async function StaffPracticePage() {
   return (
     <StaffShell back="/coach/plans" backLabel="Session plans" title="Home practice" intro="Drills and crib sheets for families to try at home. Parents find them on the Friday screen.">
       <div className="rounded-app border-2 border-line bg-paper p-4">
-        <StatefulForm action={addPracticeSheet} submitLabel="Share with parents" savedMessage="Shared. Parents in those groups can see it now.">
+        <StatefulForm action={addPracticeSheet} keepOnFailure="That didn't save. Your sheet is still here." submitLabel="Share with parents" savedMessage="Shared. Parents in those groups can see it now.">
           {ai ? <PracticeFromPlan plans={recentPlans} titleId="title" bodyId="body" /> : null}
           <div>
             <label htmlFor="title" className="field-label">
