@@ -47,7 +47,7 @@ export default async function ConsentPage({ searchParams }: PageProps<"/checklis
             <fieldset className="mt-2 flex flex-col gap-2">
               <legend className="field-label">Same for all my children</legend>
               {siblings.map((s) => (
-                <label key={s.id} className="flex min-h-12 items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5">
+                <label key={s.id} className="flex min-h-12 items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-2">
                   <input type="checkbox" name="child" value={s.id} defaultChecked={s.photoConsent === null} className="h-5 w-5 accent-[var(--grass)]" />
                   <span className="flex flex-col">
                     <span className="text-base font-bold">{s.firstName}</span>
