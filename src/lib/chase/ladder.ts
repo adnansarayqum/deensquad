@@ -8,7 +8,9 @@ import { newsReaches } from "../squads/sql";
 //   gate   by session day  the coach's register flags the child (see staff/register.ts)
 // A parent is never chased once they, or the other parent of the same child, have read it.
 // A message to a tournament squad reaches only the parents of the children in that squad.
-// Nothing is sent between 9pm and 8am London time; due steps go out at the next run after 8am.
+// An urgent message (announcements.urgent: a session cancelled, restored or changed) is emailed at post
+// time as well as pushed, instead of after 24 hours; its text still waits 48 hours.
+// Nothing is sent between 9pm and 8am London time, urgent or not; due steps go out at the next run after 8am.
 // Every step is logged in announcement_chases, so each runs at most once per parent per message.
 
 export type ChaseChannel = "app" | "email" | "sms";
@@ -41,7 +43,6 @@ export type ChaseTarget = {
 
 /** Parents due a given step: the message is old enough, they and their child's other parent haven't read it, and the step hasn't run. */
 export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date, announcementId?: string): Promise<ChaseTarget[]> {
-  const dueBefore = new Date(now.getTime() - LADDER[channel].afterHours * 3600_000);
   const oldest = new Date(now.getTime() - MAX_AGE_DAYS * 86400_000);
   const rows = await tx.query<{
     announcement_id: string;
@@ -61,7 +62,9 @@ export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date,
      join player_guardians pg on pg.player_id = p.id
      join guardians g on g.id = pg.guardian_id
      where a.requires_ack
-       and a.posted_at <= $1 and a.posted_at > $2
+       -- old enough for this step (an urgent message's email is due straight away)
+       and a.posted_at <= $1::timestamptz - make_interval(hours => case when a.urgent and $3 = 'email' then 0 else $5::int end)
+       and a.posted_at > $2
        and ($4::uuid is null or a.id = $4)
        -- this parent hasn't read it, and nobody who shares a child with them has either
        and not exists (
@@ -72,7 +75,7 @@ export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date,
        )
        and not exists (select 1 from announcement_chases c where c.announcement_id = a.id and c.guardian_id = g.id and c.channel::text = $3)
      group by a.id, a.title, a.body, g.id`,
-    [dueBefore, oldest, channel, announcementId ?? null],
+    [now, oldest, channel, announcementId ?? null, LADDER[channel].afterHours],
   );
   return rows.map((r) => ({
     announcementId: r.announcement_id,
