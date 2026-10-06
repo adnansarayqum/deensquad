@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { getCurrentUser } from "@/lib/auth/session";
 import { clubEmail } from "@/lib/config";
 
 export const metadata: Metadata = { title: "Privacy notice" };
@@ -26,8 +27,10 @@ function List({ items }: { items: ReactNode[] }) {
   );
 }
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
   const email = clubEmail();
+  // Back to the player screen (which links here) when signed in, otherwise to sign in.
+  const back = (await getCurrentUser()) ? "/player" : "/sign-in";
   const contact = email ? (
     <>
       email{" "}
@@ -41,7 +44,7 @@ export default function PrivacyPage() {
   );
 
   return (
-    <AuthShell title="Privacy notice" intro={`How The Deen Squad Football Academy uses your family's information. Last updated ${UPDATED}.`}>
+    <AuthShell title="Privacy notice" back={back} intro={`How The Deen Squad Football Academy uses your family's information. Last updated ${UPDATED}.`}>
       <div className="flex flex-col gap-6 rounded-app border-2 border-line bg-paper p-4">
         <Part title="Who we are">
           <p>

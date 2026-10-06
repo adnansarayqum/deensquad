@@ -149,6 +149,13 @@ test("player: switch between children and sign out", async ({ page }) => {
   await page.screenshot({ path: shot("player"), fullPage: true });
   await page.getByRole("link", { name: "Musa" }).click();
   await expect(page.getByRole("heading", { name: "Musa S." })).toBeVisible();
+  // The privacy notice has a way back into the app.
+  await page.getByRole("link", { name: "Privacy", exact: true }).click();
+  await expect(page).toHaveURL(/\/privacy$/);
+  const back = page.getByRole("link", { name: "Back", exact: true });
+  expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  await back.click();
+  await expect(page).toHaveURL(/\/player/);
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   await page.goto("/news");
@@ -730,6 +737,9 @@ test("privacy: anyone can read the notice from the sign-in screen", async ({ pag
   await page.goto(href!);
   await expect(page.getByRole("heading", { name: "Your rights" })).toBeVisible();
   await page.screenshot({ path: shot("privacy"), fullPage: true });
+  // Signed out, Back goes to sign in.
+  await page.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
 });
 
 /** A one-frame Y4M video of a picture on white, for Chromium's fake camera (greyscale is enough for a QR code). */
