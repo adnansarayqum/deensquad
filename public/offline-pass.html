@@ -1,0 +1,144 @@
+<!doctype html>
+<!-- Shown by the service worker (public/sw.js) for /pass and /friday when there's no signal. A static page: it holds
+     no one's data. Its script draws the QR codes saved on this phone (src/offline/pass-page.ts). -->
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#1f3d27" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b150e" media="(prefers-color-scheme: dark)" />
+    <title>Attendance QR code · Deen Squad</title>
+    <style>
+      :root {
+        --pitch: #1f3d27;
+        --on-pitch: #fff4e3;
+        --on-pitch-muted: #c9d8cc;
+        --cream: #fff4e3;
+        --paper: #ffffff;
+        --line: #e6dac4;
+        --ink: #13201a;
+        --ink-muted: #56625a;
+        --kit-orange: #b04a17;
+        --orange-tint: #fbe6d8;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --pitch: #0b150e;
+          --cream: #101912;
+          --paper: #17231a;
+          --line: #2c3b30;
+          --ink: #f1e9da;
+          --ink-muted: #aab6ad;
+          --kit-orange: #e8834f;
+          --orange-tint: #3a2214;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0 auto;
+        max-width: 430px;
+        min-height: 100dvh;
+        background: var(--cream);
+        color: var(--ink);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-size: 15px;
+        line-height: 1.45;
+      }
+      header {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: max(env(safe-area-inset-top), 20px) 16px 18px;
+        background: var(--pitch);
+        color: var(--on-pitch);
+        border-radius: 0 0 24px 24px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.1;
+      }
+      .status {
+        margin: 0;
+        padding: 10px 12px;
+        border: 2px solid var(--kit-orange);
+        border-radius: 14px;
+        background: var(--orange-tint);
+        color: var(--ink);
+        font-weight: 700;
+      }
+      button {
+        align-self: flex-start;
+        min-height: 48px;
+        padding: 0 18px;
+        border: 2px solid var(--line);
+        border-radius: 14px;
+        background: var(--paper);
+        color: var(--ink);
+        font: inherit;
+        font-weight: 800;
+      }
+      main {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 20px 16px max(env(safe-area-inset-bottom), 32px);
+      }
+      #codes {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        width: 100%;
+        align-items: center;
+      }
+      .code {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+      }
+      h2 {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.1;
+      }
+      .qr {
+        width: 100%;
+        max-width: 300px;
+        padding: 16px;
+        border: 2px solid var(--line);
+        border-radius: 18px;
+        background: #ffffff;
+      }
+      .qr svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .muted {
+        margin: 0;
+        color: var(--ink-muted);
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Attendance QR code</h1>
+      <p class="status" role="status">No signal. Showing the codes saved on this phone.</p>
+      <button id="retry" type="button">Try again</button>
+    </header>
+    <main>
+      <p class="muted">Show the code to the coach when you arrive. Turn your screen brightness up so it scans first time.</p>
+      <div id="codes"></div>
+      <p id="none" class="muted" hidden>No codes are saved on this phone. Open the app when you have signal and they'll be saved for next time.</p>
+    </main>
+    <script src="/offline-pass.js" defer></script>
+  </body>
+</html>

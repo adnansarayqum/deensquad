@@ -1,4 +1,4 @@
-import { londonDate, londonTime, shortDay } from "../dates";
+import { londonDate, londonTime, sameLondonDay, shortDay } from "../dates";
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import type { AgeGroup, PaymentState } from "../domain";
@@ -99,9 +99,7 @@ function distance(s: { starts_at: Date; ends_at: Date }, now: Date): number {
  * check a child into Friday's session. The register shows the next session read-only until then.
  */
 export function registerOpen(startsAt: string, now: Date): boolean {
-  const a = londonDate(new Date(startsAt));
-  const b = londonDate(now);
-  return a.year === b.year && a.month === b.month && a.day === b.day;
+  return sameLondonDay(new Date(startsAt), now);
 }
 
 /** Why Mark here is off for a session that isn't today. */

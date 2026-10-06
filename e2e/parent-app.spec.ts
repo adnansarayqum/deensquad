@@ -14,7 +14,10 @@ test.beforeAll(() => {
   rmSync(COACH_STATE, { force: true });
 });
 
-/** A dropped signal for a page's Server Actions (they post to the page's own address); everything else loads. */
+/**
+ * A dropped signal for a page's Server Actions (they post to the page's own address); everything else loads.
+ * Keep the matcher in a variable: page.unroute only removes the same function.
+ */
 const noSignal = (path: string) => (url: URL) => url.pathname === path;
 const abortPosts = (route: import("@playwright/test").Route) => (route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue());
 
@@ -98,12 +101,13 @@ test("news: a parent of two acknowledges the kit message", async ({ page }) => {
   await page.screenshot({ path: shot("news"), fullPage: true });
 
   // No signal: the tap stays on screen, says it didn't save and offers to try again.
-  await page.route(noSignal("/news"), abortPosts);
+  const newsOffline = noSignal("/news");
+  await page.route(newsOffline, abortPosts);
   await page.getByRole("button", { name: "I've read this" }).click();
   await expect(page.getByRole("alert").getByText("No signal. That didn't save.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Club news" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Something went wrong" })).toHaveCount(0);
-  await page.unroute(noSignal("/news"));
+  await page.unroute(newsOffline);
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByText("You're all caught up")).toBeVisible();
 });
@@ -119,12 +123,13 @@ test("friday: each child gets their own answer and headcount", async ({ page }) 
   await expect(page.getByText("Saved. Coach can see Yusuf is coming.")).toBeVisible();
   await expect(page.getByText("12 of 16 coming")).toBeVisible();
   // No signal: Musa's answer doesn't save; the screen and its QR link stay, and Try again sends it once back online.
-  await page.route(noSignal("/friday"), abortPosts);
+  const fridayOffline = noSignal("/friday");
+  await page.route(fridayOffline, abortPosts);
   await musa.getByRole("button", { name: "Not this week" }).click();
   await expect(page.getByRole("alert").getByText("No signal. That didn't save.")).toBeVisible();
   await expect(musa.getByRole("button", { name: "Not this week" })).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByRole("link", { name: /Attendance QR codes/ })).toBeVisible();
-  await page.unroute(noSignal("/friday"));
+  await expect(page.getByText(/attendance QR codes/i).first()).toBeVisible();
+  await page.unroute(fridayOffline);
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByText("Saved. Coach knows Musa is away this week.")).toBeVisible();
   await expect(page.getByText("No signal. That didn't save.")).toHaveCount(0);
@@ -564,13 +569,13 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await expect(plan).toHaveValue("Warm-up: rondos\nMain: passing on the move");
   await page.screenshot({ path: shot("coach-plan-too-big"), fullPage: true });
   // A save that never comes back keeps the plan too, and doesn't blame the file.
-  const planPage = new URL(page.url()).pathname;
-  await page.route(noSignal(planPage), abortPosts);
+  const planOffline = noSignal(new URL(page.url()).pathname);
+  await page.route(planOffline, abortPosts);
   await page.getByLabel(/Attach a PDF or photo/).setInputFiles({ name: "u10-plan.pdf", mimeType: "application/pdf", buffer: pdf });
   await page.getByRole("button", { name: "Share with parents" }).click();
   await expect(page.locator("main").getByRole("alert")).toHaveText("That didn't save. Your plan is still here.");
   await expect(plan).toHaveValue("Warm-up: rondos\nMain: passing on the move");
-  await page.unroute(noSignal(planPage));
+  await page.unroute(planOffline);
   await page.getByRole("button", { name: "Share with parents" }).click();
   await expect(page.getByText(/U10 parents can see it/)).toBeVisible();
   await page.screenshot({ path: shot("coach-plan"), fullPage: true });
@@ -1062,6 +1067,7 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
   expect(jsQR(new Uint8ClampedArray(picture.data), picture.width, picture.height)?.data).toMatch(/^DSP\.[0-9a-f-]{36}\./);
   const video = resolve("e2e/.results/musa-pass.y4m");
   writeFileSync(video, cameraVideo(picture));
+
 
   // The coach's phone, with that pass held up to its camera. (By now Coach Hamza runs the U7s only, so the new session is theirs.)
   const browser = await playwright.chromium.launch({

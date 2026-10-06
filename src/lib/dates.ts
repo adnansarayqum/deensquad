@@ -44,6 +44,13 @@ export function londonDate(at: Date): { year: number; month: number; day: number
   };
 }
 
+/** Whether two instants fall on the same London calendar day. */
+export function sameLondonDay(a: Date, b: Date): boolean {
+  const x = londonDate(a);
+  const y = londonDate(b);
+  return x.year === y.year && x.month === y.month && x.day === y.day;
+}
+
 /**
  * The next Friday training (6:30pm London) that has not yet finished at `now`.
  * On a Friday before 8pm this returns today's session.

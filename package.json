@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "tokens": "node scripts/build-tokens.mjs",
+    "offline": "node scripts/build-offline.mjs",
     "db:migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {

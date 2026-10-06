@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AdminNav } from "@/components/admin/AdminNav";
-import { signOut } from "@/lib/auth/actions";
 import { requireStaff } from "@/lib/auth/session";
+import { SignOutForm } from "@/components/SignOutForm";
 
 export const metadata: Metadata = { title: { template: "%s · Club admin · Deen Squad", default: "Club admin · Deen Squad" } };
 
@@ -31,11 +31,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 Parent app
               </Link>
             ) : null}
-            <form action={signOut}>
+            <SignOutForm>
               <button type="submit" className="flex min-h-12 w-full items-center rounded-dash px-3 hover:bg-pitch-deep">
                 Sign out
               </button>
-            </form>
+            </SignOutForm>
           </div>
         </div>
       </aside>
@@ -56,11 +56,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 <Link href="/coach" className="inline-flex min-h-11 items-center">
                   Register
                 </Link>
-                <form action={signOut}>
+                <SignOutForm>
                   <button type="submit" className="inline-flex min-h-11 items-center">
                     Sign out
                   </button>
-                </form>
+                </SignOutForm>
               </div>
             </div>
             <AdminNav isAdmin={isAdmin} />

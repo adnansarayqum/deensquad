@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Child, Session } from "../domain";
-import { availabilityQuestion, buildWeek, computeStats, joinNames, squadInvites, weekSummary } from "./views";
+import { availabilityQuestion, buildWeek, computeStats, joinNames, sessionsToday, squadInvites, weekSummary } from "./views";
 
 const child = (id: string, name: string, group: Child["ageGroup"]): Child => ({
   id,
@@ -33,6 +33,12 @@ describe("the week for a family", () => {
   it("asks about every child who hasn't answered", () => {
     const week = buildWeek(kids, [session("s", ["U7", "U10"])], new Map(), new Map());
     expect(weekSummary(week)).toBe("Are Yusuf and Musa coming?");
+  });
+  it("knows which children have a session today (London), on the day only", () => {
+    const week = buildWeek(kids, [session("s", ["U10"])], new Map(), new Map());
+    expect(sessionsToday(week, new Date("2026-10-09T08:00:00Z")).map((t) => t.child.firstName)).toEqual(["Yusuf"]);
+    expect(sessionsToday(week, new Date("2026-10-08T22:59:00Z"))).toEqual([]); // still Thursday in London
+    expect(sessionsToday(week, new Date("2026-10-09T23:00:00Z"))).toEqual([]); // Saturday in London
   });
   it("summarises answers", () => {
     const week = buildWeek(kids, [session("s", ["U7", "U10"])], new Map([["s:a", "coming"], ["s:b", "away"]]), new Map());

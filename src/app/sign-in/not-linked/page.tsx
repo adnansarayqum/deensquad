@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AuthShell } from "@/components/auth/AuthShell";
-import { signOut } from "@/lib/auth/actions";
 import { requireUser } from "@/lib/auth/session";
+import { SignOutForm } from "@/components/SignOutForm";
 
 export const metadata: Metadata = { title: "Not linked yet" };
 
@@ -12,11 +12,11 @@ export default async function NotLinkedPage() {
       <p className="text-[15px] leading-[22px]">
         Ask the club to add <span className="font-bold">{user.email}</span> to your child&apos;s record, then open the app again.
       </p>
-      <form action={signOut}>
+      <SignOutForm>
         <button type="submit" className="btn-chunky btn-paper w-full">
           Sign out
         </button>
-      </form>
+      </SignOutForm>
     </AuthShell>
   );
 }

@@ -1,21 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpen, CalendarX, ChevronRight, ClipboardList, Clock, Info, MoonStar, QrCode, Shirt } from "lucide-react";
+import { BookOpen, CalendarX, ChevronDown, ChevronRight, ClipboardList, Clock, Info, MoonStar, QrCode, Shirt } from "lucide-react";
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
+import { PassCacheWriter } from "@/components/PassCacheWriter";
+import { PassCarousel } from "@/components/PassCarousel";
 import { Attachment } from "@/components/plans/Attachment";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { clock, shortDay } from "@/lib/dates";
 import type { Session } from "@/lib/domain";
 import type { SquadCounts } from "@/lib/parent/data";
-import { getFridayPage } from "@/lib/parent/load";
-import { availabilityQuestion, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
+import { getFamily, getFridayPage } from "@/lib/parent/load";
+import { availabilityQuestion, sessionsToday, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
+import { cachedPasses, passCards, type PassCard } from "@/lib/pass/cards";
 import type { SessionPlan } from "@/lib/plans/data";
 
 export const metadata: Metadata = { title: "Friday" };
 
 export default async function FridayPage() {
-  const { family, week, cancelled, invites, upcoming, plans, latestSheet } = await getFridayPage();
+  const [{ family, week, cancelled, invites, upcoming, plans, latestSheet }, { user }] = await Promise.all([getFridayPage(), getFamily()]);
   const single = week.length === 1 ? week[0] : null;
+  // Every child's QR code is kept on the phone for no signal; on a session day, today's children's codes are shown here too.
+  const cards = await passCards(family.children);
+  const today = sessionsToday(week, new Date());
+  const todayCards = cards.filter((c) => today.some((t) => t.child.id === c.id));
   const sessions = uniqueSessions(week);
 
   return (
@@ -42,7 +49,10 @@ export default async function FridayPage() {
       )}
 
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
-        {family.children.length > 0 ? (
+        <PassCacheWriter user={user.id} passes={cachedPasses(cards)} />
+        {todayCards.length > 0 ? (
+          <TodaysCodes cards={todayCards} title={today[0].session.title} />
+        ) : family.children.length > 0 ? (
           <Link href="/pass" className="flex items-center gap-3 rounded-app bg-pitch-deep px-3.5 py-3 text-on-pitch">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold">
               <QrCode aria-hidden size={24} />
@@ -133,6 +143,33 @@ export default async function FridayPage() {
         ) : null}
       </main>
     </>
+  );
+}
+
+/** On a session day: the children's QR codes on Friday itself, one tap to open (they're in the page, so no signal needed). */
+function TodaysCodes({ cards, title }: { cards: PassCard[]; title: string }) {
+  const several = cards.length > 1;
+  return (
+    <details className="group rounded-app bg-pitch-deep text-on-pitch">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-app px-3.5 py-3 [&::-webkit-details-marker]:hidden">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold">
+          <QrCode aria-hidden size={24} />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-[15px] font-bold">{several ? "Show attendance QR codes" : "Show attendance QR code"}</span>
+          <span className="text-[13px] text-on-pitch-muted">
+            {title} today. Tap to show {several ? "them" : "it"} here for the coach.
+          </span>
+        </span>
+        <ChevronDown aria-hidden size={20} className="shrink-0 text-on-pitch-muted transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="mx-2 mb-2 flex flex-col items-center gap-1 rounded-app bg-cream px-2 pt-4 text-ink">
+        <PassCarousel cards={cards} />
+        <Link href="/pass" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+          Open full screen
+        </Link>
+      </div>
+    </details>
   );
 }
 

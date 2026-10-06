@@ -29,5 +29,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|manifest.webmanifest|crest.png|icons/|sw.js).*)"],
+  // offline-pass.html/.js: the service worker's static offline page (no one's data), fetched without a sign-in.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|manifest.webmanifest|crest.png|icons/|sw.js|offline-pass\\.).*)"],
 };

@@ -1,6 +1,6 @@
 // Pure functions that turn the family's data into exactly what each parent screen shows.
 
-import { londonDate } from "../dates";
+import { londonDate, sameLondonDay } from "../dates";
 import type { Availability, Child, ChecklistItemId, PaymentState, Session } from "../domain";
 import type { AnnouncementView, ChecklistFacts, SquadCounts } from "./data";
 import { answerKey } from "./data";
@@ -199,4 +199,12 @@ export function computeStats(past: { id: string; startsAt: string }[], attended:
     streak++;
   }
   return { sessions: count, attendancePct: past.length ? Math.round((count / past.length) * 100) : null, streakWeeks: streak };
+}
+
+/**
+ * The children whose next session is today (London) and going ahead, with it: on that day Friday shows their
+ * attendance QR codes and News points to them.
+ */
+export function sessionsToday(week: ChildWeek[], now: Date): { child: Child; session: Session }[] {
+  return week.flatMap((w) => (w.session && !w.session.cancelled && sameLondonDay(new Date(w.session.startsAt), now) ? [{ child: w.child, session: w.session }] : []));
 }

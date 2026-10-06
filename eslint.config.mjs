@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated (npm run offline) from src/offline/pass-page.ts, which is linted.
+    "public/offline-pass.js",
   ]),
 ]);
 

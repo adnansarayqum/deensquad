@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Clock, Flame, LayoutDashboard, Lock, LogOut, ScanLine, Star, Target, Trophy } from "lucide-react";
 import { Card } from "@/components/ui";
-import { signOut } from "@/lib/auth/actions";
 import type { Badge } from "@/lib/domain";
 import { getFamily, getPlayerPage } from "@/lib/parent/load";
+import { SignOutForm } from "@/components/SignOutForm";
 
 export const metadata: Metadata = { title: "Player" };
 
@@ -172,12 +172,12 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           <a href="/privacy" className="inline-flex min-h-11 items-center font-bold text-ink-muted underline">
             Privacy
           </a>
-          <form action={signOut}>
+          <SignOutForm>
             <button type="submit" className="inline-flex min-h-11 items-center gap-1.5 font-bold text-ink-muted">
               <LogOut aria-hidden size={16} />
               Sign out
             </button>
-          </form>
+          </SignOutForm>
         </div>
       </main>
     </>
