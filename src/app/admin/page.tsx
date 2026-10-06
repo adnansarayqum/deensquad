@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AdminTitle, Notice, ReadBar, Section } from "@/components/admin/bits";
 import { ColumnChart, Figure, PercentBar, StackedBar } from "@/components/admin/charts";
 import { CHANNELS, loadDashboard, type Channel, type Dashboard } from "@/lib/admin/dashboard";
+import { closeDataRequest } from "@/lib/admin/actions";
 import { TODO_NEEDS } from "@/lib/admin/needs";
 import { coachLimit, requireStaff } from "@/lib/auth/session";
 import { asUser, isDemo } from "@/lib/db";
@@ -41,7 +42,7 @@ export default async function AdminHome() {
   const user = await requireStaff();
   const isAdmin = user.staff.role === "admin";
   const limit = coachLimit(user.staff);
-  const d = await asUser(user.id, (tx) => loadDashboard(tx, { now: new Date(), limit, withShop: isAdmin }));
+  const d = await asUser(user.id, (tx) => loadDashboard(tx, { now: new Date(), limit, withShop: isAdmin, withRequests: isAdmin }));
   const empty = d.players === 0;
 
   return (
@@ -54,6 +55,8 @@ export default async function AdminHome() {
           app&apos;s variables in Railway.
         </Notice>
       ) : null}
+
+      {d.deletionRequests?.length ? <DeletionRequests requests={d.deletionRequests} /> : null}
 
       {empty && isAdmin ? (
         <Section title="Get started">
@@ -106,6 +109,49 @@ export default async function AdminHome() {
         </Section>
       ) : null}
     </>
+  );
+}
+
+/** Parents who asked (Player → Your data) to have their account deleted. Nothing is deleted until an admin acts. */
+function DeletionRequests({ requests }: { requests: NonNullable<Dashboard["deletionRequests"]> }) {
+  return (
+    <section aria-labelledby="deletion-requests" className="flex flex-col gap-3 rounded-app border-2 border-kit-orange bg-paper p-4">
+      <h2 id="deletion-requests" className="text-[17px] font-extrabold">
+        {requests.length === 1 ? "1 family asked to be deleted" : `${requests.length} families asked to be deleted`}
+      </h2>
+      <p className="text-[15px] leading-[22px] text-ink-muted">
+        Check with the family first. Removing a child on Families deletes parents left with no children, and that closes the request. Tap Done if
+        you&apos;ve dealt with it another way.
+      </p>
+      <ul className="flex flex-col divide-y-2 divide-line">
+        {requests.map((r) => (
+          <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+            <span className="flex min-w-0 flex-col">
+              <span className="text-[15px] font-bold">
+                {r.parentName} <span className="font-normal text-ink-muted">· asked {dayMonth(r.askedAt)}</span>
+              </span>
+              {r.children.length ? (
+                <span className="flex flex-wrap gap-x-3 text-[15px]">
+                  {r.children.map((c) => (
+                    <Link key={c.id} href={`/admin/families/${c.id}`} className="inline-flex min-h-12 items-center font-bold text-grass-text underline">
+                      {c.name}
+                    </Link>
+                  ))}
+                </span>
+              ) : (
+                <span className="text-[13px] text-ink-muted">No children linked.</span>
+              )}
+            </span>
+            <form action={closeDataRequest}>
+              <input type="hidden" name="request" value={r.id} />
+              <button type="submit" className="btn-chunky btn-paper min-h-12" aria-label={`Done: ${r.parentName}'s request`}>
+                Done
+              </button>
+            </form>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

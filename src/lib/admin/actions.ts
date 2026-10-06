@@ -23,6 +23,7 @@ import { enqueue } from "../background";
 import { runChase } from "../chase/run";
 import { sendInvites } from "./invites";
 import { deleteLeftoverAccounts, removeChildRecord, unlinkGuardianRecord } from "./remove";
+import { closeDeletionRequest } from "../data-requests";
 import { TOPICS } from "./topics";
 
 // Club admin Server Actions. Each checks the role first, then writes as that person,
@@ -259,6 +260,15 @@ export async function removeChild(formData: FormData): Promise<void> {
   const removed = await asUser(user.id, (tx) => removeChildRecord(tx, child));
   await asSystem((tx) => deleteLeftoverAccounts(tx, removed));
   redirect("/admin/families?removed=1");
+}
+
+/** "Done" on a parent's request to be deleted (the overview): the admin has dealt with it another way. */
+export async function closeDataRequest(formData: FormData): Promise<void> {
+  const user = await requireAdmin();
+  const request = id(formData.get("request"));
+  if (!request) return;
+  await asUser(user.id, (tx) => closeDeletionRequest(tx, request));
+  refresh();
 }
 
 // News ------------------------------------------------------------------------

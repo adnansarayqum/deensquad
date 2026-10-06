@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Clock, Flame, LayoutDashboard, Lock, LogOut, ScanLine, Star, Target, Trophy } from "lucide-react";
+import { Clock, Download, Flame, LayoutDashboard, Lock, LogOut, ScanLine, Star, Target, Trophy } from "lucide-react";
 import { Card } from "@/components/ui";
+import { loadMyDeletionRequest } from "@/lib/data-requests";
+import { asUser } from "@/lib/db";
 import type { Badge } from "@/lib/domain";
 import { getFamily, getPlayerPage } from "@/lib/parent/load";
 import { SignOutForm } from "@/components/SignOutForm";
@@ -13,6 +15,7 @@ const badgeIcons: Record<Badge["icon"], typeof Star> = { star: Star, clock: Cloc
 
 export default async function PlayerPage({ searchParams }: PageProps<"/player">) {
   const [{ family, child, stats, badges, note, awards }, { user }] = await Promise.all([getPlayerPage((await searchParams).child), getFamily()]);
+  const deletionAsked = await asUser(user.id, loadMyDeletionRequest);
 
   return (
     <>
@@ -157,7 +160,29 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           </div>
         ) : null}
 
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-sm">
+        <section aria-labelledby="your-data" className="mt-2 flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
+          <h2 id="your-data" className="text-base font-extrabold">
+            Your data
+          </h2>
+          <p className="text-[15px] leading-[22px]">See everything the app holds about you and your children, or ask the club to delete your account.</p>
+          <a href="/api/me/export" download className="btn-chunky btn-paper self-start">
+            <Download aria-hidden size={18} />
+            Download my data
+          </a>
+          {deletionAsked ? (
+            <p role="status" className="text-[15px] leading-[22px]">
+              You asked the club to delete your account on{" "}
+              {new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "Europe/London" }).format(new Date(deletionAsked))}. An admin will be in
+              touch.
+            </p>
+          ) : (
+            <Link href="/player/delete-account" className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-ink-muted underline">
+              Ask the club to delete my account
+            </Link>
+          )}
+        </section>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-sm">
           {user.staff ? (
             <div className="flex gap-4">
               <Link href="/coach" className="inline-flex min-h-11 items-center gap-1.5 font-bold text-grass-text">

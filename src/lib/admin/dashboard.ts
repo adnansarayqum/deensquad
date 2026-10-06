@@ -2,6 +2,7 @@ import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { londonDate, londonTime } from "../dates";
 import { AGE_GROUPS, type AgeGroup, type PaymentState } from "../domain";
+import { loadOpenDeletionRequests, type OpenDeletionRequest } from "../data-requests";
 import { seasonStart } from "../exports/reports";
 import { newsReaches, sessionIsFor } from "../squads/sql";
 import { NEEDS, TODO_NEEDS, behindOnNews } from "./needs";
@@ -59,6 +60,8 @@ export type Dashboard = {
   /** Admins only (the shop is theirs to run); null for coaches. */
   shop: { awaitingPayment: number; toOrder: number; ready: number; monthPence: number; seasonPence: number } | null;
   news: { recent: NewsAck[]; reminders: Record<Channel, number>; behind: number };
+  /** Parents who asked to be deleted and haven't been dealt with yet. Admins only; null for coaches. */
+  deletionRequests: OpenDeletionRequest[] | null;
 };
 
 /** Midnight on the 1st of the London month `now` falls in. */
@@ -81,13 +84,13 @@ const reaches = newsReaches("a", "p");
  */
 export async function loadDashboard(
   tx: Queryable,
-  { now, limit, withShop }: { now: Date; limit: readonly AgeGroup[] | null; withShop: boolean },
+  { now, limit, withShop, withRequests = false }: { now: Date; limit: readonly AgeGroup[] | null; withShop: boolean; withRequests?: boolean },
 ): Promise<Dashboard> {
   const groups = limit ? AGE_GROUPS.filter((g) => limit.includes(g)) : [...AGE_GROUPS];
   const season = seasonStart(now);
   const weekAgo = new Date(now.getTime() - 7 * 86400000);
 
-  const [next, seasonRows, recent, family, shop, news, reminders, behind] = await Promise.all([
+  const [next, seasonRows, recent, family, shop, news, reminders, behind, deletionRequests] = await Promise.all([
     tx.query<{ group: AgeGroup; squad: number; id: string | null; title: string | null; starts_at: Date | null; coming: number; away: number }>(
       `select g.grp as "group", s.id, s.title, s.starts_at,
          -- for a tournament squad session, the group's picked children only
@@ -188,6 +191,7 @@ export async function loadDashboard(
     ),
     // The same rule as the Families list's "unread" filter, which this figure links to.
     tx.query<{ n: number }>(`select count(*)::int as n from guardians g where ${behindOnNews("g", "$1::text[]")}`, [groups]),
+    withRequests ? loadOpenDeletionRequests(tx) : Promise.resolve(null),
   ]);
 
   const f = family[0];
@@ -229,5 +233,6 @@ export async function loadDashboard(
       reminders: Object.fromEntries(CHANNELS.map((c) => [c, reminders.find((r) => r.channel === c)?.n ?? 0])) as Record<Channel, number>,
       behind: behind[0]?.n ?? 0,
     },
+    deletionRequests,
   };
 }

@@ -134,7 +134,26 @@ ${link ? button(link, "See families") : ""}`,
   return { to, subject, text, html };
 }
 
-export type OrderEmailKind = "placed" | "paid" | "ready" | "cancelled";
+/** A parent asked the club to delete their account (Player → Your data). Names the parent only: nothing else about the family. */
+export function deletionRequestEmail(opts: { to: string; parentName: string; link: string | null; appUrl: string | null }): Email {
+  const { to, parentName, link, appUrl } = opts;
+  const subject = `Account deletion request: ${parentName}`;
+  const lines = [
+    `${parentName} has asked the club to delete their account in the parent app.`,
+    "",
+    "Nothing has been deleted yet. Please check with the family, then remove them on Families (or mark the request done on the overview).",
+  ];
+  const text = [...lines, ...(link ? ["", `Open the overview: ${link}`] : [])].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0"><b>${escape(parentName)}</b> has asked the club to delete their account in the parent app.</p>
+<p>Nothing has been deleted yet. Please check with the family, then remove them on Families (or mark the request done on the overview).</p>
+${link ? button(link, "Open the overview") : ""}`,
+  );
+  return { to, subject, text, html };
+}
+
+export type OrderEmailKind ="placed" | "paid" | "ready" | "cancelled";
 
 /**
  * What the parent hears about their kit order, once at each step: placed (with how to pay), payment received,

@@ -1,14 +1,18 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireParent } from "../auth/session";
 import { UUID } from "../auth/tokens";
-import { asUser } from "../db";
+import { asSystem, asUser } from "../db";
+import { deletionRequestRecipients, requestAccountDeletion } from "../data-requests";
+import { canSendEmail, sendEmails } from "../email/send";
+import { deletionRequestEmail } from "../email/templates";
 import { CONTRACT } from "../documents/contract";
 import type { Availability } from "../domain";
 import { cleanPhone, cleanText } from "../validate";
-import { teamFeePayUrl } from "../config";
+import { appUrl, teamFeePayUrl } from "../config";
 import { reportFamilyPayment, saveAnswer } from "./data";
 
 // Parent Server Actions. Each checks the session, validates its input, then writes as that parent,
@@ -117,4 +121,38 @@ export async function signAgreement(_prev: AgreementState, formData: FormData): 
     tx.query(`select sign_agreement($1, $2, $3, $4)`, [child, CONTRACT.id, parentName, `${player.first_name} ${player.last_name}`]),
   );
   redirect("/checklist");
+}
+
+/**
+ * "Ask the club to delete my account" (Player → Your data → the confirm page). Records the request once and emails the
+ * club, naming the parent only. Nothing is deleted here: an admin decides what happens to the children's records.
+ */
+export async function askToDeleteAccount(): Promise<void> {
+  const user = await requireParent();
+  const created = await asUser(user.id, requestAccountDeletion);
+  if (created) await tellClubAboutDeletion(user.id);
+  redirect("/player/delete-account");
+}
+
+/** Emails the club about a new deletion request. Never throws: the request is on the admin overview either way. */
+async function tellClubAboutDeletion(userId: string) {
+  if (!canSendEmail()) return;
+  try {
+    const [parent] = await asUser(userId, (tx) =>
+      tx.query<{ first_name: string; last_name: string }>(`select first_name, last_name from guardians where id = my_guardian_id()`),
+    );
+    const admins = await asSystem((tx) => tx.query<{ email: string }>(`select email from staff where role = 'admin'`));
+    const to = deletionRequestRecipients(process.env, admins.map((a) => a.email));
+    if (!parent || to.length === 0) return;
+    let base = appUrl();
+    if (!base && process.env.NODE_ENV !== "production") {
+      const host = (await headers()).get("host");
+      base = host ? `http://${host}` : null;
+    }
+    const parentName = `${parent.first_name} ${parent.last_name}`;
+    const { failed } = await sendEmails(to.map((email) => deletionRequestEmail({ to: email, parentName, link: base ? `${base}/admin` : null, appUrl: base })));
+    if (failed.length) console.error(`[data request] club email not sent to ${failed.length} address(es).`);
+  } catch (error) {
+    console.error("[data request] club email failed:", error instanceof Error ? error.message : error);
+  }
 }
