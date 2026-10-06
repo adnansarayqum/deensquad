@@ -149,7 +149,7 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
 
   // A fresh load shows who answered, not "Saved".
   await page.reload();
-  await expect(page.getByText(/^Coming · answered by you, today \d\d:\d\d$/)).toBeVisible();
+  await expect(page.getByText(/^Coming · answered by you, today \d{1,2}:\d\d[ap]m$/)).toBeVisible();
   await expect(page.getByText(/^Saved\./)).toHaveCount(0);
 
   // Sara shares the children: she sees Adnan's answers by name, changes Yusuf's, and only she is told "Saved".

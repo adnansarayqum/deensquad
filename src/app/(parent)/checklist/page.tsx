@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Camera, Check, ChevronRight, CreditCard, FileSignature, IdCard, Phone, Shirt } from "lucide-react";
 import { AppHeader, Card, Eyebrow, Progress } from "@/components/ui";
 import { getChecklistPage } from "@/lib/parent/load";
-import type { ChecklistItemView } from "@/lib/parent/views";
+import { countSteps, type ChecklistItemView } from "@/lib/parent/views";
 
 export const metadata: Metadata = { title: "To-do" };
 
@@ -53,13 +53,15 @@ export default async function ChecklistPage() {
         {sections.map(({ key, label, heading, items }) => {
           const todo = items.filter((i) => !i.done);
           const finished = items.filter((i) => i.done);
+          // Counted like the progress bar (the contract counts each child).
+          const steps = countSteps(items);
           return (
             <section key={key} aria-label={label} className="flex flex-col gap-2.5">
               {heading ? (
                 <h2 className="mt-2 flex items-baseline justify-between text-[19px] font-extrabold">
                   {heading}
                   <span className="text-sm font-bold text-ink-muted tabular-nums">
-                    {finished.length} of {items.length} done
+                    {steps.done} of {steps.total} done
                   </span>
                 </h2>
               ) : null}

@@ -26,7 +26,7 @@ export function AvailabilityPicker({
   compact?: boolean;
   /** A tournament squad invite: the same answers, worded as "can play" and "can't play". */
   squad?: boolean;
-  /** Who gave the saved answer and when ("Coming · answered by Sara, Tue 14:02"), shown until this person taps. */
+  /** Who gave the saved answer and when ("Coming · answered by Sara, Tue 2:02pm"), shown until this person taps. */
   answered?: string;
 }) {
   const [optimistic, setOptimistic] = useOptimistic(answer);

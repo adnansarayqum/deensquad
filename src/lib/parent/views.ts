@@ -1,6 +1,6 @@
 // Pure functions that turn the family's data into exactly what each parent screen shows.
 
-import { londonDate, postedLabel, sameLondonDay } from "../dates";
+import { clock, daysUntil, londonDate, sameLondonDay } from "../dates";
 import type { Availability, Child, ChecklistItemId, PaymentState, Session } from "../domain";
 import type { AnnouncementView, AnswerRecord, ChecklistFacts, SquadCounts } from "./data";
 import { answerKey } from "./data";
@@ -105,12 +105,26 @@ export function buildWeek(
 
 /**
  * The line under an answer already given, so parents who share a child can see who said what:
- * "Coming · answered by Sara, Tue 14:02", "Not this week · answered by you, today 09:12". An answer saved
- * without a guardian (or by one this parent can no longer see) shows no name: "Coming · answered Tue 14:02".
+ * "Coming · answered by Sara, Tue 2:02pm", "Not this week · answered by you, today 9:12am". An answer saved
+ * without a guardian (or by one no longer linked to the child) shows no name: "Coming · answered Tue 2:02pm".
  */
+/** "today 9:12am", "yesterday 5:40pm", "Tue 2:02pm", or "28 Sept 2:02pm" for older answers. */
+function answeredWhen(iso: string, now: Date): string {
+  const days = -daysUntil(iso, now);
+  const day =
+    days === 0
+      ? "today"
+      : days === 1
+        ? "yesterday"
+        : new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", ...(days < 7 ? { weekday: "short" } : { day: "numeric", month: "short" }) }).format(
+            new Date(iso),
+          );
+  return `${day} ${clock(iso)}`;
+}
+
 export function answeredLine(record: AnswerRecord, viewerGuardianId: string, now: Date, squad = false): string {
   const label = squad ? (record.answer === "coming" ? "Can play" : "Can't play") : record.answer === "coming" ? "Coming" : "Not this week";
-  const when = postedLabel(record.at, now).replace(/^(Today|Yesterday)/, (w) => w.toLowerCase());
+  const when = answeredWhen(record.at, now);
   const who = record.by ? (record.by.id === viewerGuardianId ? "you" : record.by.name) : null;
   return who ? `${label} · answered by ${who}, ${when}` : `${label} · answered ${when}`;
 }

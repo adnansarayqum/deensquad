@@ -93,14 +93,17 @@ describe("who answered", () => {
     expect(squadInvites(week, sessions, answers, records)[0].answered?.answer).toBe("coming");
   });
   it("names the other parent, or says you, with the day and time", () => {
-    expect(answeredLine(bySara, "g-adnan", now)).toBe("Not this week · answered by Sara, Tue 14:02");
-    expect(answeredLine(bySara, "g-sara", now)).toBe("Not this week · answered by you, Tue 14:02");
-    expect(answeredLine({ ...bySara, answer: "coming", at: "2026-10-08T08:12:00Z" }, "g-adnan", now)).toBe("Coming · answered by Sara, today 09:12");
-    expect(answeredLine({ ...bySara, answer: "coming" }, "g-adnan", now, true)).toBe("Can play · answered by Sara, Tue 14:02");
+    expect(answeredLine(bySara, "g-adnan", now)).toBe("Not this week · answered by Sara, Tue 2:02pm");
+    expect(answeredLine(bySara, "g-sara", now)).toBe("Not this week · answered by you, Tue 2:02pm");
+    expect(answeredLine({ ...bySara, answer: "coming", at: "2026-10-08T08:12:00Z" }, "g-adnan", now)).toBe("Coming · answered by Sara, today 9:12am");
+    expect(answeredLine({ ...bySara, answer: "coming" }, "g-adnan", now, true)).toBe("Can play · answered by Sara, Tue 2:02pm");
+  });
+  it("gives a date for an answer more than a week old", () => {
+    expect(answeredLine({ ...bySara, at: "2026-09-28T13:02:00Z" }, "g-adnan", now)).toBe("Not this week · answered by Sara, 28 Sept 2:02pm");
   });
   it("shows no name when the answer has no guardian (older answers) or theirs can't be seen", () => {
-    expect(answeredLine({ ...bySara, by: null }, "g-adnan", now)).toBe("Not this week · answered Tue 14:02");
-    expect(answeredLine({ ...bySara, by: { id: "g-gone", name: null } }, "g-adnan", now)).toBe("Not this week · answered Tue 14:02");
+    expect(answeredLine({ ...bySara, by: null }, "g-adnan", now)).toBe("Not this week · answered Tue 2:02pm");
+    expect(answeredLine({ ...bySara, by: { id: "g-gone", name: null } }, "g-adnan", now)).toBe("Not this week · answered Tue 2:02pm");
   });
 });
 

@@ -25,7 +25,7 @@ export default async function FridayPage() {
   const cards = await passCards(family.children);
   const now = new Date();
   const today = sessionsToday(week, now);
-  /** "Coming · answered by Sara, Tue 14:02" (or "by you") under an answer that's already been given. */
+  /** "Coming · answered by Sara, Tue 2:02pm" (or "by you") under an answer that's already been given. */
   const answered = (w: { answered?: ChildWeek["answered"]; session?: Session }) =>
     w.answered ? answeredLine(w.answered, family.guardian.id, now, Boolean(w.session?.squad)) : undefined;
   const todayCards = cards.filter((c) => today.some((t) => t.child.id === c.id));
