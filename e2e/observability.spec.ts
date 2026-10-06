@@ -29,6 +29,10 @@ test("with Sentry and analytics off, nothing is sent to either", async ({ browse
 
   expect(requests.filter((url) => NOT_ALLOWED.test(url))).toEqual([]);
   await expect(page.locator("script#ds-analytics")).toHaveCount(0);
+  // Sentry's tunnel isn't open either: signed out, /monitoring is like any other private address.
+  const tunnel = await context.request.post("/monitoring", { data: '{"dsn":"https://public@o0.ingest.de.sentry.io/0"}\n', maxRedirects: 0 });
+  expect(tunnel.status()).toBe(307);
+  expect(tunnel.headers().location).toMatch(/\/sign-in/);
   // The privacy notice lists neither while they're off.
   await expect(page.getByText("Sentry", { exact: false })).toHaveCount(0);
   await expect(page.getByText(/Umami|Plausible/)).toHaveCount(0);

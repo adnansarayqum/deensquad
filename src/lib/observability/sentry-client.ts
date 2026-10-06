@@ -10,8 +10,9 @@ export function initSentryClient(dsn: string, environment: string) {
   init({
     ...sharedOptions({ dsn, environment }),
     // The release (the deployed commit) is added at build time by withSentryConfig in next.config.ts.
-    // Reports go through the app's own /monitoring route (so ad blockers don't drop them) without the
-    // sign-in cookie: the route passes the request on to Sentry, and the cookie must never go with it.
+    // Reports go through the app's own /monitoring route (so ad blockers don't drop them; src/app/monitoring),
+    // which passes on only the report, never the visitor's IP address or headers. No cookies are sent to it either.
+    tunnel: "/monitoring",
     transportOptions: { fetchOptions: { credentials: "omit" } },
     // Errors from browser extensions aren't ours.
     denyUrls: [/^(chrome|moz|safari|safari-web|ms-browser)-extension:\/\//i],

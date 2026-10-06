@@ -52,8 +52,8 @@ export function withSentry(config: NextConfig): NextConfig {
       silent: !upload,
       // Nothing about the build is sent to Sentry beyond the source maps.
       telemetry: false,
-      // Browser reports go to the app's own address (ad blockers drop requests to sentry.io). src/proxy.ts lets it through.
-      tunnelRoute: "/monitoring",
+      // No tunnelRoute: its rewrite passed the visitor's IP address and headers on to Sentry. Browser reports go to the
+      // app's own route instead (src/app/monitoring/route.ts), which forwards the report alone.
       // The release is the deployed commit (Railway sets RAILWAY_GIT_COMMIT_SHA). Only created in Sentry when uploading.
       release: { name: process.env.RAILWAY_GIT_COMMIT_SHA?.trim() || undefined, create: upload, finalize: upload },
       sourcemaps: upload ? { deleteSourcemapsAfterUpload: true } : { disable: true },

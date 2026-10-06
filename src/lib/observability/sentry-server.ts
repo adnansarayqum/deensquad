@@ -13,6 +13,9 @@ export function initSentryServer(dsn: string) {
     ...sharedOptions({ dsn, environment: sentryEnvironment(), release: sentryRelease() }),
     // Never attach the values of local variables to stack frames (they can hold a family's details).
     includeLocalVariables: false,
+    // No sentry-trace/baggage headers on the server's own requests (Resend, SumUp, Anthropic, and the /monitoring
+    // tunnel's forwarding to Sentry, which must carry the report alone).
+    tracePropagationTargets: [],
     // No load-time hooks into other packages (they'd only add timings for database drivers the app doesn't use,
     // and Node 22 can't load them anyway).
     enableRuntimeChannelInjection: false,
