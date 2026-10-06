@@ -24,29 +24,48 @@ type Subscription = { id: string; user_id: string; endpoint: string; p256dh: str
 
 export type PushPayload = { title: string; body: string; url: string };
 
-/** Sends to every device of each user; forgets devices the push service says are gone. Returns users reached. */
-export async function pushToUsers(tx: Queryable, userIds: string[], payload: PushPayload): Promise<Set<string>> {
+/** One push to one device; rejects with the push service's `statusCode` when it refuses. */
+export type PushSend = (sub: { endpoint: string; keys: { p256dh: string; auth: string } }, body: string) => Promise<unknown>;
+
+const sendWebPush: PushSend = (sub, body) => webpush.sendNotification(sub, body, { TTL: 12 * 3600, timeout: SEND_TIMEOUT_MS });
+
+/** How many devices are sent to at once. */
+export const PUSH_BATCH = 10;
+
+/**
+ * Sends to every device of each user; forgets devices the push service says are gone. Returns users reached.
+ * Sends go out in parallel batches; the database writes follow one at a time, as one transaction can't run
+ * statements in parallel (postgres.js).
+ */
+export async function pushToUsers(tx: Queryable, userIds: string[], payload: PushPayload, send: PushSend = sendWebPush): Promise<Set<string>> {
   const reached = new Set<string>();
   if (!pushConfigured() || userIds.length === 0) return reached;
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:admin@example.com", process.env.VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!);
-  const subs = await tx.query<Subscription>(`select id, user_id, endpoint, p256dh, auth from push_subscriptions where user_id = any($1::uuid[])`, [userIds]);
-  for (const s of subs) {
-    // Only the network call is caught: a failed statement must abort the transaction, not be swallowed.
-    let status: number | "ok" | undefined;
-    try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(payload), { TTL: 12 * 3600, timeout: SEND_TIMEOUT_MS });
-      status = "ok";
-    } catch (error) {
-      status = (error as { statusCode?: number }).statusCode;
-      if (status !== 404 && status !== 410) console.error("[push] failed:", status ?? (error instanceof Error ? error.message : error));
-    }
-    if (status === "ok") {
-      reached.add(s.user_id);
-      await tx.query(`update push_subscriptions set last_success_at = now() where id = $1`, [s.id]);
-    } else if (status === 404 || status === 410) {
-      await tx.query(`delete from push_subscriptions where id = $1`, [s.id]);
-    }
+  if (send === sendWebPush) {
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:admin@example.com", process.env.VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!);
   }
+  const subs = await tx.query<Subscription>(`select id, user_id, endpoint, p256dh, auth from push_subscriptions where user_id = any($1::uuid[])`, [userIds]);
+  const body = JSON.stringify(payload);
+  const ok: string[] = [];
+  const gone: string[] = [];
+  for (let i = 0; i < subs.length; i += PUSH_BATCH) {
+    const batch = subs.slice(i, i + PUSH_BATCH);
+    // Only the network calls are caught: a failed statement must abort the transaction, not be swallowed.
+    const results = await Promise.allSettled(batch.map((s) => send({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body)));
+    results.forEach((result, j) => {
+      const s = batch[j];
+      if (result.status === "fulfilled") {
+        reached.add(s.user_id);
+        ok.push(s.id);
+        return;
+      }
+      const error = result.reason;
+      const status = (error as { statusCode?: number } | undefined)?.statusCode;
+      if (status === 404 || status === 410) gone.push(s.id);
+      else console.error("[push] failed:", status ?? (error instanceof Error ? error.message : error));
+    });
+  }
+  for (const id of ok) await tx.query(`update push_subscriptions set last_success_at = now() where id = $1`, [id]);
+  for (const id of gone) await tx.query(`delete from push_subscriptions where id = $1`, [id]);
   return reached;
 }
 
