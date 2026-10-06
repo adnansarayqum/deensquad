@@ -109,15 +109,29 @@ export function registerClosedMessage(startsAt: string, now: Date): string {
     : `This session was on ${shortDay(startsAt)}. Children can only be marked here on the day.`;
 }
 
+/** Why a session's register can't be changed at `now` (gone, or not its day), or null when it's open. */
+async function registerRefusal(tx: Queryable, sessionId: string, now: Date): Promise<string | null> {
+  const [s] = await tx.query<{ starts_at: Date }>(`select starts_at from sessions where id = $1`, [sessionId]);
+  if (!s) return "That session isn't on the register any more. Reload the page.";
+  const startsAt = iso(s.starts_at);
+  return registerOpen(startsAt, now) ? null : registerClosedMessage(startsAt, now);
+}
+
 /** A coach's Mark here: checks the child into that session, only on the session's day. Runs as staff (row level security on). */
 export async function markHere(tx: Queryable, sessionId: string, playerId: string, now: Date): Promise<{ error?: string }> {
-  const [s] = await tx.query<{ starts_at: Date }>(`select starts_at from sessions where id = $1`, [sessionId]);
-  if (!s) return { error: "That session isn't on the register any more. Reload the page." };
-  const startsAt = iso(s.starts_at);
-  if (!registerOpen(startsAt, now)) return { error: registerClosedMessage(startsAt, now) };
+  const refused = await registerRefusal(tx, sessionId, now);
+  if (refused) return { error: refused };
   await tx.query(
     `insert into attendance (session_id, player_id, method, recorded_by) values ($1, $2, 'manual', auth.uid()) on conflict do nothing`,
     [sessionId, playerId],
   );
+  return {};
+}
+
+/** Undo a check-in (Mark here or a scanned QR code): the same day lock as Mark here, so attendance on other days stays as it is. */
+export async function undoHere(tx: Queryable, sessionId: string, playerId: string, now: Date): Promise<{ error?: string }> {
+  const refused = await registerRefusal(tx, sessionId, now);
+  if (refused) return { error: refused };
+  await tx.query(`delete from attendance where session_id = $1 and player_id = $2`, [sessionId, playerId]);
   return {};
 }

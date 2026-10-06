@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
 import { passToken, readPass } from "../pass/token";
-import { checkInByPass, markHere, registerOpen } from "./checkin";
+import { checkInByPass, markHere, registerOpen, undoHere } from "./checkin";
 
 // A Friday: the sample club's training (6:30pm, every age group) is today.
 const friday = new Date("2026-10-09T17:00:00Z"); // 6pm in London
@@ -108,6 +108,20 @@ describe("Mark here", () => {
       error: "This session was on Fri 9 Oct. Children can only be marked here on the day.",
     });
     expect(await attendance(session)).toEqual([{ player_id: DEV_IDS.musa }]);
+  });
+
+  it("won't undo a check-in on another day, only on the session's day", async () => {
+    const session = await fridaySession();
+    await t.asSystem((tx) => tx.query(`insert into attendance (session_id, player_id) values ($1, $2)`, [session, DEV_IDS.musa]));
+    expect(await t.asUser(coach, (tx) => undoHere(tx, session, DEV_IDS.musa, new Date("2026-10-06T10:00:00Z")))).toEqual({
+      error: "Opens on Fri 9 Oct. You can mark children here on the day.",
+    });
+    expect(await t.asUser(coach, (tx) => undoHere(tx, session, DEV_IDS.musa, new Date("2026-10-12T10:00:00Z")))).toEqual({
+      error: "This session was on Fri 9 Oct. Children can only be marked here on the day.",
+    });
+    expect(await attendance(session)).toEqual([{ player_id: DEV_IDS.musa }]);
+    expect(await t.asUser(coach, (tx) => undoHere(tx, session, DEV_IDS.musa, atGate))).toEqual({});
+    expect(await attendance(session)).toEqual([]);
   });
 
   it("checks the child in on the day", async () => {

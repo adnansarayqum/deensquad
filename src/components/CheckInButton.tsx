@@ -34,7 +34,7 @@ export function CheckInButton({ sessionId, playerId, name, disabled = false }: {
   );
 }
 
-export function UndoCheckInButton({ sessionId, playerId, name }: { sessionId: string; playerId: string; name: string }) {
+export function UndoCheckInButton({ sessionId, playerId, name, disabled = false }: { sessionId: string; playerId: string; name: string; disabled?: boolean }) {
   const [pending, startTransition] = useTransition();
   const [problem, setProblem] = useState<Problem | null>(null);
   const undo = () =>
@@ -46,7 +46,7 @@ export function UndoCheckInButton({ sessionId, playerId, name }: { sessionId: st
     <>
       <button
         type="button"
-        disabled={pending}
+        disabled={pending || disabled}
         onClick={undo}
         aria-label={`Undo check-in for ${name}`}
         className="min-h-12 min-w-12 shrink-0 rounded-xl px-3 text-sm font-bold text-ink underline disabled:opacity-60"

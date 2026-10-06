@@ -50,7 +50,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
 
   const { session, todays, group, groups } = view;
   const s = summarise(view);
-  // On a day without a session the register shows the next one read-only: Mark here and scanning open on its day.
+  // On a day without a session the register shows the next one read-only: Mark here, Undo and scanning open on its day.
   const open = registerOpen(session.startsAt, now);
   const link = (q: { session?: string; group?: string }) =>
     `/coach?${new URLSearchParams({ session: q.session ?? session.id, ...(q.group ? { group: q.group } : {}) })}`;
@@ -133,7 +133,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
                   {group}s · {clock(r.checkedInAt!)}
                 </span>
               </span>
-              <UndoCheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} />
+              <UndoCheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} disabled={!open} />
             </div>
           ))}
         </section>
@@ -220,7 +220,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
                           {r.method === "qr" ? "QR code scanned" : "Marked here"} · {clock(r.checkedInAt!)}
                         </span>
                       </span>
-                      <UndoCheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} />
+                      <UndoCheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} disabled={!open} />
                     </li>
                   ))}
                 </ul>

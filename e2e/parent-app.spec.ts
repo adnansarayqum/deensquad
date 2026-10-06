@@ -242,6 +242,19 @@ test("coach: register marks a player here; parents can't open it", async ({ page
   await expect(here.getByRole("heading", { name: "Here (1)" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Mark Adam F. here" })).toBeEnabled();
   await expect(page.getByText("1 of 16 expected")).toBeVisible();
+
+  // Moved to tomorrow, the register is closed for Undo too: Yusuf's check-in stays as it is until the day.
+  const setDate = async (date: string) => {
+    await page.goto(`/admin/sessions/${session}/edit`);
+    await page.getByLabel("Date", { exact: true }).fill(date);
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+    await page.goto(`/coach?session=${session}&group=U10`);
+  };
+  await setDate(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date(Date.now() + 86_400_000)));
+  await expect(page.getByText(/^Opens on .+\. You can mark children here on the day\.$/)).toBeVisible();
+  await expect(here.getByRole("button", { name: "Undo check-in for Yusuf S." })).toBeDisabled();
+  await setDate(londonToday());
   await here.getByRole("button", { name: "Undo check-in for Yusuf S." }).click();
   await expect(here.getByRole("heading", { name: "Here (0)" })).toBeVisible();
 
