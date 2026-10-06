@@ -86,6 +86,19 @@ test("no signal at the gate: the codes saved on the phone show for /pass and /fr
     });
     expect(cached).toEqual(["/offline-pass.html", "/offline-pass.js"]);
 
+    // One bar of signal: /pass doesn't answer for 30 seconds. After 5 the saved codes show instead.
+    const slowPass = (url: URL) => url.pathname === "/pass";
+    await context.route(slowPass, async (route) => {
+      await new Promise((r) => setTimeout(r, 30_000));
+      await route.continue().catch(() => {});
+    });
+    const asked = Date.now();
+    await page.goto("/pass");
+    await expect(page.getByText("No signal. Showing the codes saved on this phone.")).toBeVisible({ timeout: 10_000 });
+    expect(Date.now() - asked).toBeLessThan(7_500);
+    await expect(page.getByRole("img", { name: "QR code that checks Idris in" })).toBeVisible();
+    await context.unroute(slowPass);
+
     // No signal: reloading /pass shows the saved codes, drawn on the phone, with Try again.
     await signal(false);
     await page.goto("/pass");
@@ -98,13 +111,17 @@ test("no signal at the gate: the codes saved on the phone show for /pass and /fr
     await page.emulateMedia({ colorScheme: "light" });
     expect((await page.getByRole("button", { name: "Try again" }).boundingBox())!.height).toBeGreaterThanOrEqual(48);
 
-    // The same for Friday; any other page is left to the browser (no offline copy of anything else).
+    // The same for Friday and News (where the installed app opens); any other page is left to the browser.
     await page.goto("/friday");
     await expect(page.getByText("No signal. Showing the codes saved on this phone.")).toBeVisible();
     await expect(page.getByRole("img", { name: "QR code that checks Idris in" })).toBeVisible();
+    await page.goto("/news");
+    await expect(page.getByText("No signal. Showing the codes saved on this phone.")).toBeVisible();
+    expect(await readQr(page, "QR code that checks Idris in")).toBe(saved.passes[0].token);
     const other = await context.newPage();
-    await expect(other.goto("/news")).rejects.toThrow();
+    await expect(other.goto("/checklist")).rejects.toThrow();
     await other.close();
+    await page.goto("/friday");
 
     // Back online, Try again loads the real page.
     await signal(true);

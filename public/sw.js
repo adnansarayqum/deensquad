@@ -1,17 +1,20 @@
 // Deen Squad service worker: shows the club's notifications and opens the app when one is tapped, and shows the
 // attendance QR codes saved on the phone when /pass or /friday can't load (no signal at the gate).
 //
-// Offline, deliberately narrow: only page loads (navigations) of /pass and /friday are touched. They always go to
-// the network first; only if that fails is the static /offline-pass.html shown instead (it holds no one's data:
-// its script draws the codes saved in this phone's localStorage). The only things ever cached are that page and
-// its script. Every other request (other pages, /api, Next's files) passes straight through, untouched.
+// Offline, deliberately narrow: only page loads (navigations) of /pass, /friday, /news and / (where the installed
+// app opens) are touched. They always go to the network first; only if that fails, or nothing has come back after
+// 5 seconds (one bar of signal at the gate), is the static /offline-pass.html shown instead (it holds no one's data:
+// its script draws the codes saved in this phone's localStorage; its Try again reloads). A late answer is dropped.
+// The only things ever cached are that page and its script. Every other request (other pages, /api, Next's files)
+// passes straight through, untouched.
 // Bump VERSION whenever offline-pass.html or offline-pass.js change (npm run offline), so phones fetch them again.
 
-const VERSION = "2";
+const VERSION = "3";
 const OFFLINE_CACHE = `ds-offline-v${VERSION}`;
 const OFFLINE_PAGE = "/offline-pass.html";
 const OFFLINE_FILES = [OFFLINE_PAGE, "/offline-pass.js"];
-const OFFLINE_PATHS = ["/pass", "/friday"];
+const OFFLINE_PATHS = ["/pass", "/friday", "/news", "/"];
+const NETWORK_WAIT_MS = 5000;
 
 /** Puts any missing offline file in the cache. Never throws: without them the browser's own offline page shows. */
 async function cacheOfflineFiles() {
@@ -41,12 +44,42 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-async function offlinePage() {
+/** The cached offline page, or undefined if it isn't cached (yet). */
+async function cachedOfflinePage() {
   try {
-    const page = await caches.match(OFFLINE_PAGE, { cacheName: OFFLINE_CACHE });
-    if (page) return page;
-  } catch {}
-  return Response.error();
+    return await caches.match(OFFLINE_PAGE, { cacheName: OFFLINE_CACHE });
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Network first. A failed load gets the offline page (or the browser's own error page if it isn't cached). A load
+ * still waiting after NETWORK_WAIT_MS gets the offline page too, if it's cached; otherwise it keeps waiting.
+ */
+function networkOrOfflinePage(event) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (response) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(response);
+    };
+    const timer = setTimeout(() => {
+      cachedOfflinePage().then((page) => {
+        if (page) finish(page);
+      });
+    }, NETWORK_WAIT_MS);
+    fetch(event.request).then(
+      (response) => {
+        if (done) return; // too late: the offline page is already showing, and its Try again loads the page
+        event.waitUntil(cacheOfflineFiles());
+        finish(response);
+      },
+      () => cachedOfflinePage().then((page) => finish(page || Response.error())),
+    );
+  });
 }
 
 self.addEventListener("fetch", (event) => {
@@ -61,16 +94,7 @@ self.addEventListener("fetch", (event) => {
     return; // anything unexpected: leave the request to the browser
   }
   if (kind === "page") {
-    // Network first, always. Only a failed load (no signal) gets the offline page.
-    event.respondWith(
-      fetch(event.request).then(
-        (response) => {
-          event.waitUntil(cacheOfflineFiles());
-          return response;
-        },
-        () => offlinePage(),
-      ),
-    );
+    event.respondWith(networkOrOfflinePage(event));
   } else if (kind === "file") {
     // The offline page's own script: the cached copy (it only loads when the offline page is showing).
     event.respondWith(
