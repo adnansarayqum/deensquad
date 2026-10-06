@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { BookOpen, CalendarX, ChevronDown, ChevronRight, ClipboardList, Clock, Info, MoonStar, QrCode, Shirt } from "lucide-react";
+import { BookOpen, CalendarX, ChevronDown, ChevronRight, ClipboardList, Clock, ExternalLink, Info, MapPin, MoonStar, QrCode, Shirt } from "lucide-react";
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
 import { CheckedIn } from "@/components/CheckedIn";
 import { PassCacheWriter } from "@/components/PassCacheWriter";
@@ -11,7 +12,7 @@ import { clock, shortDay } from "@/lib/dates";
 import type { Session } from "@/lib/domain";
 import type { SquadCounts } from "@/lib/parent/data";
 import { getFamily, getFridayPage } from "@/lib/parent/load";
-import { answeredLine, availabilityQuestion, sessionsToday, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
+import { answeredLine, availabilityQuestion, directionsUrl, sessionsToday, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
 import { cachedPasses, passCards, type PassCard } from "@/lib/pass/cards";
 import type { SessionPlan } from "@/lib/plans/data";
 
@@ -243,37 +244,63 @@ function InviteCard({ invite: { child, session, answer }, answered }: { invite: 
         {answer ? null : <Pill tone="action">Please answer</Pill>}
       </div>
       <h2 className="text-[19px] leading-[25px] font-extrabold">{question}</h2>
-      <p className="-mt-1.5 text-sm text-ink-muted">
-        {clock(session.startsAt)}–{clock(session.endsAt)} · {session.venue}
-        {session.arriveBy ? ` · arrive ${session.arriveBy}` : ""}
-      </p>
+      <div className="-mt-1.5 flex flex-wrap items-center justify-between gap-x-3">
+        <p className="text-sm text-ink-muted">
+          {clock(session.startsAt)}–{clock(session.endsAt)} · {session.venue}
+          {session.arriveBy ? ` · arrive ${session.arriveBy}` : ""}
+        </p>
+        <Directions venue={session.venue} />
+      </div>
       {session.notes ? <p className="-mt-1.5 text-sm whitespace-pre-line">{session.notes}</p> : null}
       <AvailabilityPicker sessionId={session.id} playerId={child.id} answer={answer} childName={child.firstName} question={question} squad answered={answered} compact />
     </Card>
   );
 }
 
+/** "Directions" to a session's venue: a Google Maps search, opened outside the app. Nothing while the venue isn't known. */
+function Directions({ venue }: { venue: string }) {
+  const url = directionsUrl(venue);
+  if (!url) return null;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener"
+      aria-label={`Directions to ${venue}`}
+      className="inline-flex min-h-12 shrink-0 items-center gap-1.5 text-[15px] font-bold text-grass-text underline"
+    >
+      Directions
+      <ExternalLink aria-hidden size={16} />
+    </a>
+  );
+}
+
+type BriefingRow = { icon: typeof Clock; text: string; extra?: ReactNode };
+
 function Briefing({ session, labelled }: { session: Session; labelled: boolean }) {
-  const rows = [
+  const rows: (BriefingRow | null)[] = [
+    session.venue ? { icon: MapPin, text: session.venue, extra: <Directions venue={session.venue} /> } : null,
     session.arriveBy || session.prayerNote
       ? { icon: Clock, text: [session.arriveBy ? `Arrive ${session.arriveBy}` : null, session.prayerNote].filter(Boolean).join(" · ") }
       : null,
     session.kit ? { icon: Shirt, text: session.kit } : null,
     session.notes ? { icon: Info, text: session.notes } : null,
-  ].filter((r): r is { icon: typeof Clock; text: string } => r !== null);
-  if (rows.length === 0) return null;
+  ];
+  const shown = rows.filter((r): r is BriefingRow => r !== null);
+  if (shown.length === 0) return null;
   return (
     <Card className="flex flex-col gap-3 p-4">
       <h2 className="text-base font-extrabold">
         {labelled ? `${shortDay(session.startsAt)} briefing · ${session.ageGroups.join(", ")}` : `${session.title} briefing`}
       </h2>
       <ul className="flex flex-col gap-3 text-[15px]">
-        {rows.map(({ icon: Icon, text }) => (
+        {shown.map(({ icon: Icon, text, extra }) => (
           <li key={text} className="flex items-center gap-3 whitespace-pre-line">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-gold-tint text-gold-text">
               <Icon aria-hidden size={20} />
             </span>
-            {text}
+            <span className="min-w-0 flex-1">{text}</span>
+            {extra}
           </li>
         ))}
       </ul>

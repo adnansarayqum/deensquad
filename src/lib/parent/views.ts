@@ -293,3 +293,13 @@ export function computeStats(past: { id: string; startsAt: string }[], attended:
 export function sessionsToday(week: ChildWeek[], now: Date): { child: Child; session: Session }[] {
   return week.flatMap((w) => (w.session && !w.session.cancelled && sameLondonDay(new Date(w.session.startsAt), now) ? [{ child: w.child, session: w.session }] : []));
 }
+
+/**
+ * A Google Maps search for a session's venue, for a "Directions" link; none while the venue isn't known yet
+ * ("Venue to be confirmed", "TBC").
+ */
+export function directionsUrl(venue: string): string | null {
+  const place = venue.trim();
+  if (!place || /\b(tbc|tba|to be (confirmed|announced))\b/i.test(place)) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
+}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronRight, Flame, QrCode } from "lucide-react";
 import { AcknowledgeButton } from "@/components/AcknowledgeButton";
 import { NotificationsCard } from "@/components/NotificationsCard";
+import { ReadFocus } from "@/components/ReadFocus";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { clock, postedLabel, shortDay } from "@/lib/dates";
 import { getNewsPage } from "@/lib/parent/load";
@@ -102,7 +103,7 @@ export default async function NewsPage() {
                 <h2 className="text-[19px] leading-[25px] font-bold">{a.title}</h2>
                 <p className="text-[15px] leading-[22px] whitespace-pre-line">{a.body}</p>
                 {a.postedBy ? <p className="text-[13px] text-ink-muted">From {a.postedBy}</p> : null}
-                <AcknowledgeButton announcementId={a.id} />
+                <AcknowledgeButton announcementId={a.id} title={a.title} />
               </Card>
             ))}
           </section>
@@ -120,7 +121,7 @@ export default async function NewsPage() {
               <span id="earlier">Earlier</span>
             </Eyebrow>
             {earlier.map((a) => (
-              <Card key={a.id} className="flex flex-col gap-2 px-4 py-3.5">
+              <ReadFocus key={a.id} id={a.id} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper px-4 py-3.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[13px] text-ink-muted">
                     {a.topic} · {a.audience === "all" ? "All groups" : a.audience.join(", ")} · {postedLabel(a.postedAt, now)}
@@ -133,7 +134,7 @@ export default async function NewsPage() {
                 </div>
                 <h2 className="text-base leading-[22px] font-bold">{a.title}</h2>
                 <p className="text-[14px] leading-5 whitespace-pre-line text-ink-muted">{a.body}</p>
-              </Card>
+              </ReadFocus>
             ))}
           </section>
         ) : null}

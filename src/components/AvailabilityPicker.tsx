@@ -68,7 +68,7 @@ export function AvailabilityPicker({
           type="button"
           aria-pressed={away}
           onClick={() => choose("away")}
-          className={`${base} ${away ? "border-kit-orange bg-kit-orange text-on-orange shadow-[0_4px_0_#7a3310]" : "border-line bg-paper text-ink shadow-lip-neutral"}`}
+          className={`${base} ${away ? "border-ink bg-cream text-ink shadow-lip-neutral" : "border-line bg-paper text-ink shadow-lip-neutral"}`}
         >
           <X aria-hidden size={icon} strokeWidth={3} />
           {squad ? "No" : "Not this week"}

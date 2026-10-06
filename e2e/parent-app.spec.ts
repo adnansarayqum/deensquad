@@ -104,13 +104,19 @@ test("news: a parent of two acknowledges the kit message", async ({ page }) => {
   // No signal: the tap stays on screen, says it didn't save and offers to try again.
   const newsOffline = noSignal("/news");
   await page.route(newsOffline, abortPosts);
-  await page.getByRole("button", { name: "I've read this" }).click();
+  // The button is named with the headline, so a screen reader can tell several apart.
+  const read = page.getByRole("button", { name: /^I've read this: \S/ });
+  const headline = (await read.getAttribute("aria-label"))!.replace("I've read this: ", "");
+  await read.click();
   await expect(page.getByRole("alert").getByText("That didn't save. Check your signal and try again.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Club news" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Something went wrong" })).toHaveCount(0);
   await page.unroute(newsOffline);
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByText("You're all caught up")).toBeVisible();
+  // Focus stays with the message (now under Earlier, marked Read), not back at the top of the page.
+  await expect(page.locator(":focus")).toContainText(headline);
+  await expect(page.locator(":focus")).toContainText("Read");
 });
 
 test("friday: each child gets their own answer and headcount", async ({ page, browser }) => {
@@ -123,6 +129,11 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
   await yusuf.getByRole("button", { name: "Coming" }).click();
   await expect(page.getByText("Saved. Coach can see Yusuf is coming.")).toBeVisible();
   await expect(page.getByText("12 of 16 coming")).toBeVisible();
+  // The venue has directions (a Google Maps search, outside the app).
+  const directions = page.getByRole("link", { name: "Directions to Bobby Moore Sports Hub" }).first();
+  await expect(directions).toHaveAttribute("href", "https://www.google.com/maps/search/?api=1&query=Bobby%20Moore%20Sports%20Hub");
+  await expect(directions).toHaveAttribute("target", "_blank");
+  expect((await directions.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   // No signal: Musa's answer doesn't save; the screen and its QR link stay, and Try again sends it once back online.
   const fridayOffline = noSignal("/friday");
   await page.route(fridayOffline, abortPosts);

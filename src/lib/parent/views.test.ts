@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Child, Session } from "../domain";
 import type { AnswerRecord } from "./data";
-import { answeredLine, availabilityQuestion, buildChecklist, buildFamilyChecklist, buildWeek, countSteps, computeStats, joinNames, sessionsToday, squadInvites, weekSummary } from "./views";
+import { answeredLine, availabilityQuestion, buildChecklist, buildFamilyChecklist, buildWeek, countSteps, directionsUrl, computeStats, joinNames, sessionsToday, squadInvites, weekSummary } from "./views";
 
 const child = (id: string, name: string, group: Child["ageGroup"]): Child => ({
   id,
@@ -164,5 +164,14 @@ describe("the to-do list", () => {
     const [payment, contract] = buildFamilyChecklist(kids.slice(0, 1), facts([], []), null);
     expect(payment.note).toBeUndefined();
     expect(contract).toMatchObject({ detail: "Read and agree with Yusuf", parts: undefined });
+  });
+});
+
+describe("directions to a venue", () => {
+  it("searches Google Maps for a known venue, and gives none while it's to be confirmed", () => {
+    expect(directionsUrl("Bobby Moore Sports Hub, E15")).toBe("https://www.google.com/maps/search/?api=1&query=Bobby%20Moore%20Sports%20Hub%2C%20E15");
+    expect(directionsUrl("Venue to be confirmed")).toBeNull();
+    expect(directionsUrl("TBC")).toBeNull();
+    expect(directionsUrl("  ")).toBeNull();
   });
 });

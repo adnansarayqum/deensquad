@@ -5,7 +5,8 @@ import { CONTRACT } from "../documents/contract";
 // of those equals the length of the list it links to. (The overview's Parents bar counts parents;
 // its invite/signin links list those parents' children, so the numbers can differ.)
 //
-// The first four are the parent To-do (see buildChecklist in src/lib/parent/views.ts): a step is
+// The first four are the parent To-do (see buildChecklist and buildFamilyChecklist in src/lib/parent/views.ts; the
+// parent sees the payment as one family step, but it's still recorded per child): a step is
 // done when there's an emergency contact, a photo answer, a payment plan that's active or reported
 // as set up, and this season's contract (CONTRACT.id) agreed.
 
