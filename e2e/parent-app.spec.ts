@@ -70,6 +70,15 @@ test("signed-out visitors are sent to sign in, and a wrong code is refused", asy
   await expect(page).toHaveURL(/\/friday$/);
 });
 
+test("pages can't be shown in another site's frame and don't name the server software", async ({ page }) => {
+  const res = await page.goto("/sign-in");
+  const headers = res!.headers();
+  expect(headers["x-frame-options"]).toBe("DENY");
+  expect(headers["content-security-policy"]).toBe("frame-ancestors 'none'");
+  expect(headers["x-content-type-options"]).toBe("nosniff");
+  expect(headers["x-powered-by"]).toBeUndefined();
+});
+
 test("an unknown email gets the same screen and no email", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByLabel("Email address").fill("stranger@example.org");
