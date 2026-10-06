@@ -104,7 +104,7 @@ test("news: a parent of two acknowledges the kit message", async ({ page }) => {
   const newsOffline = noSignal("/news");
   await page.route(newsOffline, abortPosts);
   await page.getByRole("button", { name: "I've read this" }).click();
-  await expect(page.getByRole("alert").getByText("No signal. That didn't save.")).toBeVisible();
+  await expect(page.getByRole("alert").getByText("That didn't save. Check your signal and try again.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Club news" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Something went wrong" })).toHaveCount(0);
   await page.unroute(newsOffline);
@@ -126,13 +126,13 @@ test("friday: each child gets their own answer and headcount", async ({ page }) 
   const fridayOffline = noSignal("/friday");
   await page.route(fridayOffline, abortPosts);
   await musa.getByRole("button", { name: "Not this week" }).click();
-  await expect(page.getByRole("alert").getByText("No signal. That didn't save.")).toBeVisible();
+  await expect(page.getByRole("alert").getByText("That didn't save. Check your signal and try again.")).toBeVisible();
   await expect(musa.getByRole("button", { name: "Not this week" })).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByText(/attendance QR codes/i).first()).toBeVisible();
   await page.unroute(fridayOffline);
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByText("Saved. Coach knows Musa is away this week.")).toBeVisible();
-  await expect(page.getByText("No signal. That didn't save.")).toHaveCount(0);
+  await expect(page.getByText("That didn't save. Check your signal and try again.")).toHaveCount(0);
   await page.screenshot({ path: shot("friday"), fullPage: true });
 
   await page.getByRole("link", { name: "News" }).click();
@@ -1141,7 +1141,7 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await coach.route(offline, (route) => (route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue()));
     await coach.getByRole("button", { name: "Mark Musa S. here" }).click();
     const musaRow = coach.getByRole("listitem").filter({ hasText: "Musa S." });
-    await expect(musaRow.getByText("No signal. That didn't save.")).toBeVisible();
+    await expect(musaRow.getByText("That didn't save. Check your signal and try again.")).toBeVisible();
     await expect(coach.getByRole("heading", { name: "Gate test register" })).toBeVisible();
     await expect(coach.getByRole("heading", { name: "Something went wrong" })).toHaveCount(0);
     await coach.screenshot({ path: shot("coach-mark-no-signal") });
