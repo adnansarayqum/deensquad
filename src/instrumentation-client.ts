@@ -3,7 +3,7 @@
 // so without it the SDK isn't built at all). With it, the SDK loads in its own chunk just after the page
 // starts, so it adds nothing to what every screen downloads first.
 
-import type { SentryWindow } from "./lib/observability/report";
+import { sendClientError, type SentryWindow } from "./lib/observability/report";
 
 if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
   import("./lib/observability/sentry-client")
@@ -14,6 +14,8 @@ if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       const w = window as SentryWindow;
       w.__dsSentry = m;
       if (w.__dsSentryUser !== undefined) m.setClientUser(w.__dsSentryUser);
+      // Errors an error page caught before Sentry had loaded.
+      for (const error of w.__dsSentryPending?.splice(0) ?? []) sendClientError(w, m, error);
     })
     .catch(() => {});
 }

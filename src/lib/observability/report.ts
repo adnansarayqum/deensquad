@@ -4,21 +4,49 @@
 import type { MonitoringUser } from "./scrub";
 
 type SentryClient = typeof import("./sentry-client");
-export type SentryWindow = Window & { __dsSentry?: SentryClient; __dsSentryUser?: MonitoringUser | null };
+export type SentryWindow = Window & {
+  __dsSentry?: SentryClient;
+  __dsSentryUser?: MonitoringUser | null;
+  /** Errors caught before Sentry had loaded; sent once it has (src/instrumentation-client.ts). */
+  __dsSentryPending?: unknown[];
+};
 
-function sentry(): SentryClient | undefined {
-  return typeof window === "undefined" ? undefined : (window as SentryWindow).__dsSentry;
+const MAX_PENDING = 5;
+
+function sentryWindow(): SentryWindow | undefined {
+  return typeof window === "undefined" ? undefined : (window as SentryWindow);
 }
 
-/** Sends an error caught by an error boundary (error.tsx, global-error.tsx) to Sentry, when it's on. */
+/** Sends one error with the signed-in person (if known) set first. */
+export function sendClientError(w: SentryWindow, sentry: SentryClient, error: unknown) {
+  if (w.__dsSentryUser !== undefined) sentry.setClientUser(w.__dsSentryUser);
+  sentry.captureException(error);
+}
+
+/**
+ * Sends an error caught by an error boundary (error.tsx, global-error.tsx) to Sentry, when it's on. Not one with a
+ * digest: that failed on the server, which has already reported it (src/instrumentation.ts). Waits a moment so the
+ * root layout has said who is signed in, and keeps it if Sentry hasn't loaded yet.
+ */
 export function reportClientError(error: unknown) {
-  sentry()?.captureException(error);
+  const w = sentryWindow();
+  if (!w) return;
+  const digest = (error as { digest?: unknown } | null)?.digest;
+  if (typeof digest === "string" && digest) return;
+  setTimeout(() => {
+    if (w.__dsSentry) sendClientError(w, w.__dsSentry, error);
+    else if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      const pending = (w.__dsSentryPending ??= []);
+      if (pending.length < MAX_PENDING) pending.push(error);
+    }
+  }, 0);
 }
 
 /** Tags this browser's reports with the signed-in person (opaque id and parent/coach/admin), or clears it. */
 export function setMonitoringUser(user: MonitoringUser | null) {
-  if (typeof window === "undefined") return;
+  const w = sentryWindow();
+  if (!w) return;
   // Kept for when Sentry finishes loading, if it hasn't yet.
-  (window as SentryWindow).__dsSentryUser = user;
-  sentry()?.setClientUser(user);
+  w.__dsSentryUser = user;
+  w.__dsSentry?.setClientUser(user);
 }
