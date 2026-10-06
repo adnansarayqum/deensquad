@@ -21,6 +21,10 @@ const env = [
   `DATABASE_URL=${process.env.E2E_DATABASE_URL ?? "pglite://memory"}`,
   "EMAIL_OUTBOX=e2e/.results/outbox.jsonl",
   "APP_URL=http://localhost:3100",
+  // The club's own settings, on this server only: the 3101 server shows what parents see without them.
+  "TEAMFEEPAY_URL=https://teamfeepay.example/deensquad",
+  "CLUB_FEE_TEXT='£30 a month per child, paid by direct debit through TeamFeePay'",
+  "CLUB_INFO_TEXT='Training is on Fridays at Bobby Moore Sports Hub. Sign up, then come along.'",
   ...shared,
 ].join(" ");
 // The same build with page counting on (Umami), for e2e/observability.spec.ts. Its own in-memory database and outbox;

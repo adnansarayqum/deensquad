@@ -137,13 +137,19 @@ export type ChecklistItemView = {
   icon: "card" | "camera" | "phone" | "id" | "contract";
   done: boolean;
   href?: string;
+  /** "Covers Yusuf, Ali and Maryam": a family-wide step names the children it's for. */
+  note?: string;
+  /** A family-wide step that's done child by child (the contract): each child's own state and link. */
+  parts?: { childId: string; name: string; done: boolean; href: string }[];
+  /** How many steps this row counts as in the progress (a contract row counts each child). Default 1. */
+  steps?: { done: number; total: number };
 };
 
 const joined = (iso: string) => new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric" }).format(new Date(iso));
 
+/** Steps that are done per child: registered, emergency contacts and photo consent. */
 export function buildChecklist(child: Child, facts: ChecklistFacts): ChecklistItemView[] {
   const contacts = facts.contacts.get(child.id) ?? 0;
-  const payment: PaymentState = facts.payment.get(child.id) ?? "missing";
   const q = `?child=${child.id}`;
   return [
     {
@@ -164,35 +170,6 @@ export function buildChecklist(child: Child, facts: ChecklistFacts): ChecklistIt
       href: `/checklist/contacts${q}`,
     },
     {
-      id: "payment-plan",
-      title: "Set up payments",
-      detail:
-        payment === "active"
-          ? "Monthly plan active"
-          : payment === "self_reported"
-            ? "You've set it up · the club will confirm"
-            : payment === "overdue"
-              ? "A payment is overdue. Check TeamFeePay"
-              : "Two minutes on TeamFeePay",
-      actionLabel: payment === "overdue" ? "Check" : "Start",
-      icon: "card",
-      done: payment === "active" || payment === "self_reported",
-      href: `/checklist/payment${q}`,
-    },
-    ...(facts.agreed
-      ? [
-          {
-            id: "agreement" as const,
-            title: "Club contract",
-            detail: facts.agreed.has(child.id) ? "Signed for this season" : `Read and agree with ${child.firstName}`,
-            actionLabel: "Read",
-            icon: "contract" as const,
-            done: facts.agreed.has(child.id),
-            href: `/checklist/agreement${q}`,
-          },
-        ]
-      : []),
-    {
       id: "photo-consent",
       title: "Photo consent",
       detail:
@@ -203,6 +180,81 @@ export function buildChecklist(child: Child, facts: ChecklistFacts): ChecklistIt
       href: `/checklist/consent${q}`,
     },
   ];
+}
+
+/** The family's children whose monthly plan still needs setting up (none yet, or overdue), and those overdue. */
+export function paymentNeeds(children: Child[], payment: Map<string, PaymentState>): { needed: Child[]; overdue: Child[] } {
+  const state = (c: Child): PaymentState => payment.get(c.id) ?? "missing";
+  return {
+    needed: children.filter((c) => state(c) === "missing" || state(c) === "overdue"),
+    overdue: children.filter((c) => state(c) === "overdue"),
+  };
+}
+
+/** What the club charges, from CLUB_FEE_TEXT, or an honest "ask". */
+export const feeLine = (feeText: string | null) => feeText ?? "Ask the club about fees";
+
+/**
+ * Steps for the whole family: the monthly plan (set up once on TeamFeePay, so one step that covers every child
+ * whose plan is missing) and the club contract (still agreed child by child, but one row with each child's state).
+ */
+export function buildFamilyChecklist(children: Child[], facts: ChecklistFacts, feeText: string | null): ChecklistItemView[] {
+  if (children.length === 0) return [];
+  const { needed, overdue } = paymentNeeds(children, facts.payment);
+  const allActive = children.every((c) => facts.payment.get(c.id) === "active");
+  const several = children.length > 1;
+  const payment: ChecklistItemView = {
+    id: "payment-plan",
+    title: "Set up payments",
+    detail:
+      needed.length === 0
+        ? allActive
+          ? "Monthly plan active"
+          : "You've set it up · the club will confirm"
+        : overdue.length > 0
+          ? `A payment is overdue${several ? ` for ${joinNames(overdue.map((c) => c.firstName))}` : ""}. Check TeamFeePay`
+          : feeLine(feeText),
+    note: needed.length > 0 && several ? `Covers ${joinNames(needed.map((c) => c.firstName))}` : undefined,
+    actionLabel: overdue.length > 0 ? "Check" : "Start",
+    icon: "card",
+    done: needed.length === 0,
+    href: "/checklist/payment",
+  };
+  if (!facts.agreed) return [payment];
+  const agreed = facts.agreed;
+  const signed = children.filter((c) => agreed.has(c.id));
+  const unsigned = children.filter((c) => !agreed.has(c.id));
+  const contract: ChecklistItemView = {
+    id: "agreement",
+    title: "Club contract",
+    detail: several
+      ? unsigned.length === 0
+        ? `Signed for ${joinNames(children.map((c) => c.firstName))} this season`
+        : `Read and agree with each child: ${joinNames(unsigned.map((c) => c.firstName))} still to sign`
+      : unsigned.length === 0
+        ? "Signed for this season"
+        : `Read and agree with ${children[0].firstName}`,
+    actionLabel: "Read",
+    icon: "contract",
+    done: unsigned.length === 0,
+    href: `/checklist/agreement?child=${(unsigned[0] ?? children[0]).id}`,
+    parts: several
+      ? children.map((c) => ({ childId: c.id, name: c.firstName, done: agreed.has(c.id), href: `/checklist/agreement?child=${c.id}` }))
+      : undefined,
+    steps: { done: signed.length, total: children.length },
+  };
+  return [payment, contract];
+}
+
+/** Steps done and in all, counting a row by its `steps` (the contract counts each child). */
+export function countSteps(items: ChecklistItemView[]): { done: number; total: number } {
+  return items.reduce(
+    (sum, i) => {
+      const s = i.steps ?? { done: i.done ? 1 : 0, total: 1 };
+      return { done: sum.done + s.done, total: sum.total + s.total };
+    },
+    { done: 0, total: 0 },
+  );
 }
 
 /** Monday of the London week an instant falls in, as "YYYY-MM-DD". */

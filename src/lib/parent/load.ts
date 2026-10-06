@@ -22,7 +22,8 @@ import {
   type Family,
   type SquadCounts,
 } from "./data";
-import { buildChecklist, buildWeek, computeStats, nextSessionFor, sortNews, squadInvites } from "./views";
+import { clubFeeText } from "../config";
+import { buildChecklist, buildFamilyChecklist, buildWeek, computeStats, countSteps, nextSessionFor, paymentNeeds, sortNews, squadInvites } from "./views";
 
 // One loader per parent screen. Each checks the session, then reads as that parent (row level security on).
 
@@ -124,8 +125,15 @@ export async function getChecklistPage() {
   const { user, family } = await getFamily();
   const facts = await asUser(user.id, (tx) => loadChecklistFacts(tx, family.children.map((c) => c.id)));
   const groups = family.children.map((child) => ({ child, items: buildChecklist(child, facts) }));
-  const all = groups.flatMap((g) => g.items);
-  return { family, groups, done: all.filter((i) => i.done).length, total: all.length };
+  const familyItems = buildFamilyChecklist(family.children, facts, clubFeeText());
+  return { family, groups, familyItems, ...countSteps([...familyItems, ...groups.flatMap((g) => g.items)]) };
+}
+
+/** The family's payment step: which children it covers, which are overdue, and those already done. */
+export async function getPaymentPage() {
+  const { user, family } = await getFamily();
+  const facts = await asUser(user.id, (tx) => loadChecklistFacts(tx, family.children.map((c) => c.id)));
+  return { family, payment: facts.payment, ...paymentNeeds(family.children, facts.payment) };
 }
 
 /** The child named in `?child=`, or the first child. Never someone else's child: the id must be in the family. */

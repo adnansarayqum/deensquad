@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Child, Session } from "../domain";
 import type { AnswerRecord } from "./data";
-import { answeredLine, availabilityQuestion, buildWeek, computeStats, joinNames, sessionsToday, squadInvites, weekSummary } from "./views";
+import { answeredLine, availabilityQuestion, buildChecklist, buildFamilyChecklist, buildWeek, countSteps, computeStats, joinNames, sessionsToday, squadInvites, weekSummary } from "./views";
 
 const child = (id: string, name: string, group: Child["ageGroup"]): Child => ({
   id,
@@ -132,5 +132,37 @@ describe("player stats", () => {
   });
   it("has no percentage before the first session", () => {
     expect(computeStats([], new Set())).toEqual({ sessions: 0, attendancePct: null, streakWeeks: 0 });
+  });
+});
+
+describe("the to-do list", () => {
+  const kids = [child("a", "Yusuf", "U10"), child("b", "Ali", "U10"), child("c", "Maryam", "U7")];
+  const facts = (payment: [string, "active" | "missing" | "overdue" | "self_reported"][], agreed: string[]) => ({
+    contacts: new Map<string, number>(),
+    payment: new Map(payment),
+    agreed: new Set(agreed),
+  });
+  it("asks once for the family's monthly plan, naming the children it covers, with the fee", () => {
+    const [payment] = buildFamilyChecklist(kids, facts([["a", "active"]], []), "£30 a month per child");
+    expect(payment).toMatchObject({ id: "payment-plan", done: false, detail: "£30 a month per child", note: "Covers Ali and Maryam" });
+    expect(buildFamilyChecklist(kids, facts([], []), null)[0].detail).toBe("Ask the club about fees");
+    expect(buildFamilyChecklist(kids, facts([["b", "overdue"]], []), null)[0]).toMatchObject({ detail: "A payment is overdue for Ali. Check TeamFeePay", actionLabel: "Check" });
+    const done = buildFamilyChecklist(kids, facts([["a", "active"], ["b", "self_reported"], ["c", "active"]], []), null)[0];
+    expect(done).toMatchObject({ done: true, detail: "You've set it up · the club will confirm", note: undefined });
+  });
+  it("keeps the contract per child but in one row, each child with their own state", () => {
+    const [, contract] = buildFamilyChecklist(kids, facts([], ["b"]), null);
+    expect(contract.parts?.map((p) => [p.name, p.done])).toEqual([["Yusuf", false], ["Ali", true], ["Maryam", false]]);
+    expect(contract).toMatchObject({ done: false, href: "/checklist/agreement?child=a", steps: { done: 1, total: 3 } });
+    expect(contract.detail).toBe("Read and agree with each child: Yusuf and Maryam still to sign");
+  });
+  it("counts steps: per-child steps, one payment step, and a contract step per child", () => {
+    const items = [...buildFamilyChecklist(kids, facts([], ["b"]), null), ...kids.flatMap((k) => buildChecklist(k, facts([], [])))];
+    expect(countSteps(items)).toEqual({ done: 3 + 1, total: 9 + 1 + 3 });
+  });
+  it("one child: the same wording as before, no per-child parts", () => {
+    const [payment, contract] = buildFamilyChecklist(kids.slice(0, 1), facts([], []), null);
+    expect(payment.note).toBeUndefined();
+    expect(contract).toMatchObject({ detail: "Read and agree with Yusuf", parts: undefined });
   });
 });

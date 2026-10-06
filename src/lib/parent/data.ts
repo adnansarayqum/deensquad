@@ -253,6 +253,22 @@ export async function loadChecklistFacts(tx: Queryable, childIds: string[]): Pro
   };
 }
 
+/**
+ * Marks the family's monthly plan as set up (self-reported, for the club to confirm) for each of these children
+ * that's the parent's own and still missing or overdue. One call per child to `report_payment_setup`, which checks
+ * the child is theirs. Returns the children it covered.
+ */
+export async function reportFamilyPayment(tx: Queryable, childIds: string[]): Promise<string[]> {
+  const rows = await tx.query<{ id: string }>(
+    `select p.id from players p
+     where p.id = any($1::uuid[]) and p.id in (select my_player_ids())
+       and coalesce((select ps.state::text from payment_status ps where ps.player_id = p.id), 'missing') in ('missing', 'overdue')`,
+    [childIds],
+  );
+  for (const { id } of rows) await tx.query(`select report_payment_setup($1)`, [id]);
+  return rows.map((r) => r.id);
+}
+
 export type EmergencyContact = { id: string; name: string; phone: string; relationship: string | null };
 
 export async function loadContacts(tx: Queryable, childId: string): Promise<EmergencyContact[]> {

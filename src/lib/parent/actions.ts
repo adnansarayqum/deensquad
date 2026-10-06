@@ -8,7 +8,8 @@ import { asUser } from "../db";
 import { CONTRACT } from "../documents/contract";
 import type { Availability } from "../domain";
 import { cleanPhone, cleanText } from "../validate";
-import { saveAnswer } from "./data";
+import { teamFeePayUrl } from "../config";
+import { reportFamilyPayment, saveAnswer } from "./data";
 
 // Parent Server Actions. Each checks the session, validates its input, then writes as that parent,
 // so row level security (and the database functions) decide whether the write is allowed.
@@ -72,20 +73,28 @@ export async function removeEmergencyContact(formData: FormData): Promise<void> 
   refresh();
 }
 
+/** The photo answer for a child, and for any brothers or sisters ticked under "Same for" (each must be the parent's own). */
 export async function savePhotoConsent(formData: FormData): Promise<void> {
   const user = await requireParent();
-  const child = formData.get("child");
+  const children = formData.getAll("child").filter((v): v is string => typeof v === "string" && UUID.test(v));
   const answer = formData.get("consent");
-  if (typeof child !== "string" || !UUID.test(child) || (answer !== "yes" && answer !== "no")) return;
-  await asUser(user.id, (tx) => tx.query(`select set_photo_consent($1, $2)`, [child, answer === "yes"]));
+  if (children.length === 0 || (answer !== "yes" && answer !== "no")) return;
+  await asUser(user.id, (tx) =>
+    tx.query(`select set_photo_consent(id, $2) from unnest($1::uuid[]) as id where id in (select my_player_ids())`, [children, answer === "yes"]),
+  );
   redirect("/checklist");
 }
 
+/**
+ * "I've set it up" for the family's monthly plan: one tap covers each child named in the form whose plan is still
+ * missing or overdue (`reportFamilyPayment`). Refused while the club has no TeamFeePay link, since there was nothing
+ * to set up: the payment page then says the club will tell you how to pay.
+ */
 export async function reportPaymentSetup(formData: FormData): Promise<void> {
   const user = await requireParent();
-  const child = formData.get("child");
-  if (typeof child !== "string" || !UUID.test(child)) return;
-  await asUser(user.id, (tx) => tx.query(`select report_payment_setup($1)`, [child]));
+  if (!teamFeePayUrl()) redirect("/checklist/payment");
+  const children = formData.getAll("child").filter((v): v is string => typeof v === "string" && UUID.test(v));
+  if (children.length) await asUser(user.id, (tx) => reportFamilyPayment(tx, children));
   redirect("/checklist");
 }
 

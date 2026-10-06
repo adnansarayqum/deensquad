@@ -7,10 +7,13 @@ import { getChild } from "@/lib/parent/load";
 export const metadata: Metadata = { title: "Photo consent" };
 
 export default async function ConsentPage({ searchParams }: PageProps<"/checklist/consent">) {
-  const { child } = await getChild((await searchParams).child);
+  const { child, family } = await getChild((await searchParams).child);
   if (!child) redirect("/checklist");
   const name = child.firstName;
   const current = child.photoConsent === null ? null : child.photoConsent ? "yes" : "no";
+  // Brothers and sisters can take the same answer in one go. Those without an answer yet are ticked; one whose
+  // answer is already saved (perhaps by the other parent) is left unticked and shows it, so it's never changed unseen.
+  const siblings = family.children.filter((c) => c.id !== child.id);
   const option =
     "flex cursor-pointer items-start gap-3 rounded-app border-2 border-line bg-paper p-4 shadow-lip-neutral has-[:checked]:border-grass has-[:checked]:bg-grass-tint";
 
@@ -40,6 +43,22 @@ export default async function ConsentPage({ searchParams }: PageProps<"/checklis
               </span>
             </label>
           </fieldset>
+          {siblings.length > 0 ? (
+            <fieldset className="mt-2 flex flex-col gap-2">
+              <legend className="field-label">Same for all my children</legend>
+              {siblings.map((s) => (
+                <label key={s.id} className="flex min-h-12 items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5">
+                  <input type="checkbox" name="child" value={s.id} defaultChecked={s.photoConsent === null} className="h-5 w-5 accent-[var(--grass)]" />
+                  <span className="flex flex-col">
+                    <span className="text-base font-bold">{s.firstName}</span>
+                    {s.photoConsent !== null ? (
+                      <span className="text-sm text-ink-muted">Now: {s.photoConsent ? "photos are fine" : "no photos"}</span>
+                    ) : null}
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          ) : null}
           <button type="submit" className="btn-chunky btn-grass mt-2">
             Save answer
           </button>

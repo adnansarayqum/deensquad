@@ -24,6 +24,16 @@ export function teamFeePayUrl(): string | null {
   return process.env.TEAMFEEPAY_URL?.trim() || null;
 }
 
+/** What the club charges and how, e.g. "£30 a month per child, paid by direct debit through TeamFeePay" (CLUB_FEE_TEXT). */
+export function clubFeeText(): string | null {
+  return process.env.CLUB_FEE_TEXT?.trim() || null;
+}
+
+/** A short "about the club" note for new families on the sign-up page (CLUB_INFO_TEXT, plain text). */
+export function clubInfoText(): string | null {
+  return process.env.CLUB_INFO_TEXT?.trim() || null;
+}
+
 /** The club's privacy notice: the one built into the app (/privacy), unless PRIVACY_URL points elsewhere. */
 export function privacyUrl(): string {
   return process.env.PRIVACY_URL?.trim() || "/privacy";

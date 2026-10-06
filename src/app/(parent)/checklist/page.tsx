@@ -10,10 +10,17 @@ export const metadata: Metadata = { title: "To-do" };
 const icons: Record<ChecklistItemView["icon"], typeof Camera> = { card: CreditCard, camera: Camera, phone: Phone, id: IdCard, contract: FileSignature };
 
 export default async function ChecklistPage() {
-  const { family, groups, done, total } = await getChecklistPage();
+  const { family, groups, familyItems, done, total } = await getChecklistPage();
   const single = groups.length === 1 ? groups[0] : null;
   const remaining = total - done;
   const who = single ? single.child.firstName : "everyone";
+  // One child: the family's steps (payments, contract) sit in that child's list. Several: they come first, once.
+  const sections = single
+    ? [{ key: single.child.id, label: `${single.child.firstName}'s checklist`, heading: null, items: [...familyItems, ...single.items] }]
+    : [
+        ...(familyItems.length ? [{ key: "family", label: "Whole family", heading: "Whole family", items: familyItems }] : []),
+        ...groups.map(({ child, items }) => ({ key: child.id, label: `${child.firstName}'s checklist`, heading: child.firstName, items })),
+      ];
 
   return (
     <>
@@ -43,14 +50,14 @@ export default async function ChecklistPage() {
           <Card className="p-4 text-[15px] leading-[22px]">No players are linked to your email yet. Ask the club to add your child.</Card>
         ) : null}
 
-        {groups.map(({ child, items }) => {
+        {sections.map(({ key, label, heading, items }) => {
           const todo = items.filter((i) => !i.done);
           const finished = items.filter((i) => i.done);
           return (
-            <section key={child.id} aria-label={`${child.firstName}'s checklist`} className="flex flex-col gap-2.5">
-              {!single ? (
+            <section key={key} aria-label={label} className="flex flex-col gap-2.5">
+              {heading ? (
                 <h2 className="mt-2 flex items-baseline justify-between text-[19px] font-extrabold">
-                  {child.firstName}
+                  {heading}
                   <span className="text-sm font-bold text-ink-muted tabular-nums">
                     {finished.length} of {items.length} done
                   </span>
@@ -59,27 +66,7 @@ export default async function ChecklistPage() {
               {todo.length > 0 ? (
                 <>
                   {single ? <Eyebrow>Still to do</Eyebrow> : null}
-                  {todo.map((item) => {
-                    const Icon = icons[item.icon];
-                    return (
-                      <Link
-                        key={item.id}
-                        href={item.href ?? "/checklist"}
-                        className="flex items-center gap-3.5 rounded-app border-2 border-line bg-paper p-3.5 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
-                      >
-                        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[14px] bg-orange-tint text-kit-orange">
-                          <Icon aria-hidden size={24} />
-                        </span>
-                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span className="text-base font-bold">{item.title}</span>
-                          <span className="text-sm text-ink-muted">{item.detail}</span>
-                        </span>
-                        <span className="rounded-xl bg-grass px-3 py-2 text-sm font-extrabold text-on-grass shadow-[0_3px_0_var(--grass-lip)]">
-                          {item.actionLabel}
-                        </span>
-                      </Link>
-                    );
-                  })}
+                  {todo.map((item) => (item.parts ? <PartsRow key={item.id} item={item} /> : <TodoRow key={item.id} item={item} />))}
                 </>
               ) : null}
               {single && finished.length > 0 ? <Eyebrow className="mt-2">Done</Eyebrow> : null}
@@ -96,8 +83,8 @@ export default async function ChecklistPage() {
                   </>
                 );
                 const cls = "flex items-center gap-3.5 rounded-app bg-grass-tint px-3.5 py-2";
-                // Finished steps a parent can still change (contacts, consent) stay tappable.
-                return item.href && item.id !== "payment-plan" ? (
+                // Finished steps a parent can still change (contacts, consent, one child's contract) stay tappable.
+                return item.href && item.id !== "payment-plan" && !item.parts ? (
                   <Link key={item.id} href={item.href} className={cls}>
                     {row}
                   </Link>
@@ -128,5 +115,64 @@ export default async function ChecklistPage() {
         ) : null}
       </main>
     </>
+  );
+}
+
+function TodoRow({ item }: { item: ChecklistItemView }) {
+  const Icon = icons[item.icon];
+  return (
+    <Link
+      href={item.href ?? "/checklist"}
+      className="flex items-center gap-3.5 rounded-app border-2 border-line bg-paper p-3.5 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
+    >
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[14px] bg-orange-tint text-kit-orange">
+        <Icon aria-hidden size={24} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-base font-bold">{item.title}</span>
+        <span className="text-sm text-ink-muted">{item.detail}</span>
+        {item.note ? <span className="text-sm font-bold">{item.note}</span> : null}
+      </span>
+      <span className="rounded-xl bg-grass px-3 py-2 text-sm font-extrabold text-on-grass shadow-[0_3px_0_var(--grass-lip)]">{item.actionLabel}</span>
+    </Link>
+  );
+}
+
+/** A family step done child by child (the club contract): one row, with each child's state and a link for those still to do. */
+function PartsRow({ item }: { item: ChecklistItemView }) {
+  const Icon = icons[item.icon];
+  return (
+    <div className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-3.5 shadow-lip-neutral">
+      <div className="flex items-center gap-3.5">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[14px] bg-orange-tint text-kit-orange">
+          <Icon aria-hidden size={24} />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="text-base font-bold">{item.title}</span>
+          <span className="text-sm text-ink-muted">{item.detail}</span>
+        </span>
+      </div>
+      <ul className="flex flex-col gap-2">
+        {item.parts!.map((p) =>
+          p.done ? (
+            <li key={p.childId} className="flex min-h-12 items-center gap-3 rounded-xl bg-grass-tint px-3">
+              <Check aria-hidden size={18} strokeWidth={3} className="text-grass-text" />
+              <span className="flex-1 text-[15px] font-bold">{p.name}</span>
+              <span className="text-sm font-bold text-grass-text">Signed</span>
+            </li>
+          ) : (
+            <li key={p.childId}>
+              <Link href={p.href} className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-line px-3">
+                <span className="flex-1 text-[15px] font-bold">
+                  {item.actionLabel} with {p.name}
+                </span>
+                <span className="text-sm font-bold text-kit-orange">To sign</span>
+                <ChevronRight aria-hidden size={18} className="text-ink-muted" />
+              </Link>
+            </li>
+          ),
+        )}
+      </ul>
+    </div>
   );
 }

@@ -173,7 +173,10 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
 test("to-do: contacts copied to a sibling, consent and payments", async ({ page }) => {
   await signIn(page, "sara@example.com");
   await page.goto("/checklist");
-  await expect(page.getByRole("progressbar", { name: "5 of 10 steps done" })).toBeVisible();
+  // Per child: registered, contacts, photos. For the family: one payment step, and the contract for each child.
+  await expect(page.getByRole("progressbar", { name: "4 of 9 steps done" })).toBeVisible();
+  const family = page.getByRole("region", { name: "Whole family" });
+  await expect(family.getByText("£30 a month per child, paid by direct debit through TeamFeePay")).toBeVisible();
   await page.screenshot({ path: shot("checklist"), fullPage: true });
 
   const musa = page.getByRole("region", { name: "Musa's checklist" });
@@ -190,12 +193,17 @@ test("to-do: contacts copied to a sibling, consent and payments", async ({ page 
   await page.getByRole("button", { name: "Save answer" }).click();
   await expect(page).toHaveURL(/\/checklist$/);
 
-  await musa.getByRole("link", { name: /Set up payments/ }).click();
+  // Yusuf's plan is already active, so the family's one payment step covers Musa.
+  await family.getByRole("link", { name: /Set up payments/ }).click();
+  await expect(page.getByText("£30 a month per child, paid by direct debit through TeamFeePay")).toBeVisible();
+  await expect(page.getByText("Monthly plan active for Yusuf.")).toBeVisible();
   await page.getByRole("button", { name: "I've set it up for Musa" }).click();
   await expect(page).toHaveURL(/\/checklist$/);
+  await expect(page.getByRole("progressbar", { name: "7 of 9 steps done" })).toBeVisible();
 
+  // One contract row, a link for each child still to sign.
   for (const name of ["Musa", "Yusuf"]) {
-    await page.getByRole("region", { name: `${name}'s checklist` }).getByRole("link", { name: /Club contract/ }).click();
+    await family.getByRole("link", { name: `Read with ${name}` }).click();
     await page.getByText(/gone through the player responsibilities with/).click();
     await page.getByText("I agree to the parent or guardian responsibilities.").click();
     await page.getByRole("button", { name: "Sign the contract" }).click();
