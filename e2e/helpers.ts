@@ -9,6 +9,9 @@ export const OUTBOX = "e2e/.results/outbox.jsonl";
 // codes (each address may only ask for five an hour, and the admin has used all five by then).
 export const ADMIN_STATE = "e2e/.results/admin-state.json";
 export const COACH_STATE = "e2e/.results/coach-state.json";
+/** The install gate tests' parent sign-in (e2e/parent-install-gate.spec.ts). */
+export const GATE_PARENT_STATE = "e2e/.results/gate-parent-state.json";
+// All three are deleted at the start of every run (e2e/global-setup.ts).
 
 export function latestCode(email: string): string {
   const lines = readFileSync(OUTBOX, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string; text: string });

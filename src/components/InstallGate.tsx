@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Check, Compass, Copy, Ellipsis, EllipsisVertical, SquarePlus } from "lucide-react";
 import { AppHeader } from "@/components/ui";
 import { installGateMode, readDismissCount, readSessionDismissed, recordDismiss, type InstallGateMode } from "@/lib/install-gate";
@@ -18,9 +19,10 @@ function standalone(): boolean {
   return display || (navigator as { standalone?: boolean }).standalone === true;
 }
 
-function decide(isStaff: boolean): View {
+function decide(isStaff: boolean, path: string): View {
   return installGateMode({
     ua: navigator.userAgent,
+    path,
     standalone: standalone(),
     coarse: window.matchMedia("(pointer: coarse)").matches,
     width: window.innerWidth,
@@ -36,6 +38,7 @@ function decide(isStaff: boolean): View {
  * on the server and decides after mount, so an installed app never sees it flash.
  */
 export function InstallGate({ isStaff }: { isStaff: boolean }) {
+  const path = usePathname();
   const [view, setView] = useState<View>(HIDDEN);
   const [installed, setInstalled] = useState(false);
   const [prompting, setPrompting] = useState(false);
@@ -44,7 +47,7 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
   const open = view.mode !== "hidden";
 
   useEffect(() => {
-    const update = () => setView(decide(isStaff));
+    const update = () => setView(decide(isStaff, path));
     const done = () => setInstalled(true);
     const frame = requestAnimationFrame(update);
     window.addEventListener("ds-installprompt", update);
@@ -54,7 +57,7 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
       window.removeEventListener("ds-installprompt", update);
       window.removeEventListener("appinstalled", done);
     };
-  }, [isStaff]);
+  }, [isStaff, path]);
 
   const dismiss = useCallback(() => {
     recordDismiss();
@@ -62,13 +65,39 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !dialog.current) return;
+    const gate = dialog.current;
+    const parent = gate.parentElement;
     const root = document.documentElement;
     const before = root.style.overflow;
     root.style.overflow = "hidden";
+    // The screen behind (page and tab bar, the gate's siblings in the parent layout) can't be reached by
+    // Tab or a screen reader while the gate is up, including anything Next swaps in meanwhile.
+    const shut = new Set<Element>();
+    const shutSiblings = () => {
+      for (const el of parent?.children ?? []) {
+        if (el !== gate && !el.hasAttribute("inert")) {
+          el.setAttribute("inert", "");
+          shut.add(el);
+        }
+      }
+    };
+    shutSiblings();
+    const watch = new MutationObserver(shutSiblings);
+    if (parent) watch.observe(parent, { childList: true });
     heading.current?.focus();
     return () => {
+      watch.disconnect();
+      for (const el of shut) el.removeAttribute("inert");
       root.style.overflow = before;
+      // Focus would otherwise be lost with the gate: put it at the top of the screen behind.
+      const main = parent?.isConnected ? parent.querySelector<HTMLElement>("h1") : null;
+      if (main && main.isConnected) {
+        if (!main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
+        main.focus({ preventScroll: true });
+      } else if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
     };
   }, [open]);
 
@@ -98,7 +127,7 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
 
   async function install() {
     const event = (window as GateWindow).__dsInstallPrompt;
-    if (!event) return setView(decide(isStaff));
+    if (!event) return setView(decide(isStaff, path));
     setPrompting(true);
     try {
       await event.prompt();
@@ -109,11 +138,13 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
     }
     (window as GateWindow).__dsInstallPrompt = null;
     setPrompting(false);
-    setView(decide(isStaff));
+    setView(decide(isStaff, path));
   }
 
   if (!open) return null;
   const ios = view.mode === "ios" || view.mode === "ios-inapp";
+  const inApp = view.mode === "ios-inapp" || view.mode === "android-inapp";
+  const first = inApp ? 2 : 1;
 
   return (
     <div
@@ -136,22 +167,26 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
           <p className="text-[15px] leading-[22px] text-on-pitch-muted">Get club news notifications, and open it in one tap like an app.</p>
         </AppHeader>
 
-        <div className="flex flex-1 flex-col gap-4 px-4 pt-5 pb-[max(env(safe-area-inset-bottom),24px)]">
+        <div className="flex flex-1 flex-col gap-4 px-4 pt-5 pb-4">
           {installed ? (
             <p role="status" className="flex items-center gap-2.5 rounded-app bg-grass-tint px-4 py-3.5 text-[16px] font-bold text-grass-text">
               <Check aria-hidden size={22} className="shrink-0" />
               Done. Open Deen Squad from your home screen.
             </p>
           ) : view.mode === "android-prompt" ? (
-            <button type="button" onClick={install} disabled={prompting} className="btn-chunky btn-grass w-full">
-              Install the app
-            </button>
-          ) : view.mode === "android-manual" ? (
+            <p className="text-[16px] leading-6">Tap <b>Install the app</b> below, then <b>Install</b>.</p>
+          ) : view.mode === "android-manual" || view.mode === "android-inapp" ? (
             <Steps>
-              <Step n={1} icon={<EllipsisVertical aria-hidden size={24} />}>
+              {view.mode === "android-inapp" ? (
+                <Step n={1} icon={<InAppMenuIcons android />} extra={<CopyLink />}>
+                  <b>Open this page in Chrome</b>: tap <b>⋮</b> or <b>•••</b>, then Open in Chrome (or Open in browser). You can&apos;t add
+                  it from inside this app.
+                </Step>
+              ) : null}
+              <Step n={first} icon={<EllipsisVertical aria-hidden size={24} />}>
                 Tap the menu (<b>three dots</b>) at the top of your browser.
               </Step>
-              <Step n={2} icon={<SquarePlus aria-hidden size={24} />}>
+              <Step n={first + 1} icon={<SquarePlus aria-hidden size={24} />}>
                 Choose <b>Add to Home screen</b> or <b>Install app</b>.
               </Step>
             </Steps>
@@ -163,13 +198,13 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
                   this app.
                 </Step>
               ) : null}
-              <Step n={view.mode === "ios-inapp" ? 2 : 1} icon={<ShareGlyph />}>
+              <Step n={first} icon={<ShareGlyph />}>
                 Tap the <b>Share</b> icon. It&apos;s at the bottom of Safari on iPhone, at the top on iPad.
               </Step>
-              <Step n={view.mode === "ios-inapp" ? 3 : 2} icon={<SquarePlus aria-hidden size={24} />}>
+              <Step n={first + 1} icon={<SquarePlus aria-hidden size={24} />}>
                 Choose <b>Add to Home Screen</b>.
               </Step>
-              <Step n={view.mode === "ios-inapp" ? 4 : 3} icon={<span className="text-[15px] font-bold">Add</span>}>
+              <Step n={first + 2} icon={<span className="text-[15px] font-bold">Add</span>}>
                 Tap <b>Add</b>, then open Deen Squad from your home screen.
               </Step>
             </Steps>
@@ -177,19 +212,27 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
 
           {ios ? (
             <p className="text-[14px] leading-5 text-ink-muted">You&apos;ll sign in once more in the app. We&apos;ll email you a 6-digit code, it takes 10 seconds.</p>
+          ) : view.mode === "android-inapp" ? (
+            <p className="text-[14px] leading-5 text-ink-muted">You&apos;ll sign in once more in Chrome. We&apos;ll email you a 6-digit code, it takes 10 seconds.</p>
           ) : null}
+        </div>
 
-          <div className="mt-auto flex flex-col items-center pt-2">
-            {view.offerNotNow ? (
-              <button type="button" onClick={dismiss} className="btn-chunky btn-paper w-full">
-                Not now
-              </button>
-            ) : (
-              <button type="button" onClick={dismiss} className="min-h-11 px-4 text-[14px] text-ink-muted underline underline-offset-2">
-                Continue in browser
-              </button>
-            )}
-          </div>
+        {/* Stays on screen however short the screen is (an iPhone SE with Safari's bars): the steps scroll above it. */}
+        <div className="sticky bottom-0 flex flex-col items-center gap-2 border-t-2 border-line bg-cream px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]">
+          {view.mode === "android-prompt" && !installed ? (
+            <button type="button" onClick={install} disabled={prompting} className="btn-chunky btn-grass w-full">
+              Install the app
+            </button>
+          ) : null}
+          {view.offerNotNow ? (
+            <button type="button" onClick={dismiss} className="btn-chunky btn-paper w-full">
+              Not now
+            </button>
+          ) : (
+            <button type="button" onClick={dismiss} className="min-h-11 px-4 text-[14px] text-ink-muted underline underline-offset-2">
+              Continue in browser
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -228,19 +271,20 @@ function ShareGlyph() {
   );
 }
 
-function InAppMenuIcons() {
+function InAppMenuIcons({ android = false }: { android?: boolean }) {
   return (
     <span className="flex flex-col items-center">
-      <Ellipsis aria-hidden size={20} />
-      <Compass aria-hidden size={18} />
+      {android ? <EllipsisVertical aria-hidden size={20} /> : <Ellipsis aria-hidden size={20} />}
+      {android ? <Ellipsis aria-hidden size={18} /> : <Compass aria-hidden size={18} />}
     </span>
   );
 }
 
-/** Copies this page's address so a parent in WhatsApp or Instagram can paste it into Safari. */
+/** Copies this page's address so a parent in WhatsApp or Instagram can paste it into Safari or Chrome. */
 function CopyLink() {
   const [state, setState] = useState<"idle" | "copied" | "manual">("idle");
   const field = useRef<HTMLInputElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
   const href = typeof window === "undefined" ? "" : window.location.href;
 
   async function copy() {
@@ -264,6 +308,8 @@ function CopyLink() {
       ok = false;
     }
     temp.remove();
+    // Selecting the hidden copy took focus away; give it back to the button (or the link field, below).
+    button.current?.focus();
     setState(ok ? "copied" : "manual");
   }
 
@@ -273,7 +319,7 @@ function CopyLink() {
 
   return (
     <div className="flex flex-col gap-2">
-      <button type="button" onClick={copy} className="btn-chunky btn-paper btn-small min-h-12 self-start">
+      <button ref={button} type="button" onClick={copy} className="btn-chunky btn-paper btn-small min-h-12 self-start">
         {state === "copied" ? <Check aria-hidden size={18} /> : <Copy aria-hidden size={18} />}
         {state === "copied" ? "Link copied" : "Copy link"}
       </button>

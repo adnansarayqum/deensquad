@@ -2,10 +2,12 @@
 // installed app. Pure decision first (tested), then the storage it reads and writes. Storage can throw
 // (private browsing, blocked cookies): then the count is 0 and a dismissal lasts until the page reloads.
 
-export type InstallGateMode = "hidden" | "android-prompt" | "android-manual" | "ios" | "ios-inapp";
+export type InstallGateMode = "hidden" | "android-prompt" | "android-manual" | "android-inapp" | "ios" | "ios-inapp";
 
 export type InstallGateInput = {
   ua: string;
+  /** The page's path. The attendance QR code (/pass) is shown at the gate and must never be covered. */
+  path: string;
   /** Running as an installed app: display-mode standalone/fullscreen/minimal-ui, or iOS navigator.standalone. */
   standalone: boolean;
   /** matchMedia("(pointer: coarse)"): a touch screen is the main pointer. */
@@ -27,17 +29,26 @@ export const NOT_NOW_LIMIT = 2;
 /** In-app browsers (WhatsApp, Instagram, Facebook, Gmail/Google app, Line) can't add to the home screen. */
 const IN_APP = /FBAN|FBAV|FB_IAB|Instagram|GSA\/|Line\/|WhatsApp/;
 
+/** Screens the gate never covers: the attendance QR code has to be on screen the moment it's opened. */
+export function gateFreePath(path: string): boolean {
+  return path === "/pass" || path.startsWith("/pass/");
+}
+
 export function isIos(ua: string, coarse: boolean): boolean {
   // iPadOS Safari asks for desktop sites with a Mac user agent; a touch screen gives it away.
   return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && coarse);
 }
 
 export function installGateMode(input: InstallGateInput): { mode: InstallGateMode; offerNotNow: boolean } {
-  const { ua, standalone, coarse, width, isStaff, dismissCount, sessionDismissed, hasPrompt } = input;
-  if (isStaff || standalone || !coarse || width >= GATE_MAX_WIDTH || sessionDismissed) return { mode: "hidden", offerNotNow: false };
+  const { ua, path, standalone, coarse, width, isStaff, dismissCount, sessionDismissed, hasPrompt } = input;
+  if (isStaff || standalone || !coarse || width >= GATE_MAX_WIDTH || sessionDismissed || gateFreePath(path)) {
+    return { mode: "hidden", offerNotNow: false };
+  }
   const offerNotNow = dismissCount < NOT_NOW_LIMIT;
   if (isIos(ua, coarse)) return { mode: IN_APP.test(ua) ? "ios-inapp" : "ios", offerNotNow };
-  return { mode: hasPrompt ? "android-prompt" : "android-manual", offerNotNow };
+  // A browser that offers its own install prompt can install, wherever it's opened from.
+  if (hasPrompt) return { mode: "android-prompt", offerNotNow };
+  return { mode: IN_APP.test(ua) ? "android-inapp" : "android-manual", offerNotNow };
 }
 
 const SESSION_KEY = "ds-install-gate-dismissed";

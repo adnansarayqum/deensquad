@@ -7,8 +7,11 @@ const IPAD_DESKTOP = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKi
 const ANDROID = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36";
 const INSTAGRAM = `${IPHONE} Instagram 350.0.0.0 (iPhone15,2; iOS 18_0; en_GB)`;
 
+const ANDROID_INSTAGRAM = "Mozilla/5.0 (Linux; Android 14; Pixel 7 Build/AP2A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.0.0 Mobile Safari/537.36 Instagram 350.0.0.0 Android (34/14; 420dpi; 1080x2400; Google; Pixel 7; panther; panther; en_GB)";
+
 const base: InstallGateInput = {
   ua: IPHONE,
+  path: "/news",
   standalone: false,
   coarse: true,
   width: 390,
@@ -42,6 +45,27 @@ describe("installGateMode", () => {
   it("offers the install button on Android when the browser has a prompt ready, and steps when it hasn't", () => {
     expect(mode({ ua: ANDROID, hasPrompt: true })).toEqual({ mode: "android-prompt", offerNotNow: true });
     expect(mode({ ua: ANDROID })).toEqual({ mode: "android-manual", offerNotNow: true });
+  });
+
+  it.each([
+    ["Instagram", ANDROID_INSTAGRAM],
+    ["Facebook", `${ANDROID} [FB_IAB/FB4A;FBAV/480.0.0.0;]`],
+    ["Google app (Gmail links)", `${ANDROID} GSA/15.0.0`],
+    ["Line", `${ANDROID} Line/14.0.0`],
+  ])("sends %s's in-app browser on Android to Chrome first", (_name, ua) => {
+    expect(mode({ ua })).toEqual({ mode: "android-inapp", offerNotNow: true });
+    expect(mode({ ua, dismissCount: 2 })).toEqual({ mode: "android-inapp", offerNotNow: false });
+  });
+
+  it("uses the install button even inside an app on Android if that browser offers its prompt", () => {
+    expect(mode({ ua: ANDROID_INSTAGRAM, hasPrompt: true }).mode).toBe("android-prompt");
+  });
+
+  it("never covers the attendance QR code, but does the screens around it", () => {
+    expect(mode({ path: "/pass" }).mode).toBe("hidden");
+    expect(mode({ path: "/pass/", ua: ANDROID, hasPrompt: true }).mode).toBe("hidden");
+    expect(mode({ path: "/passport" }).mode).toBe("ios");
+    expect(mode({ path: "/friday" }).mode).toBe("ios");
   });
 
   it("offers Not now twice, then only Continue in browser", () => {
