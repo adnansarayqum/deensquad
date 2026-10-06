@@ -54,7 +54,12 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
           Sign up
         </Link>
       </p>
-      <a href={privacy} className="text-sm font-bold text-grass-text underline" target="_blank" rel="noopener noreferrer">
+      {/* The built-in notice opens in the same window (its Back returns here): a new tab in an installed iPhone app can be Safari, which doesn't share the app's sign-in. */}
+      <a
+        href={privacy}
+        className="text-sm font-bold text-grass-text underline"
+        {...(privacy.startsWith("/") ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+      >
         How the club uses your information
       </a>
     </AuthShell>

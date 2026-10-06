@@ -753,9 +753,12 @@ test("families: a filtered list keeps its filter after opening a child and tappi
 
 test("privacy: anyone can read the notice from the sign-in screen", async ({ page }) => {
   await page.goto("/sign-in");
-  const href = await page.getByRole("link", { name: "How the club uses your information" }).getAttribute("href");
+  const link = page.getByRole("link", { name: "How the club uses your information" });
+  const href = await link.getAttribute("href");
   expect(href).toBe("/privacy");
-  await page.goto(href!);
+  // Same window, so an installed app doesn't hand the parent over to Safari.
+  expect(await link.getAttribute("target")).toBeNull();
+  await link.click();
   await expect(page.getByRole("heading", { name: "Your rights" })).toBeVisible();
   await page.screenshot({ path: shot("privacy"), fullPage: true });
   // Signed out, Back goes to sign in.
