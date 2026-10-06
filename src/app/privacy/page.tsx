@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { getCurrentUser } from "@/lib/auth/session";
 import { clubEmail } from "@/lib/config";
+import { analyticsConfig, sentryConfigured } from "@/lib/observability/config";
 
 export const metadata: Metadata = { title: "Privacy notice" };
 
@@ -29,6 +30,9 @@ function List({ items }: { items: ReactNode[] }) {
 
 export default async function PrivacyPage() {
   const email = clubEmail();
+  // Listed only when they're switched on, so the notice stays true either way.
+  const sentry = sentryConfigured();
+  const analytics = analyticsConfig();
   // Back to the player screen (which links here) when signed in, otherwise to sign in.
   const back = (await getCurrentUser()) ? "/player" : "/sign-in";
   const contact = email ? (
@@ -121,6 +125,24 @@ export default async function PrivacyPage() {
               <>
                 <b>Apple, Google and your browser&apos;s notification service</b> deliver notifications if you turn them on.
               </>,
+              ...(sentry
+                ? [
+                    <>
+                      <b>Sentry</b> receives a report when something goes wrong in the app, so we can fix it. A report says which screen it was, what
+                      went wrong and the type of phone or browser, with a random number standing for your account. It never includes your name, email
+                      address or your child&apos;s details.
+                    </>,
+                  ]
+                : []),
+              ...(analytics
+                ? [
+                    <>
+                      <b>{analytics.provider === "plausible" ? "Plausible" : "Umami"}</b> counts how often each screen is opened, so we can see what is
+                      useful. The counts are anonymous: no cookies, nothing saved on your phone, and no names or email addresses. If your browser asks
+                      sites not to track you, nothing is counted.
+                    </>,
+                  ]
+                : []),
             ]}
           />
           <p>
