@@ -1,6 +1,7 @@
 import { CONTRACT } from "../documents/contract";
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
+import { londonDate, londonTime } from "../dates";
 import type { AgeGroup, Announcement, Availability, Badge, Child, CoachNote, PaymentState, Session } from "../domain";
 
 // Queries for the parent screens. They run inside asUser(), so row level security applies,
@@ -198,6 +199,29 @@ export async function saveAnswer(tx: Queryable, sessionId: string, playerId: str
     [sessionId, playerId, answer],
   );
   return rows.length > 0;
+}
+
+/** The start of today and of tomorrow in London. */
+function londonToday(now: Date): [Date, Date] {
+  const d = londonDate(now);
+  const next = new Date(Date.UTC(d.year, d.month - 1, d.day + 1));
+  return [londonTime(d.year, d.month, d.day, 0, 0), londonTime(next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate(), 0, 0)];
+}
+
+/**
+ * Today's check-ins (London day) for these children, keyed like answers (`answerKey(session, child)`), with the
+ * time they were checked in: so parents can see their child has been checked in, by QR code or by hand.
+ */
+export async function loadCheckInsToday(tx: Queryable, childIds: string[], now: Date): Promise<Map<string, string>> {
+  if (childIds.length === 0) return new Map();
+  const [from, to] = londonToday(now);
+  const rows = await tx.query<{ session_id: string; player_id: string; checked_in_at: Date }>(
+    `select a.session_id, a.player_id, a.checked_in_at from attendance a join sessions s on s.id = a.session_id
+     where a.player_id = any($1::uuid[]) and s.starts_at >= $2 and s.starts_at < $3
+     order by a.checked_in_at`,
+    [childIds, from, to],
+  );
+  return new Map(rows.map((r) => [answerKey(r.session_id, r.player_id), iso(r.checked_in_at)]));
 }
 
 export type SquadCounts = { coming: number; away: number; squad: number };

@@ -72,6 +72,8 @@ export type ChildWeek = {
   answer: Availability | undefined;
   /** Who gave that answer and when (from `loadAnswers`), when known. */
   answered?: AnswerRecord;
+  /** When the child was checked in at that session (it's under way today): Friday says so instead of asking. */
+  checkedInAt?: string;
   counts: SquadCounts | undefined;
 };
 
@@ -80,7 +82,12 @@ export function buildWeek(
   sessions: Session[],
   answers: Map<string, Availability>,
   counts: Map<string, SquadCounts>,
-  records?: Map<string, AnswerRecord>,
+  extra: {
+    /** Who gave each answer (`loadAnswers`). */
+    records?: Map<string, AnswerRecord>;
+    /** When each child was checked in today (`loadCheckInsToday`), keyed like answers. */
+    checkIns?: Map<string, string>;
+  } = {},
 ): ChildWeek[] {
   return children.map((child) => {
     const session = nextSessionFor(child, sessions);
@@ -89,7 +96,8 @@ export function buildWeek(
       session,
       cancelled: cancelledBefore(child, sessions, session),
       answer: session ? answers.get(answerKey(session.id, child.id)) : undefined,
-      answered: session ? records?.get(answerKey(session.id, child.id)) : undefined,
+      answered: session ? extra.records?.get(answerKey(session.id, child.id)) : undefined,
+      checkedInAt: session ? extra.checkIns?.get(answerKey(session.id, child.id)) : undefined,
       counts: session ? counts.get(answerKey(session.id, child.ageGroup)) : undefined,
     };
   });
@@ -109,7 +117,8 @@ export function answeredLine(record: AnswerRecord, viewerGuardianId: string, now
 
 /** One line for the news header: "Is Yusuf coming?", "Yusuf is coming", "Are Yusuf and Musa coming?". */
 export function weekSummary(week: ChildWeek[]): string {
-  const open = week.filter((w) => w.session && !w.session.cancelled);
+  // A child already checked in is there, whatever was answered.
+  const open = week.filter((w) => w.session && !w.session.cancelled).map((w) => (w.checkedInAt ? { ...w, answer: "coming" as const } : w));
   const unanswered = open.filter((w) => !w.answer).map((w) => w.child.firstName);
   if (unanswered.length === 1) return open.find((w) => !w.answer)?.session?.squad ? `Can ${unanswered[0]} play?` : `Is ${unanswered[0]} coming?`;
   if (unanswered.length > 1) return `Are ${joinNames(unanswered)} coming?`;

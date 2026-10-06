@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import { Sun } from "lucide-react";
 import { BackHeader } from "@/components/BackHeader";
+import { CheckedIn } from "@/components/CheckedIn";
 import { PassCacheWriter } from "@/components/PassCacheWriter";
 import { PassCarousel } from "@/components/PassCarousel";
-import { getFamily } from "@/lib/parent/load";
+import { getPassPage } from "@/lib/parent/load";
 import { cachedPasses, passCards } from "@/lib/pass/cards";
 
 export const metadata: Metadata = { title: "Attendance QR code" };
 
 export default async function PassPage() {
-  const { user, family } = await getFamily();
+  const { user, family, checkedIn } = await getPassPage();
   const cards = await passCards(family.children);
   const several = cards.length > 1;
 
@@ -26,6 +27,13 @@ export default async function PassPage() {
           <p className="rounded-app border-2 border-line bg-paper p-4 text-[15px]">No players are linked to your email yet. Ask the club to add your child.</p>
         ) : (
           <>
+            {checkedIn.length > 0 ? (
+              <div className="flex w-full flex-col gap-2">
+                {checkedIn.map(({ child, at }) => (
+                  <CheckedIn key={child.id} name={child.firstName} at={at} />
+                ))}
+              </div>
+            ) : null}
             <PassCarousel cards={cards} />
             <p className="flex items-center gap-2 text-sm text-ink-muted">
               <Sun aria-hidden size={18} />

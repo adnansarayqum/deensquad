@@ -1197,6 +1197,14 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
   } finally {
     await browser.close();
   }
+
+  // Back on the parent's phone: Musa is checked in, so Friday says so instead of asking, and so does the QR screen.
+  await page.goto("/friday");
+  await expect(page.getByText(/^Musa was checked in at \d{1,2}:\d\d[ap]m$/)).toBeVisible();
+  await expect(page.getByRole("group", { name: /Is Musa coming/ })).toHaveCount(0);
+  await page.screenshot({ path: shot("friday-checked-in"), fullPage: true });
+  await page.goto("/pass");
+  await expect(page.getByText(/^Musa was checked in at \d{1,2}:\d\d[ap]m$/)).toBeVisible();
 });
 
 test("staff roles: an admin makes a coach an admin, who then sees the shop, and back again", async ({ browser }) => {

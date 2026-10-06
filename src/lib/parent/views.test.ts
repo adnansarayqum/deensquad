@@ -68,6 +68,18 @@ describe("the week for a family", () => {
   it("joins names", () => expect(joinNames(["A", "B", "C"])).toBe("A, B and C"));
 });
 
+describe("checked in today", () => {
+  const kids = [child("a", "Yusuf", "U10"), child("b", "Musa", "U7")];
+  it("marks a checked-in child as here, whatever was answered, and stops asking about them", () => {
+    const week = buildWeek(kids, [session("s", ["U7", "U10"])], new Map([["s:a", "away"]]), new Map(), {
+      checkIns: new Map([["s:a", "2026-10-09T16:58:00Z"], ["other:b", "2026-10-09T16:00:00Z"]]),
+    });
+    expect(week.map((w) => w.checkedInAt)).toEqual(["2026-10-09T16:58:00Z", undefined]);
+    expect(weekSummary(week)).toBe("Is Musa coming?");
+    expect(weekSummary(week.slice(0, 1))).toBe("Yusuf is coming");
+  });
+});
+
 describe("who answered", () => {
   const kids = [child("a", "Yusuf", "U10")];
   const now = new Date("2026-10-08T12:00:00Z"); // Thursday in London
@@ -76,7 +88,7 @@ describe("who answered", () => {
     const sessions = [session("fri", ["U10"]), { ...session("cup", ["U10"]), kind: "tournament" as const, startsAt: "2026-10-17T09:00:00Z", squad: ["a"] }];
     const records = new Map<string, AnswerRecord>([["fri:a", bySara], ["cup:a", { ...bySara, answer: "coming" }]]);
     const answers = new Map([...records].map(([k, r]) => [k, r.answer]));
-    const week = buildWeek(kids, sessions, answers, new Map(), records);
+    const week = buildWeek(kids, sessions, answers, new Map(), { records });
     expect(week[0].answered).toBe(bySara);
     expect(squadInvites(week, sessions, answers, records)[0].answered?.answer).toBe("coming");
   });

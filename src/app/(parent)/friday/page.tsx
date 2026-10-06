@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BookOpen, CalendarX, ChevronDown, ChevronRight, ClipboardList, Clock, Info, MoonStar, QrCode, Shirt } from "lucide-react";
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
+import { CheckedIn } from "@/components/CheckedIn";
 import { PassCacheWriter } from "@/components/PassCacheWriter";
 import { PassCarousel } from "@/components/PassCarousel";
 import { Attachment } from "@/components/plans/Attachment";
@@ -37,7 +38,11 @@ export default async function FridayPage() {
             {shortDay(single.session.startsAt)} · {single.child.ageGroup}s
           </p>
           <h1 className="font-display text-[48px] leading-[0.92] tracking-[0.02em]">
-            {single.session.squad ? `Can ${single.child.firstName} play?` : `Is ${single.child.firstName} coming?`}
+            {single.checkedInAt
+              ? `${single.child.firstName} is here`
+              : single.session.squad
+                ? `Can ${single.child.firstName} play?`
+                : `Is ${single.child.firstName} coming?`}
           </h1>
           <p className="text-sm text-on-pitch-muted">
             {single.session.squad ? `${single.session.title} · ` : ""}
@@ -78,7 +83,9 @@ export default async function FridayPage() {
         ))}
 
         {single ? (
-          single.session ? (
+          single.session && single.checkedInAt ? (
+            <CheckedIn name={single.child.firstName} at={single.checkedInAt} />
+          ) : single.session ? (
             <AvailabilityPicker
               sessionId={single.session.id}
               playerId={single.child.id}
@@ -204,16 +211,20 @@ function ChildCard({ week: w, answered }: { week: ChildWeek; answered?: string }
             {w.session.squad ? `${w.session.title} · ` : ""}
             {shortDay(w.session.startsAt)} · {clock(w.session.startsAt)}–{clock(w.session.endsAt)} · {w.session.venue}
           </p>
-          <AvailabilityPicker
-            sessionId={w.session.id}
-            playerId={w.child.id}
-            answer={w.answer}
-            childName={name}
-            question={availabilityQuestion(name, w.session, shortDay(w.session.startsAt))}
-            squad={Boolean(w.session.squad)}
-            answered={answered}
-            compact
-          />
+          {w.checkedInAt ? (
+            <CheckedIn name={name} at={w.checkedInAt} />
+          ) : (
+            <AvailabilityPicker
+              sessionId={w.session.id}
+              playerId={w.child.id}
+              answer={w.answer}
+              childName={name}
+              question={availabilityQuestion(name, w.session, shortDay(w.session.startsAt))}
+              squad={Boolean(w.session.squad)}
+              answered={answered}
+              compact
+            />
+          )}
         </>
       ) : (
         <p className="text-[15px] text-ink-muted">No session scheduled for {name}&apos;s group yet.</p>

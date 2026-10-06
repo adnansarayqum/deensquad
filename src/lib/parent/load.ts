@@ -10,6 +10,7 @@ import {
   answerKey,
   familyGroups,
   loadAnswers,
+  loadCheckInsToday,
   loadChecklistFacts,
   loadContacts,
   loadFamily,
@@ -56,7 +57,8 @@ async function loadWeek(userId: string, family: Family, now: Date) {
       const key = session ? answerKey(session.id, child.ageGroup) : null;
       if (session && key && !counts.has(key)) counts.set(key, await loadSquadCounts(tx, session.id, child.ageGroup));
     }
-    const week = buildWeek(family.children, sessions, answers, counts, records);
+    const checkIns = await loadCheckInsToday(tx, family.children.map((c) => c.id), now);
+    const week = buildWeek(family.children, sessions, answers, counts, { records, checkIns });
     return { sessions, week, invites: squadInvites(week, sessions, answers, records) };
   });
 }
@@ -99,6 +101,18 @@ export async function getFridayPage() {
 
 function uniqueById(sessions: Session[]): Session[] {
   return [...new Map(sessions.map((s) => [s.id, s])).values()].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+}
+
+/** The QR code screen: the family, and who has already been checked in today ("Musa was checked in at 5:58pm"). */
+export async function getPassPage() {
+  const { user, family } = await getFamily();
+  const checkIns = await asUser(user.id, (tx) => loadCheckInsToday(tx, family.children.map((c) => c.id), new Date()));
+  const at = new Map<string, string>();
+  for (const [key, when] of checkIns) {
+    const child = key.split(":")[1];
+    if (!at.has(child)) at.set(child, when);
+  }
+  return { user, family, checkedIn: family.children.flatMap((child) => (at.has(child.id) ? [{ child, at: at.get(child.id)! }] : [])) };
 }
 
 export async function getPracticePage() {
