@@ -46,7 +46,9 @@ vi.mock("next/navigation", () => ({
   },
 }));
 vi.mock("./options", () => ({ paymentOptions: () => ["bank"] }));
-vi.mock("./notify", () => ({ notifyNewOrder: async () => {} }));
+vi.mock("./notify", () => ({ notifyNewOrder: async () => {}, notifyParentOrder: async () => {} }));
+// The parent's confirmation email is queued for after the response; there's no request here.
+vi.mock("next/server", () => ({ after: () => {} }));
 
 const { checkout } = await import("./actions");
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AdminTitle, Section } from "@/components/admin/bits";
+import { Download } from "lucide-react";
+import { AdminTitle, Notice, Section } from "@/components/admin/bits";
 import { OrderStatusPill } from "@/components/shop/OrderStatusPill";
 import { requireAdmin } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
@@ -43,7 +44,7 @@ function nextSteps(o: Order): { status: OrderStatus; label: string; primary?: bo
 
 export default async function AdminShopPage({ searchParams }: PageProps<"/admin/shop">) {
   const user = await requireAdmin();
-  const { view } = await searchParams;
+  const { view, cancelled } = await searchParams;
   const past = view === "past";
   const { orders, supplier } = await asUser(user.id, async (tx) => ({
     orders: await loadOrdersAdmin(tx, past ? CLOSED : OPEN),
@@ -54,13 +55,21 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
     <>
       <AdminTitle
         action={
-          <Link href="/admin/shop/products" className="btn-chunky btn-paper btn-small">
-            Items and prices
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {/* The same spreadsheet as the overview's "Shop orders" download: every item with its size and initials. */}
+            <a href="/api/admin/export/orders" download className="btn-chunky btn-paper btn-small">
+              <Download aria-hidden size={16} />
+              Download for the supplier (CSV)
+            </a>
+            <Link href="/admin/shop/products" className="btn-chunky btn-paper btn-small">
+              Items and prices
+            </Link>
+          </div>
         }
       >
         Shop
       </AdminTitle>
+      {cancelled ? <Notice>Order cancelled. The parent has been emailed.</Notice> : null}
 
       {paymentOptions().length < 2 ? (
         <p className="rounded-app bg-gold-tint px-3.5 py-3 text-[15px] leading-[22px]">
@@ -80,7 +89,7 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
                 <th className="py-1 font-normal">Item</th>
                 <th className="py-1 font-normal">Size</th>
                 <th className="py-1 text-right font-normal">Qty</th>
-                <th className="py-1 text-right font-normal">With initials</th>
+                <th className="py-1 text-right font-normal">Initials</th>
               </tr>
             </thead>
             <tbody>
@@ -89,7 +98,7 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
                   <td className="py-2 font-bold">{l.productName}</td>
                   <td className="py-2">{l.size ?? "One size"}</td>
                   <td className="py-2 text-right tabular-nums">{l.quantity}</td>
-                  <td className="py-2 text-right tabular-nums">{l.initials || "–"}</td>
+                  <td className="py-2 text-right">{l.initialsRequested.length ? l.initialsRequested.join(", ") : "–"}</td>
                 </tr>
               ))}
             </tbody>
@@ -140,21 +149,27 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
                 </span>
               </span>
               <div className="flex flex-wrap gap-2">
-                {nextSteps(o).map((step) => (
-                  <form key={step.status} action={setOrderStatus}>
-                    <input type="hidden" name="order" value={o.id} />
-                    <input type="hidden" name="status" value={step.status} />
-                    {step.status === "cancelled" ? (
-                      <button type="submit" className="min-h-11 px-2 text-sm font-bold text-ink-muted underline">
-                        {step.label}
-                      </button>
-                    ) : (
+                {nextSteps(o).map((step) =>
+                  step.status === "cancelled" ? (
+                    // Asks first on its own page: it can't be undone and the parent is emailed.
+                    <Link
+                      key={step.status}
+                      href={`/admin/shop/orders/${o.id}/cancel`}
+                      aria-label={`Cancel order ${o.reference}`}
+                      className="inline-flex min-h-11 items-center px-2 text-sm font-bold text-ink-muted underline"
+                    >
+                      {step.label}
+                    </Link>
+                  ) : (
+                    <form key={step.status} action={setOrderStatus}>
+                      <input type="hidden" name="order" value={o.id} />
+                      <input type="hidden" name="status" value={step.status} />
                       <button type="submit" className={`btn-chunky btn-small ${step.primary ? "btn-grass" : "btn-paper"}`}>
                         {step.label}
                       </button>
-                    )}
-                  </form>
-                ))}
+                    </form>
+                  ),
+                )}
               </div>
             </div>
           </li>

@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { requireAdmin, requireParent } from "../auth/session";
 import { UUID } from "../auth/tokens";
 import { appUrl } from "../config";
@@ -13,7 +14,9 @@ import { cleanText } from "../validate";
 import { BASKET_COOKIE, addLine, parseBasket, type BasketLine } from "./basket";
 import { orderReference } from "./data";
 import { paymentOptions } from "./options";
-import { notifyNewOrder } from "./notify";
+import { enqueue } from "../background";
+import type { OrderEmailKind } from "../email/templates";
+import { notifyNewOrder, notifyParentOrder } from "./notify";
 import { localiseProductImages } from "./images";
 import { createCheckout, sumupConfigured } from "./sumup";
 
@@ -131,6 +134,8 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
     return { error: "We couldn't place your order. Your basket is still here. Please try again." };
   }
   await writeBasket([]);
+  // The parent's confirmation (what they ordered and how to pay), after the response so checkout isn't held up.
+  after(() => enqueue("order placed email", () => notifyParentOrder(orderId, "placed")));
 
   if (payBy === "bank") {
     await notifyNewOrder(orderId);
@@ -140,6 +145,7 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
     // The demo has no payment provider: pretend the card payment went through.
     await asSystem((tx) => tx.query(`update shop_orders set status = 'paid', paid_at = now() where id = $1`, [orderId]));
     await notifyNewOrder(orderId);
+    after(() => enqueue("order paid email", () => notifyParentOrder(orderId, "paid")));
     redirect(`/shop/orders/${orderId}?paid=demo`);
   }
 
@@ -266,19 +272,33 @@ const NEXT: Record<string, string[]> = {
   cancelled: [],
 };
 
+// The parent's email for each move (the order's own step columns make each go once; see notifyParentOrder).
+const EMAIL_FOR: Partial<Record<string, OrderEmailKind>> = { paid: "paid", ready: "ready", cancelled: "cancelled" };
+
 export async function setOrderStatus(formData: FormData): Promise<void> {
   const user = await requireAdmin();
   const id = formData.get("order");
   const status = String(formData.get("status"));
   if (typeof id !== "string" || !UUID.test(id) || !(status in NEXT)) return;
+  // Cancelling can't be undone and emails the parent, so it's confirmed on its own page first
+  // (/admin/shop/orders/[id]/cancel), which works without JavaScript.
+  if (status === "cancelled" && formData.get("confirm") !== "yes") redirect(`/admin/shop/orders/${id}/cancel`);
   const from = Object.entries(NEXT).filter(([, next]) => next.includes(status)).map(([s]) => s);
-  await asUser(user.id, (tx) =>
+  const moved = await asUser(user.id, (tx) =>
     tx.query(
       `update shop_orders set status = $2::order_status, updated_at = now(),
-         paid_at = case when $2 = 'paid' then coalesce(paid_at, now()) else paid_at end
-       where id = $1 and status::text = any ($3::text[])`,
+         paid_at = case when $2 = 'paid' then coalesce(paid_at, now()) else paid_at end,
+         ready_at = case when $2 = 'ready' then coalesce(ready_at, now()) else ready_at end,
+         collected_at = case when $2 = 'collected' then coalesce(collected_at, now()) else collected_at end
+       where id = $1 and status::text = any ($3::text[])
+       returning id`,
       [id, status, from],
     ),
   );
+  // Only a move that happened emails the parent (a second tap finds the order already moved on). After the
+  // response, so a slow or failing email never holds up or undoes the status change.
+  const kind = EMAIL_FOR[status];
+  if (moved.length && kind) after(() => enqueue(`order ${kind} email`, () => notifyParentOrder(id, kind)));
+  if (status === "cancelled") redirect(moved.length ? "/admin/shop?cancelled=1" : "/admin/shop");
   refresh();
 }

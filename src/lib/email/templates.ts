@@ -133,3 +133,83 @@ ${link ? button(link, "See families") : ""}`,
   );
   return { to, subject, text, html };
 }
+
+export type OrderEmailKind = "placed" | "paid" | "ready" | "cancelled";
+
+/**
+ * What the parent hears about their kit order, once at each step: placed (with how to pay), payment received,
+ * ready to collect on Friday, and cancelled.
+ */
+export function orderEmail(
+  kind: OrderEmailKind,
+  opts: {
+    to: string;
+    firstName: string;
+    reference: string;
+    total: string;
+    payBy: "card" | "bank";
+    /** "1 × Hoodie, size Youth M, initials MH (for Maryam)" */
+    lines: string[];
+    /** Children the order is for, by first name. */
+    children: string[];
+    /** The club account, for a bank transfer; null if it isn't set up. */
+    bank: { accountName: string; sortCode: string; accountNumber: string } | null;
+    /** "Tue 6 Oct", when the payment arrived (paid). */
+    paidOn?: string | null;
+    /** Whether the cancelled order had been paid. */
+    wasPaid?: boolean;
+    link: string | null;
+    appUrl: string | null;
+  },
+): Email {
+  const { to, firstName, reference, total, payBy, lines, children, bank, paidOn, wasPaid, link, appUrl } = opts;
+  const names = children.length === 0 ? "Your" : `${children.length === 1 ? children[0] : `${children.slice(0, -1).join(", ")} and ${children.at(-1)}`}'s`;
+  const subject = {
+    placed: `Your kit order ${reference}`,
+    paid: `Payment received for order ${reference}`,
+    ready: "Kit ready to collect on Friday",
+    cancelled: `Order ${reference} cancelled`,
+  }[kind];
+  // Paragraphs of plain text; the HTML version escapes the same words.
+  const paragraphs: string[] = {
+    placed: [
+      `Thank you for your kit order ${reference}. The total is ${total}.`,
+      payBy === "bank"
+        ? bank
+          ? `Please pay ${total} by bank transfer to:\nAccount name: ${bank.accountName}\nSort code: ${bank.sortCode}\nAccount number: ${bank.accountNumber}\nReference: ${reference}\nUse the reference so the club can match your payment to this order.`
+          : `Please pay ${total} by bank transfer. The club will send you its bank details. Use the reference ${reference} when you pay.`
+        : "You chose to pay by card. If you didn't finish paying, open your order in the app to pay.",
+      "We'll email you when it's ready.",
+    ],
+    paid: [
+      `We've received your payment of ${total} for order ${reference}${paidOn ? ` on ${paidOn}` : ""}. Thank you.`,
+      "We'll email you when it's ready.",
+    ],
+    ready: [`${names} kit from order ${reference} is ready. Collect it from a coach at Friday's session.`],
+    cancelled: [
+      `The club has cancelled your kit order ${reference} (${total}).`,
+      wasPaid ? "You've already paid for it, so please speak to the club about your refund." : "You don't need to pay for it.",
+    ],
+  }[kind];
+  const text = [
+    `Assalamu alaikum ${firstName},`,
+    "",
+    paragraphs[0],
+    "",
+    ...lines.map((l) => `- ${l}`),
+    ...paragraphs.slice(1).flatMap((p) => ["", p]),
+    ...(link ? ["", `See your order: ${link}`] : []),
+  ].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">Assalamu alaikum ${escape(firstName)},</p>
+<p>${escape(paragraphs[0])}</p>
+<ul style="padding-left:20px">${lines.map((l) => `<li>${escape(l)}</li>`).join("")}</ul>
+${paragraphs
+  .slice(1)
+  .map((p) => `<p style="white-space:pre-line">${escape(p)}</p>`)
+  .join("\n")}
+${link ? button(link, "See your order") : ""}`,
+  );
+  return { to, subject, text, html };
+}

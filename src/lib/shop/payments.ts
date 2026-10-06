@@ -1,7 +1,7 @@
 import "server-only";
 
 import { asSystem } from "../db";
-import { notifyNewOrder } from "./notify";
+import { notifyNewOrder, notifyParentOrder } from "./notify";
 import { getCheckout, sumupConfigured } from "./sumup";
 
 /**
@@ -21,6 +21,10 @@ export async function confirmSumupPayment(checkoutId: string): Promise<boolean> 
     );
     return rows[0]?.id ?? null;
   });
-  if (paid) await notifyNewOrder(paid);
+  if (paid) {
+    await notifyNewOrder(paid);
+    // The parent's receipt. Both never throw; the order is paid whatever happens to the emails.
+    await notifyParentOrder(paid, "paid");
+  }
   return Boolean(paid);
 }

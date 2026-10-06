@@ -99,7 +99,23 @@ describe("reading orders", () => {
     await t.asUser(other, (tx) => tx.query(`update shop_orders set status = 'paid' where id = $1`, [order.id]));
     expect(await t.asUser(coach, loadSupplierTotals)).toEqual([]);
     await t.asUser(coach, (tx) => tx.query(`update shop_orders set status = 'paid' where id = $1`, [order.id]));
-    expect(await t.asUser(coach, loadSupplierTotals)).toEqual([{ productName: "Black football socks", size: null, quantity: 1, initials: 0 }]);
+    expect(await t.asUser(coach, loadSupplierTotals)).toEqual([{ productName: "Black football socks", size: null, quantity: 1, initials: 0, initialsRequested: [] }]);
+    // The initials to print are listed, not just counted.
+    await t.asSystem(async (tx) => {
+      const [{ id }] = await tx.query<{ id: string }>(`insert into shop_orders (status, pay_by, total_pence) values ('paid', 'bank', 6000) returning id`);
+      await tx.query(
+        `insert into shop_order_items (order_id, product_name, size, initials, quantity, unit_pence) values
+           ($1, 'Hoodie', 'M', 'YS', 2, 2000), ($1, 'Hoodie', 'M', 'AB', 1, 2000), ($1, 'Hoodie', 'M', null, 1, 2000)`,
+        [id],
+      );
+    });
+    expect((await t.asUser(coach, loadSupplierTotals)).find((l) => l.productName === "Hoodie")).toEqual({
+      productName: "Hoodie",
+      size: "M",
+      quantity: 4,
+      initials: 3,
+      initialsRequested: ["AB", "YS ×2"],
+    });
   });
 
   it("flags a child on the register when their kit is ready", async () => {

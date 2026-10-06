@@ -4,6 +4,7 @@ import { BackHeader } from "@/components/BackHeader";
 import { Card } from "@/components/ui";
 import { CountOrderPlaced } from "@/components/observability/TrackOnce";
 import { OrderStatusPill } from "@/components/shop/OrderStatusPill";
+import { OrderTimeline } from "@/components/shop/OrderTimeline";
 import { payAgain } from "@/lib/shop/actions";
 import { formatPence, type Order } from "@/lib/shop/data";
 import { getOrderPage } from "@/lib/shop/load";
@@ -22,9 +23,9 @@ function message(order: Order, query: Record<string, string | string[] | undefin
     return { tone: "action", text: "We haven't had your payment yet. If you've just paid, reload this page in a moment." };
   if (order.status === "awaiting_payment") return { tone: "action", text: "This order hasn't been paid yet." };
   if (order.status === "paid" && (query.return || query.paid))
-    return { tone: "done", text: "Thank you, you've paid. We'll let you know when it's ready to pick up on a Friday." };
+    return { tone: "done", text: "Thank you, you've paid. We'll email you when it's ready to pick up on a Friday." };
   if (order.status === "paid" || order.status === "ordered")
-    return { tone: "done", text: "Paid. We'll let you know when it's ready to pick up on a Friday." };
+    return { tone: "done", text: "Paid. We'll email you when it's ready to pick up on a Friday." };
   if (order.status === "ready") return { tone: "action", text: "Ready to pick up. Ask a coach at Friday's session." };
   return null;
 }
@@ -59,6 +60,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/sh
             {note.text}
           </p>
         ) : null}
+        <OrderTimeline order={order} />
         <Card className="divide-y-2 divide-line">
           {order.items.map((i) => (
             <div key={i.id} className="flex items-center gap-3 p-3.5">

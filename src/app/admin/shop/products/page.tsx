@@ -62,6 +62,10 @@ function ProductFields({ p }: { p?: Product }) {
                 Remove photo
               </label>
             </div>
+          ) : p?.photoPending ? (
+            <p className="rounded-app bg-orange-tint px-3 py-2 text-sm">
+              The photo link couldn&apos;t be copied in yet, so parents see the crest instead. Upload the photo, or paste another link.
+            </p>
           ) : null}
           <input id={`photo-${key}`} name="photo" type="file" accept="image/jpeg,image/png,image/webp" aria-label={p?.imageUrl ? "Replace the photo" : "Add a photo"} className="field py-3 text-[15px]" />
           <label htmlFor={`image-${key}`} className="text-sm text-ink-muted">

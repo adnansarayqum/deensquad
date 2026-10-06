@@ -12,6 +12,8 @@ export type Product = {
   sizes: string[];
   initialsPence: number | null;
   imageUrl: string | null;
+  /** A photo link was pasted (or seeded) but hasn't been copied into the app yet, so no photo shows. */
+  photoPending: boolean;
   active: boolean;
   sort: number;
 };
@@ -37,8 +39,10 @@ const toProduct = (r: ProductRow): Product => ({
   pricePence: r.price_pence,
   sizes: r.sizes ?? [],
   initialsPence: r.initials_price_pence,
-  // A stored photo is served by the app; a plain link is shown until it's been copied in.
-  imageUrl: r.image_file_id ? `/api/files/${r.image_file_id}` : r.image_url,
+  // Only a photo stored in the app is shown. A pasted link waits until it's been copied in (localiseProductImages):
+  // linking straight to another site shows a broken image when that site refuses or the link dies.
+  imageUrl: r.image_file_id ? `/api/files/${r.image_file_id}` : null,
+  photoPending: !r.image_file_id && Boolean(r.image_url),
   active: r.active,
   sort: r.sort,
 });
@@ -77,13 +81,15 @@ export type Order = {
   totalPence: number;
   createdAt: string;
   paidAt: string | null;
+  readyAt: string | null;
+  collectedAt: string | null;
   parentName: string | null;
   sumupCheckoutId: string | null;
   items: OrderItem[];
 };
 
 const ORDER_SQL = `
-  select o.id, o.status::text as status, o.pay_by, o.total_pence, o.created_at, o.paid_at, o.sumup_checkout_id,
+  select o.id, o.status::text as status, o.pay_by, o.total_pence, o.created_at, o.paid_at, o.ready_at, o.collected_at, o.sumup_checkout_id,
     g.first_name || ' ' || g.last_name as parent_name,
     coalesce(json_agg(json_build_object(
       'id', i.id, 'productName', i.product_name, 'childName', p.first_name, 'size', i.size, 'initials', i.initials,
@@ -101,6 +107,8 @@ type OrderRow = {
   total_pence: number;
   created_at: Date;
   paid_at: Date | null;
+  ready_at: Date | null;
+  collected_at: Date | null;
   sumup_checkout_id: string | null;
   parent_name: string | null;
   items: OrderItem[] | string;
@@ -114,6 +122,8 @@ const toOrder = (r: OrderRow): Order => ({
   totalPence: r.total_pence,
   createdAt: iso(r.created_at),
   paidAt: r.paid_at ? iso(r.paid_at) : null,
+  readyAt: r.ready_at ? iso(r.ready_at) : null,
+  collectedAt: r.collected_at ? iso(r.collected_at) : null,
   parentName: r.parent_name,
   sumupCheckoutId: r.sumup_checkout_id,
   items: typeof r.items === "string" ? (JSON.parse(r.items) as OrderItem[]) : r.items,
@@ -141,13 +151,22 @@ export async function loadOrdersAdmin(tx: Queryable, statuses: OrderStatus[]): P
   return rows.map(toOrder);
 }
 
-export type SupplierLine = { productName: string; size: string | null; initials: number; quantity: number };
+export type SupplierLine = {
+  productName: string;
+  size: string | null;
+  /** How many of them have initials, and which: ["MH", "YS ×2"]. */
+  initials: number;
+  initialsRequested: string[];
+  quantity: number;
+};
 
 /** What to order from the supplier: everything paid and not yet ordered, by item and size. */
 export async function loadSupplierTotals(tx: Queryable): Promise<SupplierLine[]> {
   return tx.query<SupplierLine>(
     `select i.product_name as "productName", i.size, sum(i.quantity)::int as quantity,
-       sum(case when i.initials is not null then i.quantity else 0 end)::int as initials
+       sum(case when i.initials is not null then i.quantity else 0 end)::int as initials,
+       coalesce(array_agg(i.initials || case when i.quantity > 1 then ' ×' || i.quantity else '' end order by i.initials)
+         filter (where i.initials is not null), '{}')::text[] as "initialsRequested"
      from shop_order_items i join shop_orders o on o.id = i.order_id
      where o.status = 'paid'
      group by i.product_name, i.size
