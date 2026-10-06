@@ -1,42 +1,12 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { devices, expect, test, type Page } from "@playwright/test";
+import { devices, expect, test } from "@playwright/test";
 import jsQR from "jsqr";
+import { ADMIN_STATE, COACH_STATE, OUTBOX, latestCode, newContext, shot, signIn, skipInstallGate, switchUser } from "./helpers";
 
 // Signs in with real emailed codes (read from the test outbox) and walks through the parent,
 // coach and admin flows against the sample club. Screenshots land in e2e/.results/screens.
 // The server starts with a fresh in-memory database, and the tests build on each other in order.
-
-const shot = (name: string) => `e2e/.results/screens/${name}.png`;
-const OUTBOX = "e2e/.results/outbox.jsonl";
-// Signed-in browser state saved by earlier tests, so the desktop dashboard test doesn't use up more
-// codes (each address may only ask for five an hour, and the admin has used all five by then).
-const ADMIN_STATE = "e2e/.results/admin-state.json";
-const COACH_STATE = "e2e/.results/coach-state.json";
-
-function latestCode(email: string): string {
-  const lines = readFileSync(OUTBOX, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string; text: string });
-  const mail = lines.filter((m) => m.to === email).at(-1);
-  const code = mail?.subject.match(/^(\d{6})/)?.[1];
-  if (!code) throw new Error(`No code emailed to ${email}`);
-  return code;
-}
-
-/** Leaves the page first: an in-flight prefetch can otherwise re-set the session cookie after it's cleared. */
-async function switchUser(page: Page) {
-  await page.goto("about:blank");
-  await page.context().clearCookies();
-}
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/sign-in");
-  await page.getByLabel("Email address").fill(email);
-  await page.getByRole("button", { name: "Email me a code" }).click();
-  await expect(page).toHaveURL(/\/sign-in\/code$/);
-  await page.getByLabel("6-digit code").fill(latestCode(email));
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).not.toHaveURL(/\/sign-in/);
-}
 
 // Saved sign-ins from an earlier run must never stand in for this run's.
 test.beforeAll(() => {
@@ -47,6 +17,7 @@ test.beforeAll(() => {
 let testNumber = 0;
 test.beforeEach(async ({ context }) => {
   await context.clearCookies();
+  await skipInstallGate(context);
   // Each test signs in from its own address, so the per-IP sign-in limit doesn't trip as the suite grows.
   await context.setExtraHTTPHeaders({ "x-forwarded-for": `10.0.0.${++testNumber}` });
 });
@@ -639,7 +610,7 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   const desktop = { viewport: { width: 1280, height: 800 }, baseURL: "http://localhost:3100" };
 
   // The admin on a computer.
-  const adminContext = await browser.newContext({ ...desktop, storageState: ADMIN_STATE });
+  const adminContext = await newContext(browser, { ...desktop, storageState: ADMIN_STATE });
   const page = await adminContext.newPage();
   await page.goto("/admin");
   const sidebar = page.getByRole("complementary", { name: "Club admin menu" });
@@ -703,7 +674,7 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await adminContext.close();
 
   // The same admin on a phone: the pitch header and pill navigation, no sidebar.
-  const phoneContext = await browser.newContext({ ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: desktop.baseURL, storageState: ADMIN_STATE });
+  const phoneContext = await newContext(browser, { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: desktop.baseURL, storageState: ADMIN_STATE });
   const phone = await phoneContext.newPage();
   await phone.goto("/admin");
   await expect(phone.getByRole("complementary", { name: "Club admin menu" })).toHaveCount(0);
@@ -719,7 +690,7 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await phoneContext.close();
 
   // Coach Hamza (U7 only since the coach groups test) on a computer: U7 numbers only, no shop.
-  const coachContext = await browser.newContext({ ...desktop, storageState: COACH_STATE });
+  const coachContext = await newContext(browser, { ...desktop, storageState: COACH_STATE });
   const coach = await coachContext.newPage();
   await coach.goto("/admin");
   await expect(coach.getByRole("complementary", { name: "Club admin menu" })).toBeVisible();
@@ -746,7 +717,7 @@ test("families: a filtered list keeps its filter after opening a child and tappi
     ["phone", { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } }],
     ["computer", { viewport: { width: 1280, height: 800 } }],
   ] as const) {
-    const context = await browser.newContext({ ...options, baseURL, storageState: ADMIN_STATE });
+    const context = await newContext(browser, { ...options, baseURL, storageState: ADMIN_STATE });
     const page = await context.newPage();
     await page.goto("/admin/families?need=contract");
     const child = (name === "phone" ? page.locator("main ul") : page.getByRole("table", { name: /^Children/ })).locator('a[href^="/admin/families/"]').first();
@@ -794,7 +765,7 @@ function cameraVideo(png: Picture, width = 640, height = 480): Buffer {
 
 test("tournament squads: the admin picks two U10s and messages them; only their families see it", async ({ browser, page }) => {
   test.skip(!existsSync(ADMIN_STATE), "run with the earlier tests: needs their saved sign-in");
-  const adminContext = await browser.newContext({
+  const adminContext = await newContext(browser, {
     ...devices["Pixel 7"],
     viewport: { width: 390, height: 844 },
     baseURL: "http://localhost:3100",
@@ -851,7 +822,7 @@ test("tournament squads: the admin picks two U10s and messages them; only their 
   await expect(page.getByRole("heading", { name: "County Cup: meet at 9am" })).toBeVisible();
 
   // Ahmed (U10, not picked): no tournament, no message. (A fresh browser, so no late cookie from Bilal's parent.)
-  const otherContext = await browser.newContext({ ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: "http://localhost:3100" });
+  const otherContext = await newContext(browser, { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: "http://localhost:3100" });
   const other = await otherContext.newPage();
   await signIn(other, "parent1@example.com");
   await other.goto("/friday");
@@ -910,7 +881,7 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", `--use-file-for-fake-video-capture=${video}`],
   });
   try {
-    const context = await browser.newContext({
+    const context = await newContext(browser, {
       ...devices["Pixel 7"],
       viewport: { width: 390, height: 844 },
       baseURL: "http://localhost:3100",
@@ -973,8 +944,8 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
 test("staff roles: an admin makes a coach an admin, who then sees the shop, and back again", async ({ browser }) => {
   test.skip(!existsSync(ADMIN_STATE) || !existsSync(COACH_STATE), "run with the earlier tests: needs their saved sign-in");
   const phone = { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: "http://localhost:3100" };
-  const adminContext = await browser.newContext({ ...phone, storageState: ADMIN_STATE });
-  const coachContext = await browser.newContext({ ...phone, storageState: COACH_STATE });
+  const adminContext = await newContext(browser, { ...phone, storageState: ADMIN_STATE });
+  const coachContext = await newContext(browser, { ...phone, storageState: COACH_STATE });
   const admin = await adminContext.newPage();
   const coach = await coachContext.newPage();
 
