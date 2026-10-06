@@ -1,6 +1,7 @@
 import "server-only";
 
 import { adminEmails, appUrl } from "./config";
+import { isClientDisconnect } from "./client-disconnect";
 import { emailConfigured, sendEmails } from "./email/send";
 
 // Emails the app's maintainer when a page or action fails on the live app, at most once every
@@ -16,13 +17,7 @@ function recipients(): string[] {
   return configured.length ? configured : [...adminEmails()];
 }
 
-/**
- * The visitor left before the page finished loading (closed the app, switched screens or lost signal),
- * so the server couldn't finish sending it. Nothing failed on our side; not worth an email.
- */
-export function isClientDisconnect(message: string): boolean {
-  return /destination stream closed early|^aborted$|ECONNRESET|socket hang up/i.test(message);
-}
+export { isClientDisconnect };
 
 export async function sendErrorAlert(error: { message: string; digest?: string; path: string; kind: string }, now = Date.now()): Promise<boolean> {
   if (process.env.NODE_ENV !== "production" || !emailConfigured()) return false;
