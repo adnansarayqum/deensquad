@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { track } from "@/lib/analytics";
 import { checkout, type CheckoutState } from "@/lib/shop/actions";
 
 const LABELS = {
@@ -9,23 +8,9 @@ const LABELS = {
   bank: { title: "Bank transfer", detail: "We'll show you the club's bank details" },
 } as const;
 
-/** checkout, counting a placed order: a placed order always ends in a redirect (to the order or to SumUp), a refusal returns an error. */
-async function placeOrder(prev: CheckoutState, formData: FormData): Promise<CheckoutState> {
-  try {
-    return await checkout(prev, formData);
-  } catch (error) {
-    const digest = (error as { digest?: unknown } | null)?.digest;
-    // (Signed out meanwhile: sent to sign in, nothing ordered.)
-    if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT") && !digest.includes("/sign-in")) {
-      track("order_placed", { pay: formData.get("payBy") === "card" ? "card" : "bank" });
-    }
-    throw error;
-  }
-}
-
 /** Choose card or bank transfer, then place the order. */
 export function CheckoutForm({ options, total }: { options: ("card" | "bank")[]; total: string }) {
-  const [state, action, pending] = useActionState<CheckoutState, FormData>(placeOrder, {});
+  const [state, action, pending] = useActionState<CheckoutState, FormData>(checkout, {});
   const [payBy, setPayBy] = useState(options[0]);
   if (options.length === 0) {
     return <p className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px]">The club is still setting up payments. Please check back soon.</p>;

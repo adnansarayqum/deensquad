@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackHeader } from "@/components/BackHeader";
 import { Card } from "@/components/ui";
+import { CountOrderPlaced } from "@/components/observability/TrackOnce";
 import { OrderStatusPill } from "@/components/shop/OrderStatusPill";
 import { payAgain } from "@/lib/shop/actions";
 import { formatPence, type Order } from "@/lib/shop/data";
 import { getOrderPage } from "@/lib/shop/load";
+import { analyticsConfig } from "@/lib/observability/config";
 
 export const metadata: Metadata = { title: "Your order" };
 
@@ -27,18 +29,28 @@ function message(order: Order, query: Record<string, string | string[] | undefin
   return null;
 }
 
+/** Just placed: a bank order arriving from checkout, or a card order back from SumUp (or the demo) and paid. */
+function justPlaced(order: Order, query: Record<string, string | string[] | undefined>): "card" | "bank" | null {
+  if (order.payBy === "bank") return query.placed ? "bank" : null;
+  const paid = order.status !== "awaiting_payment" && order.status !== "cancelled";
+  return paid && (query.return || query.paid) ? "card" : null;
+}
+
 export default async function OrderPage({ params, searchParams }: PageProps<"/shop/orders/[id]">) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const page = await getOrderPage(id);
   if (!page) notFound();
   const { order, canPayOnline, bank } = page;
   const note = message(order, query);
+  // Page counting (when it's on): the order counts once, from this page, so it works without JavaScript at checkout.
+  const placed = analyticsConfig() ? justPlaced(order, query) : null;
   return (
     <>
       <BackHeader back="/shop/orders" backLabel="Your orders" title="Your order">
         Order {order.reference}
       </BackHeader>
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
+        {placed ? <CountOrderPlaced order={order.id} pay={placed} /> : null}
         <div>
           <OrderStatusPill status={order.status} payBy={order.payBy} />
         </div>

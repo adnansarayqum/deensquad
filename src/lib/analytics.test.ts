@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { doNotTrack, flush, setAnalyticsOn, setAnalyticsSender, track, trackPageview, type Hit } from "./analytics";
+import { doNotTrack, flush, setAnalyticsOn, setAnalyticsSender, track, trackOnce, trackPageview, type Hit } from "./analytics";
 
 const ID = "3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b";
 
@@ -44,6 +44,22 @@ describe("track", () => {
     ready = true;
     flush();
     expect(sent).toEqual(["pageview", "install_gate_shown"]);
+  });
+});
+
+describe("trackOnce", () => {
+  it("counts an event raised before analytics switched on, once, even after a reload", () => {
+    const sent: [Hit, string][] = [];
+    window.history.replaceState(null, "", `/shop/orders/${ID}?placed=1`);
+    // The order page's effect runs before the root layout's Analytics has switched on.
+    trackOnce(`order:${ID}`, "order_placed", { pay: "bank" });
+    trackOnce(`order:${ID}`, "order_placed", { pay: "bank" });
+    setAnalyticsOn(true);
+    setAnalyticsSender((hit, url) => sent.push([hit, url]) > 0);
+    trackOnce(`order:${ID}`, "order_placed", { pay: "bank" });
+    expect(sent).toEqual([[{ name: "order_placed", props: { pay: "bank" } }, "http://localhost:3000/shop/orders/:id"]]);
+    // A reload: a fresh page, but the tab remembers.
+    expect(sessionStorage.getItem(`ds-counted:order:${ID}`)).toBe("1");
   });
 });
 

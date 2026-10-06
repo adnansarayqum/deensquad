@@ -31,10 +31,23 @@ export function doNotTrack(): boolean {
   return values.some((v) => v === "1" || v === "yes");
 }
 
+/**
+ * One-off events raised before analytics has switched on: on a full page load the page's own effects run before
+ * the root layout's Analytics. Handed over when it switches on; never sent if it doesn't (Do Not Track).
+ */
+const early: { hit: Hit; url: string }[] = [];
+/** Keys of one-off events already counted in this tab (sessionStorage too, so a reload doesn't count them again). */
+const counted = new Set<string>();
+
 /** Turns analytics on or off (the Analytics component, before its script has loaded). Hits wait while it's on with no sender. */
 export function setAnalyticsOn(on: boolean) {
   if (!on) state = null;
-  else state ??= { sender: null, waiting: [] };
+  else {
+    state ??= { sender: null, waiting: [] };
+    state.waiting.push(...early.splice(0));
+    while (state.waiting.length > MAX_WAITING) state.waiting.shift();
+    flush();
+  }
 }
 
 /** The provider's sender, once its component has loaded (null to stop sending). Hits keep waiting meanwhile. */
@@ -66,4 +79,23 @@ export function trackPageview() {
 /** A named event with fixed labels. Does nothing when analytics is off. */
 export function track<N extends AnalyticsEventName>(name: N, ...props: Events[N] extends undefined ? [] : [Events[N]]) {
   send({ name, props: props[0] as Record<string, string> | undefined });
+}
+
+/**
+ * A named event counted at most once per `key` in this browser tab (reloads included), even if it's raised before
+ * analytics has switched on. Only rendered when analytics is configured (e.g. order_placed on the order page).
+ */
+export function trackOnce<N extends AnalyticsEventName>(key: string, name: N, ...props: Events[N] extends undefined ? [] : [Events[N]]) {
+  if (typeof window === "undefined" || counted.has(key)) return;
+  counted.add(key);
+  const storageKey = `ds-counted:${key}`;
+  try {
+    if (sessionStorage.getItem(storageKey)) return;
+    sessionStorage.setItem(storageKey, "1");
+  } catch {
+    // no storage: once per page load instead
+  }
+  const hit: Hit = { name, props: props[0] as Record<string, string> | undefined };
+  if (state) send(hit);
+  else if (early.length < MAX_WAITING) early.push({ hit, url: normaliseUrl(window.location.href) });
 }
