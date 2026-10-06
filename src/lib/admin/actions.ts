@@ -18,6 +18,7 @@ import { cancelSession, removeSession } from "./sessions";
 import { changeStaffRole, removeStaffMember } from "./staff";
 import { newsReaches } from "../squads/sql";
 import { canManageSquad, saveSquad } from "../squads/squads";
+import { enqueue } from "../background";
 import { runChase } from "../chase/run";
 import { sendInvites } from "./invites";
 import { TOPICS } from "./topics";
@@ -295,9 +296,10 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
     ),
   );
   // First rung of the chase ladder: notify parents once the response has gone (unless it's night-time; the hourly
-  // run picks it up at 8am), so a slow push or email service never holds up or fails the post.
+  // run picks it up at 8am), so a slow push or email service never holds up or fails the post. Queued behind any
+  // earlier post's run, so several posts in a row don't chase at once.
   if (formData.get("requiresAck") === "on") {
-    after(() => runChase({ announcementId: row.id }).catch((e) => console.error("[chase] on post:", e instanceof Error ? e.message : e)));
+    after(() => enqueue("chase on post", () => runChase({ announcementId: row.id })));
   }
   redirect(`/admin/news/${row.id}?posted=1`);
 }

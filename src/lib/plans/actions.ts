@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
+import { enqueue } from "../background";
 import { isGroupCoach, requireStaff, staffGroups } from "../auth/session";
 import { UUID } from "../auth/tokens";
 import { asUser } from "../db";
@@ -13,9 +14,12 @@ import { runPlanNotifications } from "./run";
 
 export type PlanState = { error?: string; saved?: boolean };
 
-/** Announces new plans and sheets once the response has gone, so a slow or failing push never holds up or fails a save. */
+/**
+ * Announces new plans and sheets once the response has gone (one run at a time, see `enqueue`), so a slow or failing
+ * push never holds up or fails a save.
+ */
 function notifyAfterResponse() {
-  after(() => runPlanNotifications().catch((e) => console.error("[plans] notify after save:", e instanceof Error ? e.message : e)));
+  after(() => enqueue("plan notifications", () => runPlanNotifications()));
 }
 
 /** Writes (or replaces) a group's plan for a session: text, an attachment, or both. */

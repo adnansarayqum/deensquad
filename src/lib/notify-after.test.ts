@@ -85,7 +85,7 @@ describe("posting news", () => {
     runChase.mockRejectedValueOnce(new Error("push service down"));
     await expect(postNews({}, news(true))).rejects.toThrow(/^redirect \/admin\/news\//);
     await expect(flushAfter()).resolves.toBeUndefined();
-    expect(console.error).toHaveBeenCalledWith("[chase] on post:", "push service down");
+    expect(console.error).toHaveBeenCalledWith("[background] chase on post failed:", "push service down");
   });
 });
 
