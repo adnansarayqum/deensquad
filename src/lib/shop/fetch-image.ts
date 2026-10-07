@@ -54,7 +54,7 @@ export async function assertPublicHost(url: string, resolve: Resolve): Promise<v
   if (addresses.some(isPrivateAddress)) throw new Error("host is on a private network");
 }
 
-/** Loopback, unspecified, private (10/8, 172.16/12, 192.168/16), link-local (169.254/16, fe80::/10), ULA (fc00::/7), or unparsable. */
+/** Loopback, unspecified, private (10/8, 172.16/12, 192.168/16), shared/CGNAT (100.64/10), link-local (169.254/16, fe80::/10), ULA (fc00::/7), or unparsable. */
 export function isPrivateAddress(ip: string): boolean {
   const kind = isIP(ip);
   if (kind === 4) return isPrivateV4(ip.split(".").map(Number));
@@ -70,7 +70,9 @@ export function isPrivateAddress(ip: string): boolean {
 }
 
 function isPrivateV4([a, b]: number[]): boolean {
-  return a === 0 || a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254);
+  return (
+    a === 0 || a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || (a === 100 && b >= 64 && b <= 127)
+  );
 }
 
 /** The eight 16-bit groups of an IPv6 address, or null if it can't be read. */
