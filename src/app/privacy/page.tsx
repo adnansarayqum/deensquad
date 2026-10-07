@@ -4,6 +4,7 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { getCurrentUser } from "@/lib/auth/session";
 import { smsConfigured } from "@/lib/chase/senders";
 import { clubEmail } from "@/lib/config";
+import { backPath } from "@/lib/viewer";
 import { analyticsConfig, sentryConfigured } from "@/lib/observability/config";
 
 export const metadata: Metadata = { title: "Privacy notice" };
@@ -29,14 +30,15 @@ function List({ items }: { items: ReactNode[] }) {
   );
 }
 
-export default async function PrivacyPage() {
+export default async function PrivacyPage({ searchParams }: PageProps<"/privacy">) {
   const email = clubEmail();
   // Listed only when they're switched on, so the notice stays true either way.
   const sentry = sentryConfigured();
   const analytics = analyticsConfig();
   const sms = smsConfigured();
-  // Back to the player screen (which links here) when signed in, otherwise to sign in.
-  const back = (await getCurrentUser()) ? "/player" : "/sign-in";
+  // Back to the player screen (which links here, with the child that was showing in `from`) when signed in, otherwise
+  // to sign in. `from` is only ever a path inside the app (backPath), never another site.
+  const back = (await getCurrentUser()) ? backPath((await searchParams).from, "/player") : "/sign-in";
   const contact = email ? (
     <>
       email{" "}

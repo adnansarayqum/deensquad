@@ -14,7 +14,7 @@ import { canSendEmail } from "../email/send";
 import { cleanBody, cleanPhone, cleanText, dialable } from "../validate";
 import { applyImport, planImport, type ImportProblem, type ImportSummary } from "./import";
 import { overlaps, within } from "./scope";
-import { familiesFilter, familiesHref, familiesInviteHref } from "./families-link";
+import { familiesFilterFromForm, familiesHref, familiesInviteHref, familyChildHref, withQuery } from "./families-link";
 import { addSessionRun, addedSentence, cancelSession, editSession, postSessionNotice, removeSession, type SessionEdit } from "./sessions";
 import { changeStaffRole, removeStaffMember } from "./staff";
 import { newsReaches } from "../squads/sql";
@@ -123,10 +123,8 @@ export async function importFamilies(prev: ImportState, formData: FormData): Pro
  */
 export async function inviteParents(formData: FormData): Promise<void> {
   await requireAdmin();
-  const params = Object.fromEntries(["group", "need", "q"].map((k) => [k, typeof formData.get(k) === "string" ? (formData.get(k) as string) : undefined]));
-  const filter = familiesFilter(params, AGE_GROUPS);
-  const list = familiesHref(filter);
-  const back = (query: string) => redirect(`${list}${list.includes("?") ? "&" : "?"}${query}`);
+  const filter = familiesFilterFromForm(formData, AGE_GROUPS);
+  const back = (query: string) => redirect(withQuery(familiesHref(filter), query));
   if (formData.get("confirm") !== "yes") redirect(familiesInviteHref(filter));
   if (!canSendEmail()) back("invite=no-email");
   const base = await inviteBase();
@@ -140,11 +138,13 @@ export async function resendInvite(formData: FormData): Promise<void> {
   const guardian = id(formData.get("guardian"));
   const child = id(formData.get("child"));
   if (!guardian || !child) return;
-  if (!canSendEmail()) redirect(`/admin/families/${child}?invite=no-email`);
+  // Back to the child with the Families filters it was opened with, so "← Families" still returns to that list.
+  const page = familyChildHref(child, familiesFilterFromForm(formData, AGE_GROUPS));
+  if (!canSendEmail()) redirect(withQuery(page, "invite=no-email"));
   const base = await inviteBase();
-  if (!base) redirect(`/admin/families/${child}?invite=no-url`);
+  if (!base) redirect(withQuery(page, "invite=no-url"));
   const { failed } = await sendInvites({ guardianIds: [guardian], baseUrl: base });
-  redirect(`/admin/families/${child}?${failed ? "invite=failed" : "invited=1"}`);
+  redirect(withQuery(page, failed ? "invite=failed" : "invited=1"));
 }
 
 // Children and parents --------------------------------------------------------
@@ -259,7 +259,7 @@ export async function removeChild(formData: FormData): Promise<void> {
   // Parents with no other children at the club go too, with their sign-ins.
   const removed = await asUser(user.id, (tx) => removeChildRecord(tx, child));
   await asSystem((tx) => deleteLeftoverAccounts(tx, removed));
-  redirect("/admin/families?removed=1");
+  redirect(withQuery(familiesHref(familiesFilterFromForm(formData, AGE_GROUPS)), "removed=1"));
 }
 
 /** "Done" on a parent's request to be deleted (the overview): the admin has dealt with it another way. */

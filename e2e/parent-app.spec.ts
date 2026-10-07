@@ -235,13 +235,18 @@ test("player: switch between children and sign out", async ({ page }) => {
   await page.screenshot({ path: shot("player"), fullPage: true });
   await page.getByRole("link", { name: "Musa" }).click();
   await expect(page.getByRole("heading", { name: "Musa S." })).toBeVisible();
-  // The privacy notice has a way back into the app.
+  const musaPage = new URL(page.url());
+  // The privacy notice has a way back into the app, to the child that was showing.
   await page.getByRole("link", { name: "Privacy", exact: true }).click();
-  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page).toHaveURL(/\/privacy\?from=%2Fplayer%3Fchild%3D[0-9a-f-]{36}$/);
   const back = page.getByRole("link", { name: "Back", exact: true });
   expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   await back.click();
-  await expect(page).toHaveURL(/\/player/);
+  await expect(page).toHaveURL(musaPage.href);
+  await expect(page.getByRole("heading", { name: "Musa S." })).toBeVisible();
+  // A made-up Back target off the site is ignored.
+  await page.goto("/privacy?from=//evil.example");
+  await expect(page.getByRole("link", { name: "Back", exact: true })).toHaveAttribute("href", "/player");
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   await page.goto("/news");
@@ -939,6 +944,9 @@ test("families: a filtered list keeps its filter after opening a child and tappi
     await expect(child, name).toHaveAttribute("href", /^\/admin\/families\/[0-9a-f-]{36}\?need=contract$/);
     await child.click();
     await expect(page, name).toHaveURL(/\/admin\/families\/[0-9a-f-]{36}\?need=contract$/);
+    // Send invite and Remove redirect, so they carry the filter too (not used here: they'd email or delete).
+    await expect(page.locator('form:has(button:text-is("Remove")) input[name="need"]'), name).toHaveValue("contract");
+    for (const form of await page.locator('form:has(button[aria-label^="Send invite"])').all()) await expect(form.locator('input[name="need"]'), name).toHaveValue("contract");
     await page.getByRole("link", { name: "← Families" }).click();
     await expect(page, name).toHaveURL(/\/admin\/families\?need=contract$/);
     await expect(page.locator("#need"), name).toHaveValue("contract");

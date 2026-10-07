@@ -112,8 +112,10 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
     const bad: { index: number; name: string | null }[] = [];
     for (const [index, line] of basket.entries()) {
       if (!(await lineProblem(tx, line))) continue;
-      const [p] = await tx.query<{ name: string }>(`select name from shop_products where id = $1`, [line.product]);
-      bad.push({ index, name: p?.name ?? null });
+      const [p] = await tx.query<{ name: string; sizes: string[] }>(`select name, sizes from shop_products where id = $1`, [line.product]);
+      // A size that's no longer offered is named, since the item itself may still be on sale in other sizes.
+      const sizeGone = p && line.size && p.sizes.length > 0 && !p.sizes.includes(line.size);
+      bad.push({ index, name: p ? (sizeGone ? `${p.name} (${line.size})` : p.name) : null });
     }
     return bad;
   });

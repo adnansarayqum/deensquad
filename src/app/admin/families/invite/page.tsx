@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FamiliesFilterFields } from "@/components/admin/FamiliesFilterFields";
 import { inviteParents } from "@/lib/admin/actions";
 import { countUninvited } from "@/lib/admin/data";
 import { familiesFilter, familiesHref, familiesScope } from "@/lib/admin/families-link";
@@ -45,9 +46,7 @@ export default async function InviteConfirmPage({ searchParams }: PageProps<"/ad
             again.
           </p>
           <form action={inviteParents} className="flex flex-wrap items-center gap-3">
-            {group ? <input type="hidden" name="group" value={group} /> : null}
-            {need ? <input type="hidden" name="need" value={need} /> : null}
-            {q ? <input type="hidden" name="q" value={q} /> : null}
+            <FamiliesFilterFields filter={filter} />
             <input type="hidden" name="confirm" value="yes" />
             <button type="submit" className="btn-chunky btn-grass">
               Send invites

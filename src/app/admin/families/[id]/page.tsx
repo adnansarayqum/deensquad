@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Notice, Section } from "@/components/admin/bits";
+import { FamiliesFilterFields } from "@/components/admin/FamiliesFilterFields";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
 import { removeChild, resendInvite, saveGuardian, setPayment, unlinkGuardian, updateChild } from "@/lib/admin/actions";
@@ -34,11 +35,12 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
   const mine = coachLimit(user.staff);
   if (mine && !mine.includes(child.ageGroup)) notFound();
   const isAdmin = user.staff.role === "admin";
+  const filter = familiesFilter(flags, staffGroups(user.staff));
 
   return (
     // Forms and detail read best at phone-to-tablet width, even on a computer.
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <Link href={familiesHref(familiesFilter(flags, staffGroups(user.staff)))} className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
+      <Link href={familiesHref(filter)} className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
         ← Families
       </Link>
       <div className="flex items-center gap-3">
@@ -92,6 +94,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                   <form action={resendInvite}>
                     <input type="hidden" name="guardian" value={g.id} />
                     <input type="hidden" name="child" value={child.id} />
+                    <FamiliesFilterFields filter={filter} />
                     <button type="submit" className="btn-chunky btn-paper btn-small" aria-label={`${g.invited ? "Send invite again" : "Send invite"} to ${g.firstName}`}>
                       {g.invited ? "Send invite again" : "Send invite"}
                     </button>
@@ -184,6 +187,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
           <summary className="cursor-pointer text-[15px] font-bold text-kit-orange">Remove {child.firstName} from the club</summary>
           <form action={removeChild} className="mt-3 flex flex-col gap-3">
             <input type="hidden" name="child" value={child.id} />
+            <FamiliesFilterFields filter={filter} />
             <p className="text-[15px] leading-[22px]">
               This deletes {child.firstName}&apos;s record, attendance and answers. Parents with no other children at the club are removed too. It
               can&apos;t be undone.

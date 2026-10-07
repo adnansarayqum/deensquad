@@ -98,7 +98,7 @@ describe("checkout", () => {
     putBasket([line(shirt, "S"), line(shirt, "L"), line(socks, null)]);
     await t.asSystem((tx) => tx.query(`update shop_products set sizes = '{M,L}' where id = $1`, [shirt]));
     expect(await checkout({}, payByBank())).toEqual({
-      error: "Training top is no longer available, so we took it out. Check your basket and try again.",
+      error: "Training top (S) is no longer available, so we took it out. Check your basket and try again.",
     });
     expect(basket()).toEqual([line(shirt, "L"), line(socks, null)]);
     expect(await orders()).toBe(0);
@@ -107,6 +107,15 @@ describe("checkout", () => {
     await expect(checkout({}, payByBank())).rejects.toThrow(/^redirect \/shop\/orders\/[0-9a-f-]{36}\?placed=1$/);
     expect(basket()).toEqual([]);
     expect(await orders()).toBe(1);
+  });
+
+  it("names each size that's gone", async () => {
+    putBasket([line(shirt, "S"), line(shirt, "L"), line(socks, null)]);
+    await t.asSystem((tx) => tx.query(`update shop_products set sizes = '{M}' where id = $1`, [shirt]));
+    expect(await checkout({}, payByBank())).toEqual({
+      error: "Training top (S) and Training top (L) are no longer available, so we took them out. Check your basket and try again.",
+    });
+    expect(basket()).toEqual([line(socks, null)]);
   });
 
   it("keeps the whole basket when placing the order fails unexpectedly", async () => {

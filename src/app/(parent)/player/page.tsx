@@ -197,7 +197,11 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           ) : (
             <span className="min-w-0 text-ink-muted [overflow-wrap:anywhere]">Signed in as {user.email}</span>
           )}
-          <a href="/privacy" className="inline-flex min-h-11 items-center font-bold text-ink-muted underline">
+          <a
+            // Back from the notice returns to the child that was showing.
+            href={child ? `/privacy?from=${encodeURIComponent(`/player?child=${child.id}`)}` : "/privacy"}
+            className="inline-flex min-h-11 items-center font-bold text-ink-muted underline"
+          >
             Privacy
           </a>
           <SignOutForm>

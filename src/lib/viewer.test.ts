@@ -5,6 +5,8 @@ describe("backPath", () => {
   it("keeps a screen inside the app", () => {
     expect(backPath("/friday", "/news")).toBe("/friday");
     expect(backPath("/coach/plans/abc?group=U10", "/coach")).toBe("/coach/plans/abc?group=U10");
+    // The privacy notice's Back, to the child that was showing on Player.
+    expect(backPath("/player?child=20000000-0000-4000-8000-000000000001", "/player")).toBe("/player?child=20000000-0000-4000-8000-000000000001");
   });
 
   it("falls back for anything that could leave the app or loop", () => {
