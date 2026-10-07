@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import jsQR from "jsqr";
 import { Check, QrCode, RotateCcw, TriangleAlert, WifiOff, X } from "lucide-react";
 import type { ScanResult } from "@/lib/staff/checkin";
 import { scanPass } from "@/lib/staff/actions";
@@ -105,6 +104,14 @@ export function PassScanner({ disabled = false }: { disabled?: boolean }) {
     // let go of the video element, and the camera would stay on.
     let stream: MediaStream | null = null;
     (async () => {
+      // The QR decoder is loaded only when the scanner opens, so the register doesn't carry it on every visit.
+      let jsQR: typeof import("jsqr").default;
+      try {
+        jsQR = (await import("jsqr")).default;
+      } catch {
+        if (!cancelled) setError("The scanner couldn't load. Check your signal and try again.");
+        return;
+      }
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
         if (cancelled) return stream.getTracks().forEach((t) => t.stop());
