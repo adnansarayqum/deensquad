@@ -18,33 +18,40 @@ export default async function StaffPage() {
   // Never the last admin and never your own role (or removal).
   const changeable = (s: StaffRow) => s.id !== user.staff.id && !(s.role === "admin" && admins <= 1);
 
-  const roleForm = (s: StaffRow): ReactNode =>
+  const roleHint = (s: StaffRow) => (s.role === "admin" ? "They'll coach every group until you tick theirs." : "Admins see every group and run the shop.");
+  // `compact`: the table's one-line rows (a text link, the hint in the footnote under the table); the phone cards keep the button and the sentence.
+  const roleForm = (s: StaffRow, compact = false): ReactNode =>
     changeable(s) ? (
-      <form action={setStaffRole} className="flex flex-col items-start gap-1">
+      <form action={setStaffRole} className={compact ? "" : "flex flex-col items-start gap-1"}>
         <input type="hidden" name="id" value={s.id} />
         <input type="hidden" name="role" value={s.role === "admin" ? "coach" : "admin"} />
-        <button type="submit" className="btn-chunky btn-paper btn-small min-h-12" aria-label={`Make ${s.displayName} ${s.role === "admin" ? "a coach" : "an admin"}`}>
+        <button
+          type="submit"
+          className={compact ? "inline-flex min-h-12 items-center px-1.5 text-sm font-bold text-grass-text underline underline-offset-4" : "btn-chunky btn-paper btn-small min-h-12"}
+          aria-label={`Make ${s.displayName} ${s.role === "admin" ? "a coach" : "an admin"}`}
+          title={compact ? roleHint(s) : undefined}
+        >
           {s.role === "admin" ? "Make coach" : "Make admin"}
         </button>
-        <span className="text-[13px] text-ink-muted">{s.role === "admin" ? "They'll coach every group until you tick theirs." : "Admins see every group and run the shop."}</span>
+        {compact ? null : <span className="text-[13px] text-ink-muted">{roleHint(s)}</span>}
       </form>
     ) : null;
   const removeForm = (s: StaffRow): ReactNode =>
     changeable(s) ? (
       <form action={removeStaff}>
         <input type="hidden" name="id" value={s.id} />
-        <button type="submit" className="min-h-12 px-2 text-sm font-bold text-ink-muted underline" aria-label={`Remove ${s.displayName}`}>
+        <button type="submit" className="inline-flex min-h-12 items-center px-1.5 text-sm font-bold text-ink-muted underline underline-offset-4" aria-label={`Remove ${s.displayName}`}>
           Remove
         </button>
       </form>
     ) : null;
-  const groupsForm = (s: StaffRow): ReactNode =>
+  const groupsForm = (s: StaffRow, compact = false): ReactNode =>
     s.role === "coach" ? (
-      <form action={setStaffGroups} className="flex flex-wrap items-center gap-2" aria-label={`${s.displayName}'s groups`}>
+      <form action={setStaffGroups} className={`flex items-center ${compact ? "flex-nowrap gap-0.5" : "flex-wrap gap-2"}`} aria-label={`${s.displayName}'s groups`}>
         <input type="hidden" name="id" value={s.id} />
-        <GroupBoxes selected={s.ageGroups} />
-        <button type="submit" className="btn-chunky btn-paper btn-small">
-          Save groups
+        <GroupBoxes selected={s.ageGroups} small={compact} />
+        <button type="submit" className="btn-chunky btn-paper btn-small shrink-0" aria-label={compact ? `Save ${s.displayName}'s groups` : undefined}>
+          {compact ? "Save" : "Save groups"}
         </button>
       </form>
     ) : (
@@ -130,42 +137,42 @@ export default async function StaffPage() {
           <caption className="sr-only">Coaches and admins</caption>
           <thead>
             <tr className="border-b-2 border-line text-left text-label text-ink-muted uppercase">
-              <th scope="col" className="px-4 py-2.5 font-bold">
+              <th scope="col" className="py-2.5 pr-2 pl-2.5 font-bold">
                 Name
               </th>
-              <th scope="col" className="px-3 py-2.5 font-bold">
+              <th scope="col" className="px-2 py-2.5 font-bold">
                 Email
               </th>
-              <th scope="col" className="px-3 py-2.5 font-bold">
+              <th scope="col" className="px-2 py-2.5 font-bold">
                 Role
               </th>
-              <th scope="col" className="px-3 py-2.5 font-bold">
+              <th scope="col" className="px-2 py-2.5 font-bold">
                 Signed in
               </th>
-              <th scope="col" className="px-3 py-2.5 font-bold">
+              <th scope="col" className="px-2 py-2.5 font-bold">
                 Groups
               </th>
-              <th scope="col" className="px-3 py-2.5 font-bold">
+              <th scope="col" className="w-px py-2.5 pr-1 pl-2 font-bold">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody>
             {staff.map((s) => (
-              <tr key={s.id} className="border-t border-line align-top">
-                <th scope="row" className="px-4 py-3 text-left font-bold whitespace-nowrap">
+              <tr key={s.id} className="border-t border-line align-middle">
+                <th scope="row" className="py-1.5 pr-2 pl-2.5 text-left font-bold whitespace-nowrap">
                   {name(s)}
                 </th>
-                <td className="px-3 py-3 text-ink-muted">{s.email}</td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                <td className="px-2 py-1.5 text-xs text-ink-muted">{s.email}</td>
+                <td className="px-2 py-1.5 whitespace-nowrap">
                   <Pill tone={s.role === "admin" ? "gold" : "neutral"}>{s.role}</Pill>
                 </td>
-                <td className="px-3 py-3 whitespace-nowrap">{s.signedIn ? <Pill tone="done">Signed in</Pill> : <Pill tone="neutral">Not yet</Pill>}</td>
-                <td className="px-3 py-2">{groupsForm(s)}</td>
-                <td className="px-3 py-2">
+                <td className="px-2 py-1.5 whitespace-nowrap">{s.signedIn ? <Pill tone="done">Signed in</Pill> : <Pill tone="neutral">Not yet</Pill>}</td>
+                <td className="px-2 py-1.5">{groupsForm(s, true)}</td>
+                <td className="py-1.5 pr-1 pl-2 whitespace-nowrap">
                   {changeable(s) ? (
-                    <div className="flex flex-wrap items-start gap-3">
-                      {roleForm(s)}
+                    <div className="-ml-1.5 flex items-center">
+                      {roleForm(s, true)}
                       {removeForm(s)}
                     </div>
                   ) : null}
@@ -174,16 +181,17 @@ export default async function StaffPage() {
             ))}
           </tbody>
         </table>
+        <p className="border-t border-line px-4 py-2.5 text-[13px] text-ink-muted">A new admin sees every group and runs the shop. Someone made a coach coaches every group until you tick theirs.</p>
       </div>
 
     </>
   );
 }
 
-function GroupBoxes({ selected }: { selected: AgeGroup[] }) {
+function GroupBoxes({ selected, small = false }: { selected: AgeGroup[]; /** The staff table's one-line rows: smaller chips. */ small?: boolean }) {
   return AGE_GROUPS.map((g) => (
-    <label key={g} className="flex min-h-11 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
-      <input type="checkbox" name="groups" value={g} defaultChecked={selected.includes(g)} className="h-4 w-4 accent-[var(--grass)]" />
+    <label key={g} className={`flex items-center rounded-pill border-2 border-line bg-paper has-[:checked]:border-grass has-[:checked]:bg-grass-tint ${small ? "min-h-9 gap-1 px-1.5" : "min-h-11 gap-2 px-3.5"}`}>
+      <input type="checkbox" name="groups" value={g} defaultChecked={selected.includes(g)} className={`accent-[var(--grass)] ${small ? "h-3.5 w-3.5" : "h-4 w-4"}`} />
       <span className="text-sm font-extrabold">{g}</span>
     </label>
   ));

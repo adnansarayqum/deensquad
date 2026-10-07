@@ -96,7 +96,7 @@ export default async function AdminHome() {
             <NeedsYou d={d} now={now} canInvite={isAdmin} />
             <AttendanceSection d={d} />
           </div>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-stretch">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
             <NextSessionSection d={d} />
             <FamiliesSection d={d} />
             <NewsSection d={d} />
