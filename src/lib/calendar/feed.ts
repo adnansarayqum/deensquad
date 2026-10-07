@@ -99,23 +99,66 @@ export function calendarLinks(base: string, token: string) {
   return { https, webcal, google: `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}` };
 }
 
-// A light cap per token (60 an hour): calendar apps poll every few hours, so anything more is a script or a loop.
-// In memory, as the app runs as one instance.
+// Light caps, in memory (the app runs as one instance; a restart only resets the counts):
+// - 60 fetches an hour per link: calendar apps poll every few hours, so anything more is a script or a loop;
+// - 30 unknown links an hour per address: someone trying links gets 429s before any more database lookups.
+// Each store holds at most 5,000 keys and, when full, drops expired then oldest entries, so a flood of made-up links
+// can't reset the counts of real ones.
 export const FEED_LIMIT = 60;
+export const MISS_LIMIT = 30;
 const WINDOW_MS = 60 * 60_000;
-const hits = new Map<string, { start: number; count: number }>();
+export const MAX_TRACKED = 5_000;
 
+/** A fixed-window counter per key. `hit` counts and says whether that hit is within the limit; `over` only looks. */
+export function windowCounter(limit: number, windowMs = WINDOW_MS, maxKeys = MAX_TRACKED) {
+  // Insertion order is window-start order: a key whose window restarts is moved to the end.
+  const hits = new Map<string, { start: number; count: number }>();
+  const live = (key: string, now: number) => {
+    const entry = hits.get(key);
+    return entry && now - entry.start < windowMs ? entry : undefined;
+  };
+  return {
+    hit(key: string, now = Date.now()): boolean {
+      const entry = live(key, now);
+      if (entry) return ++entry.count <= limit;
+      hits.delete(key);
+      if (hits.size >= maxKeys) {
+        for (const [k, v] of hits) {
+          if (now - v.start < windowMs) break;
+          hits.delete(k);
+        }
+        while (hits.size >= maxKeys) hits.delete(hits.keys().next().value!);
+      }
+      hits.set(key, { start: now, count: 1 });
+      return limit >= 1;
+    },
+    over(key: string, now = Date.now()): boolean {
+      return (live(key, now)?.count ?? 0) >= limit;
+    },
+    has: (key: string) => hits.has(key),
+    clear: () => hits.clear(),
+  };
+}
+
+const perLink = windowCounter(FEED_LIMIT);
+const misses = windowCounter(MISS_LIMIT);
+
+/** Counts a fetch of a link (by its hash); false once it's had 60 this hour. */
 export function allowFeed(key: string, now = Date.now()): boolean {
-  const entry = hits.get(key);
-  if (!entry || now - entry.start >= WINDOW_MS) {
-    if (hits.size >= 5_000) hits.clear();
-    hits.set(key, { start: now, count: 1 });
-    return true;
-  }
-  entry.count++;
-  return entry.count <= FEED_LIMIT;
+  return perLink.hit(key, now);
+}
+
+/** False when this address has asked for 30 unknown links this hour (checked before the lookup). */
+export function allowLookupFrom(ip: string | null, now = Date.now()): boolean {
+  return !misses.over(ip ?? "unknown", now);
+}
+
+/** Records a lookup of a link that doesn't exist. */
+export function recordMiss(ip: string | null, now = Date.now()) {
+  misses.hit(ip ?? "unknown", now);
 }
 
 export function resetFeedLimit() {
-  hits.clear();
+  perLink.clear();
+  misses.clear();
 }

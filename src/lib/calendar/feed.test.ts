@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { buildFamilyExport } from "../parent/export";
-import { allowFeed, FEED_LIMIT, guardianForToken, hashCalendarToken, loadFeedSessions, loadMyCalendarLink, resetFeedLimit, setMyCalendarToken, tokenFromFile } from "./feed";
+import { allowFeed, allowLookupFrom, FEED_LIMIT, MISS_LIMIT, recordMiss, windowCounter, guardianForToken, hashCalendarToken, loadFeedSessions, loadMyCalendarLink, resetFeedLimit, setMyCalendarToken, tokenFromFile } from "./feed";
 
 const now = new Date("2026-10-07T12:00:00Z");
 const day = (n: number, hour = 17) => new Date(Date.UTC(2026, 9, 7 + n, hour, 30));
@@ -101,5 +101,32 @@ describe("family calendar feed", () => {
     expect(allowFeed("a", start)).toBe(false);
     expect(allowFeed("b", start)).toBe(true);
     expect(allowFeed("a", start + 60 * 60_000)).toBe(true);
+  });
+
+  it("stops an address after 30 unknown links an hour, without touching others", () => {
+    const start = 2_000_000;
+    for (let i = 0; i < MISS_LIMIT; i++) {
+      expect(allowLookupFrom("10.0.0.1", start)).toBe(true);
+      recordMiss("10.0.0.1", start);
+    }
+    expect(allowLookupFrom("10.0.0.1", start)).toBe(false);
+    expect(allowLookupFrom("10.0.0.2", start)).toBe(true);
+    expect(allowLookupFrom("10.0.0.1", start + 60 * 60_000)).toBe(true);
+  });
+
+  it("when full, drops the oldest entries instead of forgetting every count", () => {
+    const counter = windowCounter(2, 60_000, 3);
+    counter.hit("real", 0);
+    counter.hit("real", 0);
+    expect(counter.hit("real", 0)).toBe(false);
+    counter.hit("a", 10);
+    counter.hit("b", 20);
+    // A fourth key pushes out only the oldest ("real"), not "a" and "b".
+    counter.hit("c", 30);
+    expect([counter.has("real"), counter.has("a"), counter.has("b"), counter.has("c")]).toEqual([false, true, true, true]);
+    // Expired entries go first: at 60,015 "a" (started at 10) has expired, so "b" survives a new key.
+    counter.hit("d", 60_015);
+    expect([counter.has("a"), counter.has("b"), counter.has("d")]).toEqual([false, true, true]);
+    expect(counter.over("b", 60_015)).toBe(false);
   });
 });
