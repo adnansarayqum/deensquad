@@ -808,7 +808,9 @@ test("writing help, downloads and badges: AI tidies a draft, an admin downloads 
   await expect(page.getByLabel("Title")).toHaveValue("Pitch closed on Saturday");
   // Spreadsheet downloads and badges (same admin sign-in: the suite stays under the per-email code limit).
   await page.goto("/admin");
-  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: /Families and payments/ }).click()]);
+  // The downloads are folded away at the foot of the overview.
+  await page.getByText("Download spreadsheets").click();
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: /^Families and payments/ }).click()]);
   expect(download.suggestedFilename()).toMatch(/^deen-squad-families-\d{4}-\d{2}-\d{2}\.csv$/);
   const csv = readFileSync((await download.path())!, "utf8");
   expect(csv).toContain('"Yusuf","Sample","U10"');
@@ -826,7 +828,7 @@ test("writing help, downloads and badges: AI tidies a draft, an admin downloads 
   expect(res.status()).toBe(403);
 });
 
-test("admin dashboard: a computer gets the sidebar, four sections and a Families table; phones keep the header; a U7 coach sees only U7", async ({ browser }) => {
+test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and a Families table; phones keep the header; a U7 coach sees only U7", async ({ browser }) => {
   test.skip(!existsSync(ADMIN_STATE) || !existsSync(COACH_STATE), "run with the earlier tests: needs their saved sign-in");
   const desktop = { viewport: { width: 1280, height: 800 }, baseURL: "http://localhost:3100" };
 
@@ -840,17 +842,31 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await expect(sidebar.getByRole("link", { name: "Shop" })).toBeVisible();
   await expect(sidebar.getByRole("button", { name: "Sign out" })).toBeVisible();
   await expect(page.locator("header")).toBeHidden();
-  for (const name of ["Attendance", "Families and to-dos", "Payments and shop", "News and reminders"]) {
+  for (const name of ["Needs you", "Attendance this season", "Next session", "Families and payments", "News", "Shop"]) {
     await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
   }
   await expect(page.getByRole("img", { name: /^U10, .*: \d+ coming, \d+ not coming, \d+ not answered$/ })).toBeVisible();
-  await expect(page.getByRole("list", { name: /Children checked in at the last/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /\d+ ready to collect/ })).toBeVisible();
-  await expect(page.getByRole("progressbar", { name: /Pitch closed|parents have read it/ }).first()).toBeVisible();
+  // "Needs you": at most five rows, each a count, its words and a link; orange lives only here.
+  const needs = page.getByRole("region", { name: "Needs you" }).getByRole("listitem");
+  expect(await needs.count()).toBeGreaterThan(0);
+  expect(await needs.count()).toBeLessThanOrEqual(5);
+  await expect(page.getByRole("link", { name: /^\d+ (parent|parents) behind on news$/ }).or(page.getByRole("link", { name: /^\d+ (parent|parents) not invited yet$/ })).first()).toBeVisible();
+  // Headline tiles.
+  const tiles = page.getByRole("list", { name: "At a glance" }).getByRole("link");
+  await expect(tiles).toHaveCount(4);
+  await expect(page.getByRole("link", { name: /^Attendance this season: \d+%$/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^\d+ of \d+ parents signed in$/ })).toBeVisible();
+  // The attendance chart: a hover/keyboard tooltip and a table twin with the same numbers.
+  const chart = page.getByRole("group", { name: /^Attendance at each session this season/ });
+  await chart.focus();
+  await expect(chart.getByText(/^\d+%$/).first()).toBeVisible();
+  await page.keyboard.press("ArrowLeft");
+  await page.getByText("Show as table").click();
+  await expect(page.getByRole("table", { name: /^Attendance at each session this season/ }).getByRole("row").nth(1)).toContainText(/\d+% \d+ of \d+|No register/);
+  // News: each message one link, named for it, with its read bar.
+  await expect(page.getByRole("link", { name: /^New away kit: sizes needed by Friday: \d+ of \d+ read\./ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Paid takings: £/ })).toBeVisible();
   await expect(page.locator("main")).not.toContainText("NaN");
-  await expect(page.getByRole("heading", { name: "This season (from 1 August), sessions with the register taken" })).toBeVisible();
-  await expect(page.getByText("These count parents. Their links list the children")).toBeVisible();
-  await expect(page.getByRole("link", { name: /^\d+ (parent hasn't|parents haven't) tapped ‘I’ve read this’ on 2 or more messages \(a partner may have\)$/ })).toBeVisible();
   // Every bar and figure on the overview is at least 48px tall to tap.
   for (const link of await page.getByRole("main").getByRole("link").all()) {
     if (await link.isVisible()) expect((await link.boundingBox())!.height, await link.innerText()).toBeGreaterThanOrEqual(48);
@@ -860,16 +876,14 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await page.screenshot({ path: shot("admin-dashboard-desktop-dark"), fullPage: true });
   await page.emulateMedia({ colorScheme: "light" });
 
-  // The U10 bar links to that session's register (not just today's) and the register shows its day and time.
-  const u10 = page.locator("li", { has: page.locator("b", { hasText: /^U10$/ }) }).first();
-  const when = (await u10.locator("p").innerText()).match(/· (\w{3} \d{1,2} \w{3,4}) · (.+) (\d{1,2}:\d{2}[ap]m)$/)!;
-  const coming = u10.getByRole("link", { name: /^\d+ coming$/ });
-  const href = (await coming.getAttribute("href"))!;
+  // The U10 bar links to that session's register (not just today's) and the register shows its day.
+  const u10 = page.getByRole("link", { name: /^U10, \w{3} \d{1,2} \w{3,4}: \d+ coming, \d+ not coming, \d+ not answered\. Open the register$/ });
+  const day = (await u10.getAttribute("aria-label"))!.match(/^U10, (\w{3} \d{1,2} \w{3,4}):/)![1];
+  const href = (await u10.getAttribute("href"))!;
   expect(href).toMatch(/^\/coach\?session=[0-9a-f-]{36}&group=U10$/);
-  await coming.click();
+  await u10.click();
   await expect(page).toHaveURL(href);
-  await expect(page.getByText(`Gate check-in · ${when[1]} ${when[3]}`)).toBeVisible();
-  await expect(page.getByRole("heading", { name: `${when[2]} register` })).toBeVisible();
+  await expect(page.getByText(new RegExp(`^Gate check-in · ${day} \\d{1,2}:\\d{2}[ap]m$`))).toBeVisible();
   await page.goto("/admin");
 
   // A to-do count opens Families filtered to those children, as a table with one row per child.
@@ -906,7 +920,7 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   expect(second.y).toBe(first.y); // side by side in one scrolling row
   expect(second.x).toBeGreaterThan(first.x);
   await expect(phone.locator("header").getByRole("button", { name: "Sign out" })).toBeVisible();
-  await expect(phone.getByRole("heading", { name: "Families and to-dos" })).toBeVisible();
+  await expect(phone.getByRole("heading", { name: "Families and payments" })).toBeVisible();
   await phone.screenshot({ path: shot("admin-dashboard-phone"), fullPage: true });
   await phoneContext.close();
 
@@ -916,14 +930,14 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await coach.goto("/admin");
   await expect(coach.getByRole("complementary", { name: "Club admin menu" })).toBeVisible();
   await expect(coach.getByRole("link", { name: "Shop" })).toHaveCount(0);
-  await expect(coach.getByRole("heading", { name: "Payments", exact: true })).toBeVisible();
-  await expect(coach.getByRole("heading", { name: "Payments and shop" })).toHaveCount(0);
-  await expect(coach.getByText(/ready to collect|Paid sales/)).toHaveCount(0);
+  await expect(coach.getByRole("heading", { name: "Families and payments", exact: true })).toBeVisible();
+  await expect(coach.getByRole("heading", { name: "Shop" })).toHaveCount(0);
+  await expect(coach.getByRole("link", { name: /Paid takings|kit order/ })).toHaveCount(0);
   const main = coach.locator("main");
   await expect(main).not.toContainText(/U6|U10|U12|U15|Girls/);
   await expect(coach.getByRole("img", { name: /^U7, / })).toBeVisible();
   // The five U7s: Musa's parents have finished his To-do, the other four haven't started.
-  await expect(main.getByRole("heading", { name: "Children with to-dos left (of 5 children)" })).toBeVisible();
+  await expect(main.getByRole("heading", { name: "To-dos left (of 5 children)" })).toBeVisible();
   await expect(coach.getByRole("link", { name: "4 contract not signed" })).toBeVisible();
   await expect(coach.getByRole("link", { name: "4 no emergency contact" })).toBeVisible();
   await coach.getByRole("link", { name: "4 no emergency contact" }).click();

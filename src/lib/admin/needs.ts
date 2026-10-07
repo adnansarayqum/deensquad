@@ -3,8 +3,8 @@ import { newsReaches } from "../squads/sql";
 
 // What a child still needs, as SQL conditions on `players p`. The Families filter (?need=) and the
 // overview's to-do figures and its to-check, overdue and no-plan payment figures use these, so each
-// of those equals the length of the list it links to. (The overview's Parents bar counts parents;
-// its invite/signin links list those parents' children, so the numbers can differ.)
+// of those equals the length of the list it links to. (The overview's "parents not invited yet" and "parents
+// invited, not signed in" count parents; their invite/signin links list those parents' children, so the numbers can differ.)
 //
 // The first four are the parent To-do (see buildChecklist and buildFamilyChecklist in src/lib/parent/views.ts; the
 // parent sees the payment as one family step, but it's still recorded per child): a step is

@@ -39,7 +39,15 @@ export type SeasonGroup = {
   averagePct: number | null;
 };
 
-export type RecentSession = { id: string; title: string; startsAt: string; checkedIn: number };
+/** One age group at one finished session this season whose register was taken for that group. */
+export type SessionGroupAttendance = { group: AgeGroup; checkedIn: number; expected: number; pct: number };
+
+/**
+ * A finished, uncancelled session this season with the register taken for at least one of the groups in view: each
+ * such group's figures (worked out as groupAttendance does: children in the group that day, plus anyone checked in)
+ * and all of them together.
+ */
+export type SeasonSession = { id: string; title: string; startsAt: string; groups: SessionGroupAttendance[]; checkedIn: number; expected: number; pct: number };
 
 export type NewsAck = { id: string; title: string; postedAt: string; read: number; total: number };
 
@@ -51,7 +59,10 @@ export type Dashboard = {
   attendance: {
     next: NextSessionGroup[];
     season: SeasonGroup[];
-    recent: RecentSession[];
+    /** Checked in ÷ expected over every group's season figures, as a whole percentage; null before any register. */
+    seasonPct: number | null;
+    /** This season's sessions with a register taken, oldest first (the attendance chart). */
+    sessions: SeasonSession[];
     /** Children whose last 3 sessions all have no check-in (NEEDS.missing3, the Families list it links to). */
     missedLast3: number;
   };
@@ -64,7 +75,17 @@ export type Dashboard = {
   };
   payments: Record<PaymentState, number>;
   /** Admins only (the shop is theirs to run); null for coaches. */
-  shop: { awaitingPayment: number; toOrder: number; ready: number; monthPence: number; seasonPence: number } | null;
+  shop: {
+    awaitingPayment: number;
+    toOrder: number;
+    /** Ordered from the supplier, not in yet. */
+    ordered: number;
+    ready: number;
+    /** Every order ever placed, cancelled included (the overview leaves the shop out until there's one). */
+    orders: number;
+    monthPence: number;
+    seasonPence: number;
+  } | null;
   news: { recent: NewsAck[]; reminders: Record<Channel, number>; behind: number };
   /** Parents who asked to be deleted and haven't been dealt with yet. Admins only; null for coaches. */
   deletionRequests: OpenDeletionRequest[] | null;
@@ -82,37 +103,65 @@ export function averagePct(checkedIn: number, expected: number): number | null {
 
 /**
  * Attendance by group over sessions that started at or after `from` and finished by `to` (not cancelled): sessions
- * with the register taken, check-ins, and the children expected on each day. The overview's season table and the
- * monthly summary use this, so their percentages are worked out the same way.
+ * with the register taken, check-ins, and the children expected on each day. The overview's season figures and chart
+ * and the monthly summary use this, so their percentages are worked out the same way.
  */
 export async function groupAttendance(tx: Queryable, groups: readonly AgeGroup[], from: Date, to: Date): Promise<SeasonGroup[]> {
-  const rows = await tx.query<{ group: AgeGroup; squad: number; held: number; checked_in: number; expected: number }>(
-    `select g.grp as "group",
-       (select count(*)::int from players p where p.age_group::text = g.grp) as squad,
-       (count(s.id) filter (where c.n > 0))::int as held,
-       coalesce(sum(c.n), 0)::int as checked_in,
-       coalesce(sum(c.expected) filter (where c.n > 0), 0)::int as expected
-     from unnest($1::text[]) with ordinality as g (grp, ord)
-     left join sessions s on g.grp = any (s.age_groups::text[]) and s.starts_at >= $2 and s.ends_at <= $3 and s.cancelled_at is null
-     -- each session against the group as it was that day: children who'd joined by then, and anyone checked in
-     left join lateral (
-       select count(a.player_id)::int as n, count(*)::int as expected
-       from players p left join attendance a on a.session_id = s.id and a.player_id = p.id
-       where p.age_group::text = g.grp
-         and (p.joined_on <= (s.starts_at at time zone 'Europe/London')::date or a.player_id is not null)
-     ) c on true
-     group by g.grp, g.ord
-     order by g.ord`,
-    [[...groups], from, to],
-  );
-  return rows.map((r) => ({
-    group: r.group,
-    squad: r.squad,
-    held: r.held,
-    checkedIn: r.checked_in,
-    expected: r.expected,
-    averagePct: averagePct(r.checked_in, r.expected),
-  }));
+  return (await seasonAttendance(tx, groups, from, to)).groups;
+}
+
+async function seasonAttendance(
+  tx: Queryable,
+  groups: readonly AgeGroup[],
+  from: Date,
+  to: Date,
+): Promise<{ groups: SeasonGroup[]; sessions: SeasonSession[] }> {
+  const [squads, rows] = await Promise.all([
+    tx.query<{ group: AgeGroup; squad: number }>(
+      `select g.grp as "group", (select count(*)::int from players p where p.age_group::text = g.grp) as squad
+       from unnest($1::text[]) with ordinality as g (grp, ord) order by g.ord`,
+      [[...groups]],
+    ),
+    // One row per session and group in view.
+    tx.query<{ id: string; title: string; starts_at: Date; group: AgeGroup; n: number; expected: number }>(
+      `select s.id, s.title, s.starts_at, g.grp as "group", c.n, c.expected
+       from unnest($1::text[]) as g (grp)
+       join sessions s on g.grp = any (s.age_groups::text[]) and s.starts_at >= $2 and s.ends_at <= $3 and s.cancelled_at is null
+       -- each session against the group as it was that day: children who'd joined by then, and anyone checked in
+       cross join lateral (
+         select count(a.player_id)::int as n, count(*)::int as expected
+         from players p left join attendance a on a.session_id = s.id and a.player_id = p.id
+         where p.age_group::text = g.grp
+           and (p.joined_on <= (s.starts_at at time zone 'Europe/London')::date or a.player_id is not null)
+       ) c
+       order by s.starts_at, s.created_at, s.id`,
+      [[...groups], from, to],
+    ),
+  ]);
+
+  // A session counts for a group only when the group's register was taken there (someone from it checked in), so an
+  // unused register doesn't read as 0% attendance.
+  const taken = rows.filter((r) => r.n > 0);
+  const seasonGroups = squads.map(({ group, squad }) => {
+    const mine = taken.filter((r) => r.group === group);
+    const checkedIn = mine.reduce((sum, r) => sum + r.n, 0);
+    const expected = mine.reduce((sum, r) => sum + r.expected, 0);
+    return { group, squad, held: mine.length, checkedIn, expected, averagePct: averagePct(checkedIn, expected) };
+  });
+
+  const sessions: SeasonSession[] = [];
+  for (const r of taken) {
+    let s = sessions.at(-1);
+    if (s?.id !== r.id) {
+      s = { id: r.id, title: r.title, startsAt: iso(r.starts_at), groups: [], checkedIn: 0, expected: 0, pct: 0 };
+      sessions.push(s);
+    }
+    s.groups.push({ group: r.group, checkedIn: r.n, expected: r.expected, pct: averagePct(r.n, r.expected) ?? 0 });
+    s.checkedIn += r.n;
+    s.expected += r.expected;
+    s.pct = averagePct(s.checkedIn, s.expected) ?? 0;
+  }
+  return { groups: seasonGroups, sessions };
 }
 
 // A message reaches a child when it's for everyone (null or empty audience) or for the child's group,
@@ -131,7 +180,7 @@ export async function loadDashboard(
   const season = seasonStart(now);
   const weekAgo = new Date(now.getTime() - 7 * 86400000);
 
-  const [next, seasonRows, recent, family, shop, news, reminders, behind, deletionRequests] = await Promise.all([
+  const [next, seasonRows, family, shop, news, reminders, behind, deletionRequests] = await Promise.all([
     tx.query<{ group: AgeGroup; squad: number; id: string | null; title: string | null; starts_at: Date | null; coming: number; away: number }>(
       `select g.grp as "group", s.id, s.title, s.starts_at,
          -- for a tournament squad session, the group's picked children only
@@ -152,16 +201,7 @@ export async function loadDashboard(
        order by g.ord`,
       [groups, now],
     ),
-    groupAttendance(tx, groups, season, now),
-    tx.query<{ id: string; title: string; starts_at: Date; checked_in: number }>(
-      `select s.id, s.title, s.starts_at,
-         (select count(*)::int from attendance a join players p on p.id = a.player_id
-           where a.session_id = s.id and p.age_group::text = any ($1::text[])) as checked_in
-       from sessions s
-       where s.ends_at <= $2 and s.cancelled_at is null and s.age_groups::text[] && $1::text[]
-       order by s.starts_at desc limit 8`,
-      [groups, now],
-    ),
+    seasonAttendance(tx, groups, season, now),
     tx.query<Record<string, number>>(
       `with mine as (select p.* from players p where p.age_group::text = any ($1::text[])),
        parents as (
@@ -182,11 +222,13 @@ export async function loadDashboard(
       [groups],
     ),
     withShop
-      ? tx.query<{ awaiting_payment: number; to_order: number; ready: number; month_pence: number; season_pence: number }>(
+      ? tx.query<{ awaiting_payment: number; to_order: number; ordered: number; ready: number; orders: number; month_pence: number; season_pence: number }>(
           `select
              count(*) filter (where status = 'awaiting_payment')::int as awaiting_payment,
              count(*) filter (where status = 'paid')::int as to_order,
+             count(*) filter (where status = 'ordered')::int as ordered,
              count(*) filter (where status = 'ready')::int as ready,
+             count(*)::int as orders,
              coalesce(sum(total_pence) filter (where status in ('paid', 'ordered', 'ready', 'collected') and paid_at >= $1), 0)::int as month_pence,
              coalesce(sum(total_pence) filter (where status in ('paid', 'ordered', 'ready', 'collected') and paid_at >= $2), 0)::int as season_pence
            from shop_orders`,
@@ -231,8 +273,12 @@ export async function loadDashboard(
         away: r.away,
         unanswered: Math.max(0, r.squad - r.coming - r.away),
       })),
-      season: seasonRows,
-      recent: recent.reverse().map((r) => ({ id: r.id, title: r.title, startsAt: iso(r.starts_at), checkedIn: r.checked_in })),
+      season: seasonRows.groups,
+      seasonPct: averagePct(
+        seasonRows.groups.reduce((sum, g) => sum + g.checkedIn, 0),
+        seasonRows.groups.reduce((sum, g) => sum + g.expected, 0),
+      ),
+      sessions: seasonRows.sessions,
       missedLast3: f.missedLast3,
     },
     families: {
@@ -244,7 +290,15 @@ export async function loadDashboard(
     },
     payments: { active: f.pay_active, self_reported: f.pay_self_reported, missing: f.pay_missing, overdue: f.pay_overdue },
     shop: s
-      ? { awaitingPayment: s.awaiting_payment, toOrder: s.to_order, ready: s.ready, monthPence: s.month_pence, seasonPence: s.season_pence }
+      ? {
+          awaitingPayment: s.awaiting_payment,
+          toOrder: s.to_order,
+          ordered: s.ordered,
+          ready: s.ready,
+          orders: s.orders,
+          monthPence: s.month_pence,
+          seasonPence: s.season_pence,
+        }
       : null,
     news: {
       recent: news.map((r) => ({ id: r.id, title: r.title, postedAt: iso(r.posted_at), total: r.total, read: Math.min(r.read, r.total) })),
