@@ -50,8 +50,11 @@ test("the admin adds a Girls session; it's on her Friday and its register lists 
   await page.getByLabel("Date", { exact: true }).fill(date);
   await page.getByLabel("Starts").fill("10:00");
   await page.getByLabel("Finishes").fill("11:00");
+  // Girls trains on its own: the form opens with the age groups ticked and Girls not.
+  for (const g of ["U6", "U7", "U10", "U12", "U15"]) await expect(page.getByLabel(g, { exact: true })).toBeChecked();
+  await expect(page.getByLabel("Girls", { exact: true })).not.toBeChecked();
   for (const g of ["U6", "U7", "U10", "U12", "U15"]) await page.getByLabel(g, { exact: true }).uncheck();
-  await expect(page.getByLabel("Girls", { exact: true })).toBeChecked();
+  await page.getByLabel("Girls", { exact: true }).check();
   await page.getByRole("button", { name: "Add sessions" }).click();
   await expect(page.getByText(/^Added 1 session\./)).toBeVisible();
   sessionId = (await page.getByRole("link", { name: `Edit ${TITLE} ${day}` }).getAttribute("href"))!.split("/")[3];

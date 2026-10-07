@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GROUP_LABELS } from "./auth/registration";
-import { AGE_GROUPS, groupPlural, groupsPlural, isAgeGroup, NUMBERED_GROUPS } from "./domain";
+import { AGE_GROUPS, defaultSessionGroups, groupPlural, groupsPlural, isAgeGroup, NUMBERED_GROUPS } from "./domain";
 
 describe("the club's groups", () => {
   it("lists the age groups youngest first, then Girls", () => {
@@ -28,5 +28,11 @@ describe("the club's groups", () => {
     expect(groupsPlural(["U10", "U12"])).toBe("U10, U12s");
     expect(groupsPlural(["U12", "Girls"])).toBe("U12, Girls");
     expect(groupsPlural([])).toBe("");
+  });
+
+  it("opens Add sessions with the numbered groups ticked, not Girls, unless Girls is all a coach has", () => {
+    expect(defaultSessionGroups([...AGE_GROUPS])).toEqual(["U6", "U7", "U10", "U12", "U15"]);
+    expect(defaultSessionGroups(["U10", "Girls"])).toEqual(["U10"]);
+    expect(defaultSessionGroups(["Girls"])).toEqual(["Girls"]);
   });
 });

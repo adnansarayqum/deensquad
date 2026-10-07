@@ -35,7 +35,7 @@ async function addSessionToday(page: Page, title: string, groups: string[]): Pro
   await page.getByLabel("Date", { exact: true }).fill(londonToday());
   await page.getByLabel("Starts").fill("00:00");
   await page.getByLabel("Finishes").fill("23:59");
-  for (const g of ["U6", "U7", "U10", "U12", "U15", "Girls"]) if (!groups.includes(g)) await page.getByLabel(g, { exact: true }).uncheck();
+  for (const g of ["U6", "U7", "U10", "U12", "U15"]) if (!groups.includes(g)) await page.getByLabel(g, { exact: true }).uncheck();
   await page.getByRole("button", { name: "Add sessions" }).click();
   await expect(page.getByText(/^Added 1 session\./)).toBeVisible();
   return (await page.getByRole("link", { name: `Edit ${title} ${londonDay()}` }).getAttribute("href"))!.split("/")[3];
@@ -554,7 +554,7 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
   await page.getByLabel("Title").fill("U10 friendly");
   // Months away, so it doesn't become the next session in later tests.
   await page.getByLabel("Date", { exact: true }).fill(new Date(Date.now() + 200 * 86400000).toISOString().slice(0, 10));
-  for (const g of ["U6", "U7", "U12", "U15", "Girls"]) await page.getByLabel(g, { exact: true }).uncheck();
+  for (const g of ["U6", "U7", "U12", "U15"]) await page.getByLabel(g, { exact: true }).uncheck();
   await page.getByRole("button", { name: "Add sessions" }).click();
   await expect(page.getByText(/^Added 1 session\./)).toBeVisible();
   await expect(page.getByText(/U10 friendly/).first()).toBeVisible();
@@ -989,7 +989,7 @@ test("tournament squads: the admin picks two U10s and messages them; only their 
   await admin.getByLabel("Date", { exact: true }).fill(new Date(Date.now() + 12 * 86400000).toISOString().slice(0, 10));
   await admin.getByLabel("Starts").fill("09:00");
   await admin.getByLabel("Finishes").fill("13:00");
-  for (const g of ["U6", "U7", "U12", "U15", "Girls"]) await admin.getByLabel(g, { exact: true }).uncheck();
+  for (const g of ["U6", "U7", "U12", "U15"]) await admin.getByLabel(g, { exact: true }).uncheck();
   await admin.getByRole("button", { name: "Add sessions" }).click();
   await expect(admin.getByText(/^Added 1 session\./)).toBeVisible();
   await admin.getByRole("link", { name: /^Pick squad for County Cup/ }).click();
@@ -1075,7 +1075,7 @@ test("session changes: an admin edits a session, cancels it with a reason and te
   await admin.getByLabel("Date", { exact: true }).fill(today);
   await admin.getByLabel("Starts").fill("00:01");
   await admin.getByLabel("Finishes").fill("23:58");
-  for (const g of ["U6", "U7", "U10", "U15", "Girls"]) await admin.getByLabel(g, { exact: true }).uncheck();
+  for (const g of ["U6", "U7", "U10", "U15"]) await admin.getByLabel(g, { exact: true }).uncheck();
   await admin.getByRole("button", { name: "Add sessions" }).click();
   await expect(admin.getByText(/^Added 1 session\./)).toBeVisible();
 
@@ -1376,7 +1376,7 @@ test("squad page on a phone: Save stays on screen, and a group filter keeps the 
   await page.getByLabel("Kind").selectOption("tournament");
   // Months away, so it never becomes anyone's next session.
   await page.getByLabel("Date", { exact: true }).fill(new Date(Date.now() + 250 * 86400000).toISOString().slice(0, 10));
-  for (const g of ["U6", "U7", "U15", "Girls"]) await page.getByLabel(g, { exact: true }).uncheck();
+  for (const g of ["U6", "U7", "U15"]) await page.getByLabel(g, { exact: true }).uncheck();
   await page.getByRole("button", { name: "Add sessions" }).click();
   await expect(page.getByText(/^Added 1 session\./)).toBeVisible();
   await page.getByRole("link", { name: /^Pick squad for Filter Cup/ }).click();

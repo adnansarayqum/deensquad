@@ -15,6 +15,15 @@ export function isAgeGroup(value: unknown): value is AgeGroup {
   return typeof value === "string" && (AGE_GROUPS as readonly string[]).includes(value);
 }
 
+/**
+ * The groups ticked when the Add sessions form opens: the staff member's numbered groups, because Girls trains
+ * separately. A coach of Girls alone still gets Girls.
+ */
+export function defaultSessionGroups(mine: readonly AgeGroup[]): AgeGroup[] {
+  const numbered = mine.filter((g) => g !== GIRLS);
+  return numbered.length > 0 ? numbered : [...mine];
+}
+
 /** A group's children, in copy: "U10s", but "Girls" (not "Girlss"). */
 export function groupPlural(group: string): string {
   return group === GIRLS ? GIRLS : `${group}s`;

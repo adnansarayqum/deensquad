@@ -10,6 +10,7 @@ import { within } from "@/lib/admin/scope";
 import { coachLimit, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { clock, londonDate, nextFridaySession, shortDay } from "@/lib/dates";
+import { defaultSessionGroups } from "@/lib/domain";
 import type { AgeGroup } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Sessions" };
@@ -34,7 +35,7 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <Section title="Add sessions">
           <StatefulForm action={addSessions} submitLabel="Add sessions" savedMessage="Sessions added. Parents can answer straight away.">
-            <SessionFields repeat groups={staffGroups(user.staff)} defaults={{ date: firstDate, start: "18:30", end: "20:00", venue: lastVenue ?? "", groups: staffGroups(user.staff) }} />
+            <SessionFields repeat groups={staffGroups(user.staff)} defaults={{ date: firstDate, start: "18:30", end: "20:00", venue: lastVenue ?? "", groups: defaultSessionGroups(staffGroups(user.staff)) }} />
             <p className="text-[13px] text-ink-muted">Dates that already have a session at the same time for one of these groups are skipped.</p>
           </StatefulForm>
         </Section>
