@@ -105,4 +105,5 @@ export const GROUP_LABELS: Record<AgeGroup, string> = {
   U10: "U10 (ages 8 to 10)",
   U12: "U12 (ages 11 and 12)",
   U15: "U15 (ages 13 to 15)",
+  Girls: "Girls (all ages)",
 };

@@ -48,7 +48,7 @@ describe("admin overview numbers", () => {
     expect(u10).toMatchObject({ squad: 16, coming: 11, away: 2, unanswered: 3 });
     expect(u10.session?.title).toBe("Training");
     expect(d.attendance.next.find((g) => g.group === "U7")).toMatchObject({ squad: 5, coming: 0, away: 0, unanswered: 5 });
-    expect(d.attendance.next.map((g) => g.group)).toEqual(["U6", "U7", "U10", "U12", "U15"]);
+    expect(d.attendance.next.map((g) => g.group)).toEqual(["U6", "U7", "U10", "U12", "U15", "Girls"]);
     // Season: six Fridays have passed, but "held" counts only those where the group's register was
     // taken (someone from it checked in). Yusuf came to five of them (5 of 5 × 16 U10 places = 6%),
     // Musa to two (2 of 2 × 5 U7 places = 20%).
