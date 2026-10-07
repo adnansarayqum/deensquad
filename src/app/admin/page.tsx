@@ -1,7 +1,7 @@
 import { Download } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AdminTitle, Notice, Section } from "@/components/admin/bits";
+import { Notice, PageHeader, Section, SubLabel } from "@/components/admin/bits";
 import { AttendanceChart, Bar, BarLink, HBarList, NeedLink, Sparkline, StackedBar, StatTile } from "@/components/admin/charts";
 import { CHANNELS, loadDashboard, type Channel, type Dashboard } from "@/lib/admin/dashboard";
 import { closeDataRequest } from "@/lib/admin/actions";
@@ -48,14 +48,7 @@ export default async function AdminHome() {
 
   return (
     <>
-      <div className="flex flex-col gap-1">
-        <AdminTitle>Assalamu alaikum, {greetingName(user.staff.displayName)}</AdminTitle>
-        {next ? (
-          <p className="text-[15px] text-ink-muted">
-            {next.day}: {next.coming} of {next.squad} {next.squad === 1 ? "child" : "children"} coming
-          </p>
-        ) : null}
-      </div>
+      <PageHeader title={`Assalamu alaikum, ${greetingName(user.staff.displayName)}`} subtitle={next ? `${next.day}: ${next.coming} of ${next.squad} ${next.squad === 1 ? "child" : "children"} coming` : undefined} />
 
       {isAdmin && !emailConfigured() && process.env.NODE_ENV === "production" && !isDemo() ? (
         <Notice tone="action">
@@ -95,26 +88,26 @@ export default async function AdminHome() {
           <p className="text-[15px] text-ink-muted">{limit ? "No children in your groups yet." : "No children yet."}</p>
         )
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
-          <div className="lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <>
+          {/* Row 1: the four headline tiles. Row 2: Needs you beside the attendance chart (equal heights while the
+              chart has data; with none, the chart card stays short). Row 3: three equal cards. Row 4: the shop. */}
+          <Tiles d={d} next={next} />
+          <div className={`grid grid-cols-1 gap-4 lg:grid-cols-3 ${d.attendance.sessions.length ? "lg:items-stretch" : "lg:items-start"}`}>
             <NeedsYou d={d} now={now} canInvite={isAdmin} />
-          </div>
-          <div className="lg:col-span-2 lg:col-start-2 lg:row-start-1">
-            <Tiles d={d} next={next} />
-          </div>
-          <div className="lg:col-span-2 lg:col-start-2 lg:row-start-2">
             <AttendanceSection d={d} />
           </div>
-          <NextSessionSection d={d} />
-          <FamiliesSection d={d} />
-          <NewsSection d={d} />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-stretch">
+            <NextSessionSection d={d} />
+            <FamiliesSection d={d} />
+            <NewsSection d={d} />
+          </div>
           {d.shop && (d.shop.orders > 0 || d.shop.seasonPence > 0) ? <ShopSection shop={d.shop} /> : null}
-        </div>
+        </>
       )}
 
       {isAdmin ? (
         <details className="rounded-app border-2 border-line bg-paper px-4">
-          <summary className="flex min-h-12 cursor-pointer items-center gap-2 text-[15px] font-bold">
+          <summary className="flex min-h-12 cursor-pointer items-center gap-2 text-[17px] font-extrabold">
             <Download aria-hidden size={18} className="text-grass-text" />
             Download spreadsheets
           </summary>
@@ -181,7 +174,7 @@ function NeedsYou({ d, now, canInvite }: { d: Dashboard; now: Date; canInvite: b
   const rows = needsYou(d, now, { canInvite });
   const hidden = rows.length - NEEDS_SHOWN;
   return (
-    <section aria-labelledby="needs-you" className="flex flex-col gap-1 rounded-app border-2 border-line bg-paper px-4 pt-2 pb-3">
+    <section aria-labelledby="needs-you" className="flex flex-col gap-1 rounded-app border-2 border-line bg-paper p-4 pt-2 lg:col-span-1">
       <div className="flex flex-wrap items-center justify-between gap-x-3">
         <h2 id="needs-you" className="text-[17px] font-extrabold">
           Needs you
@@ -213,7 +206,7 @@ function Tiles({ d, next }: { d: Dashboard; next: NextSessionSummary | null }) {
   const spark = d.attendance.sessions.slice(-10).map((s) => s.pct);
   const signInHref = f.signedIn === f.parents ? "/admin/families" : f.notInvited > 0 ? "/admin/families?need=invite" : "/admin/families?need=signin";
   return (
-    <ul aria-label="At a glance" className="grid grid-cols-1 gap-3 min-[300px]:grid-cols-2 sm:grid-cols-4">
+    <ul aria-label="At a glance" className="grid grid-cols-1 gap-4 min-[300px]:grid-cols-2 lg:grid-cols-4">
       <li className="flex">
         <StatTile
           href={next?.href ?? "/admin/sessions"}
@@ -261,6 +254,7 @@ function AttendanceSection({ d }: { d: Dashboard }) {
   return (
     <Section
       title="Attendance this season"
+      className="lg:col-span-2"
       aside={
         <Link href="/admin/sessions" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
           Sessions
@@ -268,7 +262,7 @@ function AttendanceSection({ d }: { d: Dashboard }) {
       }
     >
       {d.attendance.sessions.length === 0 ? (
-        <p className="text-[15px] text-ink-muted">No registers taken yet this season.</p>
+        <p className="text-[15px] text-ink-muted">No registers taken yet this season. It fills in as coaches take the register.</p>
       ) : (
         <AttendanceChart data={attendanceChart(d)} title={title} />
       )}
@@ -321,13 +315,13 @@ function FamiliesSection({ d }: { d: Dashboard }) {
         </Link>
       }
     >
-      <h3 className="text-[14px] font-bold text-ink-muted">To-dos left (of {d.players === 1 ? "1 child" : `${d.players} children`})</h3>
+      <SubLabel>To-dos left (of {d.players === 1 ? "1 child" : `${d.players} children`})</SubLabel>
       <HBarList
         title="Children with to-dos left"
         max={d.players}
         rows={TODO_NEEDS.map((n) => ({ key: n, label: TODO_LABEL[n], value: d.families.todo[n], href: `/admin/families?need=${n}` }))}
       />
-      <h3 className="text-[14px] font-bold text-ink-muted">Monthly plans (TeamFeePay)</h3>
+      <SubLabel>Monthly plans (TeamFeePay)</SubLabel>
       <StackedBar
         label="Monthly plans"
         hideZero
@@ -411,7 +405,10 @@ function ShopSection({ shop }: { shop: NonNullable<Dashboard["shop"]> }) {
     ] as const
   ).filter(([n]) => n > 0);
   return (
-    <Section title="Shop">
+    <section aria-labelledby="shop-figures" className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-app border-2 border-line bg-paper px-4 py-2">
+      <h2 id="shop-figures" className="text-[17px] font-extrabold">
+        Shop
+      </h2>
       <Link
         href="/admin/shop?view=past"
         aria-label={`Paid takings: ${formatPence(shop.monthPence)} this month, ${formatPence(shop.seasonPence)} this season`}
@@ -438,6 +435,6 @@ function ShopSection({ shop }: { shop: NonNullable<Dashboard["shop"]> }) {
       ) : (
         <p className="text-[14px] text-ink-muted">No orders open.</p>
       )}
-    </Section>
+    </section>
   );
 }
