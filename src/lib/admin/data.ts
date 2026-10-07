@@ -422,6 +422,21 @@ export async function loadAdminSession(tx: Queryable, id: string, mine: readonly
   return toAdminSession(row);
 }
 
+/**
+ * The sessions picked for a bulk action, in date order, with those that aren't there or aren't this member of
+ * staff's to change (`notYours`) left out and counted. One query however many were ticked.
+ */
+export async function loadAdminSessions(
+  tx: Queryable,
+  ids: readonly string[],
+  mine: readonly AgeGroup[] | null,
+): Promise<{ sessions: AdminSession[]; notYours: number }> {
+  if (ids.length === 0) return { sessions: [], notYours: 0 };
+  const rows = await tx.query<AdminSessionRow>(`select ${ADMIN_SESSION_COLUMNS} from sessions s where s.id = any($1::uuid[]) order by s.starts_at`, [[...ids]]);
+  const sessions = rows.filter((r) => !mine || allWithin(r.age_groups, mine)).map(toAdminSession);
+  return { sessions, notYours: rows.length - sessions.length };
+}
+
 /** Upcoming and recent sessions; `groups` (a group coach's own) keeps those that include one of them. */
 export async function loadSessionsAdmin(
   tx: Queryable,

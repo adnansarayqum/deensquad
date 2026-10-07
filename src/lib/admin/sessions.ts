@@ -66,17 +66,18 @@ export async function sessionLosses(tx: Queryable, id: string): Promise<SessionL
 }
 
 /** "Delete Autumn Cup? 11 answers, 1 plan and the squad will be deleted. This can't be undone." */
-export function lossesSentence(l: SessionLosses): string {
+export function lossesSentence(l: SessionLosses, them = false): string {
   const n = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
   const parts = [
     l.answers ? n(l.answers, "answer", "answers") : null,
     l.plans ? n(l.plans, "session plan", "session plans") : null,
-    l.picked ? `the squad of ${l.picked}` : null,
+    l.picked ? (them ? `${n(l.picked, "squad pick", "squad picks")}` : `the squad of ${l.picked}`) : null,
     l.messages ? n(l.messages, "squad message", "squad messages") : null,
   ].filter((p): p is string => p !== null);
-  if (parts.length === 0) return "Nothing else is attached to it yet. This can't be undone.";
+  const it = them ? "them" : "it";
+  if (parts.length === 0) return `Nothing else is attached to ${it} yet. This can't be undone.`;
   const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
-  return `${list[0].toUpperCase()}${list.slice(1)} will be deleted with it. This can't be undone.`;
+  return `${list[0].toUpperCase()}${list.slice(1)} will be deleted with ${it}. This can't be undone.`;
 }
 
 // Adding sessions ---------------------------------------------------------------

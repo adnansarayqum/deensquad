@@ -16,6 +16,7 @@ import { applyImport, planImport, type ImportProblem, type ImportSummary } from 
 import { overlaps, within } from "./scope";
 import { familiesFilterFromForm, familiesHref, familiesInviteHref, familyChildHref, withQuery } from "./families-link";
 import { addSessionRun, addedSentence, cancelSession, editSession, postSessionNotice, removeSession, type SessionEdit } from "./sessions";
+import { BULK_MAX, bulkCancel, bulkDelete, bulkEdit, bulkResultQuery, isBulkAction, parseIds, patchIsEmpty, type BulkEditPatch } from "./bulk-sessions";
 import { changeStaffRole, removeStaffMember } from "./staff";
 import { newsReaches } from "../squads/sql";
 import { canManageSquad, saveSquad } from "../squads/squads";
@@ -496,6 +497,94 @@ export async function deleteSession(formData: FormData): Promise<void> {
   // Only sessions nobody has been checked in to, and for a group coach only their own groups' sessions.
   const gone = await asUser(user.id, (tx) => removeSession(tx, session, coachLimit(user.staff)));
   redirect(gone ? "/admin/sessions?deleted=1" : "/admin/sessions");
+}
+
+// Bulk changes (the ticked sessions on Admin → Sessions) ---------------------------
+
+/**
+ * The bulk bar's buttons: takes the ticked ids to the confirm page for the chosen action, as `?ids=a,b,c`
+ * (a plain form, so it works without JavaScript). None ticked, or more than the cap, goes back with a notice.
+ */
+export async function openBulk(formData: FormData): Promise<void> {
+  await requireStaff();
+  const action = formData.get("do");
+  const ids = parseIds(formData.getAll("ids"));
+  if (!isBulkAction(action)) redirect("/admin/sessions");
+  if (ids.length === 0) redirect("/admin/sessions?bulk=none");
+  if (ids.length > BULK_MAX) redirect("/admin/sessions?bulk=toomany");
+  redirect(`/admin/sessions/bulk/${action}?ids=${ids.join(",")}`);
+}
+
+/** The ids posted back by a bulk confirm page's hidden fields. */
+function bulkIds(formData: FormData): string[] {
+  return parseIds(formData.getAll("ids")).slice(0, BULK_MAX);
+}
+
+/** Bulk edit: only the fields filled in change, on every session picked. Returns an error to the form, else redirects with the notice. */
+export async function bulkEditSessions(_prev: FormState, formData: FormData): Promise<FormState> {
+  const user = await requireStaff();
+  const mine = coachLimit(user.staff);
+  const ids = bulkIds(formData);
+  if (ids.length === 0) return { error: "No sessions are picked. Go back to Sessions and tick some." };
+  const text = (name: string, max: number) => cleanText(formData.get(name), max) ?? undefined;
+  const time = (name: string) => {
+    const m = TIME.exec(String(formData.get(name) ?? ""));
+    return m ? { hour: Number(m[1]), minute: Number(m[2]) } : undefined;
+  };
+  const kindValue = formData.get("kind");
+  const kind = typeof kindValue === "string" && kindValue ? (kindValue as SessionKind) : undefined;
+  if (kind && !KINDS.includes(kind)) return { error: "Choose the kind of session." };
+  const startText = String(formData.get("start") ?? "");
+  const endText = String(formData.get("end") ?? "");
+  if ((startText && !time("start")) || (endText && !time("end"))) return { error: "Check the start and finish times." };
+  const start = time("start");
+  const end = time("end");
+  if (start && end && end.hour * 60 + end.minute <= start.hour * 60 + start.minute) return { error: "The finish time must be after the start time." };
+  let groups: AgeGroup[] | undefined;
+  if (formData.get("changeGroups") === "on") {
+    groups = formData.getAll("groups").filter(isAgeGroup);
+    if (groups.length === 0) return { error: "Choose at least one group, or untick Change groups." };
+    if (mine && groups.some((g) => !mine.includes(g))) return { error: `You can manage your own groups only: ${mine.join(", ")}.` };
+  }
+  const patch: BulkEditPatch = {
+    kind,
+    title: text("title", 60),
+    venue: text("venue", 120),
+    start,
+    end,
+    arriveBy: text("arriveBy", 20),
+    kit: text("kit", 120),
+    prayerNote: text("prayerNote", 120),
+    notes: cleanBody(formData.get("notes"), 500) ?? undefined,
+    groups,
+  };
+  if (patchIsEmpty(patch)) return { error: "Fill in at least one field to change. Blank fields are left as they are." };
+  const tell = formData.get("notify") === "on";
+  const result = await asUser(user.id, (tx) => bulkEdit(tx, ids, patch, mine, tell, user.staff.id));
+  for (const news of result.news) chaseNow(news);
+  redirect(`/admin/sessions?${bulkResultQuery("edit", result)}`);
+}
+
+/** Bulk cancel or restore, from its confirm page: one reason for all, "Tell the families now" per session. */
+export async function bulkCancelSessions(formData: FormData): Promise<void> {
+  const user = await requireStaff();
+  const ids = bulkIds(formData);
+  const cancel = formData.get("cancel") === "yes";
+  if (ids.length === 0) redirect("/admin/sessions?bulk=none");
+  const reason = cancel ? cleanText(formData.get("reason"), 120) : null;
+  const tell = formData.get("notify") === "on";
+  const result = await asUser(user.id, (tx) => bulkCancel(tx, ids, cancel, coachLimit(user.staff), reason, tell, user.staff.id));
+  for (const news of result.news) chaseNow(news);
+  redirect(`/admin/sessions?${bulkResultQuery(cancel ? "cancel" : "restore", result)}`);
+}
+
+/** Bulk delete, from its confirm page (which sends confirm=yes and leaves out sessions with check-ins; refused again here). */
+export async function bulkDeleteSessions(formData: FormData): Promise<void> {
+  const user = await requireStaff();
+  const ids = bulkIds(formData);
+  if (ids.length === 0 || formData.get("confirm") !== "yes") redirect("/admin/sessions?bulk=none");
+  const result = await asUser(user.id, (tx) => bulkDelete(tx, ids, coachLimit(user.staff)));
+  redirect(`/admin/sessions?${bulkResultQuery("delete", result)}`);
 }
 
 /** Saves the tournament squad picked on a session's Squad page (admins any session; a group coach only their own groups'). */

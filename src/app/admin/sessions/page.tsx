@@ -4,7 +4,9 @@ import { FoldCard, Notice, PageHeader } from "@/components/admin/bits";
 import { SessionFields } from "@/components/admin/SessionFields";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
-import { addSessions } from "@/lib/admin/actions";
+import { BulkBar, SelectAll, SelectRow } from "@/components/admin/SessionBulk";
+import { addSessions, openBulk } from "@/lib/admin/actions";
+import { bulkNotice } from "@/lib/admin/bulk-sessions";
 import { loadSessionsAdmin, type AdminSession } from "@/lib/admin/data";
 import { within } from "@/lib/admin/scope";
 import { coachLimit, requireStaff, staffGroups } from "@/lib/auth/session";
@@ -28,6 +30,9 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
   const firstDate = `${friday.year}-${String(friday.month).padStart(2, "0")}-${String(friday.day).padStart(2, "0")}`;
   const showAll = params.all === "1" || upcoming.length <= UPCOMING_SHOWN;
   const shown = showAll ? upcoming : upcoming.slice(0, UPCOMING_SHOWN);
+  const bulk = bulkNotice(params);
+  // The bulk bar needs a row this member of staff can change; a group coach with only joint sessions on show gets none.
+  const selectable = shown.some((s) => !mine || within(s.ageGroups, mine));
 
   return (
     <>
@@ -36,6 +41,7 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
       {params.cancelled ? <Notice>{params.told ? "Cancelled. The families have been told." : "Cancelled."}</Notice> : null}
       {params.restored ? <Notice>{params.told ? "Back on. The families have been told." : "Back on."}</Notice> : null}
       {params.deleted ? <Notice>Deleted.</Notice> : null}
+      {bulk ? <Notice tone={params.bulk === "none" || params.bulk === "toomany" ? "action" : "done"}>{bulk}</Notice> : null}
 
       {/* Folded at every size (the eight-column table needs the whole column), open when there's nothing to list yet. */}
       <FoldCard id="add-sessions" title="Add sessions" open={upcoming.length === 0}>
@@ -47,16 +53,24 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
         </div>
       </FoldCard>
 
-      <section aria-labelledby="coming-up" className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4">
-            <h2 id="coming-up" className="text-[17px] font-extrabold">
-              Coming up
-            </h2>
-            {upcoming.length === 0 ? <p className="text-[15px] text-ink-muted">None yet. Add the term&apos;s sessions and parents can answer straight away.</p> : <SessionTable sessions={shown} mine={mine} editable />}
-            {showAll ? null : (
-              <Link href="/admin/sessions?all=1#coming-up" className="inline-flex min-h-12 items-center self-start text-sm font-bold text-grass-text underline">
-                Show all {upcoming.length} upcoming
-              </Link>
-            )}
+      <section aria-labelledby="coming-up" className="rounded-app border-2 border-line bg-paper p-4">
+        {/* One plain form: the rows' tick boxes and the bulk bar's buttons (openBulk), so bulk changes work without JavaScript. */}
+        <form action={openBulk} className="flex flex-col gap-3">
+          <h2 id="coming-up" className="text-[17px] font-extrabold">
+            Coming up
+          </h2>
+          {upcoming.length === 0 ? (
+            <p className="text-[15px] text-ink-muted">None yet. Add the term&apos;s sessions and parents can answer straight away.</p>
+          ) : (
+            <SessionTable sessions={shown} mine={mine} editable selectable={selectable} />
+          )}
+          {showAll ? null : (
+            <Link href="/admin/sessions?all=1#coming-up" className="inline-flex min-h-12 items-center self-start text-sm font-bold text-grass-text underline">
+              Show all {upcoming.length} upcoming
+            </Link>
+          )}
+          {selectable ? <BulkBar /> : null}
+        </form>
       </section>
       {recent.length ? (
         <details className="rounded-app border-2 border-line bg-paper px-4">
@@ -73,10 +87,14 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
 /** A row's action: a text link, 48px tall to tap, so four fit on one line of a table. */
 const action = "inline-flex min-h-12 items-center px-2 text-sm font-bold text-grass-text underline underline-offset-4";
 
-/** One row per session: a table at lg, compact cards on phones. The same actions in both. */
-function SessionTable({ sessions, mine, editable = false }: { sessions: AdminSession[]; mine: AgeGroup[] | null; editable?: boolean }) {
+/**
+ * One row per session: a table at lg, compact cards on phones. The same actions in both. `selectable` adds a tick
+ * box per row this member of staff can change (named "Select <title>, <day>") for the bulk bar.
+ */
+function SessionTable({ sessions, mine, editable = false, selectable = false }: { sessions: AdminSession[]; mine: AgeGroup[] | null; editable?: boolean; selectable?: boolean }) {
   // A group coach changes only sessions for their own groups; joint sessions are left to admins.
   const canChange = (s: AdminSession) => editable && (!mine || within(s.ageGroups, mine));
+  const select = (s: AdminSession) => (canChange(s) ? <SelectRow id={s.id} name={`Select ${s.title}, ${shortDay(s.startsAt)}`} /> : null);
   const answers = (s: AdminSession) => (editable ? `${s.coming} ${s.picked ? "confirmed" : "coming"} · ${s.away} ${s.picked ? "can't play" : "away"}` : `${s.attended} checked in`);
   const status = (s: AdminSession) => (
     <span className="flex flex-wrap items-center gap-1.5">
@@ -113,20 +131,29 @@ function SessionTable({ sessions, mine, editable = false }: { sessions: AdminSes
     <>
       {/* Phones: one compact card per session. */}
       <ul className="flex flex-col gap-2 lg:hidden">
+        {selectable ? (
+          <li className="flex items-center gap-2 text-sm font-bold">
+            <SelectAll label="Select all shown" />
+            <span aria-hidden>Select all shown</span>
+          </li>
+        ) : null}
         {sessions.map((s) => (
-          <li key={s.id} className="flex flex-col gap-2 rounded-dash border-2 border-line bg-cream px-3.5 py-3">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[15px] font-bold">
-                {shortDay(s.startsAt)} · {s.title} {clock(s.startsAt)}–{clock(s.endsAt)}
-              </span>
-              <span className="text-[13px] text-ink-muted">
-                {s.ageGroups.join(", ")} · {s.venue}
-              </span>
-              <span className="text-[13px]">{answers(s)}</span>
-              {s.cancelReason ? <span className="text-[13px]">Reason: {s.cancelReason}</span> : null}
+          <li key={s.id} className="flex gap-2 rounded-dash border-2 border-line bg-cream px-3.5 py-3 has-[:checked]:border-grass">
+            {selectable ? <div className="-ml-2 shrink-0 self-start">{select(s)}</div> : null}
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[15px] font-bold">
+                  {shortDay(s.startsAt)} · {s.title} {clock(s.startsAt)}–{clock(s.endsAt)}
+                </span>
+                <span className="text-[13px] text-ink-muted">
+                  {s.ageGroups.join(", ")} · {s.venue}
+                </span>
+                <span className="text-[13px]">{answers(s)}</span>
+                {s.cancelReason ? <span className="text-[13px]">Reason: {s.cancelReason}</span> : null}
+              </div>
+              {s.cancelled || s.picked ? status(s) : null}
+              {actions(s)}
             </div>
-            {s.cancelled || s.picked ? status(s) : null}
-            {actions(s)}
           </li>
         ))}
       </ul>
@@ -137,6 +164,11 @@ function SessionTable({ sessions, mine, editable = false }: { sessions: AdminSes
           <caption className="sr-only">{editable ? "Sessions coming up" : "Recent sessions"}</caption>
           <thead>
             <tr className="border-b-2 border-line text-left text-label text-ink-muted uppercase">
+              {selectable ? (
+                <th scope="col" className="w-12 px-0 py-1 font-bold">
+                  <SelectAll label="Select all" />
+                </th>
+              ) : null}
               <th scope="col" className="px-2 py-2.5 font-bold">
                 Date
               </th>
@@ -167,7 +199,8 @@ function SessionTable({ sessions, mine, editable = false }: { sessions: AdminSes
           </thead>
           <tbody>
             {sessions.map((s) => (
-              <tr key={s.id} className="border-t border-line align-middle hover:bg-cream">
+              <tr key={s.id} className="border-t border-line align-middle hover:bg-cream has-[:checked]:bg-grass-tint">
+                {selectable ? <td className="w-12 px-0 py-0">{select(s)}</td> : null}
                 <th scope="row" className="px-2 py-2 text-left font-bold whitespace-nowrap">
                   {shortDay(s.startsAt)}
                 </th>
