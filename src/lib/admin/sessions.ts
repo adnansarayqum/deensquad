@@ -36,8 +36,17 @@ export async function cancelSession(
 /** Deletes a session nobody has been checked in to, so attendance history is never lost. */
 export async function removeSession(tx: Queryable, id: string, mine: readonly AgeGroup[] | null): Promise<boolean> {
   if (!(await sessionIsMine(tx, id, mine))) return false;
+  const files = await planFileIds(tx, id);
   const gone = await tx.query(`delete from sessions s where s.id = $1 and not exists (select 1 from attendance a where a.session_id = s.id) returning s.id`, [id]);
+  // Its plans went with it (cascade); their attached files would otherwise stay behind in club_files.
+  if (gone.length && files.length) await tx.query(`delete from club_files where id = any($1::uuid[])`, [files]);
   return gone.length > 0;
+}
+
+/** The files attached to a session's plans. */
+async function planFileIds(tx: Queryable, sessionId: string): Promise<string[]> {
+  const rows = await tx.query<{ file_id: string }>(`select file_id from session_plans where session_id = $1 and file_id is not null`, [sessionId]);
+  return rows.map((r) => r.file_id);
 }
 
 /** What deleting a session would take with it, for the confirmation. */
