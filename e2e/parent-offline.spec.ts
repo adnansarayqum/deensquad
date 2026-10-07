@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { devices, expect, test, type Page } from "@playwright/test";
 import jsQR from "jsqr";
-import { ADMIN_STATE, newContext, shot, signIn } from "./helpers";
+import { ADMIN_STATE, newContext, shot, signIn, unfold } from "./helpers";
 
 // The attendance QR code with no signal at the gate: the service worker (public/sw.js) shows the codes saved on the
 // phone for /pass and /friday, and nothing else. Runs after parent-app.spec.ts (files run in name order), against
@@ -36,6 +36,7 @@ test("no signal at the gate: the codes saved on the phone show for /pass and /fr
   const adminContext = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
   const admin = await adminContext.newPage();
   await admin.goto("/admin/sessions");
+  await unfold(admin, "add-sessions");
   await admin.getByLabel("Title").fill("Offline test");
   await admin.getByLabel("Date", { exact: true }).fill(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date()));
   await admin.getByLabel("Starts").fill("00:02");

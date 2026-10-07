@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { devices, expect, test } from "@playwright/test";
-import { ADMIN_STATE, GIRLS_PARENT_STATE, latestCode, newContext, shot } from "./helpers";
+import { ADMIN_STATE, GIRLS_PARENT_STATE, latestCode, newContext, shot, unfold } from "./helpers";
 
 // The Girls group (the owner's decision): a family signs up with a daughter in Girls, the admin adds a Girls
 // session, her Friday shows it and its register lists her. Runs after parent-app.spec.ts (files run in name
@@ -46,6 +46,7 @@ test("the admin adds a Girls session; it's on her Friday and its register lists 
   const admin = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
   const page = await admin.newPage();
   await page.goto("/admin/sessions");
+  await unfold(page, "add-sessions");
   await page.getByLabel("Title").fill(TITLE);
   await page.getByLabel("Date", { exact: true }).fill(date);
   await page.getByLabel("Starts").fill("10:00");

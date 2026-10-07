@@ -62,3 +62,12 @@ export async function newContext(browser: Browser, options?: BrowserContextOptio
   await skipInstallGate(context);
   return context;
 }
+
+/**
+ * Opens a card folded on phones (FoldCard in src/components/admin/bits.tsx: Add sessions, Add a coach or admin).
+ * Folded at every size, so the list is on the first screen; nothing to tap once it's open.
+ */
+export async function unfold(page: Page, id: string) {
+  const toggle = page.locator(`label[for="${id}"]`);
+  if ((await toggle.isVisible()) && !(await page.locator(`#${id}`).isChecked())) await toggle.click();
+}
