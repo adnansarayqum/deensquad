@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { adminEmails } from "../config";
@@ -31,6 +32,18 @@ function fromAddress(): string {
   return process.env.EMAIL_FROM?.trim() || "Deen Squad <onboarding@resend.dev>";
 }
 
+/**
+ * Resend's `Idempotency-Key` for one request: a hash of exactly what is sent (sender, recipients, subject and both
+ * bodies, which hold any sign-in code or link) and the hour. A request repeated within the hour after a timeout
+ * whose email had in fact gone (Resend keeps keys for 24 hours) isn't sent twice, while a deliberate re-send carries
+ * a new code or link, or comes in a later hour, so it gets a new key. Resend takes the header on single and batch
+ * sends; the key changes whenever the body does, so it can never reject a different email as a repeat.
+ */
+export function idempotencyKey(body: unknown, now = Date.now()): string {
+  const hour = Math.floor(now / 3_600_000);
+  return `ds-${createHash("sha256").update(JSON.stringify(body)).update(`|${hour}`).digest("hex")}`;
+}
+
 const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /**
@@ -45,11 +58,12 @@ export async function sendEmails(emails: Email[]): Promise<EmailReport> {
     for (let i = 0; i < emails.length; i += 100) {
       const group = emails.slice(i, i + 100);
       const chunk = group.map((e) => ({ from: fromAddress(), to: [e.to], subject: e.subject, text: e.text, html: e.html }));
+      const body = chunk.length === 1 ? chunk[0] : chunk;
       try {
         const res = await fetch(chunk.length === 1 ? "https://api.resend.com/emails" : "https://api.resend.com/emails/batch", {
           method: "POST",
-          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-          body: JSON.stringify(chunk.length === 1 ? chunk[0] : chunk),
+          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey(body) },
+          body: JSON.stringify(body),
           signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
         });
         if (!res.ok) {
