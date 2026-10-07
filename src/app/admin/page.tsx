@@ -6,7 +6,7 @@ import { AttendanceChart, Bar, BarLink, HBarList, NeedLink, Sparkline, StackedBa
 import { CHANNELS, loadDashboard, type Channel, type Dashboard } from "@/lib/admin/dashboard";
 import { closeDataRequest } from "@/lib/admin/actions";
 import { TODO_NEEDS } from "@/lib/admin/needs";
-import { attendanceChart, needsYou, newsReadPct, nextSessionSummary, registerHref, type NextSessionSummary } from "@/lib/admin/overview";
+import { attendanceChart, needsYou, newsReadPct, nextSessionSummary, registerHref, sharedStart, type NextSessionSummary } from "@/lib/admin/overview";
 import { coachLimit, requireStaff } from "@/lib/auth/session";
 import { asUser, isDemo } from "@/lib/db";
 import { clock, shortDay } from "@/lib/dates";
@@ -97,7 +97,7 @@ export default async function AdminHome() {
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
           <div className="lg:col-start-1 lg:row-span-2 lg:row-start-1">
-            <NeedsYou d={d} now={now} />
+            <NeedsYou d={d} now={now} canInvite={isAdmin} />
           </div>
           <div className="lg:col-span-2 lg:col-start-2 lg:row-start-1">
             <Tiles d={d} next={next} />
@@ -177,8 +177,8 @@ function DeletionRequests({ requests }: { requests: NonNullable<Dashboard["delet
   );
 }
 
-function NeedsYou({ d, now }: { d: Dashboard; now: Date }) {
-  const rows = needsYou(d, now);
+function NeedsYou({ d, now, canInvite }: { d: Dashboard; now: Date; canInvite: boolean }) {
+  const rows = needsYou(d, now, { canInvite });
   const hidden = rows.length - NEEDS_SHOWN;
   return (
     <section aria-labelledby="needs-you" className="flex flex-col gap-1 rounded-app border-2 border-line bg-paper px-4 pt-2 pb-3">
@@ -278,10 +278,8 @@ function AttendanceSection({ d }: { d: Dashboard }) {
 
 function NextSessionSection({ d }: { d: Dashboard }) {
   const groups = d.attendance.next.filter((g) => g.squad > 0);
-  // When every group's next session starts at the same time, the time is said once, in the heading.
-  const times = new Set(groups.map((g) => g.session?.startsAt ?? ""));
-  const first = groups[0]?.session;
-  const sameTime = times.size === 1 && first ? first.startsAt : null;
+  // When every group with a session coming up starts at the same time, the time is said once, in the heading.
+  const sameTime = sharedStart(groups);
   return (
     <Section title="Next session" aside={sameTime ? <span className="text-[14px] text-ink-muted">{`${shortDay(sameTime)}, ${clock(sameTime)}`}</span> : undefined}>
       <ul className="flex flex-col">

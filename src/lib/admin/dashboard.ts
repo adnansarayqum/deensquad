@@ -45,9 +45,19 @@ export type SessionGroupAttendance = { group: AgeGroup; checkedIn: number; expec
 /**
  * A finished, uncancelled session this season with the register taken for at least one of the groups in view: each
  * such group's figures (worked out as groupAttendance does: children in the group that day, plus anyone checked in)
- * and all of them together.
+ * and all of them together. `forGroups` is every group in view the session was for (its age_groups), register or not,
+ * so the chart can tell a group's missed register from a session that was never theirs.
  */
-export type SeasonSession = { id: string; title: string; startsAt: string; groups: SessionGroupAttendance[]; checkedIn: number; expected: number; pct: number };
+export type SeasonSession = {
+  id: string;
+  title: string;
+  startsAt: string;
+  forGroups: AgeGroup[];
+  groups: SessionGroupAttendance[];
+  checkedIn: number;
+  expected: number;
+  pct: number;
+};
 
 export type NewsAck = { id: string; title: string; postedAt: string; read: number; total: number };
 
@@ -71,6 +81,8 @@ export type Dashboard = {
     signedIn: number;
     invited: number;
     notInvited: number;
+    /** Children with a parent invited but none signed in (NEEDS.signin: the Families list "Needs you" links to). */
+    childrenAwaitingSignIn: number;
     todo: Record<(typeof TODO_NEEDS)[number], number>;
   };
   payments: Record<PaymentState, number>;
@@ -153,7 +165,7 @@ async function seasonAttendance(
   for (const r of taken) {
     let s = sessions.at(-1);
     if (s?.id !== r.id) {
-      s = { id: r.id, title: r.title, startsAt: iso(r.starts_at), groups: [], checkedIn: 0, expected: 0, pct: 0 };
+      s = { id: r.id, title: r.title, startsAt: iso(r.starts_at), forGroups: rows.filter((x) => x.id === r.id).map((x) => x.group), groups: [], checkedIn: 0, expected: 0, pct: 0 };
       sessions.push(s);
     }
     s.groups.push({ group: r.group, checkedIn: r.n, expected: r.expected, pct: averagePct(r.n, r.expected) ?? 0 });
@@ -215,6 +227,7 @@ export async function loadDashboard(
          (select count(*)::int from parents where auth_user_id is not null) as "signedIn",
          (select count(*)::int from parents where auth_user_id is null and invited_at is not null) as invited,
          (select count(*)::int from parents where auth_user_id is null and invited_at is null) as "notInvited",
+         (select count(*)::int from mine p where ${NEEDS.signin.where}) as "childrenAwaitingSignIn",
          ${TODO_NEEDS.map((n) => `(select count(*)::int from mine p where ${NEEDS[n].where}) as "todo_${n}"`).join(",\n         ")},
          ${(["active", "self_reported", "missing", "overdue"] as const)
            .map((st) => `(select count(*)::int from mine p left join payment_status ps on ps.player_id = p.id where coalesce(ps.state::text, 'missing') = '${st}') as "pay_${st}"`)
@@ -286,6 +299,7 @@ export async function loadDashboard(
       signedIn: f.signedIn,
       invited: f.invited,
       notInvited: f.notInvited,
+      childrenAwaitingSignIn: f.childrenAwaitingSignIn,
       todo: Object.fromEntries(TODO_NEEDS.map((n) => [n, f[`todo_${n}`]])) as Dashboard["families"]["todo"],
     },
     payments: { active: f.pay_active, self_reported: f.pay_self_reported, missing: f.pay_missing, overdue: f.pay_overdue },

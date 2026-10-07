@@ -1,7 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import type { AttendanceChartData } from "@/lib/admin/overview";
+import { endLabels, figures, seriesRuns, type AttendanceChartData } from "@/lib/admin/overview";
 import { shortDay } from "@/lib/dates";
 import { ChartHover, type Tip } from "./ChartHover";
 
@@ -193,52 +193,31 @@ export function NeedLink({ href, count, text }: { href: string; count: number; t
 }
 
 const PLOT_H = 128;
+/** End labels are 16px tall: two that would overlap are nudged this far apart. */
+const LABEL_GAP = 16;
 const pctText = (n: number) => `${n}%`;
 
 /**
  * Attendance rate per session this season: a 0–100% line per series, three hairline gridlines, the latest value
- * labelled at the end of each line (labels that would collide are left to the legend), a hover/keyboard tooltip and
- * a "Show as table" twin with every number.
+ * labelled at the end of each line in its colour (labels that would collide are nudged apart), a hover/keyboard
+ * tooltip and a "Show as table" twin with every number. A line carries on across sessions that weren't the group's
+ * and breaks only where their register wasn't taken; a figure on its own is always drawn as a dot, so every number
+ * in the table has a mark in the chart.
  */
 export function AttendanceChart({ data, title }: { data: AttendanceChartData; title: string }) {
   const n = data.sessions.length;
   const xs = data.sessions.map((_, i) => (n === 1 ? 50 : 3 + (i / (n - 1)) * 94));
   const multi = data.series.length > 1;
   const showDots = n <= 16;
-
-  // End labels: each series' latest value, placed by its height; one that would sit within 16px of another is dropped.
-  const ends = data.series
-    .map((s) => {
-      const i = s.points.findLastIndex((p) => p !== null);
-      return i < 0 ? null : { s, pct: s.points[i]!.pct, top: (1 - s.points[i]!.pct / 100) * PLOT_H };
-    })
-    .filter((e) => e !== null)
-    .sort((a, b) => a.top - b.top);
-  const placed: typeof ends = [];
-  for (const e of ends) if (placed.every((p) => Math.abs(p.top - e.top) >= 16)) placed.push(e);
+  const ends = endLabels(data.series, PLOT_H, LABEL_GAP);
 
   const tips: Tip[] = data.sessions.map((session, i) => ({
     title: `${session.title}, ${shortDay(session.startsAt)}`,
     lines: data.series.flatMap((s) => {
       const p = s.points[i];
-      return p ? [{ key: s.key, colour: s.colour, value: pctText(p.pct), detail: `${multi ? `${s.label} · ` : ""}${p.checkedIn} of ${p.expected}` }] : [];
+      return figures(p) ? [{ key: s.key, colour: s.colour, value: pctText(p.pct), detail: `${multi ? `${s.label} · ` : ""}${p.checkedIn} of ${p.expected}` }] : [];
     }),
   }));
-
-  // Lines break where a group's register wasn't taken.
-  const runs = (s: AttendanceChartData["series"][number]) => {
-    const out: { x: number; y: number }[][] = [];
-    let run: { x: number; y: number }[] = [];
-    s.points.forEach((p, i) => {
-      if (p) run.push({ x: xs[i], y: 100 - p.pct });
-      else if (run.length) {
-        out.push(run);
-        run = [];
-      }
-    });
-    if (run.length) out.push(run);
-    return out;
-  };
 
   return (
     <figure className="flex flex-col gap-2">
@@ -267,9 +246,10 @@ export function AttendanceChart({ data, title }: { data: AttendanceChartData; ti
           <ChartHover xs={xs} tips={tips} label={`${title}. Arrow keys move between sessions.`}>
             <svg aria-hidden viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
               {data.series.map((s) =>
-                runs(s).map((run, k) => (
+                // A run of one is a dot (below), not a line.
+                seriesRuns(s.points, xs).filter((run) => run.length > 1).map((run, k) => (
                   <g key={`${s.key}-${k}`}>
-                    {!multi && run.length > 1 ? (
+                    {!multi ? (
                       <polygon points={`${run[0].x},100 ${run.map((p) => `${p.x},${p.y}`).join(" ")} ${run.at(-1)!.x},100`} fill={s.colour} fillOpacity={0.1} />
                     ) : null}
                     <polyline
@@ -285,24 +265,29 @@ export function AttendanceChart({ data, title }: { data: AttendanceChartData; ti
                 )),
               )}
             </svg>
-            {data.series.map((s) =>
-              s.points.map((p, i) =>
-                p && (showDots || i === s.points.findLastIndex((q) => q !== null)) ? (
+            {data.series.map((s) => {
+              const runs = seriesRuns(s.points, xs);
+              const lone = new Set(runs.filter((r) => r.length === 1).map((r) => r[0].i));
+              const last = s.points.findLastIndex(figures);
+              return s.points.map((p, i) =>
+                figures(p) && (showDots || lone.has(i) || i === last) ? (
                   <span
                     key={`${s.key}-${i}`}
                     aria-hidden
+                    data-dot={s.key}
                     className="pointer-events-none absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-pill"
                     style={{ left: `${xs[i]}%`, top: `${100 - p.pct}%`, background: s.colour, boxShadow: "0 0 0 2px var(--paper)" }}
                   />
                 ) : null,
-              ),
-            )}
+              );
+            })}
           </ChartHover>
         </div>
         <div aria-hidden className="relative">
-          {placed.map((e) => (
-            <span key={e.s.key} className="absolute left-2 -translate-y-1/2 text-[12px] leading-4 font-bold whitespace-nowrap tabular-nums" style={{ top: e.top }}>
-              {multi ? `${e.s.label} ` : ""}
+          {ends.map((e) => (
+            <span key={e.key} className="absolute left-2 flex -translate-y-1/2 items-center gap-1 text-[12px] leading-4 font-bold whitespace-nowrap tabular-nums" style={{ top: e.top }}>
+              {multi ? <span className="h-0.5 w-3 shrink-0 rounded-pill" style={{ background: e.colour }} /> : null}
+              {multi ? `${e.label} ` : ""}
               {pctText(e.pct)}
             </span>
           ))}
@@ -344,12 +329,17 @@ export function AttendanceChart({ data, title }: { data: AttendanceChartData; ti
                     const p = s.points[i];
                     return (
                       <td key={s.key} className="py-1.5 pr-3 text-right whitespace-nowrap tabular-nums">
-                        {p ? (
+                        {figures(p) ? (
                           <>
                             <b>{pctText(p.pct)}</b> <span className="text-ink-muted">{p.checkedIn} of {p.expected}</span>
                           </>
-                        ) : (
+                        ) : p === "no-register" ? (
                           <span className="text-ink-muted">No register</span>
+                        ) : (
+                          <span className="text-ink-muted">
+                            <span aria-hidden>–</span>
+                            <span className="sr-only">Not this group&apos;s session</span>
+                          </span>
                         )}
                       </td>
                     );

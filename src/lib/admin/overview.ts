@@ -52,13 +52,25 @@ export function nextSessionSummary(d: Dashboard, now: Date): NextSessionSummary 
   };
 }
 
+/**
+ * The start every group with a session coming up shares, or null when they differ (or none has one): then the Next
+ * session section says the time once, in its heading. A group with nothing coming up doesn't stop that.
+ */
+export function sharedStart(groups: readonly NextSessionGroup[]): string | null {
+  const times = new Set(groups.flatMap((g) => (g.session ? [g.session.startsAt] : [])));
+  return times.size === 1 ? [...times][0] : null;
+}
+
 export type NeedRow = { key: string; count: number; text: string; href: string };
 
 /**
  * Everything waiting on staff, most pressing first, leaving out anything at 0. The page shows the first 5. A session
- * whose answers are still missing counts only when it's today, tomorrow or the day after.
+ * whose answers are still missing counts only when it's today, tomorrow or the day after. Parents not invited yet are
+ * only an admin's to-do (`canInvite`): coaches can't send invites, and their Families list has no parent count to
+ * match the figure. Each count equals a number on the page it opens: the invite row matches the Families banner's
+ * parent count, and the sign-in row counts children, as that list does.
  */
-export function needsYou(d: Dashboard, now: Date): NeedRow[] {
+export function needsYou(d: Dashboard, now: Date, { canInvite }: { canInvite: boolean }): NeedRow[] {
   const f = d.families;
   const next = nextSessionSummary(d, now);
   const soon = next && daysAhead(next.startsAt, now) <= 2 ? next : null;
@@ -72,7 +84,7 @@ export function needsYou(d: Dashboard, now: Date): NeedRow[] {
     { key: "overdue", count: d.payments.overdue, text: plural(d.payments.overdue, "payment overdue", "payments overdue"), href: "/admin/families?need=overdue" },
     { key: "check", count: d.payments.self_reported, text: plural(d.payments.self_reported, "payment plan to check", "payment plans to check"), href: "/admin/families?need=check" },
     { key: "shop", count: d.shop?.toOrder ?? 0, text: plural(d.shop?.toOrder ?? 0, "paid kit order to place", "paid kit orders to place"), href: "/admin/shop" },
-    { key: "invite", count: f.notInvited, text: plural(f.notInvited, "parent not invited yet", "parents not invited yet"), href: "/admin/families?need=invite" },
+    { key: "invite", count: canInvite ? f.notInvited : 0, text: plural(f.notInvited, "parent not invited yet", "parents not invited yet"), href: "/admin/families?need=invite" },
     {
       key: "missing3",
       count: d.attendance.missedLast3,
@@ -81,7 +93,12 @@ export function needsYou(d: Dashboard, now: Date): NeedRow[] {
     },
     { key: "unread", count: d.news.behind, text: plural(d.news.behind, "parent behind on news", "parents behind on news"), href: "/admin/families?need=unread" },
     { key: "missing", count: d.payments.missing, text: plural(d.payments.missing, "child without a payment plan", "children without a payment plan"), href: "/admin/families?need=missing" },
-    { key: "signin", count: f.invited, text: plural(f.invited, "parent invited, not signed in", "parents invited, not signed in"), href: "/admin/families?need=signin" },
+    {
+      key: "signin",
+      count: f.childrenAwaitingSignIn,
+      text: plural(f.childrenAwaitingSignIn, "child whose parent is invited, not signed in", "children whose parent is invited, not signed in"),
+      href: "/admin/families?need=signin",
+    },
   ];
   return rows.filter((r) => r.count > 0);
 }
@@ -93,9 +110,17 @@ export function newsReadPct(recent: Dashboard["news"]["recent"]): { pct: number;
   return total > 0 ? { pct: Math.round((read / total) * 100), read, total } : null;
 }
 
-export type ChartPoint = { pct: number; checkedIn: number; expected: number } | null;
+/**
+ * A series' value at a session: the group's figures; "no-register" when the session was for the group but nobody
+ * from it was marked in (the line breaks there); null when the session wasn't for the group at all (the line
+ * carries on across it).
+ */
+export type ChartPoint = { pct: number; checkedIn: number; expected: number } | "no-register" | null;
+export type ChartFigures = Exclude<ChartPoint, string | null>;
 export type ChartSeries = { key: string; label: string; colour: string; points: ChartPoint[] };
 export type AttendanceChartData = { sessions: { id: string; title: string; startsAt: string }[]; series: ChartSeries[] };
+
+export const figures = (p: ChartPoint): p is ChartFigures => typeof p === "object" && p !== null;
 
 const SERIES_COLOURS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
 
@@ -116,7 +141,8 @@ export function attendanceChart(d: Dashboard): AttendanceChartData {
         colour: SERIES_COLOURS[i],
         points: sessions.map((s) => {
           const g = s.groups.find((x) => x.group === group);
-          return g ? { pct: g.pct, checkedIn: g.checkedIn, expected: g.expected } : null;
+          if (g) return { pct: g.pct, checkedIn: g.checkedIn, expected: g.expected };
+          return s.forGroups.includes(group) ? "no-register" : null;
         }),
       })),
     };
@@ -132,4 +158,50 @@ export function attendanceChart(d: Dashboard): AttendanceChartData {
       },
     ],
   };
+}
+
+export type RunPoint = { i: number; x: number; y: number };
+
+/**
+ * The stretches a series is drawn as: consecutive figures joined, carrying on across sessions that weren't the
+ * group's, and breaking only where the group's register wasn't taken. A run of one is a lone point (drawn as a dot).
+ */
+export function seriesRuns(points: ChartPoint[], xs: number[]): RunPoint[][] {
+  const out: RunPoint[][] = [];
+  let run: RunPoint[] = [];
+  points.forEach((p, i) => {
+    if (figures(p)) run.push({ i, x: xs[i], y: 100 - p.pct });
+    else if (p === "no-register" && run.length) {
+      out.push(run);
+      run = [];
+    }
+  });
+  if (run.length) out.push(run);
+  return out;
+}
+
+export type EndLabel = { key: string; label: string; colour: string; pct: number; top: number };
+
+/**
+ * Each series' latest value, labelled at the end of its line at the line's height (`top` in px from the plot's top),
+ * nudged apart by `gap` px top to bottom so none overlap, and kept inside the plot (`height` px). Each label keeps
+ * its own colour, so a nudged one still reads as its line's.
+ */
+export function endLabels(series: ChartSeries[], height: number, gap: number): EndLabel[] {
+  const ends = series
+    .map((s) => {
+      const i = s.points.findLastIndex(figures);
+      const p = i < 0 ? null : s.points[i];
+      return figures(p) ? { key: s.key, label: s.label, colour: s.colour, pct: p.pct, top: (1 - p.pct / 100) * height } : null;
+    })
+    .filter((e) => e !== null)
+    .sort((a, b) => a.top - b.top);
+  const half = gap / 2;
+  for (let i = 1; i < ends.length; i++) ends[i].top = Math.max(ends[i].top, ends[i - 1].top + gap);
+  for (let i = ends.length - 1; i >= 0; i--) {
+    const below = i === ends.length - 1 ? height - half : ends[i + 1].top - gap;
+    ends[i].top = Math.min(ends[i].top, below);
+  }
+  for (let i = 0; i < ends.length; i++) ends[i].top = Math.max(ends[i].top, i === 0 ? half : ends[i - 1].top + gap);
+  return ends;
 }

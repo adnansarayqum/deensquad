@@ -7,7 +7,7 @@ export type Tip = { title: string; lines: { key: string; colour: string; value: 
 /**
  * The hover and keyboard layer over a chart's plot: a hairline that snaps to the nearest session and a tooltip with
  * every series at it. It only adds to the chart: the same numbers are in its table. Arrow keys move along once the
- * chart has focus; a tap does the same on a phone.
+ * chart has focus; a tap shows that session on a phone and stays until the next tap or the chart loses focus.
  */
 export function ChartHover({ xs, tips, label, children }: { xs: number[]; tips: Tip[]; label: string; children: ReactNode }) {
   const [at, setAt] = useState<number | null>(null);
@@ -45,7 +45,12 @@ export function ChartHover({ xs, tips, label, children }: { xs: number[]; tips: 
       aria-label={label}
       onPointerMove={nearest}
       onPointerDown={nearest}
-      onPointerLeave={() => setAt(null)}
+      // A finger lifting off fires pointerleave too; only a mouse leaving the plot should clear the tooltip, so a
+      // tap's session stays up until the next tap or the chart loses focus.
+      onPointerLeave={(e) => {
+        if (e.pointerType === "mouse") setAt(null);
+      }}
+      // Tabbing in starts at the latest session; a tap that focused the chart has already chosen its own.
       onFocus={() => setAt((v) => v ?? xs.length - 1)}
       onBlur={() => setAt(null)}
       onKeyDown={onKeyDown}

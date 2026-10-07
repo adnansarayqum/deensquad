@@ -66,7 +66,7 @@ describe("admin overview numbers", () => {
     // The headline figure: every group's check-ins over every group's expected places (5 + 2 of 80 + 10).
     expect(d.attendance.seasonPct).toBe(8);
 
-    expect(d.families).toMatchObject({ parents: 21, signedIn: 0, invited: 0, notInvited: 21 });
+    expect(d.families).toMatchObject({ parents: 21, signedIn: 0, invited: 0, notInvited: 21, childrenAwaitingSignIn: 0 });
     // Only Yusuf has a contact, a photo answer and an active plan; nobody has signed the contract yet.
     expect(d.families.todo).toEqual({ contacts: 20, payment: 20, contract: 21, consent: 20 });
     expect(d.payments).toEqual({ active: 1, self_reported: 0, missing: 20, overdue: 0 });
@@ -188,10 +188,21 @@ describe("admin overview numbers", () => {
     expect(d.attendance.season.find((g) => g.group === "U15")).toMatchObject({ squad: 2, held: 0, checkedIn: 0, averagePct: null });
     expect(JSON.stringify(d)).not.toMatch(/NaN|Infinity/);
     // The chart leaves out the session nobody was checked in at, and the U15s (register never taken) at the other two.
-    expect(d.attendance.sessions.map((s) => [s.pct, s.groups.map((g) => g.group)])).toEqual([
-      [50, ["U12"]],
-      [70, ["U12"]],
+    expect(d.attendance.sessions.map((s) => [s.pct, s.groups.map((g) => g.group), s.forGroups])).toEqual([
+      [50, ["U12"], ["U12", "U15"]],
+      [70, ["U12"], ["U12", "U15"]],
     ]);
+  });
+
+  it("counts children whose parent is invited but not signed in, the same as the Families list that figure opens", async () => {
+    const { t, admin } = await seeded(OCTOBER);
+    // Sara (Yusuf's and Musa's mother) has had her invite; nobody in the family has signed in yet.
+    await t.asSystem((tx) => tx.query(`update guardians set invited_at = now() where id = $1`, [DEV_IDS.sara]));
+    const d = await t.asUser(admin, (tx) => loadDashboard(tx, { now: OCTOBER, limit: null, withShop: false }));
+    expect(d.families).toMatchObject({ invited: 1, notInvited: 20, childrenAwaitingSignIn: 2 });
+    const list = await t.asUser(admin, (tx) => loadFamilies(tx, null, undefined, { need: "signin", search: null }));
+    expect(list.map((f) => f.firstName).sort()).toEqual(["Musa", "Yusuf"]);
+    expect(list).toHaveLength(d.families.childrenAwaitingSignIn);
   });
 
   it("reads sensibly for an empty club, with no division by zero", async () => {
@@ -204,7 +215,7 @@ describe("admin overview numbers", () => {
     expect(d.attendance.season.every((g) => g.held === 0 && g.averagePct === null)).toBe(true);
     expect(d.attendance.sessions).toEqual([]);
     expect(d.attendance.seasonPct).toBeNull();
-    expect(d.families).toEqual({ parents: 0, signedIn: 0, invited: 0, notInvited: 0, todo: { contacts: 0, payment: 0, contract: 0, consent: 0 } });
+    expect(d.families).toEqual({ parents: 0, signedIn: 0, invited: 0, notInvited: 0, childrenAwaitingSignIn: 0, todo: { contacts: 0, payment: 0, contract: 0, consent: 0 } });
     expect(d.shop).toEqual({ awaitingPayment: 0, toOrder: 0, ordered: 0, ready: 0, orders: 0, monthPence: 0, seasonPence: 0 });
     expect(d.news).toEqual({ recent: [], reminders: { app: 0, email: 0, sms: 0, whatsapp: 0, gate: 0 }, behind: 0 });
     expect(JSON.stringify(d)).not.toMatch(/NaN|Infinity/);
@@ -237,9 +248,9 @@ describe("admin overview numbers", () => {
     // Only the two Fridays Musa was checked in at count as held for the U7s.
     expect(d.attendance.season[0]).toMatchObject({ held: 2, checkedIn: 2 });
     // Only Musa's check-ins count on the chart, not Yusuf's: the two Fridays the U7 register was taken.
-    expect(d.attendance.sessions.map((s) => [s.checkedIn, s.expected, s.groups.map((g) => g.group)])).toEqual([
-      [1, 5, ["U7"]],
-      [1, 5, ["U7"]],
+    expect(d.attendance.sessions.map((s) => [s.checkedIn, s.expected, s.groups.map((g) => g.group), s.forGroups])).toEqual([
+      [1, 5, ["U7"], ["U7"]],
+      [1, 5, ["U7"], ["U7"]],
     ]);
     expect(d.attendance.seasonPct).toBe(20);
     // Musa's two parents and the four other U7 parents.

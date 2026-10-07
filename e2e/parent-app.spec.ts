@@ -921,6 +921,19 @@ test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and
   expect(second.x).toBeGreaterThan(first.x);
   await expect(phone.locator("header").getByRole("button", { name: "Sign out" })).toBeVisible();
   await expect(phone.getByRole("heading", { name: "Families and payments" })).toBeVisible();
+  // Tapping the chart with a finger shows the session under it, and each tap shows its own (a finger lifting
+  // off is not a mouse leaving, and focus doesn't jump it to the latest session).
+  const phoneChart = phone.getByRole("group", { name: /^Attendance at each session this season/ });
+  await phoneChart.scrollIntoViewIfNeeded();
+  const plot = (await phoneChart.boundingBox())!;
+  const tapped: string[] = [];
+  for (const at of [0.05, 0.5, 0.95]) {
+    await phone.touchscreen.tap(plot.x + plot.width * at, plot.y + plot.height / 2);
+    const tip = phoneChart.locator("[aria-live]").locator("span").first();
+    await expect(tip).toBeVisible();
+    tapped.push(await tip.innerText());
+  }
+  expect(new Set(tapped).size, tapped.join(" | ")).toBe(3);
   await phone.screenshot({ path: shot("admin-dashboard-phone"), fullPage: true });
   await phoneContext.close();
 
@@ -933,6 +946,8 @@ test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and
   await expect(coach.getByRole("heading", { name: "Families and payments", exact: true })).toBeVisible();
   await expect(coach.getByRole("heading", { name: "Shop" })).toHaveCount(0);
   await expect(coach.getByRole("link", { name: /Paid takings|kit order/ })).toHaveCount(0);
+  // Invites are an admin's job: a coach's Needs you never asks for them.
+  await expect(coach.getByRole("link", { name: /not invited yet$/ })).toHaveCount(0);
   const main = coach.locator("main");
   await expect(main).not.toContainText(/U6|U10|U12|U15|Girls/);
   await expect(coach.getByRole("img", { name: /^U7, / })).toBeVisible();
