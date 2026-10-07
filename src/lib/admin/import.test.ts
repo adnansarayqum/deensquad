@@ -58,8 +58,29 @@ describe("planning an import", () => {
       ["Aisha", "U10"], // by date of birth: an age group, never Girls
       ["Huda", "U10"],
     ]);
-    // Only the two placed by date of birth are listed to check; no Girls row is.
-    expect(plan.checks.map((c) => c.line)).toEqual([5, 6]);
+    // Safa's cell also names an age, so it's listed to check; so are the two placed by date of birth. Maryam and
+    // Noor aren't: Girls has no age to check against.
+    expect(plan.checks.map((c) => c.line)).toEqual([3, 5, 6]);
+    expect(plan.checks[0].message).toBe("Safa is listed as Girls; the sheet also says U10. Check before importing.");
+  });
+
+  it("asks to check a Girls cell that also names an age", () => {
+    const plan = planImport(
+      [
+        "Child first name,Child last name,Group,Parent first name,Parent email",
+        "Hafsa,Noor,U6 girls,Amal,amal@example.com",
+        "Zainab,Noor,Under 9s girls,Amal,amal@example.com",
+        "Ruqayya,Noor,Girls,Amal,amal@example.com",
+        "Musa,Noor,U6 (boys and girls),Amal,amal@example.com",
+      ].join("\n"),
+      now,
+    );
+    expect(plan.errors).toEqual([]);
+    expect(plan.rows.map((r) => r.child.ageGroup)).toEqual(["Girls", "Girls", "Girls", "U6"]);
+    expect(plan.checks).toEqual([
+      { line: 2, message: "Hafsa is listed as Girls; the sheet also says U6. Check before importing." },
+      { line: 3, message: "Zainab is listed as Girls; the sheet also says U9. Check before importing." },
+    ]);
   });
 
   it("groups siblings by parent email and links a second parent", () => {
@@ -144,6 +165,15 @@ describe("planning an import", () => {
     });
   });
 
+  it("reads the downloadable template, whose column is called Group (sheets saying Age group still work)", () => {
+    const template = readFileSync(join(process.cwd(), "public", "families-template.csv"), "utf8");
+    expect(template.split(/\r?\n/)[0]).toBe(TEMPLATE_HEADER.join(","));
+    expect(TEMPLATE_HEADER).toContain("Group");
+    const plan = planImport(template, now);
+    expect(plan.errors).toEqual([]);
+    expect(plan.rows.map((r) => r.child.ageGroup)).toEqual(["U10", "U7"]);
+  });
+
   it("takes a sheet with dates of birth and no age group column", () => {
     const plan = planImport("Child name,DOB,Parent name,Email\nAisha Iqbal,14/03/2018,Ruksana Iqbal,ruksana@example.com", now);
     expect(plan.errors).toEqual([]);
@@ -165,15 +195,6 @@ describe("planning an import", () => {
       now,
     );
     expect(plan.rows).toHaveLength(7);
-  it("reads the downloadable template, whose column is called Group (sheets saying Age group still work)", () => {
-    const template = readFileSync(join(process.cwd(), "public", "families-template.csv"), "utf8");
-    expect(template.split(/\r?\n/)[0]).toBe(TEMPLATE_HEADER.join(","));
-    expect(TEMPLATE_HEADER).toContain("Group");
-    const plan = planImport(template, now);
-    expect(plan.errors).toEqual([]);
-    expect(plan.rows.map((r) => r.child.ageGroup)).toEqual(["U10", "U7"]);
-  });
-
     expect(plan.rows[0].parents[0].phone).toBe("07700 900000");
     expect(plan.checks).toEqual([
       { line: 4, message: "Repeats row 2 (Zakariya Khan), so the two are merged into one child." },

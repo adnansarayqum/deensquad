@@ -62,15 +62,20 @@ export function groupForAge(age: number): AgeGroup | null {
   return NUMBERED_GROUPS.find((g) => Number(g.slice(1)) >= age) ?? null;
 }
 
+/** The age a group cell names ("U9", "Under 9s", "9s"), or null. */
+function ageInCell(value: string): number | null {
+  const m = value.match(/(?:u|under)\s*-?\s*(\d{1,2})/i) ?? value.match(/^\s*(\d{1,2})\s*s?\s*$/i);
+  return m ? Number(m[1]) : null;
+}
+
 export function parseAgeGroup(value: string | null): AgeGroup | null {
   if (!value) return null;
-  // "Girls", "girl", "Girls team", "Girls U10": a cell naming girls means the Girls group, even with an age.
-  // Not "U6 (boys and girls)", the club's mixed U6.
+  // "Girls", "girl", "Girls team", "Girls U10": a cell naming girls means the Girls group, even with an age
+  // (the preview asks to check those). Not "U6 (boys and girls)", the club's mixed U6.
   if (/\bgirls?\b/i.test(value) && !/\bboys?\b/i.test(value)) return GIRLS;
-  const m = value.match(/(?:u|under)\s*-?\s*(\d{1,2})/i) ?? value.match(/^\s*(\d{1,2})\s*s?\s*$/i);
-  if (!m) return null;
+  const age = ageInCell(value);
   // "U9" or "9s" means the group that covers that age.
-  return groupForAge(Number(m[1]));
+  return age === null ? null : groupForAge(age);
 }
 
 /**
@@ -153,6 +158,9 @@ export function planImport(csvText: string, now = new Date()): ImportPlan {
       problems.push(age === null ? why : `${why}, and ${who} is ${age} by date of birth, outside the club's groups`);
     } else if (!listed) {
       rowChecks.push({ line, message: `${who} was put in ${ageGroup} by date of birth (${groupText ? `"${groupText}" isn't an age group` : "no age group given"}).` });
+    } else if (listed === GIRLS && groupText && ageInCell(groupText) !== null) {
+      // "U6 girls": Girls, but the sheet may have meant the age group, so ask.
+      rowChecks.push({ line, message: `${who} is listed as Girls; the sheet also says U${ageInCell(groupText)}. Check before importing.` });
     } else if (age !== null && listed !== GIRLS && listed !== groupForAge(age) && listed !== groupForAge(age + 1)) {
       // Girls has no age, so a girl of any age fits it and is never flagged.
       // Tolerant while the club's age rule is unconfirmed: a child's group may follow their age on 31 August
