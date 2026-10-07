@@ -29,8 +29,30 @@ export type PushSend = (sub: { endpoint: string; keys: { p256dh: string; auth: s
 
 const sendWebPush: PushSend = (sub, body) => webpush.sendNotification(sub, body, { TTL: 12 * 3600, timeout: SEND_TIMEOUT_MS });
 
-/** How many devices are sent to at once. */
+/** How many devices (or phones, for SMS) are sent to at once. */
 export const PUSH_WORKERS = 10;
+
+/**
+ * Runs `fn` over `items` from up to `limit` workers, each taking the next item as soon as its last one settles, so
+ * one slow service holds up one worker rather than a whole batch. Results keep the items' order.
+ */
+export async function inWorkers<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await Promise.resolve()
+        .then(() => fn(items[i]))
+        .then(
+          (value) => ({ status: "fulfilled", value }) as const,
+          (reason: unknown) => ({ status: "rejected", reason }) as const,
+        );
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
 
 /**
  * Sends to every device of each user; forgets devices the push service says are gone. Returns users reached.
@@ -46,22 +68,8 @@ export async function pushToUsers(tx: Queryable, userIds: string[], payload: Pus
   }
   const subs = await tx.query<Subscription>(`select id, user_id, endpoint, p256dh, auth from push_subscriptions where user_id = any($1::uuid[])`, [userIds]);
   const body = JSON.stringify(payload);
-  const results: PromiseSettledResult<unknown>[] = new Array(subs.length);
-  let next = 0;
   // Only the network calls are caught: a failed statement must abort the transaction, not be swallowed.
-  const worker = async () => {
-    while (next < subs.length) {
-      const i = next++;
-      const s = subs[i];
-      results[i] = await Promise.resolve()
-        .then(() => send({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body))
-        .then(
-        (value) => ({ status: "fulfilled", value }) as const,
-        (reason: unknown) => ({ status: "rejected", reason }) as const,
-      );
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(PUSH_WORKERS, subs.length) }, worker));
+  const results = await inWorkers(subs, PUSH_WORKERS, (s) => send({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body));
   const ok: string[] = [];
   const gone: string[] = [];
   results.forEach((result, i) => {
@@ -124,30 +132,37 @@ async function sendEmail(targets: ChaseTarget[], tx: Queryable): Promise<ChaseTa
   return out.filter((o) => went.has(o.email)).map((o) => o.target);
 }
 
+/** One text to one phone; true if Twilio took it. */
+export type SmsSend = (to: string, body: string) => Promise<boolean>;
+
 /** Twilio's Messages API. TWILIO_FROM is the sending number in +44 format, or an alphanumeric sender ID. */
-async function sendSms(targets: ChaseTarget[]): Promise<ChaseTarget[]> {
+const sendTwilio: SmsSend = async (to, body) => {
   const sid = process.env.TWILIO_ACCOUNT_SID!;
   const auth = Buffer.from(`${sid}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64");
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: "POST",
+    headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ To: to, From: process.env.TWILIO_FROM!, Body: body }),
+    signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+  });
+  if (!res.ok) console.error("[sms] Twilio refused a message:", res.status, (await res.text().catch(() => "")).slice(0, 200));
+  return res.ok;
+};
+
+/** Texts each parent, PUSH_WORKERS at a time (as push does), so one slow send holds up one worker, not the run. */
+export async function sendSmsTo(targets: ChaseTarget[], send: SmsSend = sendTwilio): Promise<ChaseTarget[]> {
   const base = appUrl() ?? "";
-  const sent: ChaseTarget[] = [];
-  for (const t of targets) {
-    const body = `Deen Squad: please open the app and read "${t.title}". ${base}/news`;
-    try {
-      const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-        method: "POST",
-        headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ To: `+${dialable(t.phone!)}`, From: process.env.TWILIO_FROM!, Body: body }),
-        signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
-      });
-      if (res.ok) sent.push(t);
-      else console.error("[sms] Twilio refused a message:", res.status, (await res.text().catch(() => "")).slice(0, 200));
-    } catch (error) {
-      // Timed out or couldn't connect: not sent, so it stays due.
-      console.error("[sms] failed:", error instanceof Error ? error.message : error);
-    }
-  }
-  return sent;
+  const results = await inWorkers(targets, PUSH_WORKERS, (t) => send(`+${dialable(t.phone!)}`, `Deen Squad: please open the app and read "${t.title}". ${base}/news`));
+  return targets.filter((t, i) => {
+    const r = results[i];
+    if (r.status === "fulfilled") return r.value;
+    // Timed out or couldn't connect: not sent, so it stays due.
+    console.error("[sms] failed:", r.reason instanceof Error ? r.reason.message : r.reason);
+    return false;
+  });
 }
+
+const sendSms = (targets: ChaseTarget[]) => sendSmsTo(targets);
 
 export function liveSenders(): Senders {
   return {
