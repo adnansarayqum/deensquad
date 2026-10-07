@@ -48,7 +48,7 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/coa
               className="field"
             />
             <div className="mt-2">
-              <WritingHelp bodyId="body" kind="plan" ai={aiConfigured()} context={`Age group: ${group}. Session: ${session.title}, ${shortDay(session.startsAt)}.`} />
+              <WritingHelp bodyId="body" kind="plan" ai={aiConfigured()} context={`Group: ${group}. Session: ${session.title}, ${shortDay(session.startsAt)}.`} />
             </div>
           </div>
           {plan?.file ? (

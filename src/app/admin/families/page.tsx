@@ -76,7 +76,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
       ) : null}
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <nav aria-label="Age groups" className="flex flex-wrap gap-2">
+        <nav aria-label="Groups" className="flex flex-wrap gap-2">
           {[null, ...mine].map((g) => (
             <Link
               key={g ?? "all"}

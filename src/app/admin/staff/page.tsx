@@ -89,7 +89,7 @@ export default async function StaffPage() {
               <form
                 action={setStaffGroups}
                 className="flex flex-wrap items-center gap-2"
-                aria-label={`${s.displayName}'s age groups`}
+                aria-label={`${s.displayName}'s groups`}
               >
                 <input type="hidden" name="id" value={s.id} />
                 <GroupBoxes selected={s.ageGroups} />

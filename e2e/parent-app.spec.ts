@@ -542,7 +542,7 @@ test("sign-up: a new parent registers their child, proves their email and lands 
 test("coach groups: a U7 coach posts to U7 only and gives a star; the parent sees it", async ({ page }) => {
   await signIn(page, "admin@deensquad.test");
   await page.goto("/admin/staff");
-  const coachGroups = page.getByRole("form", { name: "Coach Hamza's age groups" });
+  const coachGroups = page.getByRole("form", { name: "Coach Hamza's groups" });
   await coachGroups.getByLabel("U7").check();
   await coachGroups.getByRole("button", { name: "Save groups" }).click();
   await expect(coachGroups.getByLabel("U7")).toBeChecked();
@@ -1284,7 +1284,7 @@ test("staff roles: an admin makes a coach an admin, who then sees the shop, and 
   expect((await makeAdmin.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   await makeAdmin.click();
   await expect(admin.getByRole("button", { name: "Make Coach Hamza a coach" })).toBeVisible();
-  await expect(admin.getByRole("form", { name: "Coach Hamza's age groups" })).toHaveCount(0);
+  await expect(admin.getByRole("form", { name: "Coach Hamza's groups" })).toHaveCount(0);
   await admin.screenshot({ path: shot("admin-staff-roles"), fullPage: true });
 
   await coach.goto("/admin");
@@ -1294,7 +1294,7 @@ test("staff roles: an admin makes a coach an admin, who then sees the shop, and 
   // And back: a coach again (of every group until their groups are ticked), with no shop.
   await admin.getByRole("button", { name: "Make Coach Hamza a coach" }).click();
   await expect(admin.getByRole("button", { name: "Make Coach Hamza an admin" })).toBeVisible();
-  await expect(admin.getByRole("form", { name: "Coach Hamza's age groups" }).getByLabel("U7")).not.toBeChecked();
+  await expect(admin.getByRole("form", { name: "Coach Hamza's groups" }).getByLabel("U7")).not.toBeChecked();
   await coach.goto("/admin");
   await expect(coach.getByRole("link", { name: "Shop", exact: true })).toHaveCount(0);
   await adminContext.close();
@@ -1347,7 +1347,7 @@ test("gate register: with 12 children in, the list still to arrive starts on the
   await expect(here.getByRole("listitem")).toHaveCount(12);
 
   // All groups: both groups' children in one list, each with their group; Mark here and Undo work the same.
-  await page.getByRole("navigation", { name: "Age groups" }).getByRole("link", { name: "All groups" }).click();
+  await page.getByRole("navigation", { name: "Groups" }).getByRole("link", { name: "All groups" }).click();
   await expect(page.getByRole("heading", { name: "All groups", level: 2 })).toBeVisible();
   const zara = notHere.getByRole("listitem").filter({ hasText: "Zara K." });
   await expect(zara.getByText("U12", { exact: true })).toBeVisible();

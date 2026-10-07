@@ -87,7 +87,7 @@ export function ImportForm() {
           </div>
           <details className="rounded-app border-2 border-line bg-paper px-4 py-3">
             <summary className="cursor-pointer text-[15px] font-bold">Or paste the rows</summary>
-            <textarea name="csv" rows={8} className="field mt-3 font-mono !text-sm" placeholder="Child first name,Child last name,Age group,Parent first name,Parent email" />
+            <textarea name="csv" rows={8} className="field mt-3 font-mono !text-sm" placeholder="Child first name,Child last name,Group,Parent first name,Parent email" />
           </details>
         </>
       )}

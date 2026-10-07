@@ -118,7 +118,7 @@ export function planImport(csvText: string, now = new Date()): ImportPlan {
   const missing: string[] = [];
   if (at.childFirst < 0 && at.childName < 0) missing.push("child's first name (or child name)");
   // Without an age group column, every child is placed by their date of birth.
-  if (at.ageGroup < 0 && at.dob < 0) missing.push("age group (or date of birth)");
+  if (at.ageGroup < 0 && at.dob < 0) missing.push("group (or date of birth)");
   if (at.p1Email < 0) missing.push("parent email");
   if (missing.length) {
     return { rows: [], errors: [{ line: 1, message: `Couldn't find these columns: ${missing.join(", ")}. Use the template's column names.` }], warnings, checks, columns: recognised };
@@ -332,7 +332,7 @@ export const TEMPLATE_HEADER = [
   "Child first name",
   "Child last name",
   "Date of birth",
-  "Age group",
+  "Group",
   "Shirt number",
   "Position",
   "Parent first name",

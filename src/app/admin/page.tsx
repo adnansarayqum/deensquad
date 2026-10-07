@@ -209,7 +209,7 @@ function AttendanceSection({ d, limited }: { d: Dashboard; limited: boolean }) {
         <Empty>{noChildren}</Empty>
       ) : (
         <table className="w-full text-[14px]">
-          <caption className="sr-only">Sessions held and average attendance this season, by age group</caption>
+          <caption className="sr-only">Sessions held and average attendance this season, by group</caption>
           <thead>
             <tr className="text-left text-label text-ink-muted uppercase">
               <th scope="col" className="py-1 pr-2 font-bold">

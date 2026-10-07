@@ -1,8 +1,10 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS } from "../db/dev-seed";
 import { parseCsv } from "./csv";
-import { ageOnCutOff, applyImport, groupForAge, parseAgeGroup, parseDate, planImport } from "./import";
+import { ageOnCutOff, applyImport, groupForAge, parseAgeGroup, parseDate, planImport, TEMPLATE_HEADER } from "./import";
 
 const now = new Date("2026-10-05T12:00:00Z");
 
@@ -163,6 +165,15 @@ describe("planning an import", () => {
       now,
     );
     expect(plan.rows).toHaveLength(7);
+  it("reads the downloadable template, whose column is called Group (sheets saying Age group still work)", () => {
+    const template = readFileSync(join(process.cwd(), "public", "families-template.csv"), "utf8");
+    expect(template.split(/\r?\n/)[0]).toBe(TEMPLATE_HEADER.join(","));
+    expect(TEMPLATE_HEADER).toContain("Group");
+    const plan = planImport(template, now);
+    expect(plan.errors).toEqual([]);
+    expect(plan.rows.map((r) => r.child.ageGroup)).toEqual(["U10", "U7"]);
+  });
+
     expect(plan.rows[0].parents[0].phone).toBe("07700 900000");
     expect(plan.checks).toEqual([
       { line: 4, message: "Repeats row 2 (Zakariya Khan), so the two are merged into one child." },

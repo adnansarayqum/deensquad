@@ -26,7 +26,7 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
         <h1 className="font-display text-[40px] leading-[0.95] tracking-[0.02em]">Points and stars</h1>
         <p className="text-sm text-on-pitch-muted">Tap a player to give points, a star or a note for their parents.</p>
         {groups.length > 1 ? (
-          <nav aria-label="Age groups" className="flex flex-wrap gap-2">
+          <nav aria-label="Groups" className="flex flex-wrap gap-2">
             {groups.map((g) => (
               <Link
                 key={g}

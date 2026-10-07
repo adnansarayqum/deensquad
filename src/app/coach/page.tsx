@@ -94,7 +94,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
           </nav>
         ) : null}
         {groups.length > 1 ? (
-          <nav aria-label="Age groups" className="flex flex-wrap gap-2">
+          <nav aria-label="Groups" className="flex flex-wrap gap-2">
             {[...groups, ALL_GROUPS].map((g) => (
               <Link
                 key={g}
