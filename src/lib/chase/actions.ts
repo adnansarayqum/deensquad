@@ -3,16 +3,15 @@
 import { headers } from "next/headers";
 import { requireUser } from "../auth/session";
 import { asSystem } from "../db";
+import { isPushEndpoint } from "./push-endpoint";
 
 export type PushSubscriptionInput = { endpoint: string; keys: { p256dh: string; auth: string } };
 
-/** Saves this device so the club's messages can reach it. */
+/** Saves this device so the club's messages can reach it. Only an endpoint on a known push service is accepted. */
 export async function savePushSubscription(sub: PushSubscriptionInput): Promise<{ ok: boolean }> {
   const user = await requireUser();
   const valid =
-    typeof sub?.endpoint === "string" &&
-    sub.endpoint.startsWith("https://") &&
-    sub.endpoint.length < 1000 &&
+    isPushEndpoint(sub?.endpoint) &&
     typeof sub.keys?.p256dh === "string" &&
     typeof sub.keys?.auth === "string" &&
     sub.keys.p256dh.length < 200 &&
