@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { refresh } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -11,7 +12,7 @@ import { asSystem, asUser, isDemo } from "../db";
 import type { Queryable } from "../db/types";
 import { readUpload, saveFile } from "../files";
 import { cleanText } from "../validate";
-import { BASKET_COOKIE, addLine, parseBasket, type BasketLine } from "./basket";
+import { BASKET_COOKIE, addLine, parseBasketCookie, serialiseBasket, type Basket, type BasketLine } from "./basket";
 import { orderReference } from "./data";
 import { paymentOptions } from "./options";
 import { enqueue } from "../background";
@@ -23,13 +24,14 @@ import { createCheckout, deactivateCheckout, getCheckout, sumupConfigured } from
 
 const basketCookie = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge: 14 * 86400 };
 
-async function readBasket(): Promise<BasketLine[]> {
-  return parseBasket((await cookies()).get(BASKET_COOKIE)?.value);
+async function readBasket(): Promise<Basket> {
+  return parseBasketCookie((await cookies()).get(BASKET_COOKIE)?.value);
 }
 
-async function writeBasket(basket: BasketLine[]) {
+/** Writes the lines back with the basket's attempt id (one is made for a basket that has none yet). An empty basket clears the cookie. */
+async function writeBasket(lines: BasketLine[], attempt: string | null) {
   const store = await cookies();
-  if (basket.length) store.set(BASKET_COOKIE, JSON.stringify(basket), basketCookie);
+  if (lines.length) store.set(BASKET_COOKIE, serialiseBasket({ attempt: attempt ?? randomUUID(), lines }), basketCookie);
   else store.delete(BASKET_COOKIE);
 }
 
@@ -75,7 +77,8 @@ export async function addToBasket(_prev: AddState, formData: FormData): Promise<
   const check = await asUser(user.id, (tx) => lineProblem(tx, line));
   if (check) return { error: check };
 
-  await writeBasket(addLine(await readBasket(), line));
+  const basket = await readBasket();
+  await writeBasket(addLine(basket.lines, line), basket.attempt);
   return { added: true };
 }
 
@@ -83,7 +86,7 @@ export async function removeFromBasket(formData: FormData): Promise<void> {
   await requireParent();
   const index = Number(formData.get("index"));
   const basket = await readBasket();
-  if (Number.isInteger(index) && index >= 0 && index < basket.length) await writeBasket(basket.filter((_, i) => i !== index));
+  if (Number.isInteger(index) && index >= 0 && index < basket.lines.length) await writeBasket(basket.lines.filter((_, i) => i !== index), basket.attempt);
   refresh();
 }
 
@@ -96,16 +99,26 @@ async function baseUrl(): Promise<string | null> {
 
 export type CheckoutState = { error?: string };
 
-/** Places the order (prices from the database), then sends the parent to pay by card or shows the bank details. */
+/**
+ * Places the order (prices from the database), then sends the parent to pay by card or shows the bank details.
+ * One order per basket attempt: the same checkout arriving again (a resubmitted form, a retry after the signal
+ * dropped) finds the order already placed for the attempt and goes to its page instead of placing another.
+ */
 export async function checkout(_prev: CheckoutState, formData: FormData): Promise<CheckoutState> {
   const user = await requireParent();
-  const basket = await readBasket();
+  const { attempt, lines: basket } = await readBasket();
   if (basket.length === 0) return { error: "Your basket is empty." };
   const options = paymentOptions();
   const payBy = formData.get("payBy");
   if (options.length === 0) return { error: "The club hasn't set up payments yet. Please try again soon." };
   if (payBy !== "card" && payBy !== "bank") return { error: "Choose how you'd like to pay." };
   if (!options.includes(payBy)) return { error: "That way of paying isn't available. Choose another." };
+
+  const placedBefore = attempt ? await orderForAttempt(user.id, attempt) : null;
+  if (placedBefore) {
+    await writeBasket([], null);
+    redirect(`/shop/orders/${placedBefore}?placed=1`);
+  }
 
   // Anything that can no longer be ordered comes out of the basket (and nothing is ordered), so the parent can
   // check what's left and try again instead of starting over.
@@ -121,7 +134,10 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
     return bad;
   });
   if (gone.length) {
-    await writeBasket(basket.filter((_, i) => !gone.some((g) => g.index === i)));
+    await writeBasket(
+      basket.filter((_, i) => !gone.some((g) => g.index === i)),
+      attempt,
+    );
     refresh();
     const names = [...new Set(gone.map((g) => g.name ?? "An item"))];
     const what = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
@@ -130,30 +146,38 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
 
   let orderId: string;
   try {
-    [{ id: orderId }] = await asUser(user.id, (tx) => tx.query<{ id: string }>(`select place_order($1::text::jsonb, $2) as id`, [JSON.stringify(basket), payBy]));
+    [{ id: orderId }] = await asUser(user.id, (tx) =>
+      tx.query<{ id: string }>(`select place_order($1::text::jsonb, $2, $3::uuid) as id`, [JSON.stringify(basket), payBy, attempt]),
+    );
   } catch (error) {
     // Keep the basket: nothing was ordered, and the parent can try again.
     console.error("[shop] place_order:", error instanceof Error ? error.message : error);
     return { error: "We couldn't place your order. Your basket is still here. Please try again." };
   }
-  await writeBasket([]);
+  await writeBasket([], null);
   // The parent's confirmation (what they ordered and how to pay), after the response so checkout isn't held up.
+  // Both emails go once per order (notifyParentOrder's step columns, notifyNewOrder's notified_at), so a checkout
+  // that found the order already placed doesn't send them again.
   after(() => enqueue("order placed email", () => notifyParentOrder(orderId, "placed")));
 
   if (payBy === "bank") {
-    await notifyNewOrder(orderId);
+    after(() => enqueue("new order email", () => notifyNewOrder(orderId)));
     redirect(`/shop/orders/${orderId}?placed=1`);
   }
   if (isDemo()) {
     // The demo has no payment provider: pretend the card payment went through.
-    await asSystem((tx) => tx.query(`update shop_orders set status = 'paid', paid_at = now() where id = $1`, [orderId]));
-    await notifyNewOrder(orderId);
+    await asSystem((tx) => tx.query(`update shop_orders set status = 'paid', paid_at = now() where id = $1 and status = 'awaiting_payment'`, [orderId]));
+    after(() => enqueue("new order email", () => notifyNewOrder(orderId)));
     after(() => enqueue("order paid email", () => notifyParentOrder(orderId, "paid")));
     redirect(`/shop/orders/${orderId}?paid=demo`);
   }
 
   const base = await baseUrl();
-  const [{ total_pence }] = await asSystem((tx) => tx.query<{ total_pence: number }>(`select total_pence from shop_orders where id = $1`, [orderId]));
+  const [{ total_pence, sumup_checkout_id }] = await asSystem((tx) =>
+    tx.query<{ total_pence: number; sumup_checkout_id: string | null }>(`select total_pence, sumup_checkout_id from shop_orders where id = $1`, [orderId]),
+  );
+  // Placed by a checkout that got there first and already has its SumUp page: "Pay" on the order page asks SumUp about it.
+  if (sumup_checkout_id) redirect(`/shop/orders/${orderId}`);
   let url: string;
   try {
     const sumup = await createCheckout({
@@ -163,13 +187,21 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
       redirectUrl: `${base}/shop/orders/${orderId}?return=1`,
       returnUrl: `${base}/api/sumup/webhook`,
     });
-    await asSystem((tx) => tx.query(`update shop_orders set sumup_checkout_id = $2 where id = $1`, [orderId, sumup.id]));
+    await asSystem((tx) => tx.query(`update shop_orders set sumup_checkout_id = $2 where id = $1 and sumup_checkout_id is null`, [orderId, sumup.id]));
     url = sumup.url;
   } catch (error) {
     console.error("[shop] SumUp:", error instanceof Error ? error.message : error);
     redirect(`/shop/orders/${orderId}?payment=failed`);
   }
   redirect(url);
+}
+
+/** The order this parent already placed for a basket attempt, if any. */
+async function orderForAttempt(userId: string, attempt: string): Promise<string | null> {
+  const [row] = await asUser(userId, (tx) =>
+    tx.query<{ id: string }>(`select id from shop_orders where attempt_id = $1 and guardian_id = my_guardian_id()`, [attempt]),
+  );
+  return row?.id ?? null;
 }
 
 /**

@@ -3,7 +3,7 @@ import type { Queryable } from "../db/types";
 import type { CurrentUser } from "../auth/session";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
 import { testDatabase } from "../../../test/db";
-import { BASKET_COOKIE, parseBasket, type BasketLine } from "./basket";
+import { BASKET_COOKIE, parseBasket, parseBasketCookie, serialiseBasket, type BasketLine } from "./basket";
 
 // Checkout when something in the basket can no longer be ordered: nothing is ordered, only the bad lines come out.
 const holder: { t?: Awaited<ReturnType<typeof testDatabase>>; user?: CurrentUser; failPlaceOrder?: boolean } = {};
@@ -61,9 +61,12 @@ const payByBank = () => {
   f.set("payBy", "bank");
   return f;
 };
+// An older cookie: a bare array with no attempt id.
 const putBasket = (lines: BasketLine[]) => jar.set(BASKET_COOKIE, JSON.stringify(lines));
+const putAttempt = (attempt: string, lines: BasketLine[]) => jar.set(BASKET_COOKIE, serialiseBasket({ attempt, lines }));
 const basket = () => parseBasket(jar.get(BASKET_COOKIE));
 const orders = async () => (await t.asSystem((tx) => tx.query(`select 1 from shop_orders where guardian_id = $1`, [DEV_IDS.adnan]))).length;
+const ATTEMPT = "7d3c6a2e-1b4f-4c8e-9a0d-5f6e7a8b9c0d";
 const line = (product: string, size: string | null): BasketLine => ({ product, player: DEV_IDS.yusuf, size, initials: null, quantity: 1 });
 
 beforeAll(async () => {
@@ -124,5 +127,61 @@ describe("checkout", () => {
     expect(await checkout({}, payByBank())).toEqual({ error: "We couldn't place your order. Your basket is still here. Please try again." });
     expect(basket()).toEqual([line(shirt, "M"), line(socks, null)]);
     expect(await orders()).toBe(0);
+  });
+
+  it("places one order per basket attempt: the same checkout sent again lands on the order already placed", async () => {
+    putAttempt(ATTEMPT, [line(shirt, "M"), line(socks, null)]);
+    const first = await checkout({}, payByBank()).catch((e: Error) => e.message);
+    expect(first).toMatch(/^redirect \/shop\/orders\/[0-9a-f-]{36}\?placed=1$/);
+    expect(basket()).toEqual([]);
+    expect(await orders()).toBe(1);
+
+    // The phone sends the same request again (its cookie still holds the attempt): same order, nothing new.
+    putAttempt(ATTEMPT, [line(shirt, "M"), line(socks, null)]);
+    expect(await checkout({}, payByBank()).catch((e: Error) => e.message)).toBe(first);
+    expect(basket()).toEqual([]);
+    expect(await orders()).toBe(1);
+    const [order] = await t.asSystem((tx) => tx.query<{ attempt_id: string; total_pence: number }>(`select attempt_id, total_pence from shop_orders`));
+    expect(order).toEqual({ attempt_id: ATTEMPT, total_pence: 2500 });
+
+    // A new basket is a new attempt and a new order.
+    putAttempt("0e1d2c3b-4a59-4687-9a0b-1c2d3e4f5a6b", [line(socks, null)]);
+    await expect(checkout({}, payByBank())).rejects.toThrow(/placed=1$/);
+    expect(await orders()).toBe(2);
+  });
+
+  it("gives a basket its attempt id when the first line goes in and keeps it as lines change", async () => {
+    const { addToBasket, removeFromBasket } = await import("./actions");
+    const add = (product: string, size: string | null) => {
+      const f = new FormData();
+      f.set("product", product);
+      f.set("player", DEV_IDS.yusuf);
+      if (size) f.set("size", size);
+      return f;
+    };
+    expect(await addToBasket({}, add(shirt, "M"))).toEqual({ added: true });
+    const { attempt } = parseBasketCookie(jar.get(BASKET_COOKIE));
+    expect(attempt).toMatch(/^[0-9a-f-]{36}$/);
+    await addToBasket({}, add(socks, null));
+    expect(parseBasketCookie(jar.get(BASKET_COOKIE))).toMatchObject({ attempt, lines: [line(shirt, "M"), line(socks, null)] });
+    const remove = new FormData();
+    remove.set("index", "0");
+    await removeFromBasket(remove);
+    expect(parseBasketCookie(jar.get(BASKET_COOKIE))).toMatchObject({ attempt, lines: [line(socks, null)] });
+  });
+
+  it("place_order itself returns the order already placed for an attempt", async () => {
+    const items = JSON.stringify([{ product: socks, player: DEV_IDS.yusuf, quantity: 2 }]);
+    const place = () => t.asUser(holder.user!.id, (tx) => tx.query<{ id: string }>(`select place_order($1::text::jsonb, 'bank', $2::uuid) as id`, [items, ATTEMPT]));
+    const [[a], [b]] = await Promise.all([place(), place()]);
+    expect(a.id).toBe(b.id);
+    expect(await orders()).toBe(1);
+    // Without an attempt (the previous version of the app), every call is a new order, as before.
+    const [[c], [d]] = await Promise.all([
+      t.asUser(holder.user!.id, (tx) => tx.query<{ id: string }>(`select place_order($1::text::jsonb, 'bank') as id`, [items])),
+      t.asUser(holder.user!.id, (tx) => tx.query<{ id: string }>(`select place_order($1::text::jsonb, 'bank') as id`, [items])),
+    ]);
+    expect(c.id).not.toBe(d.id);
+    expect(await orders()).toBe(3);
   });
 });

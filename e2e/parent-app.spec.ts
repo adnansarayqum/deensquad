@@ -453,12 +453,23 @@ test("shop: a parent orders kit for a child and pays by transfer; the club is to
   await page.screenshot({ path: shot("shop-basket"), fullPage: true });
   // No SumUp key in tests, so bank transfer is the only way to pay.
   await expect(page.getByLabel(/Bank transfer/)).toBeChecked();
+  // The exact checkout request, kept so it can be sent again below as a phone that lost the reply would.
+  const checkoutRequest = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/shop/basket"));
   await page.getByRole("button", { name: "Place order" }).click();
+  const sent = await checkoutRequest;
   await expect(page.getByText(/Order placed. Send the bank transfer/)).toBeVisible();
   await expect(page.getByText("12345678")).toBeVisible();
   const reference = (await page.locator("dd").last().textContent())!.trim();
   expect(reference).toMatch(/^DS-[0-9A-F]{6}$/);
   await page.screenshot({ path: shot("shop-order"), fullPage: true });
+
+  // The same checkout sent twice more (same basket cookie, same session): still one order.
+  const replay = { method: "POST", headers: await sent.allHeaders(), data: sent.postDataBuffer()! };
+  const replies = await Promise.all([page.request.fetch(sent.url(), replay), page.request.fetch(sent.url(), replay)]);
+  expect(replies.map((r) => r.status())).toEqual([200, 200]);
+  await page.goto("/shop/orders");
+  await expect(page.getByRole("link", { name: /full zip hoodie/ })).toHaveCount(1);
+  await page.goBack();
 
   const mails = readFileSync(OUTBOX, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string });
   expect(mails.some((m) => m.to === "admin@deensquad.test" && m.subject === `New kit order ${reference} from Adnan Sample`)).toBe(true);
