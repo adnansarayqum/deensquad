@@ -26,6 +26,40 @@ describe("planning an import", () => {
     expect(parseAgeGroup("U16")).toBeNull();
   });
 
+  it("reads a cell naming girls as the Girls group, even with an age, but not the mixed U6", () => {
+    for (const cell of ["Girls", "girls", "girl", "Girls team", "Girls U10", "U12 Girls", "GIRLS"]) expect(parseAgeGroup(cell), cell).toBe("Girls");
+    expect(parseAgeGroup("U6 (boys and girls)")).toBe("U6");
+    expect(parseAgeGroup("Girlsxyz")).toBeNull();
+  });
+
+  it("never places a child in Girls by age", () => {
+    for (let age = 0; age <= 30; age++) expect(groupForAge(age), `age ${age}`).not.toBe("Girls");
+  });
+
+  it("keeps a girl of any age in Girls without an age check, and never puts a child there by date of birth", () => {
+    const plan = planImport(
+      [
+        "Child first name,Child last name,Date of birth,Age group,Parent first name,Parent email",
+        "Maryam,Ali,14/03/2018,Girls,Hina,hina@example.com",
+        "Safa,Ali,01/05/2011,Girls U10,Hina,hina@example.com",
+        "Noor,Ali,,girls team,Hina,hina@example.com",
+        "Aisha,Iqbal,14/03/2018,,Ruksana,ruksana@example.com",
+        "Huda,Iqbal,14/03/2018,Year 4 netball,Ruksana,ruksana@example.com",
+      ].join("\n"),
+      now,
+    );
+    expect(plan.errors).toEqual([]);
+    expect(plan.rows.map((r) => [r.child.firstName, r.child.ageGroup])).toEqual([
+      ["Maryam", "Girls"],
+      ["Safa", "Girls"], // 15 by date of birth, but the sheet names girls
+      ["Noor", "Girls"],
+      ["Aisha", "U10"], // by date of birth: an age group, never Girls
+      ["Huda", "U10"],
+    ]);
+    // Only the two placed by date of birth are listed to check; no Girls row is.
+    expect(plan.checks.map((c) => c.line)).toEqual([5, 6]);
+  });
+
   it("groups siblings by parent email and links a second parent", () => {
     const plan = planImport(
       [
@@ -78,7 +112,7 @@ describe("planning an import", () => {
     ]);
     expect(plan.errors).toEqual([
       { line: 6, message: "The age group is missing, and Baby is 2 by date of birth, outside the club's groups." },
-      { line: 7, message: `"Year 4" isn't one of the app's age groups (U6, U7, U10, U12, U15).` },
+      { line: 7, message: `"Year 4" isn't one of the app's groups (U6, U7, U10, U12, U15, Girls).` },
     ]);
   });
 

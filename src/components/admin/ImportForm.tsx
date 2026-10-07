@@ -119,7 +119,7 @@ export function ImportForm() {
             ))}
           </ul>
           {state.checks.length > 50 ? <p className="text-sm text-ink-muted">…and {state.checks.length - 50} more.</p> : null}
-          <p className="text-sm text-ink-muted">Groups by age are a best guess. Check against the club&apos;s rules.</p>
+          <p className="text-sm text-ink-muted">Age groups by date of birth are a best guess (no one is put in Girls by age). Check against the club&apos;s rules.</p>
         </div>
       ) : null}
       {state.warnings && state.warnings.length > 0 ? (
