@@ -10,6 +10,9 @@ export function sumupConfigured(): boolean {
 
 const API = "https://api.sumup.com/v0.1/checkouts";
 
+/** How long a SumUp call may take. A checkout that can't be read in time counts as not paid. */
+export const SUMUP_TIMEOUT_MS = 10_000;
+
 function headers() {
   return { Authorization: `Bearer ${process.env.SUMUP_API_KEY}`, "Content-Type": "application/json" };
 }
@@ -34,6 +37,7 @@ export async function createCheckout(opts: {
       return_url: opts.returnUrl,
       hosted_checkout: { enabled: true },
     }),
+    signal: AbortSignal.timeout(SUMUP_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`SumUp refused the checkout (${res.status}): ${(await res.text().catch(() => "")).slice(0, 200)}`);
   const body = (await res.json()) as { id?: string; hosted_checkout_url?: string };
@@ -41,10 +45,18 @@ export async function createCheckout(opts: {
   return { id: body.id, url: body.hosted_checkout_url };
 }
 
-/** The checkout as SumUp sees it: the only source of truth for whether an order was paid. */
+/**
+ * The checkout as SumUp sees it: the only source of truth for whether an order was paid. Null when SumUp can't be
+ * asked (refused, unreachable or too slow), which every caller treats as not paid.
+ */
 export async function getCheckout(id: string): Promise<{ status: string; reference: string | null; amount: number | null } | null> {
-  const res = await fetch(`${API}/${encodeURIComponent(id)}`, { headers: headers() });
-  if (!res.ok) return null;
-  const body = (await res.json()) as { status?: string; checkout_reference?: string; amount?: number };
-  return { status: body.status ?? "UNKNOWN", reference: body.checkout_reference ?? null, amount: body.amount ?? null };
+  try {
+    const res = await fetch(`${API}/${encodeURIComponent(id)}`, { headers: headers(), signal: AbortSignal.timeout(SUMUP_TIMEOUT_MS) });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { status?: string; checkout_reference?: string; amount?: number };
+    return { status: body.status ?? "UNKNOWN", reference: body.checkout_reference ?? null, amount: body.amount ?? null };
+  } catch (error) {
+    console.error("[shop] SumUp checkout lookup:", error instanceof Error ? error.message : error);
+    return null;
+  }
 }

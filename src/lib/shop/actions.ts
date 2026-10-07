@@ -18,6 +18,7 @@ import { enqueue } from "../background";
 import type { OrderEmailKind } from "../email/templates";
 import { notifyNewOrder, notifyParentOrder } from "./notify";
 import { localiseProductImages } from "./images";
+import { confirmSumupPayment } from "./payments";
 import { createCheckout, sumupConfigured } from "./sumup";
 
 const basketCookie = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge: 14 * 86400 };
@@ -171,22 +172,35 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
   redirect(url);
 }
 
-/** Try paying again for an order whose SumUp page timed out or was closed. */
+/**
+ * "Pay" again on an unpaid card order (its SumUp page timed out, was closed, or never opened). SumUp references are
+ * the order id and must be unique, so an order that already has a checkout never gets a second one: SumUp is asked
+ * about the one it has. Paid: the order is confirmed. Anything else (pending, failed, or SumUp not answering in 10 s):
+ * the order switches to bank transfer, still awaiting payment, and the order page shows the bank details and
+ * reference. Only an order with no checkout yet (the first attempt failed before SumUp gave one) gets a new one.
+ */
 export async function payAgain(formData: FormData): Promise<void> {
   const user = await requireParent();
   const id = formData.get("order");
   if (typeof id !== "string" || !UUID.test(id) || !sumupConfigured()) return;
   const [order] = await asUser(user.id, (tx) =>
-    tx.query<{ id: string; total_pence: number }>(
-      `select id, total_pence from shop_orders where id = $1 and guardian_id = my_guardian_id() and status = 'awaiting_payment' and pay_by = 'card'`,
+    tx.query<{ id: string; total_pence: number; sumup_checkout_id: string | null }>(
+      `select id, total_pence, sumup_checkout_id from shop_orders
+       where id = $1 and guardian_id = my_guardian_id() and status = 'awaiting_payment' and pay_by = 'card'`,
       [id],
     ),
   );
   if (!order) redirect(`/shop/orders/${id}`);
+
+  if (order.sumup_checkout_id) {
+    // Paid after all (and the reference and amount match): the order is confirmed.
+    if (await confirmSumupPayment(order.sumup_checkout_id)) redirect(`/shop/orders/${order.id}?return=1`);
+    return switchToBank(order.id);
+  }
+
   const base = await baseUrl();
   let url: string;
   try {
-    // SumUp references must be unique, so a retry gets a fresh one.
     const sumup = await createCheckout({
       orderId: order.id,
       totalPence: order.total_pence,
@@ -194,13 +208,26 @@ export async function payAgain(formData: FormData): Promise<void> {
       redirectUrl: `${base}/shop/orders/${order.id}?return=1`,
       returnUrl: `${base}/api/sumup/webhook`,
     });
-    await asSystem((tx) => tx.query(`update shop_orders set sumup_checkout_id = $2 where id = $1`, [order.id, sumup.id]));
+    await asSystem((tx) => tx.query(`update shop_orders set sumup_checkout_id = $2 where id = $1 and sumup_checkout_id is null`, [order.id, sumup.id]));
     url = sumup.url;
   } catch (error) {
+    // SumUp refused (it may already hold a checkout with this reference) or didn't answer: pay by bank instead.
     console.error("[shop] SumUp retry:", error instanceof Error ? error.message : error);
-    redirect(`/shop/orders/${order.id}?payment=failed`);
+    return switchToBank(order.id);
   }
   redirect(url);
+}
+
+/** An unpaid card order becomes a bank transfer order (the club is told, as for any bank order), then shows the bank details. */
+async function switchToBank(orderId: string): Promise<never> {
+  const [switched] = await asSystem((tx) =>
+    tx.query(
+      `update shop_orders set pay_by = 'bank', updated_at = now() where id = $1 and status = 'awaiting_payment' and pay_by = 'card' returning id`,
+      [orderId],
+    ),
+  );
+  if (switched) after(() => enqueue("new order email", () => notifyNewOrder(orderId)));
+  redirect(`/shop/orders/${orderId}?switched=bank`);
 }
 
 // Admin ------------------------------------------------------------------------

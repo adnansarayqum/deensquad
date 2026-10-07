@@ -16,6 +16,8 @@ function message(order: Order, query: Record<string, string | string[] | undefin
   if (order.status === "awaiting_payment" && order.payBy === "bank")
     return query.placed
       ? { tone: "done", text: "Order placed. Send the bank transfer below and we'll start on it once it arrives." }
+      : query.switched
+      ? { tone: "action", text: "The card payment didn't go through, so please pay by bank transfer instead. Use the reference so the club can match it." }
       : { tone: "action", text: "We haven't had your transfer yet. It can take a day to show once you've sent it." };
   if (order.status === "awaiting_payment" && query.payment === "failed")
     return { tone: "action", text: "We couldn't open the payment page. Please try again in a minute." };
