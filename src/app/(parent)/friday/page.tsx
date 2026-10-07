@@ -157,6 +157,10 @@ export default async function FridayPage() {
             ))}
           </section>
         ) : null}
+
+        <Link href="/player/calendar" className="inline-flex min-h-12 items-center self-start text-sm font-bold text-grass-text underline">
+          Add sessions to your calendar
+        </Link>
       </main>
     </>
   );

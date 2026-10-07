@@ -4,7 +4,7 @@ import { SESSION_COOKIE, cookieOptions } from "@/lib/auth/cookies";
 // Optimistic check only: no session cookie means "go and sign in". Every page and action still
 // checks the session against the database (src/lib/auth/session.ts) before touching data.
 
-const PUBLIC = [/^\/sign-in(\/|$)/, /^\/sign-up$/, /^\/privacy$/, /^\/api\/health$/, /^\/api\/cron\//, /^\/api\/sumup\//];
+const PUBLIC = [/^\/sign-in(\/|$)/, /^\/sign-up$/, /^\/privacy$/, /^\/api\/health$/, /^\/api\/cron\//, /^\/api\/sumup\//, /^\/api\/calendar\/[^/]+$/];
 // The Sentry tunnel (src/app/monitoring/route.ts): browser error reports, including from the sign-in screens, are posted to
 // /monitoring and passed on to Sentry. Only when the app was built with Sentry; otherwise it's like any other path.
 if (process.env.NEXT_PUBLIC_SENTRY_DSN) PUBLIC.push(/^\/monitoring\/?$/);

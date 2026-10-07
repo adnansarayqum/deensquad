@@ -17,8 +17,8 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
   const season = seasonStart(now);
   const [[parent], children, contacts, agreements, payments, availability, attendance, awards, badges, notes, reads, orders, items] =
     await Promise.all([
-      tx.query<{ first_name: string; last_name: string; email: string | null; phone: string | null; language: string; created_at: Date }>(
-        `select first_name, last_name, email, phone, language, created_at from guardians where id = my_guardian_id()`,
+      tx.query<{ first_name: string; last_name: string; email: string | null; phone: string | null; language: string; created_at: Date; calendar_at: Date | null }>(
+        `select first_name, last_name, email, phone, language, created_at, calendar_token_created_at as calendar_at from guardians where id = my_guardian_id()`,
       ),
       tx.query<{
         id: string;
@@ -108,6 +108,8 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
           phone: parent.phone,
           language: parent.language,
           addedOn: at(parent.created_at),
+          // That a private calendar link exists and when it was made; never the link itself (only its hash is kept).
+          calendarLink: parent.calendar_at ? { madeAt: at(parent.calendar_at) } : null,
         }
       : null,
     children: children.map((c) => ({

@@ -86,6 +86,11 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
             When you use the app we also keep a record of when you signed in and the device&apos;s internet address, to keep accounts secure. If you turn on
             notifications, we store the address your phone gives us to send them.
           </p>
+          <p>
+            If you add the club&apos;s sessions to your calendar (on the player screen), we keep a scrambled copy of your private calendar link, not the
+            link itself. Your calendar app (or a calendar service you choose, such as Google Calendar) then fetches your children&apos;s sessions (with their first names) from the app every few hours. Anyone you give
+            the link to can see them too, so keep it to yourself; resetting it stops the old link working.
+          </p>
           <p>We do not ask for health information in the app. If your child has a medical need the coaches should know about, please tell a coach directly.</p>
         </Part>
 

@@ -200,6 +200,48 @@ test("privacy notice lists WhatsApp, the nightly backups and the rights parents 
   await expect(page.getByText(/Every night we make a backup copy of the database/)).toContainText("kept for 30 days");
   await expect(page.getByText(/Every night we make a backup copy of the database/)).toContainText("Amsterdam");
   await expect(page.getByText(/under Your data, download a copy/)).toBeVisible();
+  await expect(page.getByText(/scrambled copy of your private calendar link/)).toBeVisible();
   // SMS isn't set up on the test server, so Twilio isn't listed.
   await expect(page.getByText("Twilio")).toHaveCount(0);
+});
+
+test("calendar: a parent gets a private link, the feed has their children's sessions, and a reset stops the old link", async ({ browser, playwright }) => {
+  test.skip(!existsSync(YOUR_DATA_PARENT_STATE), "needs the sign-up test above");
+  const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
+  const page = await context.newPage();
+  await page.goto("/friday");
+  await page.getByRole("link", { name: "Add sessions to your calendar" }).click();
+  await expect(page).toHaveURL(/\/player\/calendar$/);
+  await page.getByRole("button", { name: "Get my calendar link" }).click();
+
+  const subscribe = page.getByRole("link", { name: "Subscribe (iPhone, iPad, Mac)" });
+  await expect(subscribe).toHaveAttribute("href", /^webcal:\/\/localhost:3100\/api\/calendar\/[0-9a-f]{64}\.ics$/);
+  const feed = await page.getByLabel("Link for other calendar apps").inputValue();
+  expect(feed).toBe((await subscribe.getAttribute("href"))!.replace("webcal://", "http://"));
+  await expect(page.getByRole("link", { name: "Google Calendar" })).toHaveAttribute("href", `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(feed.replace("http://", "webcal://"))}`);
+  for (const target of [subscribe, page.getByRole("link", { name: "Google Calendar" }), page.getByRole("button", { name: "Copy link" }), page.getByRole("button", { name: "Reset link" })]) {
+    expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  }
+  await page.screenshot({ path: shot("parent-calendar-link") });
+
+  // A calendar app fetches it with no sign-in.
+  const api = await playwright.request.newContext();
+  const res = await api.get(feed);
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-type"]).toContain("text/calendar");
+  const ics = (await res.text()).replace(/\r\n /g, "");
+  expect(ics).toContain("BEGIN:VEVENT");
+  expect(ics).toMatch(/SUMMARY:.*\(Layla/);
+  expect(ics).not.toContain("Haddad");
+
+  // Back later, the link isn't shown again; a reset makes a new one and the old one stops working.
+  await page.reload();
+  await expect(page.getByText("Your calendar link is set up. Reset it to see it again.")).toBeVisible();
+  await page.getByRole("button", { name: "Reset link" }).click();
+  const fresh = await page.getByLabel("Link for other calendar apps").inputValue();
+  expect(fresh).not.toBe(feed);
+  expect((await api.get(feed)).status()).toBe(404);
+  expect((await api.get(fresh)).status()).toBe(200);
+  await api.dispose();
+  await context.close();
 });

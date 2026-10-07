@@ -29,6 +29,8 @@ export function normalisePath(path: string): string {
         // keep it as it is
       }
       if (isId(decoded)) return ":id";
+      // a calendar feed's token (/api/calendar/<token>.ics)
+      if (decoded.endsWith(".ics") && isId(decoded.slice(0, -4))) return ":id.ics";
       if (signIn && i >= 2 && !(i === 2 && SIGN_IN_PAGES.has(decoded))) return ":id";
       return segment;
     })

@@ -161,7 +161,17 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           </div>
         ) : null}
 
-        <section aria-labelledby="your-data" className="mt-2 flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
+        <section aria-labelledby="calendar" className="mt-2 flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
+          <h2 id="calendar" className="text-base font-extrabold">
+            Calendar
+          </h2>
+          <p className="text-[15px] leading-[22px]">Put your children&apos;s sessions in your phone&apos;s calendar. Changes and cancellations follow.</p>
+          <Link href="/player/calendar" className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-grass-text underline">
+            Add sessions to your calendar
+          </Link>
+        </section>
+
+        <section aria-labelledby="your-data"className="mt-2 flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
           <h2 id="your-data" className="text-base font-extrabold">
             Your data
           </h2>
