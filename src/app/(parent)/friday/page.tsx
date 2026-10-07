@@ -65,12 +65,14 @@ export default async function FridayPage() {
           <TodaysCodes cards={todayCards} title={today[0].session.title} />
         ) : family.children.length > 0 ? (
           <Link href="/pass" className="flex items-center gap-3 rounded-app bg-pitch-deep px-3.5 py-3 text-on-pitch">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold">
+            {/* The icon steps aside on a very narrow screen (200% zoom), so the heading's words fit whole rather than breaking mid-word. */}
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold max-[239px]:hidden">
               <QrCode aria-hidden size={24} />
             </span>
-            <span className="flex min-w-0 flex-1 flex-col break-words">
+            <span className="flex min-w-0 flex-1 flex-col">
               <span className="text-[15px] font-bold">{family.children.length > 1 ? "Attendance QR codes" : "Attendance QR code"}</span>
-              <span className="text-[13px] text-on-pitch-muted">{family.children.length > 1 ? "One for each child. Show it to the coach when you arrive" : `Show it to the coach to check ${family.children[0].firstName} in`}</span>
+              {/* Only this line can hold a long name, so only it may break inside a word. */}
+              <span className="text-[13px] break-words text-on-pitch-muted">{family.children.length > 1 ? "One for each child. Show it to the coach when you arrive" : `Show it to the coach to check ${family.children[0].firstName} in`}</span>
             </span>
             <ChevronRight aria-hidden size={20} className="shrink-0 text-on-pitch-muted" />
           </Link>
@@ -166,12 +168,12 @@ function TodaysCodes({ cards, title }: { cards: PassCard[]; title: string }) {
   return (
     <details className="group rounded-app bg-pitch-deep text-on-pitch">
       <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-app px-3.5 py-3 [&::-webkit-details-marker]:hidden">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold max-[239px]:hidden">
           <QrCode aria-hidden size={24} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="text-[15px] font-bold">{several ? "Show attendance QR codes" : "Show attendance QR code"}</span>
-          <span className="text-[13px] text-on-pitch-muted">
+          <span className="text-[13px] break-words text-on-pitch-muted">
             {title} today. Tap to show {several ? "them" : "it"} here for the coach.
           </span>
         </span>

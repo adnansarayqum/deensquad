@@ -85,6 +85,21 @@ test("Friday at 200% zoom (195px wide) doesn't scroll sideways, and the tab bar 
     expect(await scrollsSideways(page), `${path} scrolls sideways at 195px`).toBe(false);
   }
   await page.goto("/friday");
+  // The QR card's heading wraps between words, never inside one ("Atten-dance").
+  const heading = page.locator("main").getByText(/^(Show )?attendance QR codes?$/i).first();
+  await expect(heading).toBeVisible();
+  const brokenWords = await heading.evaluate((el) => {
+    const text = el.firstChild!;
+    const broken: string[] = [];
+    for (const m of (text.textContent ?? "").matchAll(/\S+/g)) {
+      const range = document.createRange();
+      range.setStart(text, m.index);
+      range.setEnd(text, m.index + m[0].length);
+      if (new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size > 1) broken.push(m[0]);
+    }
+    return broken;
+  });
+  expect(brokenWords).toEqual([]);
   await page.screenshot({ path: shot("friday-195px"), fullPage: true });
   const tabs = page.getByRole("navigation", { name: "Main" });
   for (const name of ["News", "Friday", "To-do", "Shop", "Players"]) await expect(tabs.getByRole("link", { name })).toBeVisible();

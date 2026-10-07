@@ -57,6 +57,8 @@ export default async function PlansPage() {
               <Link
                 key={g}
                 href={`/coach/plans/${s.id}?group=${g}`}
+                // Named in full: a list of "U10 · No plan yet · Add plan" links can't otherwise be told apart.
+                aria-label={`${plan ? "Edit" : "Add"} ${g} plan for ${s.title}, ${shortDay(s.startsAt)}${plan ? " (plan added)" : ""}`}
                 className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
               >
                 <span className="font-display text-[26px] leading-none">{g}</span>

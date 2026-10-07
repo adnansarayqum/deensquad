@@ -126,7 +126,10 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
   await expect(page.getByText("11 of 16 coming")).toBeVisible();
   const yusuf = page.getByRole("group", { name: /Is Yusuf coming/ });
   const musa = page.getByRole("group", { name: /Is Musa coming/ });
-  await yusuf.getByRole("button", { name: "Coming" }).click();
+  // Each child's buttons say whose they are, so the repeated "Coming" / "Not this week" can be told apart.
+  await expect(page.getByRole("button", { name: "Coming", exact: true })).toHaveCount(0);
+  await expect(musa.getByRole("button", { name: "Not this week: Musa isn't coming", exact: true })).toBeVisible();
+  await yusuf.getByRole("button", { name: "Yusuf is coming", exact: true }).click();
   await expect(page.getByText("Saved. Coach can see Yusuf is coming.")).toBeVisible();
   await expect(page.getByText("12 of 16 coming")).toBeVisible();
   // The venue has directions (a Google Maps search, outside the app).
@@ -137,9 +140,9 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
   // No signal: Musa's answer doesn't save; the screen and its QR link stay, and Try again sends it once back online.
   const fridayOffline = noSignal("/friday");
   await page.route(fridayOffline, abortPosts);
-  await musa.getByRole("button", { name: "Not this week" }).click();
+  await musa.getByRole("button", { name: "Not this week: Musa isn't coming" }).click();
   await expect(page.getByRole("alert").getByText("That didn't save. Check your signal and try again.")).toBeVisible();
-  await expect(musa.getByRole("button", { name: "Not this week" })).toHaveAttribute("aria-pressed", "false");
+  await expect(musa.getByRole("button", { name: "Not this week: Musa isn't coming" })).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByText(/attendance QR codes/i).first()).toBeVisible();
   await page.unroute(fridayOffline);
   await page.getByRole("button", { name: "Try again" }).click();
@@ -165,17 +168,17 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
   await expect(sara.getByText(/^Coming · answered by Adnan, today /)).toBeVisible();
   await expect(sara.getByText(/^Not this week · answered by Adnan, today /)).toBeVisible();
   await expect(sara.getByText(/^Saved\./)).toHaveCount(0);
-  await sara.getByRole("group", { name: /Is Yusuf coming/ }).getByRole("button", { name: "Not this week" }).click();
+  await sara.getByRole("group", { name: /Is Yusuf coming/ }).getByRole("button", { name: "Not this week: Yusuf isn't coming" }).click();
   await expect(sara.getByText("Saved. Coach knows Yusuf is away this week.")).toBeVisible();
   await saraContext.close();
 
   await page.reload();
   await expect(page.getByText(/^Not this week · answered by Sara, today /).first()).toBeVisible();
-  await expect(yusuf.getByRole("button", { name: "Not this week" })).toHaveAttribute("aria-pressed", "true");
+  await expect(yusuf.getByRole("button", { name: "Not this week: Yusuf isn't coming" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText(/^Saved\./)).toHaveCount(0);
   await page.screenshot({ path: shot("friday-answered-by"), fullPage: true });
   // Adnan puts it back.
-  await yusuf.getByRole("button", { name: "Coming" }).click();
+  await yusuf.getByRole("button", { name: "Yusuf is coming" }).click();
   await expect(page.getByText("Saved. Coach can see Yusuf is coming.")).toBeVisible();
 
   await page.getByRole("link", { name: "News" }).click();
@@ -647,9 +650,11 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await signIn(page, "admin@deensquad.test");
   await page.goto("/coach/plans");
   // Groups with no children (U6) aren't listed.
-  await expect(page.getByRole("link", { name: /U10/ }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: /^U6\b/ })).toHaveCount(0);
-  await page.getByRole("link", { name: /U10/ }).first().click();
+  // Each link names its group and session, so the repeated "Add plan" links can be told apart.
+  const u10 = page.getByRole("link", { name: /^(Add|Edit) U10 plan for .+, \w{3} \d{1,2} \w{3}/ }).first();
+  await expect(u10).toBeVisible();
+  await expect(page.getByRole("link", { name: /\bU6 plan for/ })).toHaveCount(0);
+  await u10.click();
   const plan = page.getByLabel("What you'll work on");
   await plan.fill("Warm-up: rondos\nMain: passing on the move");
   // A scanned sheet over the limit is refused before it's sent, naming its size; the typed plan stays.
@@ -1025,7 +1030,7 @@ test("tournament squads: the admin picks two U10s and messages them; only their 
   await page.goto("/friday");
   const question = page.getByRole("group", { name: /^Can Bilal play in County Cup on / });
   await expect(question).toBeVisible();
-  await question.getByRole("button", { name: "Yes" }).click();
+  await question.getByRole("button", { name: "Yes, Bilal can play", exact: true }).click();
   await expect(page.getByText("Saved. The coach can see Bilal can play.")).toBeVisible();
   await page.screenshot({ path: shot("parent-squad-invite"), fullPage: true });
   await page.goto("/news");
@@ -1112,7 +1117,7 @@ test("session changes: an admin edits a session, cancels it with a reason and te
   await expect(page.getByText("Check club news")).toHaveCount(0);
   const next = page.getByRole("group", { name: /Is Zara coming/ });
   await expect(next).toBeVisible();
-  await next.getByRole("button", { name: "Coming" }).click();
+  await next.getByRole("button", { name: "Zara is coming" }).click();
   await expect(page.getByText("Saved. Coach can see Zara is coming.")).toBeVisible();
   await page.screenshot({ path: shot("parent-friday-cancelled"), fullPage: true });
   await page.goto("/news");

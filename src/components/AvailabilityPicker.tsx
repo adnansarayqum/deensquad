@@ -51,6 +51,10 @@ export function AvailabilityPicker({
   const coming = optimistic === "coming";
   const away = optimistic === "away";
   const icon = compact ? 22 : 30;
+  // Each button is named for the child, so a family with several children doesn't hear "Coming" again and again. The
+  // visible word stays in the name (voice control users say what they see).
+  const comingName = squad ? `Yes, ${childName} can play` : `${childName} is coming`;
+  const awayName = squad ? `No, ${childName} can't play` : `Not this week: ${childName} isn't coming`;
 
   return (
     <div className="flex flex-col gap-3">
@@ -59,6 +63,7 @@ export function AvailabilityPicker({
         <button
           type="button"
           aria-pressed={coming}
+          aria-label={comingName}
           onClick={() => choose("coming")}
           className={`${base} ${coming ? "border-grass bg-grass text-on-grass shadow-lip-grass" : "border-line bg-paper text-ink shadow-lip-neutral"}`}
         >
@@ -68,6 +73,7 @@ export function AvailabilityPicker({
         <button
           type="button"
           aria-pressed={away}
+          aria-label={awayName}
           onClick={() => choose("away")}
           className={`${base} ${away ? "border-ink bg-cream text-ink shadow-lip-neutral" : "border-line bg-paper text-ink shadow-lip-neutral"}`}
         >

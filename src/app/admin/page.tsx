@@ -383,6 +383,8 @@ function NewsSection({ d }: { d: Dashboard }) {
                   </Link>
                   <Link
                     href={`/admin/news/${m.id}`}
+                    // Two messages can both be "20 not read": the name says which message's readers it opens.
+                    aria-label={unread > 0 ? `${unread} not read: see who hasn't read "${m.title}"` : `Everyone has read "${m.title}"`}
                     className={`inline-flex min-h-12 items-center text-[14px] font-bold ${unread > 0 ? "text-kit-orange" : "text-grass-text"}`}
                   >
                     {unread > 0 ? `${unread} not read` : "Everyone has read it"}

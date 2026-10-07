@@ -63,7 +63,7 @@ test("the admin adds a Girls session; it's on her Friday and its register lists 
   const friday = await parent.newPage();
   await friday.goto("/friday");
   await expect(friday.getByText(`${day} · Girls`, { exact: true })).toBeVisible();
-  await expect(friday.getByRole("group", { name: `Is Amina coming? ${day}` }).getByRole("button", { name: "Coming" })).toBeVisible();
+  await expect(friday.getByRole("group", { name: `Is Amina coming? ${day}` }).getByRole("button", { name: "Amina is coming" })).toBeVisible();
   await expect(friday.getByRole("heading", { name: `${TITLE} briefing` })).toBeVisible();
   await expect(friday.getByRole("region", { name: "Girls this week" })).toContainText("Girls coming this week");
   await expect(friday.locator("body")).not.toContainText("Girlss");

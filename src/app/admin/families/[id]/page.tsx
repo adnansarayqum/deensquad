@@ -99,7 +99,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                 ) : null}
                 <details className="w-full rounded-app border-2 border-line px-3.5 py-2.5">
                   <summary className="cursor-pointer text-sm font-bold">Edit {g.firstName}&apos;s details</summary>
-                  <StatefulForm action={saveGuardian} submitLabel="Save parent" savedMessage="Parent saved." className="mt-3">
+                  <StatefulForm action={saveGuardian} submitLabel={`Save ${g.name}`} savedMessage="Parent saved." className="mt-3">
                     <input type="hidden" name="child" value={child.id} />
                     <input type="hidden" name="guardian" value={g.id} />
                     <GuardianFields prefix={`g-${g.id}`} first={g.firstName} last={g.lastName} email={g.email} phone={g.phone} />
