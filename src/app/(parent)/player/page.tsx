@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Clock, Download, Flame, LayoutDashboard, Lock, LogOut, ScanLine, Star, Target, Trophy } from "lucide-react";
+import { Clock, Flame, LayoutDashboard, Lock, LogOut, ScanLine, Star, Target, Trophy } from "lucide-react";
 import { Card } from "@/components/ui";
 import { loadMyDeletionRequest } from "@/lib/data-requests";
 import { asUser } from "@/lib/db";
 import { groupPlural, type Badge } from "@/lib/domain";
 import { getFamily, getPlayerPage } from "@/lib/parent/load";
+import { DownloadMyData } from "@/components/DownloadMyData";
 import { SignOutForm } from "@/components/SignOutForm";
 import { StaffSwitch } from "@/components/StaffSwitch";
 
@@ -165,10 +166,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
             Your data
           </h2>
           <p className="text-[15px] leading-[22px]">See everything the app holds about you and your children, or ask the club to delete your account.</p>
-          <a href="/api/me/export" download className="btn-chunky btn-paper self-start">
-            <Download aria-hidden size={18} />
-            Download my data
-          </a>
+          <DownloadMyData />
           {deletionAsked ? (
             <p role="status" className="text-[15px] leading-[22px]">
               You asked the club to delete your account on{" "}

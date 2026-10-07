@@ -129,6 +129,20 @@ test("your data: a parent downloads their family's data, which holds their child
   const res = await page.request.get("/api/me/export");
   expect(res.headers()["content-disposition"]).toMatch(/^attachment; filename="deen-squad-my-data-/);
   expect(res.headers()["cache-control"]).toBe("no-store");
+
+  // Too many in an hour: said on the screen, and no file of error text is saved.
+  let downloads = 0;
+  page.on("download", () => downloads++);
+  await page.route("**/api/me/export", (route) => route.fulfill({ status: 429, body: "That's a lot of downloads in one hour. Try again later." }));
+  await section.getByRole("link", { name: "Download my data" }).click();
+  await expect(section.getByRole("status")).toHaveText("You've downloaded this a lot in the last hour. Try again later.");
+  await page.screenshot({ path: shot("your-data-too-many") });
+  expect(downloads).toBe(0);
+  await page.unroute("**/api/me/export");
+  // And the next one that's allowed clears the message.
+  const [again] = await Promise.all([page.waitForEvent("download"), section.getByRole("link", { name: "Download my data" }).click()]);
+  expect(again.suggestedFilename()).toMatch(/^deen-squad-my-data-\d{4}-\d{2}-\d{2}\.json$/);
+  await expect(section.getByRole("status")).toHaveText("");
   await context.close();
 
   // Signed out, there's nothing to download.
