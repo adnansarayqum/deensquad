@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Download } from "lucide-react";
-import { AdminTitle, Section } from "@/components/admin/bits";
+import { PageHeader, Section } from "@/components/admin/bits";
 import { ImportForm } from "@/components/admin/ImportForm";
 import { requireAdmin } from "@/lib/auth/session";
 import { AGE_GROUPS } from "@/lib/domain";
@@ -13,10 +12,7 @@ export default async function ImportPage() {
   return (
     // Forms and detail read best at phone-to-tablet width, even on a computer.
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <Link href="/admin/families" className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
-        ← Families
-      </Link>
-      <AdminTitle>Import families</AdminTitle>
+      <PageHeader back={{ href: "/admin/families", label: "Families" }} title="Import families" />
 
       <Section title="How it works">
         <ul className="flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-[22px]">

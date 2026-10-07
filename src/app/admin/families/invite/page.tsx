@@ -3,6 +3,7 @@ import Link from "next/link";
 import { FamiliesFilterFields } from "@/components/admin/FamiliesFilterFields";
 import { inviteParents } from "@/lib/admin/actions";
 import { countUninvited } from "@/lib/admin/data";
+import { PageHeader } from "@/components/admin/bits";
 import { familiesFilter, familiesHref, familiesScope } from "@/lib/admin/families-link";
 import { NEEDS } from "@/lib/admin/needs";
 import { requireAdmin } from "@/lib/auth/session";
@@ -25,17 +26,14 @@ export default async function InviteConfirmPage({ searchParams }: PageProps<"/ad
 
   return (
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <Link href={back} className="inline-flex min-h-11 items-center self-start text-sm font-bold text-grass-text">
-        ← Families
-      </Link>
       {count === 0 ? (
         <>
-          <h1 className="font-display text-[40px] leading-[0.95] tracking-[0.02em]">No one to invite</h1>
+          <PageHeader back={{ href: back, label: "Families" }} title="No one to invite" />
           <p className="text-[15px]">Every parent {scope} has already had an invite or signed in.</p>
         </>
       ) : (
         <>
-          <h1 className="font-display text-[40px] leading-[0.95] tracking-[0.02em]">{whole ? `Email all ${parents} in the club?` : `Email ${parents} ${scope}?`}</h1>
+          <PageHeader back={{ href: back, label: "Families" }} title={whole ? `Email all ${parents} in the club?` : `Email ${parents} ${scope}?`} />
           {need || q ? (
             <p className="text-[15px] text-ink-muted">
               The list: {[group, need ? NEEDS[need].label.toLowerCase() : null, q ? `matching “${q}”` : null].filter(Boolean).join(" · ")}

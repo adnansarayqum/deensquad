@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, Upload } from "lucide-react";
-import { AdminTitle, Notice } from "@/components/admin/bits";
+import { Notice, PageHeader } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
 import { countBehindOnNews, countUninvited, loadFamilies, type FamilyRow } from "@/lib/admin/data";
 import { familiesFilter, familiesHref, familiesInviteHref, familiesScope, familyChildHref } from "@/lib/admin/families-link";
@@ -36,8 +36,9 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
 
   return (
     <>
-      <AdminTitle
-        action={
+      <PageHeader
+        title="Families"
+        actions={
           isAdmin ? (
             <Link href="/admin/families/import" className="btn-chunky btn-paper btn-small">
               <Upload aria-hidden size={16} />
@@ -45,9 +46,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
             </Link>
           ) : null
         }
-      >
-        Families
-      </AdminTitle>
+      />
 
       {params.invited && params.notSent ? (
         <Notice tone="action">{`Sent to ${params.invited}. ${params.notSent} not sent – try again later.`}</Notice>

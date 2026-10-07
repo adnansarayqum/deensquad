@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { AdminTitle, Section } from "@/components/admin/bits";
+import { PageHeader, Section } from "@/components/admin/bits";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth/session";
@@ -95,15 +94,7 @@ export default async function ShopProductsPage() {
   const products = await asUser(user.id, (tx) => loadProducts(tx, { includeHidden: true }));
   return (
     <>
-      <AdminTitle
-        action={
-          <Link href="/admin/shop" className="btn-chunky btn-paper btn-small">
-            Back to orders
-          </Link>
-        }
-      >
-        Shop items
-      </AdminTitle>
+      <PageHeader back={{ href: "/admin/shop", label: "Shop" }} title="Shop items" subtitle="What parents can order, with sizes and prices." />
 
       <Section title="Add an item">
         <StatefulForm action={saveProduct} submitLabel="Add item" savedMessage="Item added.">

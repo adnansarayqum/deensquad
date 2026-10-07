@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Clock, Flame, Star, Target, Trophy } from "lucide-react";
-import { AppHeader, Card } from "@/components/ui";
+import { Clock, Flame, Star, Target, Trophy } from "lucide-react";
+import { PageHeader, Section } from "@/components/admin/bits";
+import { Card } from "@/components/ui";
 import { AwardForm, NoteForm } from "@/components/awards/AwardForm";
 import { aiConfigured } from "@/lib/ai/claude";
 import { removeAward, setBadge } from "@/lib/awards/actions";
@@ -39,31 +39,21 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
   const isAdmin = user.staff.role === "admin";
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-cream pb-[max(env(safe-area-inset-bottom),24px)]">
-      <AppHeader>
-        <Link href={`/coach/awards?group=${player.age_group}`} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-bold text-on-pitch-muted">
-          <ChevronLeft aria-hidden size={18} />
-          {groupPlural(player.age_group)}
-        </Link>
-        <h1 className="font-display text-[40px] leading-[0.95] tracking-[0.02em]">
-          {player.first_name} {player.last_name}
-        </h1>
-        <p className="text-sm text-on-pitch-muted">
-          {totals.points} {totals.points === 1 ? "point" : "points"} · {totals.stars} {totals.stars === 1 ? "star" : "stars"}
-        </p>
-      </AppHeader>
-      <main className="flex flex-col gap-4 px-4 pt-4">
-        <Card className="p-4">
-          <AwardForm playerId={player.id} firstName={player.first_name} />
-        </Card>
+    <div className="flex flex-col gap-4 lg:max-w-3xl">
+      <PageHeader
+        back={{ href: `/coach/awards?group=${player.age_group}`, label: "Points and stars" }}
+        title={`${player.first_name} ${player.last_name}`}
+        subtitle={`${groupPlural(player.age_group)} · ${totals.points} ${totals.points === 1 ? "point" : "points"} · ${totals.stars} ${totals.stars === 1 ? "star" : "stars"}`}
+      />
+      <Card className="p-4">
+        <AwardForm playerId={player.id} firstName={player.first_name} />
+      </Card>
 
-        {recent.length > 0 ? (
-          <section aria-labelledby="given" className="flex flex-col gap-2">
-            <h2 id="given" className="text-label text-ink-muted uppercase">
-              Given so far
-            </h2>
+      {recent.length > 0 ? (
+        <Section title="Given so far">
+          <ul className="flex flex-col gap-2">
             {recent.map((a) => (
-              <div key={a.id} className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-2.5">
+              <li key={a.id} className="flex items-center gap-3 rounded-dash border-2 border-line bg-cream px-3.5 py-2.5">
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="flex items-center gap-1.5 text-[15px] font-bold">
                     {a.stars ? <Star aria-hidden size={15} className="text-gold-text" fill="currentColor" strokeWidth={0} /> : null}
@@ -85,12 +75,13 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
                     </button>
                   </form>
                 ) : null}
-              </div>
+              </li>
             ))}
-          </section>
-        ) : null}
+          </ul>
+        </Section>
+      ) : null}
 
-        {badges.length > 0 ? (
+      {badges.length > 0 ? (
           <Card className="flex flex-col gap-3 p-4">
             <h2 className="text-[17px] font-extrabold">Badges</h2>
             <ul className="flex flex-col gap-2">
@@ -128,10 +119,9 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
           </Card>
         ) : null}
 
-        <Card className="p-4">
-          <NoteForm playerId={player.id} firstName={player.first_name} ai={aiConfigured()} />
-        </Card>
-      </main>
+      <Card className="p-4">
+        <NoteForm playerId={player.id} firstName={player.first_name} ai={aiConfigured()} />
+      </Card>
     </div>
   );
 }

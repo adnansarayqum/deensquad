@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Attachment } from "@/components/plans/Attachment";
-import { StaffShell } from "@/components/plans/StaffShell";
+import { PageHeader } from "@/components/admin/bits";
 import { PracticeFromPlan, WritingHelp } from "@/components/writing/WritingHelp";
 import { aiConfigured } from "@/lib/ai/claude";
 import { shortDay } from "@/lib/dates";
@@ -36,7 +36,8 @@ export default async function StaffPracticePage() {
   const recentPlans = plans.map((p) => ({ id: p.id, label: `${p.age_group} · ${shortDay(iso(p.starts_at))}`, text: p.body }));
 
   return (
-    <StaffShell back="/coach/plans" backLabel="Session plans" title="Home practice" intro="Drills and crib sheets for families to try at home. Parents find them on the Friday screen.">
+    <div className="flex flex-col gap-4 lg:max-w-3xl">
+      <PageHeader back={{ href: "/coach/plans", label: "Session plans" }} title="Home practice sheets" subtitle="Drills and crib sheets for families to try at home. Parents find them on the Friday screen." />
       <div className="rounded-app border-2 border-line bg-paper p-4">
         <StatefulForm action={addPracticeSheet} keepOnFailure="That didn't save. Your sheet is still here." submitLabel="Share with parents" savedMessage="Shared. Parents in those groups can see it now.">
           {ai ? <PracticeFromPlan plans={recentPlans} titleId="title" bodyId="body" /> : null}
@@ -77,7 +78,7 @@ export default async function StaffPracticePage() {
         </StatefulForm>
       </div>
 
-      <h2 className="mt-2 text-label text-ink-muted uppercase">Shared</h2>
+      <h2 className="text-label text-ink-muted uppercase">Shared</h2>
       {sheets.length === 0 ? <Card className="p-4 text-[15px] text-ink-muted">Nothing shared yet.</Card> : null}
       {sheets.map((s) => (
         <Card key={s.id} className="flex flex-col gap-2 p-3.5">
@@ -100,6 +101,6 @@ export default async function StaffPracticePage() {
           </div>
         </Card>
       ))}
-    </StaffShell>
+    </div>
   );
 }

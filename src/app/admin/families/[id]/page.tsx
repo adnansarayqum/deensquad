@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Notice, Section } from "@/components/admin/bits";
+import { Notice, PageHeader, Section } from "@/components/admin/bits";
 import { FamiliesFilterFields } from "@/components/admin/FamiliesFilterFields";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
@@ -40,30 +39,20 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
   return (
     // Forms and detail read best at phone-to-tablet width, even on a computer.
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <Link href={familiesHref(filter)} className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
-        ← Families
-      </Link>
-      <div className="flex items-center gap-3">
-        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-pill bg-pitch font-display text-[28px] text-on-pitch">
-          {child.shirtNumber ?? child.firstName[0]}
-        </span>
-        <div>
-          <h1 className="font-display text-[40px] leading-[0.95] tracking-[0.02em]">
-            {child.firstName} {child.lastName}
-          </h1>
-          <p className="text-[15px] text-ink-muted">
-            {groupPlural(child.ageGroup)} · {child.attended} {child.attended === 1 ? "session" : "sessions"} attended
+      <PageHeader
+        back={{ href: familiesHref(filter), label: "Families" }}
+        title={`${child.firstName} ${child.lastName}`}
+        subtitle={`${groupPlural(child.ageGroup)} · ${child.attended} ${child.attended === 1 ? "session" : "sessions"} attended`}
+      >
+        {child.missedLast3 ? (
+          <p className="flex flex-wrap items-center gap-2 text-[15px]">
+            <Pill tone="action">Missed the last 3 sessions</Pill>
+            <span className="text-ink-muted">
+              {child.lastHereThisSeason ? `Last here ${signedOn.format(new Date(child.lastHereThisSeason))}` : "Not here yet this season"}
+            </span>
           </p>
-          {child.missedLast3 ? (
-            <p className="mt-1 flex flex-wrap items-center gap-2 text-[15px]">
-              <Pill tone="action">Missed the last 3 sessions</Pill>
-              <span className="text-ink-muted">
-                {child.lastHereThisSeason ? `Last here ${signedOn.format(new Date(child.lastHereThisSeason))}` : "Not here yet this season"}
-              </span>
-            </p>
-          ) : null}
-        </div>
-      </div>
+        ) : null}
+      </PageHeader>
 
       {flags.invited ? <Notice>Invite sent.</Notice> : null}
       {flags.invite === "failed" ? <Notice tone="action">The invite wasn&apos;t sent. Try again later.</Notice> : null}

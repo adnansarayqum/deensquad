@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AdminTitle, ReadBar, Section } from "@/components/admin/bits";
+import { PageHeader, ReadBar, Section } from "@/components/admin/bits";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { postNews } from "@/lib/admin/actions";
 import { loadNewsList } from "@/lib/admin/data";
@@ -22,7 +22,7 @@ export default async function AdminNewsPage() {
 
   return (
     <>
-      <AdminTitle>News</AdminTitle>
+      <PageHeader title="News" subtitle="Post a message and see who has read it." />
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <Section title="Post a message">

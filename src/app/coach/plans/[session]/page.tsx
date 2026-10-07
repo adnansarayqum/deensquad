@@ -4,7 +4,7 @@ import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Attachment } from "@/components/plans/Attachment";
 import { WritingHelp } from "@/components/writing/WritingHelp";
 import { aiConfigured } from "@/lib/ai/claude";
-import { StaffShell } from "@/components/plans/StaffShell";
+import { PageHeader } from "@/components/admin/bits";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { UUID } from "@/lib/auth/tokens";
 import { clock, shortDay } from "@/lib/dates";
@@ -29,7 +29,8 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/coa
   const { session, plan } = page;
 
   return (
-    <StaffShell back="/coach/plans" backLabel="Session plans" title={`${group} plan`} intro={`${shortDay(session.startsAt)} · ${session.title} ${clock(session.startsAt)}`}>
+    <div className="flex flex-col gap-4 lg:max-w-3xl">
+      <PageHeader back={{ href: "/coach/plans", label: "Session plans" }} title={`${group} plan`} subtitle={`${shortDay(session.startsAt)} · ${session.title} ${clock(session.startsAt)}`} />
       <div className="rounded-app border-2 border-line bg-paper p-4">
         <StatefulForm action={savePlan} keepOnFailure="That didn't save. Your plan is still here." submitLabel={plan ? "Save changes" : "Share with parents"} savedMessage={`Saved. ${group} parents can see it on the Friday screen, and get a notification if they have them on.`}>
           <input type="hidden" name="session" value={session.id} />
@@ -77,6 +78,6 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/coa
           </button>
         </form>
       ) : null}
-    </StaffShell>
+    </div>
   );
 }

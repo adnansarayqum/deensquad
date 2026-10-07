@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AdminTitle, Section } from "@/components/admin/bits";
+import { PageHeader, Section } from "@/components/admin/bits";
 import { loadMonthlySummary, monthName, monthOf, parseMonth, previousMonth, summarySections } from "@/lib/admin/summary";
 import { requireAdmin } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
@@ -19,8 +19,7 @@ export default async function SummaryPreview({ searchParams }: PageProps<"/admin
 
   return (
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <AdminTitle>{monthName(month)} summary</AdminTitle>
-      <p className="text-[15px] text-ink-muted">What the monthly email to admins says. Figures under Right now are as they stand today.</p>
+      <PageHeader title={`${monthName(month)} summary`} subtitle="What the monthly email to admins says. Figures under Right now are as they stand today." />
       {summarySections(summary).map((s) => (
         <Section key={s.title} title={s.title}>
           <ul className="flex flex-col gap-1">

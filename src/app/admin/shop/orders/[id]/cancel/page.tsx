@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdminTitle } from "@/components/admin/bits";
+import { PageHeader } from "@/components/admin/bits";
 import { UUID } from "@/lib/auth/tokens";
 import { requireAdmin } from "@/lib/auth/session";
 import { emailConfigured } from "@/lib/email/send";
@@ -24,10 +24,7 @@ export default async function CancelOrderPage({ params }: PageProps<"/admin/shop
 
   return (
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <Link href="/admin/shop" className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
-        ← Shop
-      </Link>
-      <AdminTitle>{`Cancel order ${order.reference}${who}?`}</AdminTitle>
+      <PageHeader back={{ href: "/admin/shop", label: "Shop" }} title={`Cancel order ${order.reference}${who}?`} />
       {cancellable ? (
         <form action={setOrderStatus} className="flex flex-col gap-4 rounded-app border-2 border-line bg-paper p-4">
           <input type="hidden" name="order" value={order.id} />
