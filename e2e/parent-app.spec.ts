@@ -1281,6 +1281,27 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     expect(coach.url()).toBe(register);
     await expect(scan).toBeFocused();
     await expect.poll(cameraOn).toBe(false);
+    // A double tap on Close goes back once only: still on the register.
+    await scan.click();
+    await expect(scanner).toBeVisible();
+    await scanner.getByRole("button", { name: "Close the scanner" }).dblclick();
+    await expect(scanner).toHaveCount(0);
+    await coach.waitForTimeout(500);
+    expect(coach.url()).toBe(register);
+    await expect(coach.getByRole("heading", { name: "Gate test register" })).toBeVisible();
+    // The phone is locked or the coach switches apps: the scanner closes and the camera goes off.
+    await scan.click();
+    await expect.poll(cameraOn).toBe(true);
+    await coach.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect(scanner).toHaveCount(0);
+    await expect.poll(cameraOn).toBe(false);
+    expect(coach.url()).toBe(register);
+    await coach.evaluate(() => {
+      delete (document as unknown as { visibilityState?: string }).visibilityState;
+    });
     await here.getByRole("button", { name: "Undo check-in for Musa S." }).click();
     await expect(here.getByRole("heading", { name: "Here (0)" })).toBeVisible();
 

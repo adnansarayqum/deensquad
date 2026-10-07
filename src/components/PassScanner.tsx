@@ -46,8 +46,11 @@ export function PassScanner({ disabled = false }: { disabled?: boolean }) {
     pushed.current = true;
   };
   const closeScanner = useCallback(() => {
-    if (pushed.current) history.back();
-    else setOpen(false);
+    if (pushed.current) {
+      // Cleared first, so a second tap (or Escape) before popstate arrives doesn't go back a second page.
+      pushed.current = false;
+      history.back();
+    } else setOpen(false);
   }, []);
 
   useEffect(() => {
@@ -67,11 +70,17 @@ export function PassScanner({ disabled = false }: { disabled?: boolean }) {
         closeScanner();
       }
     };
+    // The phone locked or the coach switched apps: close, which stops the camera.
+    const onHide = () => {
+      if (document.visibilityState === "hidden") closeScanner();
+    };
     window.addEventListener("popstate", onPop);
     document.addEventListener("keydown", onKey);
+    document.addEventListener("visibilitychange", onHide);
     return () => {
       window.removeEventListener("popstate", onPop);
       document.removeEventListener("keydown", onKey);
+      document.removeEventListener("visibilitychange", onHide);
     };
   }, [open, closeScanner]);
 
