@@ -247,6 +247,14 @@ function AttendanceSection({ d, limited }: { d: Dashboard; limited: boolean }) {
         </table>
       )}
 
+      {d.attendance.missedLast3 > 0 ? (
+        <p className="text-[15px]">
+          <Link href="/admin/families?need=missing3" className="inline-flex min-h-12 items-center font-bold text-grass-text underline">
+            {d.attendance.missedLast3 === 1 ? "1 child has missed their last 3 sessions" : `${d.attendance.missedLast3} children have missed their last 3 sessions`}
+          </Link>
+        </p>
+      ) : null}
+
       <Sub>Checked in at the last {d.attendance.recent.length || 8} sessions</Sub>
       {d.attendance.recent.length === 0 ? (
         <Empty>No sessions held yet.</Empty>

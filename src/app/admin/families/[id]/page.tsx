@@ -54,6 +54,14 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
           <p className="text-[15px] text-ink-muted">
             {groupPlural(child.ageGroup)} · {child.attended} {child.attended === 1 ? "session" : "sessions"} attended
           </p>
+          {child.missedLast3 ? (
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-[15px]">
+              <Pill tone="action">Missed the last 3 sessions</Pill>
+              <span className="text-ink-muted">
+                {child.lastHereThisSeason ? `Last here ${signedOn.format(new Date(child.lastHereThisSeason))}` : "Not here yet this season"}
+              </span>
+            </p>
+          ) : null}
         </div>
       </div>
 

@@ -48,7 +48,13 @@ export type Channel = (typeof CHANNELS)[number];
 
 export type Dashboard = {
   players: number;
-  attendance: { next: NextSessionGroup[]; season: SeasonGroup[]; recent: RecentSession[] };
+  attendance: {
+    next: NextSessionGroup[];
+    season: SeasonGroup[];
+    recent: RecentSession[];
+    /** Children whose last 3 sessions all have no check-in (NEEDS.missing3, the Families list it links to). */
+    missedLast3: number;
+  };
   families: {
     parents: number;
     signedIn: number;
@@ -72,6 +78,41 @@ export function monthStart(now: Date): Date {
 
 export function averagePct(checkedIn: number, expected: number): number | null {
   return expected > 0 ? Math.round((checkedIn / expected) * 100) : null;
+}
+
+/**
+ * Attendance by group over sessions that started at or after `from` and finished by `to` (not cancelled): sessions
+ * with the register taken, check-ins, and the children expected on each day. The overview's season table and the
+ * monthly summary use this, so their percentages are worked out the same way.
+ */
+export async function groupAttendance(tx: Queryable, groups: readonly AgeGroup[], from: Date, to: Date): Promise<SeasonGroup[]> {
+  const rows = await tx.query<{ group: AgeGroup; squad: number; held: number; checked_in: number; expected: number }>(
+    `select g.grp as "group",
+       (select count(*)::int from players p where p.age_group::text = g.grp) as squad,
+       (count(s.id) filter (where c.n > 0))::int as held,
+       coalesce(sum(c.n), 0)::int as checked_in,
+       coalesce(sum(c.expected) filter (where c.n > 0), 0)::int as expected
+     from unnest($1::text[]) with ordinality as g (grp, ord)
+     left join sessions s on g.grp = any (s.age_groups::text[]) and s.starts_at >= $2 and s.ends_at <= $3 and s.cancelled_at is null
+     -- each session against the group as it was that day: children who'd joined by then, and anyone checked in
+     left join lateral (
+       select count(a.player_id)::int as n, count(*)::int as expected
+       from players p left join attendance a on a.session_id = s.id and a.player_id = p.id
+       where p.age_group::text = g.grp
+         and (p.joined_on <= (s.starts_at at time zone 'Europe/London')::date or a.player_id is not null)
+     ) c on true
+     group by g.grp, g.ord
+     order by g.ord`,
+    [[...groups], from, to],
+  );
+  return rows.map((r) => ({
+    group: r.group,
+    squad: r.squad,
+    held: r.held,
+    checkedIn: r.checked_in,
+    expected: r.expected,
+    averagePct: averagePct(r.checked_in, r.expected),
+  }));
 }
 
 // A message reaches a child when it's for everyone (null or empty audience) or for the child's group,
@@ -111,25 +152,7 @@ export async function loadDashboard(
        order by g.ord`,
       [groups, now],
     ),
-    tx.query<{ group: AgeGroup; squad: number; held: number; checked_in: number; expected: number }>(
-      `select g.grp as "group",
-         (select count(*)::int from players p where p.age_group::text = g.grp) as squad,
-         (count(s.id) filter (where c.n > 0))::int as held,
-         coalesce(sum(c.n), 0)::int as checked_in,
-         coalesce(sum(c.expected) filter (where c.n > 0), 0)::int as expected
-       from unnest($1::text[]) with ordinality as g (grp, ord)
-       left join sessions s on g.grp = any (s.age_groups::text[]) and s.starts_at >= $2 and s.ends_at <= $3 and s.cancelled_at is null
-       -- each session against the group as it was that day: children who'd joined by then, and anyone checked in
-       left join lateral (
-         select count(a.player_id)::int as n, count(*)::int as expected
-         from players p left join attendance a on a.session_id = s.id and a.player_id = p.id
-         where p.age_group::text = g.grp
-           and (p.joined_on <= (s.starts_at at time zone 'Europe/London')::date or a.player_id is not null)
-       ) c on true
-       group by g.grp, g.ord
-       order by g.ord`,
-      [groups, season, now],
-    ),
+    groupAttendance(tx, groups, season, now),
     tx.query<{ id: string; title: string; starts_at: Date; checked_in: number }>(
       `select s.id, s.title, s.starts_at,
          (select count(*)::int from attendance a join players p on p.id = a.player_id
@@ -147,6 +170,7 @@ export async function loadDashboard(
        )
        select
          (select count(*)::int from mine) as players,
+         (select count(*)::int from mine p where ${NEEDS.missing3.where}) as "missedLast3",
          (select count(*)::int from parents) as parents,
          (select count(*)::int from parents where auth_user_id is not null) as "signedIn",
          (select count(*)::int from parents where auth_user_id is null and invited_at is not null) as invited,
@@ -207,15 +231,9 @@ export async function loadDashboard(
         away: r.away,
         unanswered: Math.max(0, r.squad - r.coming - r.away),
       })),
-      season: seasonRows.map((r) => ({
-        group: r.group,
-        squad: r.squad,
-        held: r.held,
-        checkedIn: r.checked_in,
-        expected: r.expected,
-        averagePct: averagePct(r.checked_in, r.expected),
-      })),
+      season: seasonRows,
       recent: recent.reverse().map((r) => ({ id: r.id, title: r.title, startsAt: iso(r.starts_at), checkedIn: r.checked_in })),
+      missedLast3: f.missedLast3,
     },
     families: {
       parents: f.parents,

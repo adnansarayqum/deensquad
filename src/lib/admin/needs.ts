@@ -1,5 +1,5 @@
 import { CONTRACT } from "../documents/contract";
-import { newsReaches } from "../squads/sql";
+import { newsReaches, sessionIsFor } from "../squads/sql";
 
 // What a child still needs, as SQL conditions on `players p`. The Families filter (?need=) and the
 // overview's to-do figures and its to-check, overdue and no-plan payment figures use these, so each
@@ -30,6 +30,24 @@ export function behindOnNews(g: string, within: string): string {
       and not exists (select 1 from announcement_reads br where br.announcement_id = bn.id and br.guardian_id = ${g}.id)) >= 2)`;
 }
 
+/**
+ * "Missing lately": the child's last 3 sessions all have no check-in for them. A session counts when it has finished,
+ * wasn't cancelled, was for the child (sessionIsFor: their group's, or a squad they were picked for), came after
+ * they joined (players.joined_on, London date) and had their group's register taken (someone from the group checked
+ * in), the same rules as the squad picker's attendance. Fewer than 3 such sessions is never "missing". Uses the
+ * database's now(), so the overview and the Families list agree.
+ */
+export const MISSED_LAST_3 = `(select count(*) = 3 and count(ma.player_id) = 0
+    from (select ms.id from sessions ms
+          where ms.cancelled_at is null and ms.ends_at <= now()
+            and ${sessionIsFor("ms", "p")}
+            and (p.joined_on <= (ms.starts_at at time zone 'Europe/London')::date
+                 or exists (select 1 from attendance mj where mj.session_id = ms.id and mj.player_id = p.id))
+            and exists (select 1 from attendance mt join players mtp on mtp.id = mt.player_id
+                        where mt.session_id = ms.id and mtp.age_group = p.age_group)
+          order by ms.starts_at desc limit 3) ml
+    left join attendance ma on ma.session_id = ml.id and ma.player_id = p.id)`;
+
 export const NEEDS = {
   contacts: { label: "No emergency contact", where: `not exists (select 1 from emergency_contacts ec where ec.player_id = p.id)` },
   consent: { label: "No photo answer", where: `p.photo_consent is null` },
@@ -40,6 +58,7 @@ export const NEEDS = {
   missing: { label: "No payment plan set up", where: `${paymentState} = 'missing'` },
   overdue: { label: "Payment overdue", where: `${paymentState} = 'overdue'` },
   check: { label: "Payment to check", where: `${paymentState} = 'self_reported'` },
+  missing3: { label: "Missed the last 3 sessions", where: MISSED_LAST_3 },
   // Children with a parent who's behind on news (see behindOnNews); `within` is the list's groups.
   unread: {
     label: "Parent hasn't read 2+ messages",
