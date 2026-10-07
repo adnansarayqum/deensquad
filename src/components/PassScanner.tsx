@@ -88,19 +88,16 @@ export function PassScanner({ disabled = false }: { disabled?: boolean }) {
     }, 1500);
   }, []);
 
-  const stop = useCallback(() => {
-    const stream = video.current?.srcObject as MediaStream | null;
-    stream?.getTracks().forEach((t) => t.stop());
-    if (video.current) video.current.srcObject = null;
-  }, []);
-
   useEffect(() => {
     if (!open) return;
     let frame = 0;
     let cancelled = false;
+    // Kept here, not read back from the <video>: by the time this effect is cleaned up on close, React has already
+    // let go of the video element, and the camera would stay on.
+    let stream: MediaStream | null = null;
     (async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
         if (cancelled) return stream.getTracks().forEach((t) => t.stop());
         video.current!.srcObject = stream;
         await video.current!.play();
@@ -135,9 +132,9 @@ export function PassScanner({ disabled = false }: { disabled?: boolean }) {
     return () => {
       cancelled = true;
       cancelAnimationFrame(frame);
-      stop();
+      stream?.getTracks().forEach((t) => t.stop());
     };
-  }, [open, stop, send]);
+  }, [open, send]);
 
   if (!open) {
     return (

@@ -247,6 +247,7 @@ test("player: switch between children and sign out", async ({ page }) => {
   // A made-up Back target off the site is ignored.
   await page.goto("/privacy?from=//evil.example");
   await expect(page.getByRole("link", { name: "Back", exact: true })).toHaveAttribute("href", "/player");
+  await page.getByRole("link", { name: "Back", exact: true }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   await page.goto("/news");
