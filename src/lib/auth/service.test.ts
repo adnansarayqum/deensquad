@@ -7,6 +7,7 @@ import {
   createSession,
   deleteSession,
   ensureBootstrapAdmin,
+  purgeExpiredSessions,
   issueSignIn,
   peekLink,
   readSession,
@@ -67,7 +68,7 @@ describe("sign-in codes", () => {
   it("limits how many codes one email can ask for in an hour", async () => {
     for (let i = 0; i < LIMITS.perEmailPerHour; i++) await issue(DEV_EMAILS.parent, later(i));
     const blocked = await t.asSystem((tx) => issueSignIn(tx, { email: DEV_EMAILS.parent, ip: "9.9.9.9", now: later(10), purpose: "sign_in" }));
-    expect(blocked).toEqual({ ok: false, reason: "rate_limited" });
+    expect(blocked).toEqual({ ok: false, reason: "rate_limited", limit: "email" });
     const nextHour = await t.asSystem((tx) => issueSignIn(tx, { email: DEV_EMAILS.parent, ip: "9.9.9.9", now: later(70), purpose: "sign_in" }));
     expect(nextHour.ok).toBe(true);
   });
@@ -85,7 +86,7 @@ describe("sign-in codes", () => {
     const hundredth = await t.asSystem((tx) => issueSignIn(tx, { email: emails[0].email, ip: "5.5.5.5", now: later(2), purpose: "sign_in" }));
     expect(hundredth.ok).toBe(true);
     const blocked = await t.asSystem((tx) => issueSignIn(tx, { email: emails[1].email, ip: "5.5.5.5", now: later(3), purpose: "sign_in" }));
-    expect(blocked).toEqual({ ok: false, reason: "rate_limited" });
+    expect(blocked).toEqual({ ok: false, reason: "rate_limited", limit: "ip" });
   });
 
   it("refuses sign-up 301 in an hour across the club, while parents the club has can still sign in", async () => {
@@ -99,7 +100,7 @@ describe("sign-in codes", () => {
     );
     const registration = { firstName: "Hana", lastName: "Rahman", phone: null, children: [{ firstName: "Ilyas", lastName: "Rahman", dateOfBirth: "2017-05-01", ageGroup: "U10" as const }] };
     const signUp = await t.asSystem((tx) => issueSignIn(tx, { email: "hana@example.com", ip: "7.7.7.7", now: later(5), purpose: "sign_in", registration }));
-    expect(signUp).toEqual({ ok: false, reason: "rate_limited", clubWide: true });
+    expect(signUp).toEqual({ ok: false, reason: "rate_limited", limit: "club" });
     expect((await issue(DEV_EMAILS.parent, later(5))).code).toMatch(/^\d{6}$/);
     const nextHour = await t.asSystem((tx) => issueSignIn(tx, { email: "hana@example.com", ip: "7.7.7.7", now: later(62), purpose: "sign_in", registration }));
     expect(nextHour.ok).toBe(true);
@@ -147,6 +148,20 @@ describe("sessions", () => {
     await t.asSystem((tx) => deleteSession(tx, token));
     expect(await t.asSystem((tx) => readSession(tx, token, later(161 * 24 * 60)))).toBeNull();
     expect(await t.asSystem((tx) => readSession(tx, "made-up", now))).toBeNull();
+  });
+
+  it("purges sessions that expired over a week ago, keeping live and just-expired ones", async () => {
+    const userId = await t.signIn(DEV_EMAILS.parent);
+    const live = await t.asSystem((tx) => createSession(tx, userId, now));
+    const stale = await t.asSystem((tx) => createSession(tx, userId, new Date(now.getTime() - 100 * 86400_000)));
+    const justExpired = await t.asSystem((tx) => createSession(tx, userId, new Date(now.getTime() - 93 * 86400_000)));
+    expect(await t.asSystem((tx) => purgeExpiredSessions(tx, now))).toBe(1);
+    const [{ n }] = await t.asSystem((tx) => tx.query<{ n: number }>(`select count(*)::int as n from auth.sessions`));
+    expect(n).toBe(2);
+    expect(await t.asSystem((tx) => readSession(tx, live, now))).not.toBeNull();
+    expect(await t.asSystem((tx) => readSession(tx, stale, now))).toBeNull();
+    expect(await t.asSystem((tx) => readSession(tx, justExpired, now))).toBeNull();
+    expect(await t.asSystem((tx) => purgeExpiredSessions(tx, later(8 * 24 * 60)))).toBe(1);
   });
 });
 

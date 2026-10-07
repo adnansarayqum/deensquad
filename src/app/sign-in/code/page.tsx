@@ -24,7 +24,7 @@ export default async function CodePage() {
           // Deliberately the same for any address, so this screen never tells anyone who is a member.
           <>
             We&apos;ve sent a code to <span className="font-bold text-on-pitch">{pending.to}</span> if it&apos;s on the club&apos;s list. It
-            works for 15 minutes.
+            works for 15 minutes. Already got a code? Enter the latest one.
           </>
         )
       }
