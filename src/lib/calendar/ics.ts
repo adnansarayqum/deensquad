@@ -1,6 +1,6 @@
 // The family calendar feed (GET /api/calendar/<token>.ics) as iCalendar text (RFC 5545). Pure: no database.
 // Times are written in UTC ("Z"), which every calendar app shows in the viewer's own time zone, so a session at
-// 6:30pm London reads 6:30pm on both sides of a clock change without shipping a VTIMEZONE.
+// 6:30pm London reads 6:30pm on both sides of a clock change. A Europe/London VTIMEZONE is always included (a valid calendar even with no events).
 
 export const CALENDAR_DOMAIN = "thedeensquadfootballacademy.co.uk";
 
@@ -77,6 +77,26 @@ function description(s: CalendarSession): string {
   return lines.join("\n");
 }
 
+const LONDON = [
+  "BEGIN:VTIMEZONE",
+  "TZID:Europe/London",
+  "BEGIN:DAYLIGHT",
+  "TZOFFSETFROM:+0000",
+  "TZOFFSETTO:+0100",
+  "TZNAME:BST",
+  "DTSTART:19700329T010000",
+  "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU",
+  "END:DAYLIGHT",
+  "BEGIN:STANDARD",
+  "TZOFFSETFROM:+0100",
+  "TZOFFSETTO:+0000",
+  "TZNAME:GMT",
+  "DTSTART:19701025T020000",
+  "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU",
+  "END:STANDARD",
+  "END:VTIMEZONE",
+];
+
 /** The whole feed. `now` is the DTSTAMP of every event (when this copy was made). */
 export function buildCalendar(sessions: CalendarSession[], now: Date): string {
   const lines = [
@@ -89,6 +109,9 @@ export function buildCalendar(sessions: CalendarSession[], now: Date): string {
     "X-WR-TIMEZONE:Europe/London",
     "REFRESH-INTERVAL;VALUE=DURATION:PT6H",
     "X-PUBLISHED-TTL:PT6H",
+    // Always there, so a family with no sessions still gets a valid calendar (RFC 5545 needs one component).
+    // Events are in UTC; this describes the club's own time zone for apps that show it.
+    ...LONDON,
   ];
   for (const s of sessions) {
     lines.push(

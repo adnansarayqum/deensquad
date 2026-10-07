@@ -68,4 +68,11 @@ describe("calendar feed text", () => {
     expect(text).toContain("STATUS:CANCELLED");
     expect(text).toContain("DESCRIPTION:Cancelled: Pitch flooded");
   });
+
+  it("is a valid calendar with no sessions: it always has the London time zone", () => {
+    const ics = buildCalendar([], now);
+    expect(ics).toContain("BEGIN:VTIMEZONE\r\nTZID:Europe/London");
+    expect(ics).toContain("END:VTIMEZONE\r\nEND:VCALENDAR\r\n");
+    expect(ics).not.toContain("BEGIN:VEVENT");
+  });
 });
