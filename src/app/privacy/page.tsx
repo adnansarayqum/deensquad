@@ -208,7 +208,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
           <List
             items={[
               "see the information we hold about you or your child",
-              "correct anything that is wrong (you can change contacts and photo consent yourself in the app)",
+              "correct anything that is wrong (you can change your own name and mobile, your children's names and dates of birth, contacts and photo consent yourself in the app, on the player screen)",
               "delete information we no longer need",
               "stop or limit how we use it, or object to how we use it",
               "give you a copy to take elsewhere",

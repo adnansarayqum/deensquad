@@ -156,6 +156,9 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
 
       {isAdmin ? (
         <Section title="Child's details">
+          {child.changedByParentAt ? (
+            <p className="text-sm text-ink-muted">Last changed by the parent on {signedOn.format(new Date(child.changedByParentAt))}.</p>
+          ) : null}
           <StatefulForm action={updateChild} submitLabel="Save details" savedMessage="Details saved.">
             <input type="hidden" name="id" value={child.id} />
             <div className="grid gap-3 sm:grid-cols-2">

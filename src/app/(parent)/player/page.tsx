@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Clock, Flame, LayoutDashboard, Lock, LogOut, ScanLine, Star, Target, Trophy } from "lucide-react";
+import { ChevronRight, Clock, Flame, LayoutDashboard, Lock, LogOut, ScanLine, Star, Target, Trophy } from "lucide-react";
 import { Card } from "@/components/ui";
 import { loadMyDeletionRequest } from "@/lib/data-requests";
 import { asUser } from "@/lib/db";
@@ -15,8 +15,11 @@ export const metadata: Metadata = { title: "Player" };
 const badgeIcons: Record<Badge["icon"], typeof Star> = { star: Star, clock: Clock, trophy: Trophy, flame: Flame, target: Target };
 
 export default async function PlayerPage({ searchParams }: PageProps<"/player">) {
-  const [{ family, child, stats, badges, note, awards }, { user }] = await Promise.all([getPlayerPage((await searchParams).child), getFamily()]);
+  const flags = await searchParams;
+  const [{ family, child, stats, badges, note, awards }, { user }] = await Promise.all([getPlayerPage(flags.child), getFamily()]);
   const deletionAsked = await asUser(user.id, loadMyDeletionRequest);
+  // Back from Add a child: the child it opened on was just added (only said for the child that's showing).
+  const justAdded = child && flags.added === "1" && flags.child === child.id;
 
   return (
     <>
@@ -71,7 +74,20 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
       )}
 
       <main className="flex flex-col gap-3.5 px-4 pt-4 pb-4">
-        {!child ? <Card className="p-4 text-[15px] leading-[22px]">No players are linked to your email yet. Ask the club to add your child.</Card> : null}
+        {!child ? (
+          <Card className="flex flex-col gap-2 p-4 text-[15px] leading-[22px]">
+            <p>No players are linked to your email yet. Add your child here, or ask the club to add them.</p>
+            <Link href="/player/add-child" className="btn-chunky btn-grass">
+              Add a child
+            </Link>
+          </Card>
+        ) : null}
+
+        {justAdded ? (
+          <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+            {child.firstName} is now on your account. The club has been told and will check their group.
+          </p>
+        ) : null}
 
         {child && stats ? (
           stats.attendancePct === null ? (
@@ -160,6 +176,26 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
             </p>
           </div>
         ) : null}
+
+        <section aria-labelledby="your-family" className="mt-2 flex flex-col rounded-app border-2 border-line bg-paper p-1">
+          <h2 id="your-family" className="px-3 pt-3 pb-1 text-base font-extrabold">
+            Your family
+          </h2>
+          {child ? (
+            <Link href={`/player/child/${child.id}`} className="flex min-h-12 items-center justify-between gap-3 px-3 text-[15px] font-bold">
+              {child.firstName}&apos;s details
+              <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+            </Link>
+          ) : null}
+          <Link href="/player/me" className="flex min-h-12 items-center justify-between gap-3 border-t-2 border-line px-3 text-[15px] font-bold">
+            Your details
+            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+          </Link>
+          <Link href="/player/add-child" className="flex min-h-12 items-center justify-between gap-3 border-t-2 border-line px-3 text-[15px] font-bold">
+            Add a child
+            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+          </Link>
+        </section>
 
         <section aria-labelledby="calendar" className="mt-2 flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
           <h2 id="calendar" className="text-base font-extrabold">

@@ -176,6 +176,8 @@ export type ChildDetail = {
   missedLast3: boolean;
   /** When they were last checked in, if that was this season (from 1 August); null if not yet this season. */
   lastHereThisSeason: string | null;
+  /** When a parent last changed the name or date of birth from the app (migration 0021); null if never. */
+  changedByParentAt: string | null;
   guardians: (FamilyGuardian & { firstName: string; lastName: string; otherChildren: string[] })[];
   contacts: { id: string; name: string; phone: string; relationship: string | null }[];
   /** This season's club contract (CONTRACT.id): who agreed it and when, or null if nobody has yet. */
@@ -197,9 +199,10 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
     attended: number;
     missed_last_3: boolean;
     last_here: Date | null;
+    updated_by_parent_at: Date | null;
   }>(
     `select p.id, p.first_name, p.last_name, p.date_of_birth::text as date_of_birth, p.age_group::text as age_group, p.shirt_number,
-       p.position, p.joined_on::text as joined_on, p.photo_consent, coalesce(ps.state, 'missing')::text as payment,
+       p.position, p.joined_on::text as joined_on, p.photo_consent, p.updated_by_parent_at, coalesce(ps.state, 'missing')::text as payment,
        (select count(*) from attendance a where a.player_id = p.id)::int as attended,
        ${MISSED_LAST_3} as missed_last_3,
        (select max(ls.starts_at) from attendance la join sessions ls on ls.id = la.session_id where la.player_id = p.id and ls.starts_at >= ${SEASON_START_SQL}) as last_here
@@ -247,6 +250,7 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
     attended: p.attended,
     missedLast3: p.missed_last_3,
     lastHereThisSeason: p.last_here ? iso(p.last_here) : null,
+    changedByParentAt: p.updated_by_parent_at ? iso(p.updated_by_parent_at) : null,
     guardians: guardians.map((g) => ({
       id: g.id,
       name: `${g.first_name} ${g.last_name}`,

@@ -134,6 +134,25 @@ ${link ? button(link, "See families") : ""}`,
   return { to, subject, text, html };
 }
 
+/** A parent added a child from the Player screen. The club checks the group and links any other parent. */
+export function newChildEmail(opts: { to: string; parentName: string; childName: string; group: string; link: string | null; appUrl: string | null }): Email {
+  const { to, parentName, childName, group, link, appUrl } = opts;
+  const subject = `New child added by ${parentName}: ${childName} (${group})`;
+  const lines = [
+    `${parentName} has added ${childName} (${group}) to their account in the app.`,
+    "",
+    "Please check the group is right, and link any other parent to the child on Families.",
+  ];
+  const text = [...lines, ...(link ? ["", `See families: ${link}`] : [])].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0"><b>${escape(parentName)}</b> has added <b>${escape(childName)}</b> (${escape(group)}) to their account in the app.</p>
+<p>Please check the group is right, and link any other parent to the child on Families.</p>
+${link ? button(link, "See families") : ""}`,
+  );
+  return { to, subject, text, html };
+}
+
 /** A parent asked the club to delete their account (Player → Your data). Names the parent only: nothing else about the family. */
 export function deletionRequestEmail(opts: { to: string; parentName: string; link: string | null; appUrl: string | null }): Email {
   const { to, parentName, link, appUrl } = opts;

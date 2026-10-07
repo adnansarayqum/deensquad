@@ -44,6 +44,12 @@ export function londonDate(at: Date): { year: number; month: number; day: number
   };
 }
 
+/** The London calendar date as YYYY-MM-DD (a date input's value). */
+export function londonIsoDate(at: Date): string {
+  const d = londonDate(at);
+  return `${d.year}-${String(d.month).padStart(2, "0")}-${String(d.day).padStart(2, "0")}`;
+}
+
 /** Whether two instants fall on the same London calendar day. */
 export function sameLondonDay(a: Date, b: Date): boolean {
   const x = londonDate(a);
