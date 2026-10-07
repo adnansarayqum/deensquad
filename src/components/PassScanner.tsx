@@ -28,6 +28,52 @@ export function PassScanner({ disabled = false }: { disabled?: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const busy = useRef(false);
   const last = useRef<{ token: string; at: number } | null>(null);
+  const opener = useRef<HTMLButtonElement>(null);
+  const closer = useRef<HTMLButtonElement>(null);
+  /** Set once the scanner has been open, so focus goes back to "Scan QR codes" only after a close, not on first load. */
+  const wasOpen = useRef(false);
+
+  /** True while the scanner's own history entry is the current one. A ref, not history.state: Next replaces that state on a refresh (after each check-in). */
+  const pushed = useRef(false);
+
+  // The scanner is a history entry of its own (same address), so a phone's Back button closes it and stays on the
+  // register. Close (X) and Escape go back through that entry too; popstate is what actually closes it.
+  const openScanner = () => {
+    setError(null);
+    setResult(null);
+    setOpen(true);
+    history.pushState({ scanner: 1 }, "");
+    pushed.current = true;
+  };
+  const closeScanner = useCallback(() => {
+    if (pushed.current) history.back();
+    else setOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      if (wasOpen.current) opener.current?.focus();
+      return;
+    }
+    wasOpen.current = true;
+    closer.current?.focus();
+    const onPop = () => {
+      pushed.current = false;
+      setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeScanner();
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, closeScanner]);
 
   // A failed request isn't a bad pass: say so and keep the pass to try again.
   const send = useCallback(async (token: string) => {
@@ -96,12 +142,9 @@ export function PassScanner({ disabled = false }: { disabled?: boolean }) {
   if (!open) {
     return (
       <button
+        ref={opener}
         type="button"
-        onClick={() => {
-          setError(null);
-          setResult(null);
-          setOpen(true);
-        }}
+        onClick={openScanner}
         disabled={disabled}
         className="btn-chunky btn-grass w-full disabled:opacity-60 disabled:shadow-none"
       >
@@ -123,8 +166,9 @@ export function PassScanner({ disabled = false }: { disabled?: boolean }) {
       <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),16px)] pb-3">
         <h2 className="font-display text-[32px] leading-none tracking-[0.02em]">Scan QR codes</h2>
         <button
+          ref={closer}
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={closeScanner}
           className="grid h-12 w-12 place-items-center rounded-pill bg-pitch text-on-pitch"
           aria-label="Close the scanner"
         >

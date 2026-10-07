@@ -1210,6 +1210,18 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
       extraHTTPHeaders: { "x-forwarded-for": "10.0.1.1" },
     });
     const coach = await context.newPage();
+    // Keep every camera stream the page opens, to check the camera is off once the scanner closes.
+    await coach.addInitScript(() => {
+      const w = window as unknown as { __streams: MediaStream[] };
+      w.__streams = [];
+      const open = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.getUserMedia = async (c) => {
+        const stream = await open(c);
+        w.__streams.push(stream);
+        return stream;
+      };
+    });
+    const cameraOn = () => coach.evaluate(() => (window as unknown as { __streams: MediaStream[] }).__streams.some((s) => s.getTracks().some((t) => t.readyState === "live")));
     await signIn(coach, "coach@deensquad.test");
     // Today's session, so the pass checks the child in whatever day the suite runs.
     await coach.goto("/admin/sessions");
@@ -1242,9 +1254,32 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await expect(scanner.getByText("U7 · Checked in", { exact: true })).toBeVisible();
     await coach.screenshot({ path: shot("coach-scan") });
     await scanner.getByRole("button", { name: "Close the scanner" }).click();
+    await expect(scanner).toHaveCount(0);
+    const scan = coach.getByRole("button", { name: "Scan QR codes" });
+    await expect(scan).toBeFocused();
+    await expect.poll(cameraOn).toBe(false);
 
     await expect(here.getByRole("heading", { name: "Here (1)" })).toBeVisible();
     await expect(here.getByText(/QR code scanned/)).toBeVisible();
+
+    // The phone's Back button closes the scanner and stays on the register; so does Escape. Focus starts on Close.
+    const register = coach.url();
+    await scan.click();
+    await expect(scanner.getByRole("button", { name: "Close the scanner" })).toBeFocused();
+    await expect.poll(cameraOn).toBe(true);
+    await coach.goBack();
+    await expect(scanner).toHaveCount(0);
+    expect(coach.url()).toBe(register);
+    await expect(coach.getByRole("heading", { name: "Gate test register" })).toBeVisible();
+    await expect(scan).toBeFocused();
+    await expect.poll(cameraOn).toBe(false);
+    await scan.click();
+    await expect(scanner).toBeVisible();
+    await coach.keyboard.press("Escape");
+    await expect(scanner).toHaveCount(0);
+    expect(coach.url()).toBe(register);
+    await expect(scan).toBeFocused();
+    await expect.poll(cameraOn).toBe(false);
     await here.getByRole("button", { name: "Undo check-in for Musa S." }).click();
     await expect(here.getByRole("heading", { name: "Here (0)" })).toBeVisible();
 
