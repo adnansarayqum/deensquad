@@ -19,7 +19,7 @@ import type { OrderEmailKind } from "../email/templates";
 import { notifyNewOrder, notifyParentOrder } from "./notify";
 import { localiseProductImages } from "./images";
 import { confirmSumupPayment } from "./payments";
-import { createCheckout, sumupConfigured } from "./sumup";
+import { createCheckout, deactivateCheckout, getCheckout, sumupConfigured } from "./sumup";
 
 const basketCookie = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge: 14 * 86400 };
 
@@ -175,9 +175,11 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
 /**
  * "Pay" again on an unpaid card order (its SumUp page timed out, was closed, or never opened). SumUp references are
  * the order id and must be unique, so an order that already has a checkout never gets a second one: SumUp is asked
- * about the one it has. Paid: the order is confirmed. Anything else (pending, failed, or SumUp not answering in 10 s):
- * the order switches to bank transfer, still awaiting payment, and the order page shows the bank details and
- * reference. Only an order with no checkout yet (the first attempt failed before SumUp gave one) gets a new one.
+ * about the one it has. Paid: the order is confirmed. Failed or expired: the order switches to bank transfer, still
+ * awaiting payment, and the order page shows the bank details and reference. Still pending, or SumUp not answering in
+ * 10 s: nothing changes (the parent may be paying right now); the page says it's still checking and offers "Pay by
+ * bank transfer instead" (`payByBankInstead`). Only an order with no checkout yet (the first attempt failed before
+ * SumUp gave one) gets a new one.
  */
 export async function payAgain(formData: FormData): Promise<void> {
   const user = await requireParent();
@@ -193,9 +195,11 @@ export async function payAgain(formData: FormData): Promise<void> {
   if (!order) redirect(`/shop/orders/${id}`);
 
   if (order.sumup_checkout_id) {
+    const checkout = await getCheckout(order.sumup_checkout_id);
     // Paid after all (and the reference and amount match): the order is confirmed.
-    if (await confirmSumupPayment(order.sumup_checkout_id)) redirect(`/shop/orders/${order.id}?return=1`);
-    return switchToBank(order.id);
+    if (checkout?.status === "PAID" && (await confirmSumupPayment(order.sumup_checkout_id))) redirect(`/shop/orders/${order.id}?return=1`);
+    if (checkout?.status === "FAILED" || checkout?.status === "EXPIRED") return switchToBank(order.id);
+    redirect(`/shop/orders/${order.id}?checking=1`);
   }
 
   const base = await baseUrl();
@@ -216,6 +220,26 @@ export async function payAgain(formData: FormData): Promise<void> {
     return switchToBank(order.id);
   }
   redirect(url);
+}
+
+/**
+ * "Pay by bank transfer instead", tapped by the parent while a card payment is still being checked. The SumUp page is
+ * deactivated first (best-effort), so it can't also take a card; a card payment that went through anyway is still
+ * matched to the order (the order page asks SumUp) and the club refunds any double payment.
+ */
+export async function payByBankInstead(formData: FormData): Promise<void> {
+  const user = await requireParent();
+  const id = formData.get("order");
+  if (typeof id !== "string" || !UUID.test(id)) return;
+  const [order] = await asUser(user.id, (tx) =>
+    tx.query<{ id: string; sumup_checkout_id: string | null }>(
+      `select id, sumup_checkout_id from shop_orders where id = $1 and guardian_id = my_guardian_id() and status = 'awaiting_payment' and pay_by = 'card'`,
+      [id],
+    ),
+  );
+  if (!order) redirect(`/shop/orders/${id}`);
+  if (order.sumup_checkout_id && sumupConfigured()) await deactivateCheckout(order.sumup_checkout_id);
+  return switchToBank(order.id);
 }
 
 /** An unpaid card order becomes a bank transfer order (the club is told, as for any bank order), then shows the bank details. */

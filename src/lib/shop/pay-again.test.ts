@@ -29,7 +29,7 @@ vi.mock("./notify", () => ({ notifyNewOrder: async (id: string) => void notified
 vi.mock("next/server", () => ({ after: (fn: () => unknown) => void fn() }));
 vi.mock("../background", () => ({ enqueue: (_name: string, fn: () => Promise<unknown>) => fn() }));
 
-const { payAgain } = await import("./actions");
+const { payAgain, payByBankInstead } = await import("./actions");
 const { confirmSumupPayment } = await import("./payments");
 const { POST: webhook } = await import("@/app/api/sumup/webhook/route");
 
@@ -47,6 +47,7 @@ function fakeSumup(status: string | "hang") {
     vi.fn(async (url: string, init: RequestInit = {}) => {
       calls.push({ url, method: init.method ?? "GET", signal: init.signal });
       if (init.method === "POST") return Response.json({ id: "chk_new", hosted_checkout_url: "https://pay.sumup.example/chk_new" });
+      if (init.method === "DELETE") return Response.json({ id: "chk_1", status: "INACTIVE" });
       if (status === "hang") return new Promise<Response>((_, reject) => init.signal!.addEventListener("abort", () => reject(init.signal!.reason)));
       return Response.json({ id: "chk_1", status, checkout_reference: order, amount: 25 });
     }),
@@ -100,7 +101,15 @@ describe("Pay again on an order that already has a SumUp checkout", () => {
     expect(posts()).toEqual([]);
   });
 
-  for (const status of ["PENDING", "FAILED"]) {
+  it("PENDING: changes nothing (the parent may be paying now) and says it's still checking", async () => {
+    fakeSumup("PENDING");
+    await expect(payAgain(form())).rejects.toThrow(`redirect /shop/orders/${order}?checking=1`);
+    expect(await row()).toEqual({ status: "awaiting_payment", pay_by: "card", sumup_checkout_id: "chk_1" });
+    expect(posts()).toEqual([]);
+    expect(notified).toEqual([]);
+  });
+
+  for (const status of ["FAILED", "EXPIRED"]) {
     it(`${status}: switches the order to bank transfer, still awaiting payment, with no second checkout`, async () => {
       fakeSumup(status);
       await expect(payAgain(form())).rejects.toThrow(`redirect /shop/orders/${order}?switched=bank`);
@@ -112,7 +121,7 @@ describe("Pay again on an order that already has a SumUp checkout", () => {
     });
   }
 
-  it("SumUp not answering within 10 seconds counts as not paid", async () => {
+  it("SumUp not answering within 10 seconds: not paid, and nothing changes", async () => {
     const real = AbortSignal.timeout.bind(AbortSignal);
     const asked: number[] = [];
     vi.spyOn(AbortSignal, "timeout").mockImplementation((ms: number) => {
@@ -120,18 +129,35 @@ describe("Pay again on an order that already has a SumUp checkout", () => {
       return real(20); // shortened so the test doesn't wait ten seconds
     });
     fakeSumup("hang");
-    await expect(payAgain(form())).rejects.toThrow(`redirect /shop/orders/${order}?switched=bank`);
+    await expect(payAgain(form())).rejects.toThrow(`redirect /shop/orders/${order}?checking=1`);
     expect(asked).toEqual([10_000]);
-    expect(await row()).toMatchObject({ status: "awaiting_payment", pay_by: "bank" });
+    expect(await row()).toMatchObject({ status: "awaiting_payment", pay_by: "card" });
     expect(posts()).toEqual([]);
   });
 
   it("the switched order can still be confirmed if the parent paid on that SumUp page after all", async () => {
-    fakeSumup("PENDING");
+    fakeSumup("FAILED");
     await expect(payAgain(form())).rejects.toThrow(/switched=bank/);
     fakeSumup("PAID");
     expect(await confirmSumupPayment("chk_1")).toBe(true);
     expect(await row()).toMatchObject({ status: "paid", pay_by: "card" });
+  });
+});
+
+describe("Pay by bank transfer instead (the parent's choice while a card payment is being checked)", () => {
+  it("deactivates the SumUp checkout first, then switches the order to bank transfer", async () => {
+    fakeSumup("PENDING");
+    await expect(payByBankInstead(form())).rejects.toThrow(`redirect /shop/orders/${order}?switched=bank`);
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["DELETE https://api.sumup.com/v0.1/checkouts/chk_1"]);
+    expect(calls[0].signal).toBeInstanceOf(AbortSignal);
+    expect(await row()).toEqual({ status: "awaiting_payment", pay_by: "bank", sumup_checkout_id: "chk_1" });
+    expect(notified).toEqual([order]);
+  });
+
+  it("still switches when SumUp can't deactivate it (best-effort)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("no", { status: 500 })));
+    await expect(payByBankInstead(form())).rejects.toThrow(`redirect /shop/orders/${order}?switched=bank`);
+    expect(await row()).toMatchObject({ pay_by: "bank" });
   });
 });
 

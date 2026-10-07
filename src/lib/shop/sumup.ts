@@ -60,3 +60,19 @@ export async function getCheckout(id: string): Promise<{ status: string; referen
     return null;
   }
 }
+
+/**
+ * Deactivates a checkout so its payment page can't take a card any more (when the parent chooses bank transfer
+ * instead). Best-effort: true only if SumUp confirmed it; a refusal (e.g. it's already paid), an error or no answer in
+ * 10 s is logged and returns false.
+ */
+export async function deactivateCheckout(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/${encodeURIComponent(id)}`, { method: "DELETE", headers: headers(), signal: AbortSignal.timeout(SUMUP_TIMEOUT_MS) });
+    if (!res.ok) console.error("[shop] SumUp didn't deactivate the checkout:", res.status);
+    return res.ok;
+  } catch (error) {
+    console.error("[shop] SumUp deactivate:", error instanceof Error ? error.message : error);
+    return false;
+  }
+}
