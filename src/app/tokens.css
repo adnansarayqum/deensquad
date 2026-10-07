@@ -26,6 +26,10 @@
   --on-orange: #ffffff;
   --focus: #1d5fcc;
   --focus-halo: #fff4e3;
+  --chart-1: #2a78d6;
+  --chart-2: #c94f82;
+  --chart-3: #4a3aa7;
+  --chart-4: #b07800;
   --lip-grass: 0 4px 0 #23561f;
   --lip-neutral: 0 4px 0 #e6dac4;
   --lip-gold: 0 4px 0 #8a6418;
@@ -70,6 +74,10 @@
     --on-orange: #0b150e;
     --focus: #8db8ff;
     --focus-halo: #0b150e;
+    --chart-1: #3987e5;
+    --chart-2: #d55181;
+    --chart-3: #9085e9;
+    --chart-4: #c98500;
     --lip-grass: 0 4px 0 #3e8c3a;
     --lip-neutral: 0 4px 0 #2c3b30;
     color-scheme: dark;
@@ -102,6 +110,10 @@
   --color-on-orange: var(--on-orange);
   --color-focus: var(--focus);
   --color-focus-halo: var(--focus-halo);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
   --shadow-lip-grass: var(--lip-grass);
   --shadow-lip-neutral: var(--lip-neutral);
   --shadow-lip-gold: var(--lip-gold);
