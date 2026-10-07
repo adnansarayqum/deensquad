@@ -2,9 +2,9 @@ import { UUID } from "../auth/tokens";
 
 // The basket lives in a cookie until checkout. It only holds choices; prices are looked up
 // in the database when the order is placed (place_order), so editing the cookie changes nothing.
-// It also carries an attempt id, made when the first line goes in: place_order gives one order per attempt, so a
-// checkout sent twice (a phone whose signal dropped after the order was saved, a form resubmitted) lands on the
-// same order. Older cookies are a bare array with no attempt; they get one the next time the basket changes.
+// It also carries an attempt id, minted afresh every time the lines change: place_order gives one order per attempt,
+// so a checkout sent twice (a phone whose signal dropped after the order was saved, a form resubmitted) lands on the
+// same order, while a basket changed since then is a new attempt. Older cookies are a bare array with no attempt.
 
 export const BASKET_COOKIE = "ds_basket";
 
@@ -54,4 +54,13 @@ export function addLine(basket: BasketLine[], line: BasketLine): BasketLine[] {
   const existing = basket.find(same);
   if (existing) return basket.map((l) => (same(l) ? { ...l, quantity: Math.min(20, l.quantity + line.quantity) } : l));
   return [...basket, line].slice(0, 30);
+}
+
+/** True when an order's items are exactly these lines (same product, child, size, initials and quantity, any order). */
+export function sameLines(a: readonly BasketLine[], b: readonly BasketLine[]): boolean {
+  const key = (l: BasketLine) => [l.product, l.player ?? "", l.size ?? "", (l.initials ?? "").toUpperCase(), l.quantity].join("|");
+  const sorted = (lines: readonly BasketLine[]) => lines.map(key).sort();
+  const x = sorted(a);
+  const y = sorted(b);
+  return x.length === y.length && x.every((k, i) => k === y[i]);
 }

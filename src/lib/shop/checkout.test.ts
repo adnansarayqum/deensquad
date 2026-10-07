@@ -150,7 +150,30 @@ describe("checkout", () => {
     expect(await orders()).toBe(2);
   });
 
-  it("gives a basket its attempt id when the first line goes in and keeps it as lines change", async () => {
+  it("after a lost reply, a basket changed since is a new order; an unchanged one isn't", async () => {
+    putAttempt(ATTEMPT, [line(shirt, "M")]);
+    const first = await checkout({}, payByBank()).catch((e: Error) => e.message);
+    expect(first).toMatch(/placed=1$/);
+    expect(await orders()).toBe(1);
+    // The phone never saw the reply and still holds the old cookie; the parent adds socks and tries again.
+    putAttempt(ATTEMPT, [line(shirt, "M"), line(socks, null)]);
+    const second = await checkout({}, payByBank()).catch((e: Error) => e.message);
+    expect(second).toMatch(/placed=1$/);
+    expect(second).not.toBe(first);
+    expect(await orders()).toBe(2);
+    expect(basket()).toEqual([]);
+    const totals = await t.asSystem((tx) => tx.query<{ total_pence: number }>(`select total_pence from shop_orders order by created_at`));
+    expect(totals.map((r) => r.total_pence)).toEqual([2000, 2500]);
+    // The unchanged basket under that attempt still repeats the first order; a quantity change is a new one.
+    putAttempt(ATTEMPT, [line(shirt, "M")]);
+    expect(await checkout({}, payByBank()).catch((e: Error) => e.message)).toBe(first);
+    expect(await orders()).toBe(2);
+    putAttempt(ATTEMPT, [{ ...line(shirt, "M"), quantity: 2 }]);
+    await expect(checkout({}, payByBank())).rejects.toThrow(/placed=1$/);
+    expect(await orders()).toBe(3);
+  });
+
+  it("mints a new attempt id every time the lines change, so only an unchanged basket repeats an order", async () => {
     const { addToBasket, removeFromBasket } = await import("./actions");
     const add = (product: string, size: string | null) => {
       const f = new FormData();
@@ -163,11 +186,16 @@ describe("checkout", () => {
     const { attempt } = parseBasketCookie(jar.get(BASKET_COOKIE));
     expect(attempt).toMatch(/^[0-9a-f-]{36}$/);
     await addToBasket({}, add(socks, null));
-    expect(parseBasketCookie(jar.get(BASKET_COOKIE))).toMatchObject({ attempt, lines: [line(shirt, "M"), line(socks, null)] });
+    const afterAdd = parseBasketCookie(jar.get(BASKET_COOKIE));
+    expect(afterAdd).toMatchObject({ lines: [line(shirt, "M"), line(socks, null)] });
+    expect(afterAdd.attempt).not.toBe(attempt);
     const remove = new FormData();
     remove.set("index", "0");
     await removeFromBasket(remove);
-    expect(parseBasketCookie(jar.get(BASKET_COOKIE))).toMatchObject({ attempt, lines: [line(socks, null)] });
+    const afterRemove = parseBasketCookie(jar.get(BASKET_COOKIE));
+    expect(afterRemove).toMatchObject({ lines: [line(socks, null)] });
+    expect(afterRemove.attempt).not.toBe(afterAdd.attempt);
+    expect(afterRemove.attempt).toMatch(/^[0-9a-f-]{36}$/);
   });
 
   it("place_order itself returns the order already placed for an attempt", async () => {
