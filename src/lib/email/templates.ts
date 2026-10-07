@@ -232,3 +232,41 @@ ${link ? button(link, "See your order") : ""}`,
   );
   return { to, subject, text, html };
 }
+
+/**
+ * The owner's monthly summary (src/lib/admin/summary.ts): short lines in sections, each linking to the admin page
+ * where it can be acted on. Counts only, no names.
+ */
+export function monthlySummaryEmail(opts: {
+  to: string;
+  month: string;
+  sections: { title: string; lines: { text: string; path: string }[] }[];
+  appUrl: string | null;
+}): Email {
+  const { to, month, sections, appUrl } = opts;
+  const subject = `Deen Squad: ${month} summary`;
+  const link = (path: string) => (appUrl ? `${appUrl}${path}` : null);
+  const text = [
+    `Assalamu alaikum. Here's how ${month} went in the parent app.`,
+    ...sections.flatMap((s) => ["", s.title, ...s.lines.map((l) => `- ${l.text}${link(l.path) ? ` ${link(l.path)}` : ""}`)]),
+    "",
+    "Figures under “Right now” are as they stand today. This email goes to the club's admins on the 1st of each month.",
+  ].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">Assalamu alaikum. Here's how <b>${escape(month)}</b> went in the parent app.</p>
+${sections
+  .map(
+    (s) => `<h2 style="font-size:17px;margin:20px 0 6px">${escape(s.title)}</h2>
+<ul style="margin:0;padding-left:20px">${s.lines
+      .map((l) => {
+        const href = link(l.path);
+        return `<li style="margin:4px 0">${href ? `<a href="${escape(href)}" style="color:#1f6b2a">${escape(l.text)}</a>` : escape(l.text)}</li>`;
+      })
+      .join("")}</ul>`,
+  )
+  .join("\n")}
+<p style="font-size:14px;color:#56625a;margin-top:20px">Figures under “Right now” are as they stand today. This email goes to the club's admins on the 1st of each month.</p>`,
+  );
+  return { to, subject, text, html };
+}
