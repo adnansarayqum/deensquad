@@ -112,7 +112,9 @@ async function sendEmail(targets: ChaseTarget[], tx: Queryable): Promise<ChaseTa
         requestId = issued.request.requestId;
       }
     }
-    out.push({ target: t, requestId, email: reminderEmail({ to: t.email!, firstName: t.firstName, title: t.title, body: t.body, children: t.children, link, appUrl: base }) });
+    const email = reminderEmail({ to: t.email!, firstName: t.firstName, title: t.title, body: t.body, children: t.children, link, appUrl: base });
+    // One reminder email per message per parent: a later run retrying one that timed out but went isn't sent twice.
+    out.push({ target: t, requestId, email: { ...email, idempotencyKey: `${t.announcementId}:${t.guardianId}:email` } });
   }
   const report = await sendEmails(out.map((o) => o.email));
   const went = new Set(report.sent);

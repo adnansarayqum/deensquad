@@ -119,3 +119,34 @@ describe("pushToUsers", () => {
     expect(sentTo.sort()).toEqual(["https://push.example/4a", "https://push.example/4b"]);
   });
 });
+
+describe("reminder emails", () => {
+  it("carry the message + parent idempotency key, so a retried run can't email a parent twice", async () => {
+    vi.stubEnv("RESEND_API_KEY", "test");
+    vi.stubEnv("APP_URL", "https://app.test");
+    const fetch = vi.fn(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetch);
+    try {
+      const { liveSenders } = await import("./senders");
+      const target = (announcementId: string) => ({
+        announcementId,
+        title: "Kit day",
+        body: "Bring kit",
+        guardianId: "g-1",
+        userId: users[0], // signed in: no sign-in link needed
+        firstName: "Sara",
+        email: "sara@example.com",
+        phone: null,
+        children: ["Yusuf"],
+      });
+      const send = liveSenders().email!;
+      await t.asSystem((tx) => send([target("a-1")], tx));
+      await t.asSystem((tx) => send([target("a-2")], tx));
+      const keys = fetch.mock.calls.map((c) => new Headers((c as unknown as [string, RequestInit])[1].headers).get("Idempotency-Key"));
+      expect(keys).toEqual(["a-1:g-1:email", "a-2:g-1:email"]);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+    }
+  });
+});
