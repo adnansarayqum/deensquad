@@ -20,7 +20,8 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
     headers: {
       "Content-Type": file.mime,
       "Content-Disposition": contentDisposition(file.name, new URL(request.url).searchParams.get("download") === "1"),
-      "Cache-Control": "private, max-age=3600",
+      // A file id is a UUID and its content never changes, so the browser can keep it for good (private: one person's cache).
+      "Cache-Control": "private, max-age=31536000, immutable",
       "X-Content-Type-Options": "nosniff",
     },
   });
