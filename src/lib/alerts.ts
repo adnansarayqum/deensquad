@@ -2,6 +2,7 @@ import "server-only";
 
 import { adminEmails, appUrl } from "./config";
 import { isClientDisconnect } from "./client-disconnect";
+import { isMalformedActionBody } from "./malformed-body";
 import { emailConfigured, sendEmails } from "./email/send";
 
 // Emails the app's maintainer when a page or action fails on the live app, at most once every
@@ -17,11 +18,12 @@ function recipients(): string[] {
   return configured.length ? configured : [...adminEmails()];
 }
 
-export { isClientDisconnect };
+export { isClientDisconnect, isMalformedActionBody };
 
-export async function sendErrorAlert(error: { message: string; digest?: string; path: string; kind: string }, now = Date.now()): Promise<boolean> {
+export async function sendErrorAlert(error: { name?: string; message: string; digest?: string; path: string; kind: string }, now = Date.now()): Promise<boolean> {
   if (process.env.NODE_ENV !== "production" || !emailConfigured()) return false;
   if (isClientDisconnect(error.message)) return false;
+  if (isMalformedActionBody(error, error.kind.split(" ")[0])) return false;
   if (now - lastSent < QUIET_MS) {
     suppressed++;
     return false;
