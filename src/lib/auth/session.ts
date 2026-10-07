@@ -49,8 +49,10 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
         ]),
       ]);
     let [guardians, staff] = await load();
-    // Someone added by the club after they first signed in (a coach who is also a parent, say).
-    if (guardians.length === 0 || staff.length === 0) {
+    // Nothing of theirs is linked: a last look by email, in case a row was written without the link (the database
+    // links new parent and staff rows to an existing sign-in as they're inserted, so this is rare). Someone who is
+    // already a parent or staff isn't re-checked on every request.
+    if (guardians.length === 0 && staff.length === 0) {
       await linkRecords(tx, session.userId, session.email);
       [guardians, staff] = await load();
     }
