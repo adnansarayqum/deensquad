@@ -11,9 +11,9 @@ describe("the club's groups", () => {
     expect(isAgeGroup("U9")).toBe(false);
   });
 
-  it("labels Girls for the sign-up picker and keeps the mixed U6", () => {
+  it("labels Girls for the sign-up picker and plain U6", () => {
     expect(AGE_GROUPS.map((g) => GROUP_LABELS[g])).toEqual([
-      "U6 (boys and girls)",
+      "U6",
       "U7",
       "U10 (ages 8 to 10)",
       "U12 (ages 11 and 12)",

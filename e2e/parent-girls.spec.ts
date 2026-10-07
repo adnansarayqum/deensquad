@@ -29,7 +29,7 @@ test("a family signs up with a daughter in Girls", async ({ browser }) => {
   // Girls comes last in the picker, after the age groups.
   const options = await page.locator("#childGroup-0 option").allTextContents();
   expect(options.at(-1)).toBe("Girls (all ages)");
-  expect(options).toContain("U6 (boys and girls)");
+  expect(options).toContain("U6");
   await page.locator("#childGroup-0").selectOption({ label: "Girls (all ages)" });
   await page.getByRole("button", { name: "Sign up" }).click();
   await expect(page).toHaveURL(/\/sign-in\/code$/);
