@@ -5,18 +5,24 @@ import { loadDashboard } from "./dashboard";
 import { loadChild, loadFamilies } from "./data";
 
 // "Missing lately" (need=missing3): the last 3 sessions for a child, counting only finished, uncancelled sessions
-// for them, after they joined, with their group's register taken, all have no check-in for them. The rule uses the
-// database's now(), so the fixtures are dated from the real clock.
+// for them this season, after they joined, with their group's register taken, all have no check-in for them. The rule
+// reads the database's clock (DB_NOW), which these tests set with `app.now` so they hold on any day of the year.
 
 let t: Awaited<ReturnType<typeof testDatabase>>;
 let admin: string;
-const daysAgo = (n: number) => new Date(Date.now() - n * 86400000);
+let NOW = new Date("2026-10-07T12:00:00Z");
+const daysAgo = (n: number) => new Date(NOW.getTime() - n * 86400000);
+const setNow = (at: Date) => {
+  NOW = at;
+  return t.asSystem((tx) => tx.query(`select set_config('app.now', $1, false)`, [at.toISOString()]));
+};
 const dateOnly = (d: Date) => d.toISOString().slice(0, 10);
 
 beforeEach(async () => {
   t = await testDatabase();
   await t.asSystem((tx) => tx.query(`insert into staff (email, display_name, role) values ('admin@example.com', 'Ibrahim Khan', 'admin')`));
   admin = await t.signIn("admin@example.com");
+  await setNow(new Date("2026-10-07T12:00:00Z"));
 });
 
 const sys = <T,>(fn: (tx: Queryable) => Promise<T>) => t.asSystem(fn);
@@ -125,17 +131,32 @@ describe("children who've missed their last 3 sessions", () => {
     await checkIn(first, yusuf);
     const list = await missing();
     expect(list).toEqual(["Musa", "Yusuf"]);
-    const all = await t.asUser(admin, (tx) => loadDashboard(tx, { now: new Date(), limit: null, withShop: false }));
+    const all = await t.asUser(admin, (tx) => loadDashboard(tx, { now: NOW, limit: null, withShop: false }));
     expect(all.attendance.missedLast3).toBe(list.length);
     // A coach limited to U7 sees none of them.
-    const u7 = await t.asUser(admin, (tx) => loadDashboard(tx, { now: new Date(), limit: ["U7"], withShop: false }));
+    const u7 = await t.asUser(admin, (tx) => loadDashboard(tx, { now: NOW, limit: ["U7"], withShop: false }));
     expect(u7.attendance.missedLast3).toBe(0);
 
-    // Yusuf was last here 28 days ago: shown when that's this season (from 1 August). Musa has never been.
+    // Yusuf was last here 28 days ago (9 September, this season). Musa has never been.
     const detail = await t.asUser(admin, (tx) => loadChild(tx, yusuf));
-    const today = new Date();
-    const season = new Date(Date.UTC(today.getUTCMonth() >= 7 ? today.getUTCFullYear() : today.getUTCFullYear() - 1, 7, 1));
-    expect(detail?.lastHereThisSeason ? new Date(detail.lastHereThisSeason).getTime() : null).toEqual(daysAgo(28) >= season ? expect.any(Number) : null);
+    expect(detail?.lastHereThisSeason).toBe(daysAgo(28).toISOString());
     expect((await t.asUser(admin, (tx) => loadChild(tx, musa)))?.lastHereThisSeason).toBeNull();
+  });
+
+  it("starts again each season: last season's sessions don't count, and the pill's date is this season's", async () => {
+    await setNow(new Date("2026-08-20T12:00:00Z"));
+    const ali = await child("Ali", "U10", 300);
+    const yusuf = await child("Yusuf", "U10", 300);
+    // July (last season): Yusuf came on the 9th, then missed three. August: he missed the one session so far.
+    const [july9] = await heldWithAli(ali, 42, 35, 28, 21, 7);
+    await checkIn(july9, yusuf);
+    expect(await missing()).toEqual([]);
+    const detail = await t.asUser(admin, (tx) => loadChild(tx, yusuf));
+    expect(detail).toMatchObject({ missedLast3: false, lastHereThisSeason: null });
+
+    // Two more August sessions missed: now three this season.
+    await heldWithAli(ali, 5, 2);
+    expect(await missing()).toEqual(["Yusuf"]);
+    expect((await t.asUser(admin, (tx) => loadDashboard(tx, { now: NOW, limit: null, withShop: false }))).attendance.missedLast3).toBe(1);
   });
 });

@@ -3,9 +3,8 @@ import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { AGE_GROUPS, type AgeGroup, type PaymentState, type Session, type StaffRole } from "../domain";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
-import { seasonStart } from "../exports/reports";
 import { newsReaches } from "../squads/sql";
-import { MISSED_LAST_3, behindOnNews, needWhere, type Need } from "./needs";
+import { MISSED_LAST_3, SEASON_START_SQL, behindOnNews, needWhere, type Need } from "./needs";
 import { overlaps, within as allWithin } from "./scope";
 
 // Queries for the club admin. They run as a member of staff (row level security on: staff see the club).
@@ -203,9 +202,9 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
        p.position, p.joined_on::text as joined_on, p.photo_consent, coalesce(ps.state, 'missing')::text as payment,
        (select count(*) from attendance a where a.player_id = p.id)::int as attended,
        ${MISSED_LAST_3} as missed_last_3,
-       (select max(ls.starts_at) from attendance la join sessions ls on ls.id = la.session_id where la.player_id = p.id and ls.starts_at >= $2) as last_here
+       (select max(ls.starts_at) from attendance la join sessions ls on ls.id = la.session_id where la.player_id = p.id and ls.starts_at >= ${SEASON_START_SQL}) as last_here
      from players p left join payment_status ps on ps.player_id = p.id where p.id = $1`,
-    [id, seasonStart(new Date())],
+    [id],
   );
   if (!p) return null;
   const [guardians, contacts, agreements] = await Promise.all([
