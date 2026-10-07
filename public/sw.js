@@ -9,7 +9,7 @@
 // passes straight through, untouched.
 // Bump VERSION whenever offline-pass.html or offline-pass.js change (npm run offline), so phones fetch them again.
 
-const VERSION = "3";
+const VERSION = "4";
 const OFFLINE_CACHE = `ds-offline-v${VERSION}`;
 const OFFLINE_PAGE = "/offline-pass.html";
 const OFFLINE_FILES = [OFFLINE_PAGE, "/offline-pass.js"];

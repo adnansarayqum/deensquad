@@ -1,7 +1,7 @@
 // Pure functions that turn the family's data into exactly what each parent screen shows.
 
 import { clock, daysUntil, londonDate, sameLondonDay } from "../dates";
-import type { Availability, Child, ChecklistItemId, PaymentState, Session } from "../domain";
+import { groupPlural, type Availability, type Child, type ChecklistItemId, type PaymentState, type Session } from "../domain";
 import type { AnnouncementView, AnswerRecord, ChecklistFacts, SquadCounts } from "./data";
 import { answerKey } from "./data";
 
@@ -169,7 +169,7 @@ export function buildChecklist(child: Child, facts: ChecklistFacts): ChecklistIt
     {
       id: "registered",
       title: "Registered",
-      detail: `${child.ageGroup}s · joined ${joined(child.joinedOn)}`,
+      detail: `${groupPlural(child.ageGroup)} · joined ${joined(child.joinedOn)}`,
       actionLabel: "",
       icon: "id",
       done: true,

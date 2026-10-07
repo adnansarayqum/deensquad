@@ -10,7 +10,7 @@ import { familiesFilter, familiesHref } from "@/lib/admin/families-link";
 import { UUID } from "@/lib/auth/tokens";
 import { coachLimit, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
-import { AGE_GROUPS, type PaymentState } from "@/lib/domain";
+import { AGE_GROUPS, groupPlural, type PaymentState } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Child" };
 
@@ -50,7 +50,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
             {child.firstName} {child.lastName}
           </h1>
           <p className="text-[15px] text-ink-muted">
-            {child.ageGroup}s · {child.attended} {child.attended === 1 ? "session" : "sessions"} attended
+            {groupPlural(child.ageGroup)} · {child.attended} {child.attended === 1 ? "session" : "sessions"} attended
           </p>
         </div>
       </div>
@@ -163,7 +163,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
               <Field label="Last name" name="lastName" defaultValue={child.lastName} />
               <div>
                 <label htmlFor="ageGroup" className="field-label">
-                  Age group
+                  Group
                 </label>
                 <select id="ageGroup" name="ageGroup" defaultValue={child.ageGroup} className="field">
                   {AGE_GROUPS.map((g) => (

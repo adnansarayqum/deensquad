@@ -110,7 +110,7 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
         </p>
       ) : null}
 
-      {list.length === 0 ? <p className="text-[15px] text-ink-muted">No children in these age groups yet.</p> : null}
+      {list.length === 0 ? <p className="text-[15px] text-ink-muted">No children in these groups yet.</p> : null}
       <table className="w-full border-separate border-spacing-y-1.5 text-left">
         <thead className="sr-only lg:not-sr-only">
           <tr className="text-label text-ink-muted uppercase">

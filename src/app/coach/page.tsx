@@ -11,6 +11,7 @@ import { clock, shortDay } from "@/lib/dates";
 import { registerClosedMessage, registerOpen } from "@/lib/staff/checkin";
 import { flagSummary } from "@/lib/staff/flags";
 import { ALL_GROUPS, loadRegister, summarise, type RegisterRow } from "@/lib/staff/register";
+import { groupPlural } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Register" };
 
@@ -127,7 +128,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
                   {r.firstName} {r.lastInitial}. checked in
                 </span>
                 <span className="text-[13px] text-ink-muted">
-                  {r.ageGroup}s · {clock(r.checkedInAt!)}
+                  {groupPlural(r.ageGroup)} · {clock(r.checkedInAt!)}
                 </span>
               </span>
               <UndoCheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} disabled={!open} />
@@ -138,14 +139,14 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
 
       <main className="mt-3.5 flex flex-1 flex-col gap-3 rounded-t-[24px] bg-cream px-4 pt-[18px] pb-[max(env(safe-area-inset-bottom),24px)] text-ink">
         <div className="flex items-baseline justify-between">
-          <h2 className="font-display text-[30px] leading-none text-ink">{all ? "All groups" : `${group}s`}</h2>
+          <h2 className="font-display text-[30px] leading-none text-ink">{all ? "All groups" : groupPlural(group)}</h2>
           <p className="text-sm text-ink-muted">
             <span className="font-display text-[26px] text-ink tabular-nums">{s.here.length}</span> of {s.expectedTotal} expected
           </p>
         </div>
         <Progress value={s.here.length} max={Math.max(1, s.expectedTotal)} label={`${s.here.length} of ${s.expectedTotal} here`} className="w-full" />
         {view.rows.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">No players in the {group}s yet. Import families in the club admin.</p>
+          <p className="text-[15px] text-ink-muted">No players in the {groupPlural(group)} yet. Import families in the club admin.</p>
         ) : (
           <RegisterLists sessionId={session.id} open={open} showGroup={all} notHere={s.notHere.map(gate)} away={s.away.map(gate)} here={s.here.map(gate)}>
             {needsAWord ? (

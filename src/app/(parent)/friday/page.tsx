@@ -10,7 +10,7 @@ import { Attachment } from "@/components/plans/Attachment";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { clock, shortDay } from "@/lib/dates";
 import { attachmentTitle } from "@/lib/files";
-import type { Session } from "@/lib/domain";
+import { groupPlural, type Session } from "@/lib/domain";
 import type { SquadCounts } from "@/lib/parent/data";
 import { getFamily, getFridayPage } from "@/lib/parent/load";
 import { answeredLine, availabilityQuestion, directionsUrl, sessionsToday, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
@@ -37,7 +37,7 @@ export default async function FridayPage() {
       {single?.session ? (
         <AppHeader stripes>
           <p className="text-label text-floodlight uppercase">
-            {shortDay(single.session.startsAt)} · {single.child.ageGroup}s
+            {shortDay(single.session.startsAt)} · {groupPlural(single.child.ageGroup)}
           </p>
           <h1 className="font-display text-[48px] leading-[0.92] tracking-[0.02em]">
             {single.checkedInAt
@@ -199,7 +199,7 @@ function ChildCard({ week: w, answered }: { week: ChildWeek; answered?: string }
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-[19px] font-extrabold">
-          {name} <span className="text-[15px] font-bold text-ink-muted">· {w.child.ageGroup}s</span>
+          {name} <span className="text-[15px] font-bold text-ink-muted">· {groupPlural(w.child.ageGroup)}</span>
         </h2>
         {w.counts && w.session ? (
           <span className="text-[13px] text-ink-muted tabular-nums">
@@ -314,10 +314,10 @@ function Headcount({ group, counts, squad }: { group: string; counts: SquadCount
   const unanswered = Math.max(0, counts.squad - counts.coming - counts.away);
   const total = Math.max(1, counts.squad);
   return (
-    <section aria-label={squad ? `${group}s in the squad` : `${group}s this week`} className="flex items-center gap-4 rounded-app bg-pitch-deep p-4 text-on-pitch">
+    <section aria-label={squad ? `${groupPlural(group)} in the squad` : `${groupPlural(group)} this week`} className="flex items-center gap-4 rounded-app bg-pitch-deep p-4 text-on-pitch">
       <span className="font-display text-[56px] leading-[0.9] text-floodlight tabular-nums">{counts.coming}</span>
       <div className="flex flex-1 flex-col gap-1.5">
-        <span className="text-[15px] font-bold">{squad ? `of the ${counts.squad} ${group}s picked can play` : `${group}s coming this week`}</span>
+        <span className="text-[15px] font-bold">{squad ? `of the ${counts.squad} ${groupPlural(group)} picked can play` : `${groupPlural(group)} coming this week`}</span>
         <div className="flex h-2.5 overflow-hidden rounded-pill bg-pitch" aria-hidden>
           <div className="bg-grass" style={{ width: `${(counts.coming / total) * 100}%` }} />
           <div className="bg-kit-orange" style={{ width: `${(counts.away / total) * 100}%` }} />

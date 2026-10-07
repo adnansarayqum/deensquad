@@ -4,7 +4,7 @@ import { Clock, Download, Flame, LayoutDashboard, Lock, LogOut, ScanLine, Star, 
 import { Card } from "@/components/ui";
 import { loadMyDeletionRequest } from "@/lib/data-requests";
 import { asUser } from "@/lib/db";
-import type { Badge } from "@/lib/domain";
+import { groupPlural, type Badge } from "@/lib/domain";
 import { getFamily, getPlayerPage } from "@/lib/parent/load";
 import { SignOutForm } from "@/components/SignOutForm";
 import { StaffSwitch } from "@/components/StaffSwitch";
@@ -49,7 +49,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
               </h1>
               <p className="text-sm text-on-pitch-muted">
                 {child.shirtNumber ? <span className="sr-only">Shirt number {child.shirtNumber}. </span> : null}
-                {[`${child.ageGroup}s`, child.position, `since ${new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric" }).format(new Date(child.joinedOn))}`]
+                {[groupPlural(child.ageGroup), child.position, `since ${new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric" }).format(new Date(child.joinedOn))}`]
                   .filter(Boolean)
                   .join(" · ")}
               </p>

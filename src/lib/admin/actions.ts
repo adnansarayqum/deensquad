@@ -163,7 +163,7 @@ export async function updateChild(_prev: FormState, formData: FormData): Promise
   const dob = cleanText(formData.get("dateOfBirth"), 10);
   if (!child) return { error: "Something went wrong. Reload and try again." };
   if (!firstName || !lastName) return { error: "Add the child's first and last name." };
-  if (!isAgeGroup(group)) return { error: "Choose an age group." };
+  if (!isAgeGroup(group)) return { error: "Choose a group." };
   if (shirt !== null && !(Number.isInteger(shirt) && shirt >= 1 && shirt <= 99)) return { error: "Shirt numbers go from 1 to 99." };
   if (dob && !/^\d{4}-\d{2}-\d{2}$/.test(dob)) return { error: "Choose a date of birth." };
   await asUser(user.id, (tx) =>
@@ -302,7 +302,7 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
     everyone = false;
     groups = s.age_groups.filter(isAgeGroup);
   }
-  if (!everyone && groups.length === 0) return { error: "Choose who it's for: everyone, or at least one age group." };
+  if (!everyone && groups.length === 0) return { error: "Choose who it's for: everyone, or at least one group." };
   if (isGroupCoach(user.staff)) {
     const mine = staffGroups(user.staff);
     if (everyone || groups.some((g) => !mine.includes(g))) return { error: `You can post to your own groups: ${mine.join(", ")}.` };
@@ -388,7 +388,7 @@ function sessionFields(formData: FormData, mine: readonly AgeGroup[] | null) {
   if (!KINDS.includes(kind as SessionKind)) return { error: "Choose the kind of session." } as const;
   if (!title) return { error: "Add a title, like Training." } as const;
   if (!venue) return { error: "Add the venue." } as const;
-  if (groups.length === 0) return { error: "Choose at least one age group." } as const;
+  if (groups.length === 0) return { error: "Choose at least one group." } as const;
   if (mine && groups.some((g) => !mine.includes(g))) return { error: `You can manage your own groups only: ${mine.join(", ")}.` } as const;
   if (!date) return { error: "Choose the date." } as const;
   if (!start || !end) return { error: "Add start and finish times." } as const;

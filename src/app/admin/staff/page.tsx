@@ -19,7 +19,7 @@ export default async function StaffPage() {
     <>
       <AdminTitle>Staff</AdminTitle>
       <p className="text-[15px] leading-[22px] text-ink-muted">
-        Coaches take the register and post news for the age groups ticked
+        Coaches take the register and post news for the groups ticked
         against them (none ticked means every group). Admins see the whole club
         and can also import families, send invites, run the shop and manage
         staff. Make someone an admin or a coach at any time; the club always
@@ -162,7 +162,7 @@ export default async function StaffPage() {
           </fieldset>
           <fieldset className="flex flex-col gap-2">
             <legend className="field-label">
-              Coach&apos;s age groups{" "}
+              Coach&apos;s groups{" "}
               <span className="font-normal text-ink-muted">
                 (none ticked means every group)
               </span>

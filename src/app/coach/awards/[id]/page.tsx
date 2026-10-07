@@ -10,6 +10,7 @@ import { loadAwards } from "@/lib/awards/data";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { UUID } from "@/lib/auth/tokens";
 import { asUser } from "@/lib/db";
+import { groupPlural } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Points and stars" };
 
@@ -42,7 +43,7 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
       <AppHeader>
         <Link href={`/coach/awards?group=${player.age_group}`} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-bold text-on-pitch-muted">
           <ChevronLeft aria-hidden size={18} />
-          {player.age_group}s
+          {groupPlural(player.age_group)}
         </Link>
         <h1 className="font-display text-[40px] leading-[0.95] tracking-[0.02em]">
           {player.first_name} {player.last_name}

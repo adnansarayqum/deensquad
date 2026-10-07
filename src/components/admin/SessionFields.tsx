@@ -75,7 +75,7 @@ export function SessionFields({ defaults, groups, repeat = false }: { defaults: 
         <input id="venue" name="venue" defaultValue={defaults.venue ?? ""} maxLength={120} className="field" />
       </div>
       <fieldset>
-        <legend className="field-label">Age groups</legend>
+        <legend className="field-label">Groups</legend>
         <div className="flex flex-wrap gap-2">
           {groups.map((g) => (
             <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">

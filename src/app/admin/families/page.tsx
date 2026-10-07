@@ -8,6 +8,7 @@ import { familiesFilter, familiesHref, familiesInviteHref, familiesScope, family
 import { NEEDS, type Need } from "@/lib/admin/needs";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
+import { groupPlural } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Families" };
 
@@ -144,7 +145,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
           {filtered
             ? "No children match."
             : group
-              ? `No players in the ${group}s.`
+              ? `No players in the ${groupPlural(group)}.`
               : "No families yet. Import them from a spreadsheet to get started."}
         </p>
       ) : (
@@ -187,7 +188,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
           {/* Computers: a table, one row per child. */}
           <div className="hidden overflow-x-auto rounded-dash border-2 border-line bg-paper lg:block">
             <table className="w-full text-[14px]">
-              <caption className="sr-only">Children{group ? ` in the ${group}s` : ""}, their parents and what they still need</caption>
+              <caption className="sr-only">Children{group ? ` in the ${groupPlural(group)}` : ""}, their parents and what they still need</caption>
               <thead>
                 <tr className="border-b-2 border-line text-left text-label text-ink-muted uppercase">
                   <th scope="col" className="px-3 py-2.5 font-bold">

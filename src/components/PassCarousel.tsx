@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { groupPlural } from "@/lib/domain";
 
 export type PassCard = { id: string; firstName: string; ageGroup: string; svg: string };
 
@@ -63,7 +64,7 @@ export function PassCarousel({ cards }: { cards: PassCard[] }) {
         {cards.map((c, i) => (
           <section key={c.id} aria-label={label(i)} className="flex w-full min-w-0 shrink-0 snap-center flex-col items-center gap-3 px-2">
             <h2 className="text-center font-display text-[40px] leading-none tracking-[0.02em] break-words">
-              {c.firstName} <span className="text-ink-muted">· {c.ageGroup}s</span>
+              {c.firstName} <span className="text-ink-muted">· {groupPlural(c.ageGroup)}</span>
             </h2>
             <div
               role="img"

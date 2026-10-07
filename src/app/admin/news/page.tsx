@@ -66,7 +66,7 @@ export default async function AdminNewsPage() {
                   </label>
                   <label className="flex min-h-11 items-center gap-3 text-[15px] font-bold">
                     <input type="radio" name="audience" value="groups" className="h-5 w-5 accent-[var(--grass)]" />
-                    Only these age groups:
+                    Only these groups:
                   </label>
                 </>
               )}

@@ -5,7 +5,7 @@ import { AppHeader, Card } from "@/components/ui";
 import { loadSquadAwards } from "@/lib/awards/data";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
-import { isAgeGroup } from "@/lib/domain";
+import { groupPlural, isAgeGroup } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Points and stars" };
 
@@ -41,7 +41,7 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
         ) : null}
       </AppHeader>
       <main className="flex flex-col gap-2 px-4 pt-4">
-        {squad.length === 0 ? <Card className="p-4 text-[15px]">No players in the {group}s yet.</Card> : null}
+        {squad.length === 0 ? <Card className="p-4 text-[15px]">No players in the {groupPlural(group)} yet.</Card> : null}
         {squad.map((p) => (
           <Link
             key={p.id}

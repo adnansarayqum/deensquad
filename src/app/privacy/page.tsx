@@ -72,7 +72,7 @@ export default async function PrivacyPage() {
           <p>About your child:</p>
           <List
             items={[
-              "name, date of birth, age group, shirt number and position",
+              "name, date of birth, group, shirt number and position",
               "whether they are coming to each session, and when they were checked in at the gate",
               "your answer about club photos",
               "emergency contacts you give us (please check they are happy for you to share their details)",
