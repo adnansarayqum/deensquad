@@ -4,7 +4,7 @@ import { MessageCircle, Phone } from "lucide-react";
 import { Notice, PageHeader, ReadBar, Section } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
 import { chaseOnWhatsApp, deleteNews } from "@/lib/admin/actions";
-import { loadNewsDetail } from "@/lib/admin/data";
+import { audienceLabel, loadNewsDetail } from "@/lib/admin/data";
 import { within } from "@/lib/admin/scope";
 import { UUID } from "@/lib/auth/tokens";
 import { coachLimit, requireStaff } from "@/lib/auth/session";
@@ -47,10 +47,15 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
   return (
     // Forms and detail read best at phone-to-tablet width, even on a computer.
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <PageHeader back={{ href: "/admin/news", label: "News" }} title={news.title} subtitle={`${news.topic} · ${news.squad ? `Squad · ${news.squad.title}` : news.audience ? news.audience.join(", ") : "Every family"} · ${postedLabel(news.postedAt, new Date())}${news.postedBy ? ` · ${news.postedBy}` : ""}`} />
-      {flags.posted ? <Notice>Posted. Parents see it at the top of Club news.</Notice> : null}
+      <PageHeader back={{ href: "/admin/news", label: "News" }} title={news.title} subtitle={`${news.topic} · ${audienceLabel(news)} · ${postedLabel(news.postedAt, new Date())}${news.postedBy ? ` · ${news.postedBy}` : ""}`} />
+      {flags.posted ? (
+        <Notice>
+          Posted. Sent to {news.audienceCount} {news.audienceCount === 1 ? "parent" : "parents"}: they see it at the top of Club news.
+        </Notice>
+      ) : null}
 
       <Section title="Message">
+        {news.chosen && news.chosen.length > 2 ? <p className="text-sm text-ink-muted">For {news.chosen.join(", ")}</p> : null}
         <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
         {news.requiresAck ? <ReadBar read={news.readCount} total={news.audienceCount} groupsOnly={news.groupsOnly} /> : <p className="text-sm text-ink-muted">No read receipts asked for.</p>}
       </Section>

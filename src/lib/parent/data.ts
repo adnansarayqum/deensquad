@@ -87,10 +87,13 @@ export type AnnouncementView = Announcement & { read: boolean };
 
 /**
  * Messages for this family, given its age groups and children as parameters: a squad message only when
- * one of the children is in that squad, any other when it's for everyone or one of the groups.
+ * one of the children is in that squad, a message to chosen children only when one of them is chosen,
+ * any other when it's for everyone or one of the groups.
  */
 const familyNews = (groups: string, childIds: string) => `(case when a.squad_session_id is not null
   then exists (select 1 from session_squads q where q.session_id = a.squad_session_id and q.player_id = any (${childIds}::uuid[]))
+  when a.to_children
+  then exists (select 1 from announcement_players c where c.announcement_id = a.id and c.player_id = any (${childIds}::uuid[]))
   else a.audience is null or a.audience && ${groups}::text[]::age_group[] end)`;
 
 export async function loadNews(tx: Queryable, family: Family, limit = 50): Promise<AnnouncementView[]> {

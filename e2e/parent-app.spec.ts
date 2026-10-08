@@ -1075,7 +1075,7 @@ test("tournament squads: the admin picks two U10s and messages them; only their 
   await admin.getByLabel("Headline").fill("County Cup: meet at 9am");
   await admin.getByLabel("Message").fill("Bring water and the away kit.");
   await admin.getByRole("button", { name: "Send to the squad's parents" }).click();
-  await expect(admin.getByText("Posted. Parents see it at the top of Club news.")).toBeVisible();
+  await expect(admin.getByText("Posted. Sent to 2 parents: they see it at the top of Club news.")).toBeVisible();
   await expect(admin.getByText(/Squad · County Cup/)).toBeVisible();
   await expect(admin.getByText("0 of 2 read")).toBeVisible();
   await expect(admin.getByText("Parent R", { exact: true })).toBeVisible();

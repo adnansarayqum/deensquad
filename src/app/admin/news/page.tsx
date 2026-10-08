@@ -3,7 +3,9 @@ import Link from "next/link";
 import { PageHeader, ReadBar, Section } from "@/components/admin/bits";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { postNews } from "@/lib/admin/actions";
-import { loadNewsList } from "@/lib/admin/data";
+import { audienceLabel, loadNewsList } from "@/lib/admin/data";
+import { loadNewsChildren } from "@/lib/admin/news";
+import { NewsAudience } from "@/components/admin/NewsAudience";
 import { TOPICS } from "@/lib/admin/topics";
 import { WritingHelp } from "@/components/writing/WritingHelp";
 import { aiConfigured } from "@/lib/ai/claude";
@@ -17,7 +19,8 @@ export default async function AdminNewsPage() {
   const user = await requireStaff();
   const limited = isGroupCoach(user.staff);
   const myGroups = staffGroups(user.staff);
-  const news = await asUser(user.id, (tx) => loadNewsList(tx, 50, coachLimit(user.staff)));
+  const mine = coachLimit(user.staff);
+  const { news, children } = await asUser(user.id, async (tx) => ({ news: await loadNewsList(tx, 50, mine), children: await loadNewsChildren(tx, mine) }));
   const now = new Date();
 
   return (
@@ -54,31 +57,7 @@ export default async function AdminNewsPage() {
                 <WritingHelp bodyId="body" titleId="title" kind="news" ai={aiConfigured()} />
               </div>
             </div>
-            <fieldset className="flex flex-col gap-2">
-              <legend className="field-label">Who is it for?</legend>
-              {limited ? (
-                <input type="hidden" name="audience" value="groups" />
-              ) : (
-                <>
-                  <label className="flex min-h-11 items-center gap-3 text-[15px] font-bold">
-                    <input type="radio" name="audience" value="all" defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
-                    Every family
-                  </label>
-                  <label className="flex min-h-11 items-center gap-3 text-[15px] font-bold">
-                    <input type="radio" name="audience" value="groups" className="h-5 w-5 accent-[var(--grass)]" />
-                    Only these groups:
-                  </label>
-                </>
-              )}
-              <div className={`flex flex-wrap gap-2 ${limited ? "" : "pl-8"}`}>
-                {myGroups.map((g) => (
-                  <label key={g} className="flex min-h-11 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
-                    <input type="checkbox" name="groups" value={g} defaultChecked={limited && myGroups.length === 1} className="h-4 w-4 accent-[var(--grass)]" />
-                    <span className="text-sm font-extrabold">{g}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+            <NewsAudience limited={limited} myGroups={myGroups} list={children} />
             <label className="flex min-h-11 items-center gap-3 text-[15px]">
               <input type="checkbox" name="requiresAck" defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
               <span>
@@ -96,7 +75,7 @@ export default async function AdminNewsPage() {
           {news.map((n) => (
             <Link key={n.id} href={`/admin/news/${n.id}`} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper px-4 py-3">
               <span className="text-[13px] text-ink-muted">
-                {n.topic} · {n.squad ? `Squad · ${n.squad.title}` : n.audience ? n.audience.join(", ") : "Every family"} · {postedLabel(n.postedAt, now)}
+                {n.topic} · {audienceLabel(n)} · {postedLabel(n.postedAt, now)}
                 {n.postedBy ? ` · ${n.postedBy}` : ""}
               </span>
               <span className="text-base font-bold">{n.title}</span>

@@ -26,6 +26,7 @@ import { sendInvites } from "./invites";
 import { deleteLeftoverAccounts, removeChildRecord, unlinkGuardianRecord } from "./remove";
 import { closeDeletionRequest } from "../data-requests";
 import { TOPICS } from "./topics";
+import { checkChosenChildren, insertNews } from "./news";
 
 // Club admin Server Actions. Each checks the role first, then writes as that person,
 // so row level security still applies (staff manage the club; only admins manage staff).
@@ -277,6 +278,8 @@ export async function closeDataRequest(formData: FormData): Promise<void> {
 /**
  * Posts a message. With `squadSession` (from a session's Squad page) it goes only to the parents of the children
  * picked for that session's squad; its audience is the session's groups, so group coaches' views treat it as theirs.
+ * With audience "children" (Chosen children) it goes only to the parents of the ticked children (`player`), and its
+ * audience is their groups for the same reason; a group coach may choose only children in their own groups.
  */
 export async function postNews(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireStaff();
@@ -290,6 +293,21 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
   if (!TOPICS.includes(topic as (typeof TOPICS)[number])) return { error: "Choose a topic." };
   if (!title) return { error: "Add a headline." };
   if (!body) return { error: "Write the message." };
+  const requiresAck = formData.get("requiresAck") === "on";
+  if (!squadSession && formData.get("audience") === "children") {
+    // The group ticks belong to "Only these groups" (hidden under this choice), so they're ignored here. The children
+    // are checked and the message written in one transaction, so a child removed meanwhile can't fail the insert.
+    const ids = formData.getAll("player").filter((v): v is string => typeof v === "string" && UUID.test(v));
+    const result = await asUser(user.id, async (tx) => {
+      const checked = await checkChosenChildren(tx, ids, coachLimit(user.staff));
+      if ("error" in checked) return checked;
+      return {
+        id: await insertNews(tx, { topic: topic as string, title, body, audience: checked.groups, requiresAck, postedBy: user.staff.id, squadSession: null, children: ids }),
+      };
+    });
+    if ("error" in result) return result;
+    return posted(result.id, requiresAck);
+  }
   if (squadSession) {
     const [s] = await asUser(user.id, (tx) =>
       tx.query<{ age_groups: string[]; picked: number }>(
@@ -312,20 +330,20 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
     const mine = staffGroups(user.staff);
     if (everyone || groups.some((g) => !mine.includes(g))) return { error: `You can post to your own groups: ${mine.join(", ")}.` };
   }
-  const [row] = await asUser(user.id, (tx) =>
-    tx.query<{ id: string }>(
-      `insert into announcements (topic, title, body, audience, requires_ack, posted_by, squad_session_id)
-       values ($1, $2, $3, $4::text[]::age_group[], $5, $6, $7) returning id`,
-      [topic, title, body, everyone ? null : groups, formData.get("requiresAck") === "on", user.staff.id, squadSession ?? null],
-    ),
+  const newsId = await asUser(user.id, (tx) =>
+    insertNews(tx, { topic: topic as string, title, body, audience: everyone ? null : groups, requiresAck, postedBy: user.staff.id, squadSession: squadSession ?? null, children: null }),
   );
+  return posted(newsId, requiresAck);
+}
+
+function posted(newsId: string, requiresAck: boolean): never {
   // First rung of the chase ladder: notify parents once the response has gone (unless it's night-time; the hourly
   // run picks it up at 8am), so a slow push or email service never holds up or fails the post. Queued behind any
   // earlier post's run, so several posts in a row don't chase at once.
-  if (formData.get("requiresAck") === "on") {
-    after(() => enqueue("chase on post", () => runChase({ announcementId: row.id })));
+  if (requiresAck) {
+    after(() => enqueue("chase on post", () => runChase({ announcementId: newsId })));
   }
-  redirect(`/admin/news/${row.id}?posted=1`);
+  redirect(`/admin/news/${newsId}?posted=1`);
 }
 
 export async function deleteNews(formData: FormData): Promise<void> {

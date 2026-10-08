@@ -4,6 +4,7 @@ import { iso } from "../db/types";
 import { AGE_GROUPS, type AgeGroup, type PaymentState, type Session, type StaffRole } from "../domain";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
 import { newsReaches } from "../squads/sql";
+import { chosenLabel } from "./news-audience";
 import { MISSED_LAST_3, SEASON_START_SQL, behindOnNews, needWhere, type Need } from "./needs";
 import { overlaps, within as allWithin } from "./scope";
 
@@ -285,11 +286,16 @@ export type NewsRow = {
   groupsOnly: boolean;
   /** A message to a tournament squad: the session it's about (it reaches only the squad's parents). */
   squad: { sessionId: string; title: string } | null;
+  /** A message to chosen children: their names ("Kaizan A."), a group coach's own groups only. Null for any other message. */
+  chosen: string[] | null;
 };
 
 /** `groups` is the SQL parameter holding a group coach's own groups (null: the whole club), which limits the counts. */
 const newsColumns = (groups: string) => `a.id, a.topic, a.title, a.body, a.audience::text[] as audience, a.requires_ack, a.urgent, a.posted_at, sn.display_name as posted_by,
   a.squad_session_id, (select ss.title from sessions ss where ss.id = a.squad_session_id) as squad_title,
+  case when a.to_children then coalesce((select array_agg(p.first_name || case when p.last_name = '' then '' else ' ' || upper(left(p.last_name, 1)) || '.' end order by p.first_name, p.last_name)
+    from announcement_players ap join players p on p.id = ap.player_id
+    where ap.announcement_id = a.id and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))), '{}')::text[] end as chosen,
   (select count(distinct pg.guardian_id)::int from player_guardians pg join players p on p.id = pg.player_id
     where ${newsReaches()} and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))) as audience_count,
   -- parents who've read it and still have a child it reaches (a squad message follows the squad as it changes)
@@ -311,6 +317,7 @@ type NewsDbRow = {
   read_count: number;
   squad_session_id: string | null;
   squad_title: string | null;
+  chosen: string[] | null;
 };
 
 const toNews = (r: NewsDbRow, groups: readonly AgeGroup[] | null): NewsRow => ({
@@ -327,7 +334,15 @@ const toNews = (r: NewsDbRow, groups: readonly AgeGroup[] | null): NewsRow => ({
   readCount: Math.min(r.read_count, r.audience_count),
   groupsOnly: groups !== null,
   squad: r.squad_session_id ? { sessionId: r.squad_session_id, title: r.squad_title ?? "Squad" } : null,
+  chosen: r.chosen,
 });
+
+/** Who a message is for, as the news list and detail say it: "Squad · Spring Cup", "3 children: Kaizan A., Musa B., +1", "U7, U10" or "Every family". */
+export function audienceLabel(n: Pick<NewsRow, "squad" | "chosen" | "audience">): string {
+  if (n.squad) return `Squad · ${n.squad.title}`;
+  if (n.chosen) return chosenLabel(n.chosen);
+  return n.audience ? n.audience.join(", ") : "Every family";
+}
 
 /** Recent messages; `groups` (a group coach's own) keeps those whose audience overlaps them (see `overlaps` in scope.ts). */
 export async function loadNewsList(tx: Queryable, limit = 50, groups: readonly AgeGroup[] | null = null): Promise<NewsRow[]> {
