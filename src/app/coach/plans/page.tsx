@@ -38,11 +38,10 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
     );
     return { sessions, plans: await loadPlans(tx, sessions.map((s) => s.id), groups), filled };
   });
-  // A group is listed when it has children for the session, or already has a plan.
-  const listed = (s: (typeof sessions)[number]) =>
-    s.ageGroups.filter(
-      (g) => groups.includes(g) && (filled.some((f) => f.session_id === s.id && f.age_group === g) || plans.some((p) => p.sessionId === s.id && p.ageGroup === g)),
-    );
+  // Every one of the session's groups the staff member covers is listed, so a plan can be added ahead of
+  // children joining; a group with no children for the session yet says so beside it.
+  const listed = (s: (typeof sessions)[number]) => s.ageGroups.filter((g) => groups.includes(g));
+  const empty = (s: (typeof sessions)[number], g: string) => !filled.some((f) => f.session_id === s.id && f.age_group === g);
   const shown = showAll ? sessions : sessions.slice(0, SESSIONS_SHOWN);
   const planFor = (s: (typeof sessions)[number], g: string) => plans.find((p) => p.sessionId === s.id && p.ageGroup === g);
   const planText = (plan: ReturnType<typeof planFor>) => plan?.body?.split("\n")[0] ?? (plan?.file ? plan.file.name : "No plan yet");
@@ -83,6 +82,7 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
                   <span className="font-display text-[26px] leading-none">{g}</span>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-[15px] text-ink-muted">{planText(plan)}</span>
+                    {empty(s, g) ? <span className="text-[13px] text-ink-muted">No children yet</span> : null}
                   </span>
                   {plan ? <Pill tone="done" icon>Plan added</Pill> : <Pill tone="action">Add plan</Pill>}
                   <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
@@ -140,6 +140,7 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
                         <span className="flex items-center gap-2.5">
                           {plan ? <Pill tone="done" icon>Plan added</Pill> : <Pill tone="action">No plan yet</Pill>}
                           {plan ? <span className="truncate text-ink-muted">{planText(plan)}</span> : null}
+                          {empty(s, g) ? <span className="shrink-0 text-[13px] text-ink-muted">No children yet</span> : null}
                         </span>
                       </td>
                       <td className="px-3 py-2">

@@ -671,11 +671,12 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   const pdf = makePdf(["Warm-up: rondos", "Main: passing on the move"]);
   await signIn(page, "admin@deensquad.test");
   await page.goto("/coach/plans");
-  // Groups with no children (U6) aren't listed.
+  // Every one of the session's groups is listed, so a plan can go in before children join; an empty one says so.
   // Each link names its group and session, so the repeated "Add plan" links can be told apart.
   const u10 = page.getByRole("link", { name: /^(Add|Edit) U10 plan for .+, \w{3} \d{1,2} \w{3}/ }).first();
   await expect(u10).toBeVisible();
-  await expect(page.getByRole("link", { name: /\bU6 plan for/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /\bU6 plan for/ }).first()).toBeVisible();
+  await expect(page.locator("main").getByText("No children yet").first()).toBeVisible();
   await u10.click();
   const plan = page.getByLabel("What you'll work on");
   await plan.fill("Warm-up: rondos\nMain: passing on the move");
