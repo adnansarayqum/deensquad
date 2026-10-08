@@ -44,7 +44,8 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
   const empty = (s: (typeof sessions)[number], g: string) => !filled.some((f) => f.session_id === s.id && f.age_group === g);
   const shown = showAll ? sessions : sessions.slice(0, SESSIONS_SHOWN);
   const planFor = (s: (typeof sessions)[number], g: string) => plans.find((p) => p.sessionId === s.id && p.ageGroup === g);
-  const planText = (plan: ReturnType<typeof planFor>) => plan?.body?.split("\n")[0] ?? (plan?.file ? plan.file.name : "No plan yet");
+  const planText = (plan: ReturnType<typeof planFor>) =>
+    plan?.body?.split("\n")[0] ?? (plan?.file ? plan.file.name : plan?.video ? "YouTube video" : "No plan yet");
   const linkName = (s: (typeof sessions)[number], g: string, plan: ReturnType<typeof planFor>) =>
     // Named in full: a list of "U10 · No plan yet · Add plan" links can't otherwise be told apart.
     `${plan ? "Edit" : "Add"} ${g} plan for ${s.title}, ${shortDay(s.startsAt)}${plan ? " (plan added)" : ""}`;
@@ -84,6 +85,7 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
                     <span className="truncate text-[15px] text-ink-muted">{planText(plan)}</span>
                     {empty(s, g) ? <span className="text-[13px] text-ink-muted">No children yet</span> : null}
                   </span>
+                  {plan?.video ? <Pill tone="neutral">Video</Pill> : null}
                   {plan ? <Pill tone="done" icon>Plan added</Pill> : <Pill tone="action">Add plan</Pill>}
                   <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
                 </Link>
@@ -139,6 +141,7 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
                       <td className="max-w-md px-3 py-2">
                         <span className="flex items-center gap-2.5">
                           {plan ? <Pill tone="done" icon>Plan added</Pill> : <Pill tone="action">No plan yet</Pill>}
+                          {plan?.video ? <Pill tone="neutral">Video</Pill> : null}
                           {plan ? <span className="truncate text-ink-muted">{planText(plan)}</span> : null}
                           {empty(s, g) ? <span className="shrink-0 text-[13px] text-ink-muted">No children yet</span> : null}
                         </span>

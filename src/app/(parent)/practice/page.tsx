@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BackHeader } from "@/components/BackHeader";
 import { Attachment } from "@/components/plans/Attachment";
+import { VideoCard } from "@/components/plans/VideoCard";
 import { Card, Pill } from "@/components/ui";
 import { attachmentTitle } from "@/lib/files";
 import { getPracticePage } from "@/lib/parent/load";
@@ -28,6 +29,7 @@ export default async function PracticePage() {
             </div>
             {s.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{s.body}</p> : null}
             {s.file ? <Attachment file={s.file} label={attachmentTitle("sheet", s.file)} from="/practice" /> : null}
+            {s.video ? <VideoCard video={s.video} name={s.title} /> : null}
             <p className="text-[13px] text-ink-muted">{[s.from, day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</p>
           </Card>
         ))}
