@@ -8,6 +8,7 @@ import type { FormState } from "@/lib/admin/actions";
 import { saveSquadPicks } from "@/lib/admin/actions";
 import { matchesName } from "@/lib/search";
 import type { SquadChild } from "@/lib/squads/squads";
+import { ChildAvatar } from "@/components/ChildAvatar";
 
 const INITIAL: FormState = {};
 
@@ -142,6 +143,7 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
                       onChange={(e) => toggle(c.id, e.target.checked)}
                       className="h-5 w-5 shrink-0 accent-[var(--grass)]"
                     />
+                    <ChildAvatar photoId={c.photoId} firstName={c.firstName} lastName={c.lastName} size={40} />
                     <span className="flex min-w-0 flex-col">
                       <span className="text-[15px] font-bold">
                         {c.firstName} {c.lastName}

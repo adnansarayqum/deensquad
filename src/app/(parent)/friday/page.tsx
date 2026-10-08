@@ -7,6 +7,7 @@ import { CheckedIn } from "@/components/CheckedIn";
 import { PassCacheWriter } from "@/components/PassCacheWriter";
 import { PassCarousel } from "@/components/PassCarousel";
 import { Attachment } from "@/components/plans/Attachment";
+import { VideoCard } from "@/components/plans/VideoCard";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { googleCalendarUrl, sessionIcsPath } from "@/lib/calendar/session";
 import { clock, shortDay } from "@/lib/dates";
@@ -140,16 +141,20 @@ export default async function FridayPage() {
         ))}
 
         {latestSheet ? (
-          <Link href="/practice" className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-grass-tint text-grass-text">
-              <BookOpen aria-hidden size={22} />
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[15px] font-bold">Practise at home</span>
-              <span className="truncate text-[13px] text-ink-muted">Latest: {latestSheet.title}</span>
-            </span>
-            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
-          </Link>
+          <div className="flex flex-col gap-2">
+            <Link href="/practice" className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-grass-tint text-grass-text">
+                <BookOpen aria-hidden size={22} />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[15px] font-bold">Practise at home</span>
+                <span className="truncate text-[13px] text-ink-muted">Latest: {latestSheet.title}</span>
+              </span>
+              <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+            </Link>
+            {/* The latest sheet's video plays here too, so a child can follow it without another screen. */}
+            {latestSheet.video ? <VideoCard video={latestSheet.video} name={latestSheet.title} /> : null}
+          </div>
         ) : null}
 
         {single?.session && single.counts ? (
@@ -400,6 +405,7 @@ function PlanCard({ plan, sessionLabel }: { plan: SessionPlan; sessionLabel?: Se
       </div>
       {plan.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{plan.body}</p> : null}
       {plan.file ? <Attachment file={plan.file} label={attachmentTitle("plan", plan.file)} from="/friday" /> : null}
+      {plan.video ? <VideoCard video={plan.video} name={`${plan.ageGroup} session plan`} title="Session plan video" /> : null}
       {plan.from ? <p className="text-[13px] text-ink-muted">From {plan.from}</p> : null}
     </Card>
   );

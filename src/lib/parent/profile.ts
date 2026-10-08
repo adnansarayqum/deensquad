@@ -10,7 +10,16 @@ export const NAME_MAX = 60;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export type MyDetails = { firstName: string; lastName: string; phone: string | null; email: string | null };
-export type MyChild = { id: string; firstName: string; lastName: string; dateOfBirth: string | null; ageGroup: AgeGroup };
+export type MyChild = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string | null;
+  ageGroup: AgeGroup;
+  photoConsent: boolean | null;
+  /** The photo for the coaches (a club_files id), if the parent added one. */
+  photoId: string | null;
+};
 
 export async function loadMyDetails(tx: Queryable): Promise<MyDetails | null> {
   const [row] = await tx.query<{ first_name: string; last_name: string; phone: string | null; email: string | null }>(
@@ -21,12 +30,30 @@ export async function loadMyDetails(tx: Queryable): Promise<MyDetails | null> {
 
 /** One of the parent's own children, with their date of birth (which the family's `Child` doesn't carry). Null for anyone else's. */
 export async function loadMyChild(tx: Queryable, id: string): Promise<MyChild | null> {
-  const [row] = await tx.query<{ id: string; first_name: string; last_name: string; date_of_birth: string | null; age_group: AgeGroup }>(
-    `select id, first_name, last_name, date_of_birth::text as date_of_birth, age_group::text as age_group
+  const [row] = await tx.query<{
+    id: string;
+    first_name: string;
+    last_name: string;
+    date_of_birth: string | null;
+    age_group: AgeGroup;
+    photo_consent: boolean | null;
+    photo_file_id: string | null;
+  }>(
+    `select id, first_name, last_name, date_of_birth::text as date_of_birth, age_group::text as age_group, photo_consent, photo_file_id
      from players where id = $1 and id in (select my_player_ids())`,
     [id],
   );
-  return row ? { id: row.id, firstName: row.first_name, lastName: row.last_name, dateOfBirth: row.date_of_birth, ageGroup: row.age_group } : null;
+  return row
+    ? {
+        id: row.id,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        dateOfBirth: row.date_of_birth,
+        ageGroup: row.age_group,
+        photoConsent: row.photo_consent,
+        photoId: row.photo_file_id,
+      }
+    : null;
 }
 
 /** A name a parent typed, or null: whitespace tidied, at most NAME_MAX characters. */
@@ -76,4 +103,18 @@ export async function addMyChild(tx: Queryable, child: { firstName: string; last
     child.ageGroup,
   ]);
   return id;
+}
+
+/**
+ * Adds or replaces the photo of one of the parent's own children (`set_my_child_photo`, migration 0023: refused
+ * unless the child is theirs and photo consent is yes; the old file is deleted). Returns the new file id.
+ */
+export async function setMyChildPhoto(tx: Queryable, childId: string, photo: { mime: string; data: Uint8Array }): Promise<string> {
+  const [{ id }] = await tx.query<{ id: string }>(`select set_my_child_photo($1, $2, $3::bytea) as id`, [childId, photo.mime, photo.data]);
+  return id;
+}
+
+/** Takes the photo off (the file is deleted with it). */
+export async function clearMyChildPhoto(tx: Queryable, childId: string): Promise<void> {
+  await tx.query(`select clear_my_child_photo($1)`, [childId]);
 }

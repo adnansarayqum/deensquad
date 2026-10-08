@@ -31,10 +31,13 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
         joined_on: string;
         photo_consent: boolean | null;
         photo_consent_recorded_at: Date | null;
+        has_photo: boolean;
+        photo_updated_at: Date | null;
         relationship: string | null;
       }>(
         `select p.id, p.first_name, p.last_name, p.date_of_birth::text as date_of_birth, p.age_group::text as age_group, p.shirt_number,
-           p.position, p.joined_on::text as joined_on, p.photo_consent, p.photo_consent_recorded_at, pg.relationship
+           p.position, p.joined_on::text as joined_on, p.photo_consent, p.photo_consent_recorded_at,
+           p.photo_file_id is not null as has_photo, p.photo_updated_at, pg.relationship
          from players p join player_guardians pg on pg.player_id = p.id and pg.guardian_id = my_guardian_id()
          where p.id in (select my_player_ids())
          order by p.date_of_birth nulls last, p.first_name`,
@@ -123,6 +126,8 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
       yourRelationship: c.relationship,
       photoConsent: c.photo_consent === null ? "not answered" : c.photo_consent ? "yes" : "no",
       photoConsentRecordedAt: at(c.photo_consent_recorded_at),
+      // Whether there's a photo for the coaches and when it was added; not the photo itself (it's on the child's details).
+      photoForCoaches: c.has_photo ? `yes, added ${at(c.photo_updated_at)}` : "no",
       payment: payments.find((p) => p.player_id === c.id)?.state ?? "missing",
       contractSignatures: forChild(agreements, c.id).map((a) => ({ document: a.document, signedBy: a.parent_name, signedAt: at(a.signed_at) })),
       emergencyContacts: forChild(contacts, c.id).map((e) => ({ name: e.name, phone: e.phone, relationship: e.relationship, addedAt: at(e.created_at) })),

@@ -20,6 +20,8 @@ export type RegisterRow = {
   lastInitial: string;
   ageGroup: AgeGroup;
   shirtNumber: number | null;
+  /** The photo a parent added for the coaches (a club_files id). */
+  photoId: string | null;
   answer: Availability | null;
   checkedInAt: string | null;
   /** How they were checked in: their gate pass or a coach's Mark here. */
@@ -116,6 +118,7 @@ export async function loadRegister(
     age_group: AgeGroup;
     shirt_number: number | null;
     photo_consent: boolean | null;
+    photo_file_id: string | null;
     payment: PaymentState;
     answer: Availability | null;
     checked_in_at: Date | null;
@@ -123,7 +126,7 @@ export async function loadRegister(
     unread_news: boolean;
     kit_ready: boolean;
   }>(
-    `select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number, p.photo_consent,
+    `select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number, p.photo_consent, p.photo_file_id,
        coalesce(ps.state, 'missing')::text as payment, a.answer::text as answer, at.checked_in_at, at.method,
        ${unreadNewsSql("$3")} as unread_news,
        exists (
@@ -149,6 +152,7 @@ export async function loadRegister(
       lastInitial: r.last_name[0] ?? "",
       ageGroup: r.age_group,
       shirtNumber: r.shirt_number,
+      photoId: r.photo_file_id,
       answer: r.answer,
       checkedInAt: r.checked_in_at ? iso(r.checked_in_at) : null,
       method: r.checked_in_at ? r.method : null,

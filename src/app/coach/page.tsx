@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CalendarClock } from "lucide-react";
 import { PageHeader } from "@/components/admin/bits";
 import { UndoCheckInButton } from "@/components/CheckInButton";
+import { ChildAvatar } from "@/components/ChildAvatar";
 import { PassScanner } from "@/components/PassScanner";
 import { RegisterAutoRefresh } from "@/components/RegisterAutoRefresh";
 import { FlagPills, RegisterLists, type GateRow } from "@/components/RegisterLists";
@@ -22,6 +23,7 @@ const gate = (r: RegisterRow): GateRow => ({
   firstName: r.firstName,
   lastInitial: r.lastInitial,
   ageGroup: r.ageGroup,
+  photoId: r.photoId,
   answer: r.answer,
   checkedIn: r.checkedInAt ? `${r.method === "qr" ? "QR code scanned" : "Marked here"} · ${clock(r.checkedInAt)}` : null,
   flags: r.flags,
@@ -106,7 +108,12 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
         <section aria-label="Just checked in" className="flex flex-col gap-2">
           {s.latest.map((r) => (
             <div key={r.id} className="flex flex-wrap items-center gap-3 rounded-app bg-grass-tint py-2 pr-2 pl-3.5 text-ink">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-grass font-display text-[22px] text-on-grass">{r.shirtNumber ?? r.firstName[0]}</span>
+              {r.photoId ? (
+                // A bigger face for the one who just came in, so the coach can match name to child at the gate.
+                <ChildAvatar photoId={r.photoId} firstName={r.firstName} size={72} />
+              ) : (
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-grass font-display text-[22px] text-on-grass">{r.shirtNumber ?? r.firstName[0]}</span>
+              )}
               <span className="flex min-w-0 flex-1 flex-col items-start">
                 <span className="text-[15px] font-bold">
                   {r.firstName} {r.lastInitial}. checked in

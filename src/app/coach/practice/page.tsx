@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Attachment } from "@/components/plans/Attachment";
+import { VideoField } from "@/components/plans/VideoField";
+import { VideoCard } from "@/components/plans/VideoCard";
 import { PageHeader } from "@/components/admin/bits";
 import { PracticeFromPlan, WritingHelp } from "@/components/writing/WritingHelp";
 import { aiConfigured } from "@/lib/ai/claude";
@@ -49,7 +51,7 @@ export default async function StaffPracticePage() {
           </div>
           <div>
             <label htmlFor="body" className="field-label">
-              Instructions <span className="font-normal text-ink-muted">(optional if you attach a sheet)</span>
+              Instructions <span className="font-normal text-ink-muted">(optional if you attach a sheet or add a video)</span>
             </label>
             <textarea id="body" name="body" rows={5} maxLength={4000} placeholder="10 minutes a day. Count your best score and tell your coach on Friday." className="field" />
             <div className="mt-2">
@@ -62,6 +64,7 @@ export default async function StaffPracticePage() {
             </label>
             <input id="file" name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="field py-3 text-[15px]" />
           </div>
+          <VideoField />
           <fieldset className="flex flex-col gap-2">
             <legend className="field-label">
               Who is it for? {limited ? null : <span className="font-normal text-ink-muted">(none ticked means every group)</span>}
@@ -84,10 +87,14 @@ export default async function StaffPracticePage() {
         <Card key={s.id} className="flex flex-col gap-2 p-3.5">
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-base font-extrabold">{s.title}</h3>
-            <Pill tone="neutral">{s.ageGroups.length ? s.ageGroups.join(", ") : "Everyone"}</Pill>
+            <span className="flex flex-wrap justify-end gap-1">
+              {s.video ? <Pill tone="neutral">Video</Pill> : null}
+              <Pill tone="neutral">{s.ageGroups.length ? s.ageGroups.join(", ") : "Everyone"}</Pill>
+            </span>
           </div>
           {s.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{s.body}</p> : null}
           {s.file ? <Attachment file={s.file} from="/coach/practice" /> : null}
+          {s.video ? <VideoCard video={s.video} name={s.title} /> : null}
           <div className="flex items-center justify-between gap-2 text-[13px] text-ink-muted">
             <span>{[s.from, day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</span>
             {user.staff.role === "admin" || s.postedById === user.staff.id ? (

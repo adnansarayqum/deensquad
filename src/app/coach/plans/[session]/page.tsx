@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Attachment } from "@/components/plans/Attachment";
+import { VideoField } from "@/components/plans/VideoField";
 import { WritingHelp } from "@/components/writing/WritingHelp";
 import { aiConfigured } from "@/lib/ai/claude";
 import { PageHeader } from "@/components/admin/bits";
@@ -13,6 +14,7 @@ import { isAgeGroup } from "@/lib/domain";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "@/lib/parent/data";
 import { deletePlan, savePlan } from "@/lib/plans/actions";
 import { loadPlan } from "@/lib/plans/data";
+import { canonicalYouTube } from "@/lib/video";
 
 export const metadata: Metadata = { title: "Session plan" };
 
@@ -68,6 +70,7 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/coa
             </label>
             <input id="file" name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="field py-3 text-[15px]" />
           </div>
+          <VideoField defaultValue={plan?.video ? canonicalYouTube(plan.video) : ""} />
         </StatefulForm>
       </div>
       {plan ? (

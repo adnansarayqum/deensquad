@@ -10,6 +10,7 @@ import { asUser } from "../db";
 import { isAgeGroup } from "../domain";
 import { readUpload, saveFile } from "../files";
 import { cleanBody, cleanText } from "../validate";
+import { readVideoField } from "../video";
 import { runPlanNotifications } from "./run";
 
 export type PlanState = { error?: string; saved?: boolean };
@@ -33,6 +34,8 @@ export async function savePlan(_prev: PlanState, formData: FormData): Promise<Pl
   const file = await readUpload(formData.get("file"));
   if (!file.ok) return { error: file.error };
   const removeFile = formData.get("removeFile") === "on";
+  const video = readVideoField(formData.get("video"));
+  if (!video.ok) return { error: video.error };
 
   const error = await asUser(user.id, async (tx) => {
     const [s] = await tx.query(`select 1 from sessions where id = $1 and $2::age_group = any (age_groups)`, [session, group]);
@@ -42,11 +45,12 @@ export async function savePlan(_prev: PlanState, formData: FormData): Promise<Pl
       group,
     ]);
     const fileId = file.upload ? await saveFile(tx, file.upload, user.staff.id) : removeFile ? null : (existing?.file_id ?? null);
-    if (!body && !fileId) return "Write the plan or attach a file.";
+    if (!body && !fileId && !video.url) return "Write the plan, attach a file or add a video.";
     await tx.query(
-      `insert into session_plans (session_id, age_group, body, file_id, author) values ($1, $2::age_group, $3, $4, $5)
-       on conflict (session_id, age_group) do update set body = excluded.body, file_id = excluded.file_id, author = excluded.author, updated_at = now()`,
-      [session, group, body, fileId, user.staff.id],
+      `insert into session_plans (session_id, age_group, body, file_id, video_url, author) values ($1, $2::age_group, $3, $4, $5, $6)
+       on conflict (session_id, age_group) do update
+         set body = excluded.body, file_id = excluded.file_id, video_url = excluded.video_url, author = excluded.author, updated_at = now()`,
+      [session, group, body, fileId, video.url, user.staff.id],
     );
     if (existing?.file_id && existing.file_id !== fileId) await tx.query(`delete from club_files where id = $1`, [existing.file_id]);
     return null;
@@ -78,20 +82,19 @@ export async function addPracticeSheet(_prev: PlanState, formData: FormData): Pr
   const mine = staffGroups(user.staff);
   const groups = formData.getAll("groups").filter(isAgeGroup);
   const file = await readUpload(formData.get("file"));
+  const video = readVideoField(formData.get("video"));
   if (!title) return { error: "Give it a title, like Keepy-uppy challenge." };
   if (!file.ok) return { error: file.error };
-  if (!body && !file.upload) return { error: "Write the instructions or attach a sheet." };
+  if (!video.ok) return { error: video.error };
+  if (!body && !file.upload && !video.url) return { error: "Write the instructions, attach a sheet or add a video." };
   if (groups.some((g) => !mine.includes(g))) return { error: `You can post to your own groups: ${mine.join(", ")}.` };
   if (isGroupCoach(user.staff) && groups.length === 0) return { error: "Choose which of your groups it's for." };
   await asUser(user.id, async (tx) => {
     const fileId = file.upload ? await saveFile(tx, file.upload, user.staff.id) : null;
-    await tx.query(`insert into practice_sheets (title, body, age_groups, file_id, posted_by) values ($1, $2, $3::text[]::age_group[], $4, $5)`, [
-      title,
-      body,
-      groups,
-      fileId,
-      user.staff.id,
-    ]);
+    await tx.query(
+      `insert into practice_sheets (title, body, age_groups, file_id, video_url, posted_by) values ($1, $2, $3::text[]::age_group[], $4, $5, $6)`,
+      [title, body, groups, fileId, video.url, user.staff.id],
+    );
   });
   notifyAfterResponse();
   refresh();
