@@ -30,7 +30,14 @@ export function latestCode(email: string, outbox = OUTBOX): string {
 /** Leaves the page first: an in-flight prefetch can otherwise re-set the session cookie after it's cleared. */
 export async function switchUser(page: Page) {
   await page.goto("about:blank");
-  await page.context().clearCookies();
+  // The staff shell prefetches its menu's pages; a prefetch still in flight can set the old session cookie
+  // again after it's cleared (each response refreshes the sliding session). Clear until it stays gone.
+  const context = page.context();
+  for (let quiet = 0, tries = 0; quiet < 2 && tries < 20; tries++) {
+    await context.clearCookies();
+    await page.waitForTimeout(250);
+    quiet = (await context.cookies()).length === 0 ? quiet + 1 : 0;
+  }
 }
 
 export async function signIn(page: Page, email: string, outbox = OUTBOX) {
