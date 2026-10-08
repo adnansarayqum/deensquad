@@ -40,7 +40,7 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
   return (
     <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-cream pb-[max(env(safe-area-inset-bottom),24px)]">
       <AppHeader>
-        <Link href={`/coach/awards?group=${player.age_group}`} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-bold text-on-pitch-muted">
+        <Link href={`/coach/awards?group=${player.age_group}`} className="inline-flex min-h-12 items-center gap-1 self-start text-sm font-bold text-on-pitch-muted">
           <ChevronLeft aria-hidden size={18} />
           {player.age_group}s
         </Link>
@@ -75,7 +75,7 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
                 {isAdmin || a.fromId === user.staff.id ? (
                   <form action={removeAward}>
                     <input type="hidden" name="award" value={a.id} />
-                    <button type="submit" className="min-h-11 px-2 text-sm font-bold text-ink-muted underline">
+                    <button type="submit" className="min-h-12 px-2 text-sm font-bold text-ink-muted underline">
                       Undo
                     </button>
                   </form>
@@ -107,7 +107,7 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
                       <input type="hidden" name="badge" value={b.id} />
                       <input type="hidden" name="give" value={b.earned_on ? "no" : "yes"} />
                       {b.earned_on ? (
-                        <button type="submit" className="min-h-11 px-2 text-sm font-bold text-ink-muted underline" aria-label={`Take back ${b.name}`}>
+                        <button type="submit" className="min-h-12 px-2 text-sm font-bold text-ink-muted underline" aria-label={`Take back ${b.name}`}>
                           Take back
                         </button>
                       ) : (

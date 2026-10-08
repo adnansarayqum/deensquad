@@ -9,11 +9,16 @@ import { codeHash, newCode, newToken, sameHash, sha256, UUID } from "./tokens";
 export const SIGN_IN_MINUTES = 15;
 export const INVITE_DAYS = 7;
 export const MAX_CODE_ATTEMPTS = 5;
+/**
+ * Wrong codes for one address across all its requests in 24 hours. Each new code gives another 5 tries, so without
+ * this someone could keep guessing (5 codes an hour x 5 tries) for weeks. The link in the email still works.
+ */
+export const MAX_WRONG_CODES_PER_DAY = 20;
 export const SESSION_DAYS = 90;
 // Families at one venue often share an internet address (its wifi, or a mobile network), so the per-address
-// limit is generous. Sign-ups (an email the club doesn't have yet) also have a club-wide hourly cap, so a flood
+// limit is generous (a few hundred parents signing in at the ground on the same evening). Sign-ups (an email the club doesn't have yet) also have a club-wide hourly cap, so a flood
 // of made-up sign-ups can't fill the families list or send hundreds of emails; ordinary sign-ins never count towards it.
-export const LIMITS = { perEmailPerHour: 5, perIpPerHour: 100, signUpsPerHour: 300 };
+export const LIMITS = { perEmailPerHour: 5, perIpPerHour: 500, signUpsPerHour: 300 };
 
 export type IssuedRequest = { requestId: string; email: string; code: string | null; token: string; expiresAt: Date };
 
@@ -91,7 +96,7 @@ export async function issueSignIn(
 
 export type VerifyResult =
   | { ok: true; userId: string; email: string; registered?: Registered }
-  | { ok: false; reason: "wrong" | "expired" | "used" | "too_many"; attemptsLeft?: number };
+  | { ok: false; reason: "wrong" | "expired" | "used" | "too_many" | "locked"; attemptsLeft?: number };
 
 type RequestRow = {
   id: string;
@@ -113,6 +118,11 @@ export async function verifyCode(tx: Queryable, requestId: string, code: string,
   const problem = checkUsable(row, now);
   if (problem) return { ok: false, reason: problem };
   if (row.attempts >= MAX_CODE_ATTEMPTS) return { ok: false, reason: "too_many" };
+  const [{ wrongToday }] = await tx.query<{ wrongToday: number }>(
+    `select coalesce(sum(attempts), 0)::int as "wrongToday" from auth.sign_in_requests where lower(email) = lower($1) and created_at > $2`,
+    [row.email, new Date(now.getTime() - 86400_000)],
+  );
+  if (wrongToday >= MAX_WRONG_CODES_PER_DAY) return { ok: false, reason: "locked" };
   if (!sameHash(row.code_hash, codeHash(row.id, code))) {
     await tx.query(`update auth.sign_in_requests set attempts = attempts + 1 where id = $1`, [row.id]);
     const left = MAX_CODE_ATTEMPTS - row.attempts - 1;

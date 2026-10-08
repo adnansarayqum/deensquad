@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
 import { passToken } from "../pass/token";
-import { checkInByPass } from "./checkin";
+import { checkInByPass, markHere } from "./checkin";
 import { flagSummary } from "./flags";
 import { ALL_GROUPS, loadRegister, summarise } from "./register";
 
@@ -43,6 +43,30 @@ describe("the gate register", () => {
     const s = summarise((await register("U10"))!);
     expect(s.here).toMatchObject([{ id: DEV_IDS.yusuf, method: "qr" }]);
     expect(s.notHere.some((r) => r.id === DEV_IDS.yusuf)).toBe(false);
+  });
+
+  it("finds a group coach's own session when the club's only session today is for other groups", async () => {
+    // Today's training becomes U10 only; a U7-only session is added tomorrow.
+    const [today] = await t.asUser(coach, (tx) =>
+      tx.query<{ id: string }>(`select id from sessions where starts_at::date = '2026-10-09' and cancelled_at is null limit 1`),
+    );
+    await t.asSystem((tx) => tx.query(`update sessions set age_groups = '{U10}' where id = $1`, [today.id]));
+    const [u7] = await t.asSystem((tx) =>
+      tx.query<{ id: string }>(
+        `insert into sessions (title, starts_at, ends_at, venue, age_groups) values ('U7 skills', '2026-10-10T09:00:00Z', '2026-10-10T10:00:00Z', 'Park', '{U7}') returning id`,
+      ),
+    );
+    const view = (await register("U7", ["U7"]))!;
+    expect(view.session.id).toBe(u7.id);
+    // The U10 coach still gets today's.
+    expect((await register("U10", ["U10"]))!.session.id).toBe(today.id);
+  });
+
+  it("refuses Mark here on a cancelled session", async () => {
+    const view = (await register("U10"))!;
+    await t.asSystem((tx) => tx.query(`update sessions set cancelled_at = now() where id = $1`, [view.session.id]));
+    const result = await t.asUser(coach, (tx) => markHere(tx, view.session.id, view.rows[0].id, atGate));
+    expect(result).toEqual({ error: "This session was cancelled. Nothing was saved." });
   });
 
   it("opens a linked future session even when there is a session today", async () => {

@@ -51,7 +51,13 @@ export async function addEmergencyContact(_prev: ContactFormState, formData: For
   const relationship = cleanText(formData.get("relationship"), 40);
   if (childIds.length === 0) return { error: "Choose which child this contact is for." };
   if (!name) return { error: "Add the contact's name." };
-  if (!phone) return { error: "Add a phone number we can call, like 07700 900123." };
+  if (!phone) {
+    return {
+      error: String(formData.get("phone") ?? "").trim()
+        ? "That phone number doesn't look right. Type it like 07700 900123."
+        : "Add a phone number we can call, like 07700 900123.",
+    };
+  }
   await asUser(user.id, async (tx) => {
     for (const id of childIds) {
       await tx.query(

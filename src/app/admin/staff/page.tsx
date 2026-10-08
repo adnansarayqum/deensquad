@@ -44,21 +44,26 @@ export default async function StaffPage() {
               </span>
               <span className="flex items-center gap-2">
                 <Pill tone={s.role === "admin" ? "gold" : "neutral"}>
-                  {s.role}
+                  {s.role === "admin" ? "Admin" : "Coach"}
                 </Pill>
                 {s.signedIn ? <Pill tone="done">Signed in</Pill> : null}
                 {s.id !== user.staff.id &&
                 !(s.role === "admin" && admins <= 1) ? (
-                  <form action={removeStaff}>
-                    <input type="hidden" name="id" value={s.id} />
-                    <button
-                      type="submit"
-                      className="min-h-11 px-2 text-sm font-bold text-ink-muted underline"
-                      aria-label={`Remove ${s.displayName}`}
-                    >
-                      Remove
-                    </button>
-                  </form>
+                  <details className="group">
+                    <summary className="flex min-h-12 cursor-pointer items-center px-2 text-sm font-bold text-ink-muted underline">
+                      Remove<span className="sr-only"> {s.displayName}</span>
+                    </summary>
+                    <form action={removeStaff} className="mt-2 flex flex-col gap-2">
+                      <input type="hidden" name="id" value={s.id} />
+                      <label className="flex min-h-11 items-center gap-3 text-sm font-bold">
+                        <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--kit-orange)]" />
+                        Yes, remove {s.displayName}
+                      </label>
+                      <button type="submit" className="btn-chunky btn-paper btn-small self-start">
+                        Remove {s.displayName}
+                      </button>
+                    </form>
+                  </details>
                 ) : null}
               </span>
             </div>

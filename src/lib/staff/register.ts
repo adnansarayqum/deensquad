@@ -37,19 +37,45 @@ export type RegisterView = {
   rows: RegisterRow[];
 };
 
-/** Today's sessions (London time), or the next one if there's nothing today. */
-export async function loadRegisterSessions(tx: Queryable, now: Date): Promise<Session[]> {
+/**
+ * The register's "Unread news" flag for child `p` at time `now` (a SQL parameter, e.g. "$3"): the last rung of the
+ * chase ladder, when nobody in the family has read a message that's been waiting two days or more.
+ * Shared with the gate scanner so both say the same.
+ */
+export const unreadNewsSql = (now: string) => `exists (
+         select 1 from announcements an
+         where an.requires_ack and an.posted_at <= ${now}::timestamptz - interval '48 hours' and an.posted_at > ${now}::timestamptz - interval '14 days'
+           and ${newsReaches("an", "p")}
+           -- not about a message posted before any of the child's parents were added (see the chase ladder)
+           and exists (
+             select 1 from player_guardians fg join guardians fgg on fgg.id = fg.guardian_id
+             where fg.player_id = p.id and fgg.created_at <= an.posted_at
+           )
+           and not exists (
+             select 1 from announcement_reads r join player_guardians rg on rg.guardian_id = r.guardian_id
+             where r.announcement_id = an.id and rg.player_id = p.id
+           )
+       )`;
+
+/**
+ * Today's sessions (London time), or the next one if there's nothing today.
+ * `allowed` (a group coach's groups) counts only sessions for those groups, so another group's session never hides theirs.
+ */
+export async function loadRegisterSessions(tx: Queryable, now: Date, allowed?: AgeGroup[]): Promise<Session[]> {
   const d = londonDate(now);
   const start = londonTime(d.year, d.month, d.day, 0, 0);
   const end = londonTime(d.year, d.month, d.day, 23, 59);
+  const groups = allowed ?? null;
   const today = await tx.query<SessionRow>(
-    `select ${SESSION_COLUMNS} from sessions s where s.starts_at between $1 and $2 and s.cancelled_at is null order by s.starts_at`,
-    [start, end],
+    `select ${SESSION_COLUMNS} from sessions s where s.starts_at between $1 and $2 and s.cancelled_at is null
+       and ($3::text[] is null or s.age_groups::text[] && $3::text[]) order by s.starts_at`,
+    [start, end, groups],
   );
   if (today.length) return today.map(toSession);
   const next = await tx.query<SessionRow>(
-    `select ${SESSION_COLUMNS} from sessions s where s.ends_at > $1 and s.cancelled_at is null order by s.starts_at limit 1`,
-    [now],
+    `select ${SESSION_COLUMNS} from sessions s where s.ends_at > $1 and s.cancelled_at is null
+       and ($2::text[] is null or s.age_groups::text[] && $2::text[]) order by s.starts_at limit 1`,
+    [now, groups],
   );
   return next.map(toSession);
 }
@@ -61,7 +87,7 @@ export async function loadRegister(
 ): Promise<RegisterView | null> {
   const allowed = opts.allowed;
   const mine = (s: Session): Session => (allowed ? { ...s, ageGroups: s.ageGroups.filter((g) => allowed.includes(g)) } : s);
-  const todays = (await loadRegisterSessions(tx, opts.now)).map(mine).filter((s) => s.ageGroups.length > 0);
+  const todays = (await loadRegisterSessions(tx, opts.now, allowed)).map(mine).filter((s) => s.ageGroups.length > 0);
   // A linked session (e.g. from the admin dashboard) wins, even on a day with its own sessions; otherwise today's first.
   let session: Session | undefined = todays.find((s) => s.id === opts.sessionId);
   if (!session && typeof opts.sessionId === "string") {
@@ -99,21 +125,7 @@ export async function loadRegister(
   }>(
     `select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number, p.photo_consent,
        coalesce(ps.state, 'missing')::text as payment, a.answer::text as answer, at.checked_in_at, at.method,
-       -- last rung of the chase ladder: nobody in the family has read a message that's been waiting two days or more
-       exists (
-         select 1 from announcements an
-         where an.requires_ack and an.posted_at <= $3::timestamptz - interval '48 hours' and an.posted_at > $3::timestamptz - interval '14 days'
-           and ${newsReaches("an", "p")}
-           -- not about a message posted before any of the child's parents were added (see the chase ladder)
-           and exists (
-             select 1 from player_guardians fg join guardians fgg on fgg.id = fg.guardian_id
-             where fg.player_id = p.id and fgg.created_at <= an.posted_at
-           )
-           and not exists (
-             select 1 from announcement_reads r join player_guardians rg on rg.guardian_id = r.guardian_id
-             where r.announcement_id = an.id and rg.player_id = p.id
-           )
-       ) as unread_news,
+       ${unreadNewsSql("$3")} as unread_news,
        exists (
          select 1 from shop_order_items i join shop_orders o on o.id = i.order_id where i.player_id = p.id and o.status = 'ready'
        ) as kit_ready

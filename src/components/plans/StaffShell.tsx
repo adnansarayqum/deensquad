@@ -8,7 +8,7 @@ export function StaffShell({ back, backLabel, title, intro, nav, children }: { b
   return (
     <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-cream pb-[max(env(safe-area-inset-bottom),24px)]">
       <AppHeader>
-        <Link href={back} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-bold text-on-pitch-muted">
+        <Link href={back} className="inline-flex min-h-12 items-center gap-1 self-start text-sm font-bold text-on-pitch-muted">
           <ChevronLeft aria-hidden size={18} />
           {backLabel}
         </Link>

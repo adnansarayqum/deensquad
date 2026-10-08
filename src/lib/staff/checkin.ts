@@ -4,7 +4,7 @@ import { iso } from "../db/types";
 import type { AgeGroup, PaymentState } from "../domain";
 import { readPass } from "../pass/token";
 import { sessionIsFor } from "../squads/sql";
-import type { RegisterFlag } from "./register";
+import { unreadNewsSql, type RegisterFlag } from "./register";
 
 // Checking a child in from their gate pass. Runs as the member of staff scanning (row level security on).
 // The child goes into today's session for their age group, or a tournament squad session they're picked for
@@ -35,15 +35,17 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
     age_group: AgeGroup;
     photo_consent: boolean | null;
     payment: PaymentState;
+    unread_news: boolean;
     kit_ready: boolean;
   }>(
     `select p.id, p.first_name, p.last_name, p.shirt_number, p.age_group::text as age_group, p.photo_consent,
        coalesce(ps.state, 'missing')::text as payment,
+       ${unreadNewsSql("$2")} as unread_news,
        exists (
          select 1 from shop_order_items i join shop_orders o on o.id = i.order_id where i.player_id = p.id and o.status = 'ready'
        ) as kit_ready
      from players p left join payment_status ps on ps.player_id = p.id where p.id = $1`,
-    [playerId],
+    [playerId, now],
   );
   if (!c) return { ok: false, reason: "unknown_child" };
 
@@ -80,6 +82,7 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
       flags: [
         ...(c.payment === "missing" || c.payment === "overdue" ? (["no_payment_plan"] as const) : []),
         ...(c.photo_consent === null ? (["missing_consent"] as const) : []),
+        ...(c.unread_news ? (["unread_news"] as const) : []),
         ...(c.kit_ready ? (["kit_ready"] as const) : []),
       ],
     },
@@ -111,8 +114,12 @@ export function registerClosedMessage(startsAt: string, now: Date): string {
 
 /** Why a session's register can't be changed at `now` (gone, or not its day), or null when it's open. */
 async function registerRefusal(tx: Queryable, sessionId: string, now: Date): Promise<string | null> {
-  const [s] = await tx.query<{ starts_at: Date }>(`select starts_at from sessions where id = $1`, [sessionId]);
+  const [s] = await tx.query<{ starts_at: Date; cancelled: boolean }>(
+    `select starts_at, cancelled_at is not null as cancelled from sessions where id = $1`,
+    [sessionId],
+  );
   if (!s) return "That session isn't on the register any more. Reload the page.";
+  if (s.cancelled) return "This session was cancelled. Nothing was saved.";
   const startsAt = iso(s.starts_at);
   return registerOpen(startsAt, now) ? null : registerClosedMessage(startsAt, now);
 }

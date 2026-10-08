@@ -12,7 +12,7 @@ afterEach(() => {
 describe("sendEmails", () => {
   it("reports a failed batch as not sent and keeps the batches that went", async () => {
     vi.stubEnv("RESEND_API_KEY", "test");
-    const fetch = vi.fn().mockResolvedValueOnce(new Response("{}", { status: 200 })).mockResolvedValueOnce(new Response("rate limited", { status: 429 }));
+    const fetch = vi.fn().mockResolvedValueOnce(new Response("{}", { status: 200 })).mockResolvedValueOnce(new Response("server error", { status: 500 }));
     vi.stubGlobal("fetch", fetch);
     vi.spyOn(console, "error").mockImplementation(() => {});
     const all = emails(150);
@@ -20,6 +20,21 @@ describe("sendEmails", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(report.sent).toEqual(all.slice(0, 100));
     expect(report.failed).toEqual(all.slice(100));
+  });
+
+  it("waits and tries again when Resend says too many requests, up to twice", async () => {
+    vi.stubEnv("RESEND_API_KEY", "test");
+    const limited = () => new Response("rate limited", { status: 429, headers: { "retry-after": "0.01" } });
+    const fetch = vi.fn().mockResolvedValueOnce(limited()).mockResolvedValueOnce(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetch);
+    expect(await sendEmails(emails(1))).toMatchObject({ sent: [{ to: "p0@example.com" }], failed: [] });
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const always = vi.fn().mockImplementation(async () => limited());
+    vi.stubGlobal("fetch", always);
+    expect(await sendEmails(emails(1))).toMatchObject({ sent: [], failed: [{ to: "p0@example.com" }] });
+    expect(always).toHaveBeenCalledTimes(3);
   });
 
   it("gives up on a request that hangs and counts it as not sent", async () => {

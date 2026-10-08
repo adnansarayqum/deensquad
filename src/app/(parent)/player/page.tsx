@@ -27,7 +27,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                   key={c.id}
                   href={`/player?child=${c.id}`}
                   aria-current={c.id === child.id ? "page" : undefined}
-                  className={`inline-flex min-h-11 items-center rounded-pill px-4 text-sm font-extrabold ${
+                  className={`inline-flex min-h-12 items-center rounded-pill px-4 text-sm font-extrabold ${
                     c.id === child.id ? "bg-floodlight text-on-gold" : "bg-pitch text-on-pitch"
                   }`}
                 >
@@ -160,11 +160,11 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-sm">
           {user.staff ? (
             <div className="flex gap-4">
-              <Link href="/coach" className="inline-flex min-h-11 items-center gap-1.5 font-bold text-grass-text">
+              <Link href="/coach" className="inline-flex min-h-12 items-center gap-1.5 font-bold text-grass-text">
                 <ScanLine aria-hidden size={18} />
                 Register
               </Link>
-              <Link href="/admin" className="inline-flex min-h-11 items-center gap-1.5 font-bold text-grass-text">
+              <Link href="/admin" className="inline-flex min-h-12 items-center gap-1.5 font-bold text-grass-text">
                 <LayoutDashboard aria-hidden size={18} />
                 Club admin
               </Link>
@@ -172,11 +172,11 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           ) : (
             <span className="text-ink-muted">Signed in as {user.email}</span>
           )}
-          <a href="/privacy" className="inline-flex min-h-11 items-center font-bold text-ink-muted underline">
+          <a href="/privacy" className="inline-flex min-h-12 items-center font-bold text-ink-muted underline">
             Privacy
           </a>
           <SignOutForm>
-            <button type="submit" className="inline-flex min-h-11 items-center gap-1.5 font-bold text-ink-muted">
+            <button type="submit" className="inline-flex min-h-12 items-center gap-1.5 font-bold text-ink-muted">
               <LogOut aria-hidden size={16} />
               Sign out
             </button>

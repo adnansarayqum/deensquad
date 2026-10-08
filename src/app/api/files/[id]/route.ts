@@ -15,12 +15,14 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
     tx.query<{ name: string; mime: string; data: Uint8Array }>(`select name, mime, data from club_files where id = $1`, [id]),
   );
   if (!file) return new Response("Not found", { status: 404 });
+  // No extra copy: an 8 MB plan opened by many parents at once is already several copies in memory per request.
   const body = file.data instanceof Uint8Array ? file.data : new Uint8Array(file.data as ArrayBuffer);
-  return new Response(new Uint8Array(body), {
+  return new Response(body as Uint8Array<ArrayBuffer>, {
     headers: {
       "Content-Type": file.mime,
       "Content-Disposition": contentDisposition(file.name, new URL(request.url).searchParams.get("download") === "1"),
-      "Cache-Control": "private, max-age=3600",
+      // A file is never changed after upload (a new one gets a new id), so the phone can keep it for a day.
+      "Cache-Control": "private, max-age=86400",
       "X-Content-Type-Options": "nosniff",
     },
   });

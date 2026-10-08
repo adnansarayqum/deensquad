@@ -14,7 +14,7 @@ import { canSendEmail } from "../email/send";
 import { cleanBody, cleanPhone, cleanText, dialable } from "../validate";
 import { applyImport, planImport, type ImportProblem, type ImportSummary } from "./import";
 import { overlaps, within } from "./scope";
-import { familiesFilter, familiesHref, familiesInviteHref } from "./families-link";
+import { familiesFilter, familiesHref, familiesInviteHref, familiesQuery } from "./families-link";
 import { addSessionRun, addedSentence, cancelSession, editSession, postSessionNotice, removeSession, type SessionEdit } from "./sessions";
 import { changeStaffRole, removeStaffMember } from "./staff";
 import { newsReaches } from "../squads/sql";
@@ -134,16 +134,23 @@ export async function inviteParents(formData: FormData): Promise<void> {
   back(`invited=${sent}${failed ? `&notSent=${failed}` : ""}`);
 }
 
+/** Back to a child's page with `query`, keeping the Families list's filters the form carried. */
+function childPage(formData: FormData, child: string, query: string): never {
+  const params = Object.fromEntries(["group", "need", "q"].map((k) => [k, typeof formData.get(k) === "string" ? (formData.get(k) as string) : undefined]));
+  const filters = familiesQuery(familiesFilter(params, AGE_GROUPS));
+  redirect(`/admin/families/${child}?${query}${filters ? `&${filters}` : ""}`);
+}
+
 export async function resendInvite(formData: FormData): Promise<void> {
   await requireAdmin();
   const guardian = id(formData.get("guardian"));
   const child = id(formData.get("child"));
   if (!guardian || !child) return;
-  if (!canSendEmail()) redirect(`/admin/families/${child}?invite=no-email`);
+  if (!canSendEmail()) childPage(formData, child, "invite=no-email");
   const base = await inviteBase();
-  if (!base) redirect(`/admin/families/${child}?invite=no-url`);
+  if (!base) childPage(formData, child, "invite=no-url");
   const { failed } = await sendInvites({ guardianIds: [guardian], baseUrl: base });
-  redirect(`/admin/families/${child}?${failed ? "invite=failed" : "invited=1"}`);
+  childPage(formData, child, failed ? "invite=failed" : "invited=1");
 }
 
 // Children and parents --------------------------------------------------------
@@ -245,10 +252,10 @@ export async function unlinkGuardian(formData: FormData): Promise<void> {
   const user = await requireAdmin();
   const child = id(formData.get("child"));
   const guardian = id(formData.get("guardian"));
-  if (!child || !guardian) return;
+  if (!child || !guardian || formData.get("confirm") !== "yes") return;
   const removed = await asUser(user.id, (tx) => unlinkGuardianRecord(tx, child, guardian));
   await asSystem((tx) => deleteLeftoverAccounts(tx, removed));
-  refresh();
+  childPage(formData, child, "unlinked=1");
 }
 
 export async function removeChild(formData: FormData): Promise<void> {
@@ -291,6 +298,10 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
     if (s.picked === 0) return { error: "Pick the squad first, then message them." };
     everyone = false;
     groups = s.age_groups.filter(isAgeGroup);
+  }
+  // "Every family" is the default, so ticked groups under it would otherwise be ignored and the whole club messaged.
+  if (everyone && groups.length) {
+    return { error: "You ticked age groups. Choose “Only these age groups” to send just to them, or untick them to send to every family." };
   }
   if (!everyone && groups.length === 0) return { error: "Choose who it's for: everyone, or at least one age group." };
   if (isGroupCoach(user.staff)) {
@@ -549,7 +560,7 @@ export async function setStaffRole(formData: FormData): Promise<void> {
 export async function removeStaff(formData: FormData): Promise<void> {
   const user = await requireAdmin();
   const staff = id(formData.get("id"));
-  if (!staff || staff === user.staff.id) return;
+  if (!staff || staff === user.staff.id || formData.get("confirm") !== "yes") return;
   await asUser(user.id, (tx) => removeStaffMember(tx, staff));
   refresh();
 }

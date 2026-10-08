@@ -31,6 +31,11 @@ function fromAddress(): string {
   return process.env.EMAIL_FROM?.trim() || "Deen Squad <onboarding@resend.dev>";
 }
 
+/** Resend allows a few requests a second per account; a wave of sign-ins can go over it, so a 429 waits and tries again. */
+const RATE_LIMIT_RETRIES = 2;
+
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /**
@@ -46,12 +51,18 @@ export async function sendEmails(emails: Email[]): Promise<EmailReport> {
       const group = emails.slice(i, i + 100);
       const chunk = group.map((e) => ({ from: fromAddress(), to: [e.to], subject: e.subject, text: e.text, html: e.html }));
       try {
-        const res = await fetch(chunk.length === 1 ? "https://api.resend.com/emails" : "https://api.resend.com/emails/batch", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-          body: JSON.stringify(chunk.length === 1 ? chunk[0] : chunk),
-          signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
-        });
+        let res: Response;
+        for (let attempt = 0; ; attempt++) {
+          res = await fetch(chunk.length === 1 ? "https://api.resend.com/emails" : "https://api.resend.com/emails/batch", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+            body: JSON.stringify(chunk.length === 1 ? chunk[0] : chunk),
+            signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+          });
+          if (res.status !== 429 || attempt >= RATE_LIMIT_RETRIES) break;
+          const wait = Number(res.headers.get("retry-after"));
+          await pause(Number.isFinite(wait) && wait > 0 ? Math.min(wait, 3) * 1000 : 1000);
+        }
         if (!res.ok) {
           const detail = await res.text().catch(() => "");
           throw new Error(`Resend refused the email (${res.status}): ${detail.slice(0, 300)}`);

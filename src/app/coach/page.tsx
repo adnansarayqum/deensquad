@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CalendarClock, ChevronLeft, ClipboardList, Star } from "lucide-react";
 import { UndoCheckInButton } from "@/components/CheckInButton";
 import { PassScanner } from "@/components/PassScanner";
+import { RegisterAutoRefresh } from "@/components/RegisterAutoRefresh";
 import { FlagPills, RegisterLists, type GateRow } from "@/components/RegisterLists";
 import { Progress } from "@/components/ui";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
@@ -40,7 +41,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
           {back.label}
         </Link>
         <h1 className="font-display text-[44px] leading-[0.95] tracking-[0.02em]">Register</h1>
-        <p className="text-[15px] text-on-pitch-muted">No sessions coming up for your groups. Add the term&apos;s sessions in the club admin.</p>
+        <p className="text-[15px] text-on-pitch-muted">No sessions coming up for your groups. A club admin adds the term&apos;s sessions.</p>
         <Link href="/coach/awards" className="inline-flex min-h-12 items-center gap-1.5 self-start text-sm font-bold text-floodlight">
           <Star aria-hidden size={16} fill="currentColor" strokeWidth={0} />
           Points and stars
@@ -64,6 +65,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-pitch-deep text-on-pitch">
+      {open ? <RegisterAutoRefresh /> : null}
       <header className="flex flex-col gap-3 px-4 pt-[max(env(safe-area-inset-top),20px)] pb-3.5">
         <div className="flex items-end justify-between gap-3 pt-4">
           <div className="flex flex-col gap-0.5">
@@ -76,7 +78,10 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
             </p>
             <h1 className="font-display text-[44px] leading-[0.95] tracking-[0.02em]">{session.title} register</h1>
           </div>
-          <span className="font-display text-[28px] leading-none text-floodlight">{time}</span>
+          <span className="flex flex-col items-end text-floodlight">
+            <span className="text-label uppercase">Updated</span>
+            <span className="font-display text-[28px] leading-none">{time}</span>
+          </span>
         </div>
         {todays.length > 1 ? (
           <nav aria-label="Today's sessions" className="flex flex-wrap gap-2">
@@ -145,7 +150,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
         </div>
         <Progress value={s.here.length} max={Math.max(1, s.expectedTotal)} label={`${s.here.length} of ${s.expectedTotal} here`} className="w-full" />
         {view.rows.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">No players in the {group}s yet. Import families in the club admin.</p>
+          <p className="text-[15px] text-ink-muted">No players in the {group}s yet. A club admin adds families.</p>
         ) : (
           <RegisterLists sessionId={session.id} open={open} showGroup={all} notHere={s.notHere.map(gate)} away={s.away.map(gate)} here={s.here.map(gate)}>
             {needsAWord ? (

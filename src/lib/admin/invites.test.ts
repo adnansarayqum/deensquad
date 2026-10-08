@@ -37,7 +37,7 @@ function resend(answers: boolean[]) {
     "fetch",
     vi.fn(async (_url: string, init: RequestInit) => {
       const ok = answers[call++] ?? true;
-      if (!ok) return new Response("rate limited", { status: 429 });
+      if (!ok) return new Response("server error", { status: 500 });
       const body = JSON.parse(String(init.body));
       delivered.push(...(Array.isArray(body) ? body : [body]).map((e: { to: string[] }) => e.to[0]));
       return new Response("{}", { status: 200 });

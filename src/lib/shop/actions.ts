@@ -187,6 +187,7 @@ export async function payAgain(formData: FormData): Promise<void> {
     // SumUp references must be unique, so a retry gets a fresh one.
     const sumup = await createCheckout({
       orderId: order.id,
+      retry: Date.now().toString(36),
       totalPence: order.total_pence,
       description: `Deen Squad kit order ${orderReference(order.id)}`,
       redirectUrl: `${base}/shop/orders/${order.id}?return=1`,

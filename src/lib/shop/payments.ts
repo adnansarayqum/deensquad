@@ -8,7 +8,7 @@ import { getCheckout, sumupConfigured } from "./sumup";
 
 /**
  * Asks SumUp whether a checkout was paid, and if so marks its order paid.
- * Never trusts a webhook body or a redirect: the reference and the amount must match the order.
+ * Never trusts a webhook body or a redirect: the reference (the order id, plus `.<suffix>` on a retry) and the amount must match the order.
  */
 export async function confirmSumupPayment(checkoutId: string): Promise<boolean> {
   if (!sumupConfigured()) return false;
@@ -17,7 +17,7 @@ export async function confirmSumupPayment(checkoutId: string): Promise<boolean> 
   const paid = await asSystem(async (tx) => {
     const rows = await tx.query<{ id: string }>(
       `update shop_orders set status = 'paid', paid_at = now(), updated_at = now()
-       where sumup_checkout_id = $1 and id::text = $2 and status = 'awaiting_payment' and total_pence = $3
+       where sumup_checkout_id = $1 and id::text = split_part($2, '.', 1) and status = 'awaiting_payment' and total_pence = $3
        returning id`,
       [checkoutId, checkout.reference ?? "", Math.round((checkout.amount ?? -1) * 100)],
     );

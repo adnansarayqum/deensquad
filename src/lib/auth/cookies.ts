@@ -14,7 +14,10 @@ export function cookieOptions(maxAgeSeconds: number) {
   };
 }
 
-/** Only same-site paths, so `?next=` can't send someone to another website. */
+/**
+ * Only same-site paths, so `?next=` can't send someone to another website. Control characters, spaces and
+ * backslashes are refused too: browsers drop a tab or newline from a URL, so "/\t/evil.example" becomes "//evil.example".
+ */
 export function safeNext(value: unknown): string {
-  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") && !value.startsWith("/\\") ? value : "/";
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") && !/[\x00-\x20\x7f\\]/.test(value) ? value : "/";
 }

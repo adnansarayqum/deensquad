@@ -6,7 +6,7 @@ import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
 import { removeChild, resendInvite, saveGuardian, setPayment, unlinkGuardian, updateChild } from "@/lib/admin/actions";
 import { loadChild } from "@/lib/admin/data";
-import { familiesFilter, familiesHref } from "@/lib/admin/families-link";
+import { familiesFilter, familiesHref, type FamiliesFilter } from "@/lib/admin/families-link";
 import { UUID } from "@/lib/auth/tokens";
 import { coachLimit, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
@@ -34,11 +34,12 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
   const mine = coachLimit(user.staff);
   if (mine && !mine.includes(child.ageGroup)) notFound();
   const isAdmin = user.staff.role === "admin";
+  const filter = familiesFilter(flags, staffGroups(user.staff));
 
   return (
     // Forms and detail read best at phone-to-tablet width, even on a computer.
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <Link href={familiesHref(familiesFilter(flags, staffGroups(user.staff)))} className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
+      <Link href={familiesHref(filter)} className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
         ← Families
       </Link>
       <div className="flex items-center gap-3">
@@ -57,7 +58,11 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
 
       {flags.invited ? <Notice>Invite sent.</Notice> : null}
       {flags.invite === "failed" ? <Notice tone="action">The invite wasn&apos;t sent. Try again later.</Notice> : null}
-      {flags.invite === "no-email" ?<Notice tone="action">Email isn&apos;t set up yet. Add RESEND_API_KEY in Railway.</Notice> : null}
+      {flags.invite === "no-email" ? <Notice tone="action">Email isn&apos;t set up yet. Add RESEND_API_KEY in Railway.</Notice> : null}
+      {flags.invite === "no-url" ? (
+        <Notice tone="action">The invite wasn&apos;t sent: the app doesn&apos;t know its web address. Set APP_URL in Railway, then try again.</Notice>
+      ) : null}
+      {flags.unlinked ? <Notice>Parent unlinked.</Notice> : null}
 
       <Section title="Payment" aside={<Pill tone={child.payment === "active" ? "done" : child.payment === "self_reported" ? "gold" : "action"}>{paymentLabel[child.payment]}</Pill>}>
         <p className="text-sm text-ink-muted">Set this after checking TeamFeePay.</p>
@@ -92,6 +97,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                   <form action={resendInvite}>
                     <input type="hidden" name="guardian" value={g.id} />
                     <input type="hidden" name="child" value={child.id} />
+                    <FilterInputs filter={filter} />
                     <button type="submit" className="btn-chunky btn-paper btn-small">
                       {g.invited ? "Send invite again" : "Send invite"}
                     </button>
@@ -104,11 +110,19 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                     <input type="hidden" name="guardian" value={g.id} />
                     <GuardianFields prefix={`g-${g.id}`} first={g.firstName} last={g.lastName} email={g.email} phone={g.phone} />
                   </StatefulForm>
-                  <form action={unlinkGuardian} className="mt-3">
+                  <form action={unlinkGuardian} className="mt-4 flex flex-col gap-2 border-t border-line pt-3">
                     <input type="hidden" name="child" value={child.id} />
                     <input type="hidden" name="guardian" value={g.id} />
-                    <button type="submit" className="text-sm font-bold text-kit-orange underline">
-                      Unlink {g.firstName} from {child.firstName}
+                    <FilterInputs filter={filter} />
+                    <p className="text-sm text-ink-muted">
+                      If {g.firstName} has no other children at the club, their details and sign-in are deleted. This can&apos;t be undone.
+                    </p>
+                    <label className="flex min-h-11 items-center gap-3 text-sm font-bold">
+                      <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--kit-orange)]" />
+                      Yes, unlink {g.firstName} from {child.firstName}
+                    </label>
+                    <button type="submit" className="btn-chunky btn-paper btn-small self-start">
+                      Unlink {g.firstName}
                     </button>
                   </form>
                 </details>
@@ -248,5 +262,16 @@ function GuardianFields({
       <Field prefix={prefix} label="Email" name="email" type="email" inputMode="email" defaultValue={email ?? ""} />
       <Field prefix={prefix} label="Phone" name="phone" type="tel" inputMode="tel" defaultValue={phone ?? ""} />
     </div>
+  );
+}
+
+/** Carries the Families list's filters through a form, so "← Families" still returns to the same list afterwards. */
+function FilterInputs({ filter }: { filter: FamiliesFilter }) {
+  return (
+    <>
+      {filter.group ? <input type="hidden" name="group" value={filter.group} /> : null}
+      {filter.need ? <input type="hidden" name="need" value={filter.need} /> : null}
+      {filter.q ? <input type="hidden" name="q" value={filter.q} /> : null}
+    </>
   );
 }

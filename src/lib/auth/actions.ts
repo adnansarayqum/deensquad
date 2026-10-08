@@ -51,12 +51,20 @@ export async function requestCode(_prev: FormState, formData: FormData): Promise
     const { requestId, code, token } = result.request;
     const base = await baseUrl();
     const { failed } = await sendEmails([signInEmail({ to: email, code: code!, link: base ? `${base}/sign-in/link?token=${token}` : null, appUrl: base })]);
-    if (failed.length) return { error: "We couldn't send the email just now. Try again in a minute." };
+    if (failed.length) {
+      await forgetRequest(requestId);
+      return { error: "We couldn't send the email just now. Try again in a minute." };
+    }
     pending = { id: requestId, to: maskEmail(email), next };
   }
 
   (await cookies()).set(PENDING_COOKIE, JSON.stringify(pending), cookieOptions(SIGN_IN_MINUTES * 60));
   redirect("/sign-in/code");
+}
+
+/** A code that never reached the parent shouldn't count towards their hourly limit (or the venue's). */
+async function forgetRequest(requestId: string) {
+  await asSystem((tx) => tx.query(`delete from auth.sign_in_requests where id = $1`, [requestId])).catch(() => {});
 }
 
 /** A new family signing itself up: we email a code, and the family is created once it's entered. */
@@ -77,7 +85,10 @@ export async function register(_prev: FormState, formData: FormData): Promise<Fo
   const { requestId, code, token } = result.request;
   const base = await baseUrl();
   const { failed } = await sendEmails([signInEmail({ to: email, code: code!, link: base ? `${base}/sign-in/link?token=${token}` : null, appUrl: base })]);
-  if (failed.length) return { error: "We couldn't send the email just now. Try again in a minute." };
+  if (failed.length) {
+    await forgetRequest(requestId);
+    return { error: "We couldn't send the email just now. Try again in a minute." };
+  }
   const pending: Pending = { id: requestId, to: maskEmail(email), next: "/checklist", signUp: true };
   (await cookies()).set(PENDING_COOKIE, JSON.stringify(pending), cookieOptions(SIGN_IN_MINUTES * 60));
   redirect("/sign-in/code");
@@ -131,6 +142,8 @@ export async function submitCode(_prev: FormState, formData: FormData): Promise<
         };
       case "too_many":
         return { error: "Too many wrong codes. Ask for a new one." };
+      case "locked":
+        return { error: "Too many wrong codes today. Tap the link in the email instead, or try again tomorrow." };
       case "expired":
         return { error: "That code has expired. Ask for a new one." };
       case "used":

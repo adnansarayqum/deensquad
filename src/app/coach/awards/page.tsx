@@ -19,7 +19,7 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
   return (
     <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-cream pb-[max(env(safe-area-inset-bottom),24px)]">
       <AppHeader>
-        <Link href="/coach" className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-bold text-on-pitch-muted">
+        <Link href="/coach" className="inline-flex min-h-12 items-center gap-1 self-start text-sm font-bold text-on-pitch-muted">
           <ChevronLeft aria-hidden size={18} />
           Register
         </Link>
@@ -32,7 +32,7 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
                 key={g}
                 href={`/coach/awards?group=${g}`}
                 aria-current={g === group ? "page" : undefined}
-                className={`inline-flex min-h-11 min-w-14 items-center justify-center rounded-pill px-4 text-sm font-extrabold ${g === group ? "bg-floodlight text-on-gold" : "bg-pitch-deep text-on-pitch"}`}
+                className={`inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-sm font-extrabold ${g === group ? "bg-floodlight text-on-gold" : "bg-pitch-deep text-on-pitch"}`}
               >
                 {g}
               </Link>

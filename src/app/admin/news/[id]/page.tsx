@@ -35,7 +35,12 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
   const at = (hours: number) => new Date(posted + hours * 3600_000).toISOString();
   const steps = [
     { label: "App notification", when: "when posted", ready: pushConfigured() },
-    { label: "Email reminder", when: `${shortDay(at(LADDER.email.afterHours))} ${clock(at(LADDER.email.afterHours))}`, ready: canSendEmail() },
+    {
+      label: "Email reminder",
+      // Session notices (cancelled, restored, changed) email at once; quiet hours still hold them until 8am.
+      when: news.urgent ? "when posted" : `${shortDay(at(LADDER.email.afterHours))} ${clock(at(LADDER.email.afterHours))}`,
+      ready: canSendEmail(),
+    },
     { label: "Text reminder", when: `${shortDay(at(LADDER.sms.afterHours))} ${clock(at(LADDER.sms.afterHours))}`, ready: smsConfigured() },
   ];
   const chaseLabel: Record<string, string> = { app: "Notified", email: "Emailed", sms: "Texted", whatsapp: "WhatsApp", gate: "At the gate" };
@@ -77,7 +82,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
       ) : null}
 
       {news.requiresAck ? (
-        <Section title={chase.length ? `Not read yet (${chase.length})` : "Everyone has read it"}>
+        <Section title={chase.length ? `Not read yet (${chase.length})` : news.audienceCount === 0 ? "No parents to read it yet" : "Everyone has read it"}>
           {chase.length ? <p className="text-sm text-ink-muted">WhatsApp opens with a short reminder ready to send. Each reminder is logged.</p> : null}
           <ul className="flex flex-col gap-2">
             {chase.map((u) => (
