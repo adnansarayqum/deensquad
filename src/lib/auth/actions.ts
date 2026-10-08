@@ -157,6 +157,8 @@ export async function submitCode(_prev: FormState, formData: FormData): Promise<
         };
       case "too_many":
         return { error: "Too many wrong codes. Ask for a new one." };
+      case "locked":
+        return { error: "Too many wrong codes today. Tap the link in the email instead, or try again tomorrow." };
       case "expired":
         return { error: "That code has expired. Ask for a new one." };
       case "used":

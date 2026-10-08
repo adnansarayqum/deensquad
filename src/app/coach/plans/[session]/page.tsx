@@ -56,7 +56,7 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/coa
             <div className="flex flex-col gap-2">
               <span className="field-label">Attached</span>
               <Attachment file={plan.file} from={`/coach/plans/${session.id}?group=${group}`} />
-              <label className="flex min-h-11 items-center gap-3 text-[15px]">
+              <label className="flex min-h-12 items-center gap-3 text-[15px]">
                 <input type="checkbox" name="removeFile" className="h-5 w-5 accent-[var(--grass)]" />
                 Remove this attachment
               </label>
@@ -73,7 +73,7 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/coa
       {plan ? (
         <form action={deletePlan}>
           <input type="hidden" name="plan" value={plan.id} />
-          <button type="submit" className="min-h-11 px-1 text-sm font-bold text-ink-muted underline">
+          <button type="submit" className="min-h-12 px-1 text-sm font-bold text-ink-muted underline">
             Delete this plan
           </button>
         </form>

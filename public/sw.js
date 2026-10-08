@@ -2,8 +2,8 @@
 // attendance QR codes saved on the phone when /pass or /friday can't load (no signal at the gate).
 //
 // Offline, deliberately narrow: only page loads (navigations) of /pass, /friday, /news and / (where the installed
-// app opens) are touched. They always go to the network first; only if that fails, or nothing has come back after
-// 5 seconds (one bar of signal at the gate), is the static /offline-pass.html shown instead (it holds no one's data:
+// app opens) are touched. They always go to the network first; only if that fails, or (for /pass and /friday) nothing
+// has come back after 5 seconds (one bar of signal at the gate), is the static /offline-pass.html shown instead (it holds no one's data:
 // its script draws the codes saved in this phone's localStorage; its Try again reloads). A late answer is dropped.
 // The only things ever cached are that page and its script. Every other request (other pages, /api, Next's files)
 // passes straight through, untouched.
@@ -15,6 +15,9 @@ const OFFLINE_PAGE = "/offline-pass.html";
 const OFFLINE_FILES = [OFFLINE_PAGE, "/offline-pass.js"];
 const OFFLINE_PATHS = ["/pass", "/friday", "/news", "/"];
 const NETWORK_WAIT_MS = 5000;
+// Only the QR pages give up on a slow answer: a busy server (everyone opening a news notification at once) mustn't
+// show News readers the "no signal" QR page while their phone is online.
+const QUICK_PATHS = ["/pass", "/friday"];
 
 /** Puts any missing offline file in the cache. Never throws: without them the browser's own offline page shows. */
 async function cacheOfflineFiles() {
@@ -54,10 +57,10 @@ async function cachedOfflinePage() {
 }
 
 /**
- * Network first. A failed load gets the offline page (or the browser's own error page if it isn't cached). A load
- * still waiting after NETWORK_WAIT_MS gets the offline page too, if it's cached; otherwise it keeps waiting.
+ * Network first. A failed load gets the offline page (or the browser's own error page if it isn't cached). With
+ * `quick` (the QR pages), a load still waiting after NETWORK_WAIT_MS gets the offline page too, if it's cached.
  */
-function networkOrOfflinePage(event) {
+function networkOrOfflinePage(event, quick) {
   return new Promise((resolve) => {
     let done = false;
     const finish = (response) => {
@@ -66,7 +69,7 @@ function networkOrOfflinePage(event) {
       clearTimeout(timer);
       resolve(response);
     };
-    const timer = setTimeout(() => {
+    const timer = quick && setTimeout(() => {
       cachedOfflinePage().then((page) => {
         if (page) finish(page);
       });
@@ -88,13 +91,13 @@ self.addEventListener("fetch", (event) => {
     const request = event.request;
     const url = new URL(request.url);
     if (request.method !== "GET" || url.origin !== self.location.origin) return;
-    if (request.mode === "navigate" && OFFLINE_PATHS.includes(url.pathname)) kind = "page";
+    if (request.mode === "navigate" && OFFLINE_PATHS.includes(url.pathname)) kind = QUICK_PATHS.includes(url.pathname) ? "quick" : "page";
     else if (OFFLINE_FILES.includes(url.pathname) && url.pathname !== OFFLINE_PAGE) kind = "file";
   } catch {
     return; // anything unexpected: leave the request to the browser
   }
-  if (kind === "page") {
-    event.respondWith(networkOrOfflinePage(event));
+  if (kind === "page" || kind === "quick") {
+    event.respondWith(networkOrOfflinePage(event, kind === "quick"));
   } else if (kind === "file") {
     // The offline page's own script: the cached copy (it only loads when the offline page is showing).
     event.respondWith(

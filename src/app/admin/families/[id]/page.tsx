@@ -56,7 +56,11 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
 
       {flags.invited ? <Notice>Invite sent.</Notice> : null}
       {flags.invite === "failed" ? <Notice tone="action">The invite wasn&apos;t sent. Try again later.</Notice> : null}
-      {flags.invite === "no-email" ?<Notice tone="action">Email isn&apos;t set up yet. Add RESEND_API_KEY in Railway.</Notice> : null}
+      {flags.invite === "no-email" ? <Notice tone="action">Email isn&apos;t set up yet. Add RESEND_API_KEY in Railway.</Notice> : null}
+      {flags.invite === "no-url" ? (
+        <Notice tone="action">The invite wasn&apos;t sent: the app doesn&apos;t know its web address. Set APP_URL in Railway, then try again.</Notice>
+      ) : null}
+      {flags.unlinked ? <Notice>Parent unlinked.</Notice> : null}
 
       <Section title="Payment" aside={<Pill tone={child.payment === "active" ? "done" : child.payment === "self_reported" ? "gold" : "action"}>{paymentLabel[child.payment]}</Pill>}>
         <p className="text-sm text-ink-muted">Set this after checking TeamFeePay.</p>
@@ -104,11 +108,19 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                     <input type="hidden" name="guardian" value={g.id} />
                     <GuardianFields prefix={`g-${g.id}`} first={g.firstName} last={g.lastName} email={g.email} phone={g.phone} />
                   </StatefulForm>
-                  <form action={unlinkGuardian} className="mt-3">
+                  <form action={unlinkGuardian} className="mt-4 flex flex-col gap-2 border-t border-line pt-3">
                     <input type="hidden" name="child" value={child.id} />
                     <input type="hidden" name="guardian" value={g.id} />
-                    <button type="submit" className="text-sm font-bold text-kit-orange underline">
-                      Unlink {g.firstName} from {child.firstName}
+                    <FamiliesFilterFields filter={filter} />
+                    <p className="text-sm text-ink-muted">
+                      If {g.firstName} has no other children at the club, their details and sign-in are deleted. This can&apos;t be undone.
+                    </p>
+                    <label className="flex min-h-11 items-center gap-3 text-sm font-bold">
+                      <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--kit-orange)]" />
+                      Yes, unlink {g.firstName} from {child.firstName}
+                    </label>
+                    <button type="submit" className="btn-chunky btn-paper btn-small self-start">
+                      Unlink {g.firstName}
                     </button>
                   </form>
                 </details>
@@ -254,3 +266,4 @@ function GuardianFields({
     </div>
   );
 }
+

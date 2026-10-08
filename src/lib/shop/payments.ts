@@ -8,7 +8,7 @@ import { getCheckout, sumupConfigured } from "./sumup";
 
 /**
  * Asks SumUp whether a checkout was paid, and if so marks its order paid.
- * Never trusts a webhook body or a redirect: the reference and the amount must match the order.
+ * Never trusts a webhook body or a redirect: the reference (the order id, plus `.<suffix>` on a retry) and the amount must match the order.
  * SumUp is only asked about a checkout that belongs to an order still awaiting payment, so a webhook with a made-up
  * or old id never makes the app call out.
  */
@@ -25,7 +25,7 @@ export async function confirmSumupPayment(checkoutId: string): Promise<boolean> 
       // pay_by back to card: an order switched to bank transfer after a card payment that didn't go through can still
       // be paid on that SumUp page.
       `update shop_orders set status = 'paid', pay_by = 'card', paid_at = now(), updated_at = now()
-       where sumup_checkout_id = $1 and id::text = $2 and status = 'awaiting_payment' and total_pence = $3
+       where sumup_checkout_id = $1 and id::text = split_part($2, '.', 1) and status = 'awaiting_payment' and total_pence = $3
        returning id`,
       [checkoutId, checkout.reference ?? "", Math.round((checkout.amount ?? -1) * 100)],
     );

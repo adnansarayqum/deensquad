@@ -19,6 +19,8 @@ function headers() {
 
 export async function createCheckout(opts: {
   orderId: string;
+  /** SumUp refuses a reference it has seen, so a retry adds a suffix after a dot (`<order id>.<suffix>`). */
+  retry?: string;
   totalPence: number;
   description: string;
   redirectUrl: string;
@@ -28,7 +30,7 @@ export async function createCheckout(opts: {
     method: "POST",
     headers: headers(),
     body: JSON.stringify({
-      checkout_reference: opts.orderId,
+      checkout_reference: opts.retry ? `${opts.orderId}.${opts.retry}` : opts.orderId,
       amount: Number((opts.totalPence / 100).toFixed(2)),
       currency: "GBP",
       merchant_code: process.env.SUMUP_MERCHANT_CODE,

@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { requireStaff } from "../auth/session";
 import { UUID } from "../auth/tokens";
 import { asUser } from "../db";
-import { checkInByPass, markHere, undoHere, type ScanResult } from "./checkin";
+import { markHere, undoHere } from "./checkin";
 
 /** A tap's answer: nothing when it saved, or why it couldn't (shown beside the tap; see `TapProblem`). */
 export type TapResult = { error?: string };
@@ -28,10 +28,3 @@ export async function undoCheckIn(sessionId: string, playerId: string): Promise<
   return result;
 }
 
-/** The gate scanner: checks a child in from their pass and says what happened. */
-export async function scanPass(token: string): Promise<ScanResult> {
-  const user = await requireStaff();
-  const result = await asUser(user.id, (tx) => checkInByPass(tx, token, new Date()));
-  if (result.ok && result.child.status === "checked_in") refresh();
-  return result;
-}

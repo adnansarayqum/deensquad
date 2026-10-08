@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, Flame, QrCode } from "lucide-react";
+import { ChevronRight, Flame, ListChecks, QrCode } from "lucide-react";
 import { AcknowledgeButton } from "@/components/AcknowledgeButton";
 import { NotificationsCard } from "@/components/NotificationsCard";
 import { ReadFocus } from "@/components/ReadFocus";
@@ -15,7 +15,7 @@ import { groupsPlural } from "@/lib/domain";
 export const metadata: Metadata = { title: "Club news" };
 
 export default async function NewsPage() {
-  const { family, news, week, streakWeeks } = await getNewsPage();
+  const { family, news, week, streakWeeks, stepsLeft } = await getNewsPage();
   const now = new Date();
   const unread = news.filter((a) => !a.read);
   const earlier = news.filter((a) => a.read);
@@ -79,6 +79,25 @@ export default async function NewsPage() {
               </span>
             </span>
             <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+          </Link>
+        ) : null}
+        {stepsLeft > 0 ? (
+          <Link
+            href="/checklist"
+            className="flex items-center gap-3 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 py-3 text-ink transition-transform active:translate-y-1"
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-kit-orange text-on-orange">
+              <ListChecks aria-hidden size={24} />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-[15px] font-bold">
+                Finish setting up {family.children.length === 1 ? family.children[0].firstName : "your children"}
+              </span>
+              <span className="text-[13px]">
+                {stepsLeft === 1 ? "1 step left" : `${stepsLeft} steps left`} · contacts, photos and the club contract
+              </span>
+            </span>
+            <ChevronRight aria-hidden size={20} className="shrink-0" />
           </Link>
         ) : null}
         <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} />

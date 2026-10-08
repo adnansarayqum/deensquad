@@ -97,7 +97,7 @@ export default async function ShopProductsPage() {
       <PageHeader back={{ href: "/admin/shop", label: "Shop" }} title="Shop items" subtitle="What parents can order, with sizes and prices." />
 
       <Section title="Add an item">
-        <StatefulForm action={saveProduct} submitLabel="Add item" savedMessage="Item added.">
+        <StatefulForm action={saveProduct} keepOnFailure="That didn't save. The photo may be too big (8 MB at most), or check your signal and try again." submitLabel="Add item" savedMessage="Item added.">
           <ProductFields />
         </StatefulForm>
       </Section>
@@ -114,7 +114,7 @@ export default async function ShopProductsPage() {
             </span>
           </summary>
           <div className="border-t-2 border-line p-4">
-            <StatefulForm action={saveProduct} submitLabel="Save changes" savedMessage="Saved.">
+            <StatefulForm action={saveProduct} keepOnFailure="That didn't save. The photo may be too big (8 MB at most), or check your signal and try again." submitLabel="Save changes" savedMessage="Saved.">
               <ProductFields p={p} />
             </StatefulForm>
           </div>

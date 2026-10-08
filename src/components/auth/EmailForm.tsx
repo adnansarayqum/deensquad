@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState } from "react";
+import { submitKeepingInput } from "@/components/submitKeepingInput";
 import { requestCode, type FormState } from "@/lib/auth/actions";
 import { FormError } from "./AuthShell";
 
 export function EmailForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(requestCode, {});
   return (
-    <form action={action} className="flex flex-col gap-4" noValidate>
+    <form action={action} onSubmit={submitKeepingInput(action)} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="next" value={next} />
       <div>
         <label htmlFor="email" className="field-label">

@@ -22,7 +22,7 @@ import {
   type Family,
   type SquadCounts,
 } from "./data";
-import { clubFeeText } from "../config";
+import { clubFeeText, teamFeePayUrl } from "../config";
 import { buildChecklist, buildFamilyChecklist, buildWeek, computeStats, countSteps, nextSessionFor, paymentNeeds, sortNews, squadInvites } from "./views";
 
 // One loader per parent screen. Each checks the session, then reads as that parent (row level security on).
@@ -67,12 +67,23 @@ async function loadWeek(userId: string, family: Family, now: Date) {
 export async function getNewsPage() {
   const { user, family } = await getFamily();
   const now = new Date();
-  const [news, { week }] = await Promise.all([
+  const [news, { week }, facts] = await Promise.all([
     family.children.length ? asUser(user.id, (tx) => loadNews(tx, family)) : Promise.resolve([]),
     loadWeek(user.id, family, now),
+    family.children.length ? asUser(user.id, (tx) => loadChecklistFacts(tx, family.children.map((c) => c.id))) : Promise.resolve(null),
   ]);
   const stats = family.children.length === 1 ? await getStats(user.id, family.children[0], now) : null;
-  return { family, news: sortNews(news), week, streakWeeks: stats?.streakWeeks ?? null };
+  return { family, news: sortNews(news), week, streakWeeks: stats?.streakWeeks ?? null, stepsLeft: facts ? stepsLeft(family, facts) : 0 };
+}
+
+/**
+ * To-do steps the parent can still do themselves, for the "Finish setting up" card on News (where every sign-in
+ * lands). The payment step counts only when there's a link to set it up; otherwise the club tells them how.
+ */
+function stepsLeft(family: Family, facts: Awaited<ReturnType<typeof loadChecklistFacts>>): number {
+  const familyItems = buildFamilyChecklist(family.children, facts, clubFeeText()).filter((i) => i.id !== "payment-plan" || teamFeePayUrl());
+  const { done, total } = countSteps([...familyItems, ...family.children.flatMap((c) => buildChecklist(c, facts))]);
+  return total - done;
 }
 
 export async function getFridayPage() {

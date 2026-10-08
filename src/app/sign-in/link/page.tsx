@@ -16,7 +16,10 @@ export default async function LinkPage({ searchParams }: PageProps<"/sign-in/lin
 
   if (!valid) {
     return (
-      <AuthShell title="Link expired" intro="This sign-in link has expired or has already been used.">
+      <AuthShell
+        title="Link expired"
+        intro="This link has expired or has already been used. Tap below, type your email and we'll send you a new code."
+      >
         <Link href="/sign-in" className="btn-chunky btn-grass">
           Get a new code
         </Link>
@@ -26,10 +29,10 @@ export default async function LinkPage({ searchParams }: PageProps<"/sign-in/lin
 
   return (
     <AuthShell
-      title={valid.purpose === "invite" ? "Welcome" : "Sign in"}
+      title={valid.purpose === "invite" ? "Welcome to Deen Squad" : "Sign in"}
       intro={
         <>
-          Signing in as <span className="font-bold text-on-pitch">{maskEmail(valid.email)}</span>.
+          Signing in as <span className="font-bold text-on-pitch">{maskEmail(valid.email)}</span>. Tap Continue to open the club app.
         </>
       }
     >

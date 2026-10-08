@@ -4,6 +4,7 @@ import { CalendarClock } from "lucide-react";
 import { PageHeader } from "@/components/admin/bits";
 import { UndoCheckInButton } from "@/components/CheckInButton";
 import { PassScanner } from "@/components/PassScanner";
+import { RegisterAutoRefresh } from "@/components/RegisterAutoRefresh";
 import { FlagPills, RegisterLists, type GateRow } from "@/components/RegisterLists";
 import { Progress } from "@/components/ui";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
@@ -62,15 +63,17 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
 
   return (
     <>
+      {open ? <RegisterAutoRefresh /> : null}
       {/* Scan sits beside the title and the clock on the session line, so the lists start higher on a phone at the gate. */}
       <PageHeader title="Register" actions={<PassScanner disabled={!open} className="" />}>
         <div className="-mt-1 flex items-center justify-between gap-3">
           <p className="text-[15px] leading-[22px] text-ink-muted">
             {session.title} · {shortDay(session.startsAt)} {clock(session.startsAt)}
           </p>
-          <span className="font-display text-[26px] leading-none text-gold-text tabular-nums">
-            <span className="sr-only">Time now </span>
-            {time}
+          {/* When the list was last loaded (it refreshes itself every 20 s), not a live clock. */}
+          <span className="flex items-baseline gap-1.5 text-gold-text">
+            <span className="text-[13px] font-bold">Updated</span>
+            <span className="font-display text-[26px] leading-none tabular-nums">{time}</span>
           </span>
         </div>
         {todays.length > 1 ? (
@@ -130,7 +133,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
         </div>
         <Progress value={s.here.length} max={Math.max(1, s.expectedTotal)} label={`${s.here.length} of ${s.expectedTotal} here`} className="w-full" />
         {view.rows.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">No players in the {groupPlural(group)} yet. Import families under Families.</p>
+          <p className="text-[15px] text-ink-muted">No players in the {groupPlural(group)} yet. A club admin adds families.</p>
         ) : (
           <RegisterLists sessionId={session.id} open={open} showGroup={all} notHere={s.notHere.map(gate)} away={s.away.map(gate)} here={s.here.map(gate)}>
             {needsAWord ? (

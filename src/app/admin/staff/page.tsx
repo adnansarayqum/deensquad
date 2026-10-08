@@ -38,12 +38,22 @@ export default async function StaffPage() {
     ) : null;
   const removeForm = (s: StaffRow): ReactNode =>
     changeable(s) ? (
-      <form action={removeStaff}>
-        <input type="hidden" name="id" value={s.id} />
-        <button type="submit" className="inline-flex min-h-12 items-center px-1.5 text-sm font-bold text-ink-muted underline underline-offset-4" aria-label={`Remove ${s.displayName}`}>
-          Remove
-        </button>
-      </form>
+      // One tap would remove them at once, so it opens a "Yes, remove" tick first (removeStaff checks confirm=yes).
+      <details>
+        <summary className="inline-flex min-h-12 cursor-pointer items-center px-1.5 text-sm font-bold text-ink-muted underline underline-offset-4">
+          Remove<span className="sr-only"> {s.displayName}</span>
+        </summary>
+        <form action={removeStaff} className="mt-1 flex flex-col items-start gap-2">
+          <input type="hidden" name="id" value={s.id} />
+          <label className="flex min-h-12 items-center gap-2 text-sm font-bold">
+            <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--kit-orange)]" />
+            Yes, remove {s.displayName}
+          </label>
+          <button type="submit" className="btn-chunky btn-paper btn-small">
+            Remove {s.displayName}
+          </button>
+        </form>
+      </details>
     ) : null;
   const groupsForm = (s: StaffRow, compact = false): ReactNode =>
     s.role === "coach" ? (
@@ -116,7 +126,7 @@ export default async function StaffPage() {
                 <span className="text-[13px] break-all text-ink-muted">{s.email}</span>
               </span>
               <span className="flex items-center gap-2">
-                <Pill tone={s.role === "admin" ? "gold" : "neutral"}>{s.role}</Pill>
+                <Pill tone={s.role === "admin" ? "gold" : "neutral"}>{s.role === "admin" ? "Admin" : "Coach"}</Pill>
                 {s.signedIn ? <Pill tone="done">Signed in</Pill> : <Pill tone="neutral">Not yet</Pill>}
               </span>
             </div>
@@ -165,7 +175,7 @@ export default async function StaffPage() {
                 </th>
                 <td className="px-2 py-1.5 text-xs text-ink-muted">{s.email}</td>
                 <td className="px-2 py-1.5 whitespace-nowrap">
-                  <Pill tone={s.role === "admin" ? "gold" : "neutral"}>{s.role}</Pill>
+                  <Pill tone={s.role === "admin" ? "gold" : "neutral"}>{s.role === "admin" ? "Admin" : "Coach"}</Pill>
                 </td>
                 <td className="px-2 py-1.5 whitespace-nowrap">{s.signedIn ? <Pill tone="done">Signed in</Pill> : <Pill tone="neutral">Not yet</Pill>}</td>
                 <td className="px-2 py-1.5">{groupsForm(s, true)}</td>

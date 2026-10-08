@@ -274,6 +274,8 @@ export type NewsRow = {
   body: string;
   audience: AgeGroup[] | null;
   requiresAck: boolean;
+  /** A session cancelled/restored/changed notice: its reminder email goes when posted, not after 24 hours. */
+  urgent: boolean;
   postedAt: string;
   postedBy: string | null;
   /** Parents it reaches and how many have read it: for a group coach, only parents with a child in their groups. */
@@ -286,7 +288,7 @@ export type NewsRow = {
 };
 
 /** `groups` is the SQL parameter holding a group coach's own groups (null: the whole club), which limits the counts. */
-const newsColumns = (groups: string) => `a.id, a.topic, a.title, a.body, a.audience::text[] as audience, a.requires_ack, a.posted_at, sn.display_name as posted_by,
+const newsColumns = (groups: string) => `a.id, a.topic, a.title, a.body, a.audience::text[] as audience, a.requires_ack, a.urgent, a.posted_at, sn.display_name as posted_by,
   a.squad_session_id, (select ss.title from sessions ss where ss.id = a.squad_session_id) as squad_title,
   (select count(distinct pg.guardian_id)::int from player_guardians pg join players p on p.id = pg.player_id
     where ${newsReaches()} and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))) as audience_count,
@@ -302,6 +304,7 @@ type NewsDbRow = {
   body: string;
   audience: AgeGroup[] | null;
   requires_ack: boolean;
+  urgent: boolean;
   posted_at: Date;
   posted_by: string | null;
   audience_count: number;
@@ -317,6 +320,7 @@ const toNews = (r: NewsDbRow, groups: readonly AgeGroup[] | null): NewsRow => ({
   body: r.body,
   audience: r.audience,
   requiresAck: r.requires_ack,
+  urgent: r.urgent,
   postedAt: iso(r.posted_at),
   postedBy: r.posted_by,
   audienceCount: r.audience_count,

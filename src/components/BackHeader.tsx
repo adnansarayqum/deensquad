@@ -7,7 +7,7 @@ import { AppHeader } from "@/components/ui";
 export function BackHeader({ back, backLabel, title, children }: { back: string; backLabel: string; title: string; children?: ReactNode }) {
   return (
     <AppHeader>
-      <Link href={back} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-bold text-on-pitch-muted">
+      <Link href={back} className="inline-flex min-h-12 items-center gap-1 self-start text-sm font-bold text-on-pitch-muted">
         <ChevronLeft aria-hidden size={18} />
         {backLabel}
       </Link>

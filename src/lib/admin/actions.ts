@@ -247,10 +247,10 @@ export async function unlinkGuardian(formData: FormData): Promise<void> {
   const user = await requireAdmin();
   const child = id(formData.get("child"));
   const guardian = id(formData.get("guardian"));
-  if (!child || !guardian) return;
+  if (!child || !guardian || formData.get("confirm") !== "yes") return;
   const removed = await asUser(user.id, (tx) => unlinkGuardianRecord(tx, child, guardian));
   await asSystem((tx) => deleteLeftoverAccounts(tx, removed));
-  refresh();
+  redirect(withQuery(familyChildHref(child, familiesFilterFromForm(formData, AGE_GROUPS)), "unlinked=1"));
 }
 
 export async function removeChild(formData: FormData): Promise<void> {
@@ -302,6 +302,10 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
     if (s.picked === 0) return { error: "Pick the squad first, then message them." };
     everyone = false;
     groups = s.age_groups.filter(isAgeGroup);
+  }
+  // "Every family" is the default, so ticked groups under it would otherwise be ignored and the whole club messaged.
+  if (everyone && groups.length) {
+    return { error: "You ticked groups. Choose “Only these groups” to send just to them, or untick them to send to every family." };
   }
   if (!everyone && groups.length === 0) return { error: "Choose who it's for: everyone, or at least one group." };
   if (isGroupCoach(user.staff)) {
@@ -648,7 +652,7 @@ export async function setStaffRole(formData: FormData): Promise<void> {
 export async function removeStaff(formData: FormData): Promise<void> {
   const user = await requireAdmin();
   const staff = id(formData.get("id"));
-  if (!staff || staff === user.staff.id) return;
+  if (!staff || staff === user.staff.id || formData.get("confirm") !== "yes") return;
   await asUser(user.id, (tx) => removeStaffMember(tx, staff));
   refresh();
 }

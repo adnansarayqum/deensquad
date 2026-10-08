@@ -803,7 +803,7 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await switchUser(page);
   await signIn(page, "parent16@example.com");
   expect((await page.goto(`/files/${fileId}`))?.status()).toBe(404);
-  await expect(page.getByRole("heading", { name: "That page isn't on the pitch" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
   expect((await page.request.get(`/api/files/${fileId}`)).status()).toBe(404);
 });
 
@@ -1289,7 +1289,8 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await expect(here.getByRole("heading", { name: "Here (0)" })).toBeVisible();
 
     // No signal at the gate: the scanner says so (not "not a pass") and offers to try again.
-    const offline = (url: URL) => url.pathname === "/coach";
+    // The scanner posts to its own route; Mark here and Undo are Server Actions on /coach.
+    const offline = (url: URL) => url.pathname === "/coach" || url.pathname === "/api/coach/scan";
     await coach.route(offline, (route) => (route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue()));
     await coach.getByRole("button", { name: "Scan QR codes" }).click();
     const scanner = coach.getByRole("dialog", { name: "Scan attendance QR codes" });

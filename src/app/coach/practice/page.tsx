@@ -68,7 +68,7 @@ export default async function StaffPracticePage() {
             </legend>
             <div className="flex flex-wrap gap-2">
               {groups.map((g) => (
-                <label key={g} className="flex min-h-11 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
+                <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
                   <input type="checkbox" name="groups" value={g} defaultChecked={limited && groups.length === 1} className="h-4 w-4 accent-[var(--grass)]" />
                   <span className="text-sm font-extrabold">{g}</span>
                 </label>
@@ -93,7 +93,7 @@ export default async function StaffPracticePage() {
             {user.staff.role === "admin" || s.postedById === user.staff.id ? (
               <form action={deletePracticeSheet}>
                 <input type="hidden" name="sheet" value={s.id} />
-                <button type="submit" className="min-h-11 px-1 font-bold underline" aria-label={`Remove ${s.title}`}>
+                <button type="submit" className="min-h-12 px-1 font-bold underline" aria-label={`Remove ${s.title}`}>
                   Remove
                 </button>
               </form>

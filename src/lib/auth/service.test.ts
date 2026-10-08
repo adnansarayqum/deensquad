@@ -4,6 +4,7 @@ import { testDatabase } from "../../../test/db";
 import {
   LIMITS,
   MAX_CODE_ATTEMPTS,
+  MAX_WRONG_CODES_PER_DAY,
   createSession,
   deleteSession,
   ensureBootstrapAdmin,
@@ -57,6 +58,18 @@ describe("sign-in codes", () => {
     expect(right).toEqual({ ok: false, reason: "too_many" });
   });
 
+  it("stops codes for an address after a day's worth of wrong ones, across requests; the link still works", async () => {
+    const perRequest = MAX_CODE_ATTEMPTS;
+    for (let r = 0; r < MAX_WRONG_CODES_PER_DAY / perRequest; r++) {
+      const req = await issue(DEV_EMAILS.parent, later(r * 61));
+      const wrong = req.code === "000000" ? "111111" : "000000";
+      for (let i = 0; i < perRequest; i++) await t.asSystem((tx) => verifyCode(tx, req.requestId, wrong, later(r * 61 + 1)));
+    }
+    const next = await issue(DEV_EMAILS.parent, later(400));
+    expect(await t.asSystem((tx) => verifyCode(tx, next.requestId, next.code!, later(401)))).toEqual({ ok: false, reason: "locked" });
+    expect((await t.asSystem((tx) => verifyLink(tx, next.token, later(401)))).ok).toBe(true);
+  });
+
   it("expires after 15 minutes and can't be used twice", async () => {
     const a = await issue();
     expect(await t.asSystem((tx) => verifyCode(tx, a.requestId, a.code!, later(16)))).toEqual({ ok: false, reason: "expired" });
@@ -73,18 +86,18 @@ describe("sign-in codes", () => {
     expect(nextHour.ok).toBe(true);
   });
 
-  it("lets about 100 codes an hour come from one address, since families share a venue's wifi", async () => {
+  it("lets 500 codes an hour come from one address, since a few hundred families share a venue's wifi", async () => {
     const emails = await t.asSystem((tx) => tx.query<{ email: string }>(`select email from guardians where email like 'parent%' order by email`));
-    expect(LIMITS.perIpPerHour).toBe(100);
+    expect(LIMITS.perIpPerHour).toBe(500);
     await t.asSystem((tx) =>
       tx.query(
         `insert into auth.sign_in_requests (email, purpose, link_hash, ip, created_at, expires_at)
-         select 'someone' || n || '@example.com', 'sign_in', 'ip-' || n, '5.5.5.5', $1, $2 from generate_series(1, 99) n`,
+         select 'someone' || n || '@example.com', 'sign_in', 'ip-' || n, '5.5.5.5', $1, $2 from generate_series(1, 499) n`,
         [later(1), later(16)],
       ),
     );
-    const hundredth = await t.asSystem((tx) => issueSignIn(tx, { email: emails[0].email, ip: "5.5.5.5", now: later(2), purpose: "sign_in" }));
-    expect(hundredth.ok).toBe(true);
+    const last = await t.asSystem((tx) => issueSignIn(tx, { email: emails[0].email, ip: "5.5.5.5", now: later(2), purpose: "sign_in" }));
+    expect(last.ok).toBe(true);
     const blocked = await t.asSystem((tx) => issueSignIn(tx, { email: emails[1].email, ip: "5.5.5.5", now: later(3), purpose: "sign_in" }));
     expect(blocked).toEqual({ ok: false, reason: "rate_limited", limit: "ip" });
   });

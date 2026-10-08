@@ -68,7 +68,7 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
                     <input type="hidden" name="award" value={a.id} />
                     <button
                       type="submit"
-                      className="min-h-11 px-2 text-sm font-bold text-ink-muted underline"
+                      className="min-h-12 px-2 text-sm font-bold text-ink-muted underline"
                       aria-label={`Undo ${[a.stars ? "star" : null, a.points ? `${a.points} ${a.points === 1 ? "point" : "points"}` : null].filter(Boolean).join(" and ")}, ${day.format(new Date(a.givenAt))}`}
                     >
                       Undo
@@ -103,7 +103,7 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
                       <input type="hidden" name="badge" value={b.id} />
                       <input type="hidden" name="give" value={b.earned_on ? "no" : "yes"} />
                       {b.earned_on ? (
-                        <button type="submit" className="min-h-11 px-2 text-sm font-bold text-ink-muted underline" aria-label={`Take back ${b.name}`}>
+                        <button type="submit" className="min-h-12 px-2 text-sm font-bold text-ink-muted underline" aria-label={`Take back ${b.name}`}>
                           Take back
                         </button>
                       ) : (

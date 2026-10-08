@@ -244,6 +244,7 @@ export async function payAgain(formData: FormData): Promise<void> {
   try {
     const sumup = await createCheckout({
       orderId: order.id,
+      retry: Date.now().toString(36),
       totalPence: order.total_pence,
       description: `Deen Squad kit order ${orderReference(order.id)}`,
       redirectUrl: `${base}/shop/orders/${order.id}?return=1`,

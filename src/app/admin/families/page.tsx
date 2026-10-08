@@ -166,7 +166,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
                       </span>
                       <span className="truncate text-[13px] text-ink-muted">{parents || "No parent linked"}</span>
                       <span className="flex flex-wrap gap-1.5">
-                        {status === "in" ? <Pill tone="done">In app</Pill> : status === "invited" ? <Pill tone="gold">Invited</Pill> : <Pill tone="neutral">Not invited</Pill>}
+                        {status === "in" ? <Pill tone="done">Signed in</Pill> : status === "invited" ? <Pill tone="gold">Invited</Pill> : <Pill tone="neutral">Not invited</Pill>}
                         {f.payment === "missing" || f.payment === "overdue" ? (
                           <Pill tone="action">{f.payment === "overdue" ? "Payment overdue" : "No payment plan"}</Pill>
                         ) : f.payment === "self_reported" ? (

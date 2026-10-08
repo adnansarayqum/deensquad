@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, QrCode, RotateCcw, TriangleAlert, WifiOff, X } from "lucide-react";
 import type { ScanResult } from "@/lib/staff/checkin";
-import { scanPass } from "@/lib/staff/actions";
 import { FLAG_WORDS } from "@/lib/staff/flags";
 
 const reasonText = {
@@ -11,18 +11,43 @@ const reasonText = {
   unknown_child: "This QR code is for a child who is no longer at the club.",
 } as const;
 
+/** A scan with no answer after this long counts as no signal, so a hung request never freezes the scanner. */
+const SCAN_TIMEOUT_MS = 10_000;
+
 /** What the scanner shows: the server's answer, or that the answer never came back (no signal or a server fault). */
-type Shown = ScanResult | { ok: false; reason: "no_signal"; token: string };
+type Shown = ScanResult | { ok: false; reason: "no_signal"; token: string } | { ok: false; reason: "signed_out" };
+
+/** Checks the child in through /api/coach/scan, which (unlike a Server Action) never queues behind a stuck request. */
+async function checkIn(token: string): Promise<ScanResult | { ok: false; reason: "signed_out" }> {
+  // A plain timer, not AbortSignal.timeout(), which older iPhones (iOS 15) don't have.
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), SCAN_TIMEOUT_MS);
+  try {
+    const res = await fetch("/api/coach/scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+      signal: abort.signal,
+    });
+    if (res.status === 401 || res.redirected) return { ok: false, reason: "signed_out" };
+    if (!res.ok) throw new Error(`scan failed (${res.status})`);
+    return (await res.json()) as ScanResult;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * Full-screen camera scanner for family gate passes. Each pass checks the family in straight away.
  * `disabled` on a day with no session (the register is showing the next one): the server would refuse anyway.
  */
 export function PassScanner({ disabled = false, className = "w-full" }: { disabled?: boolean; /** Layout classes for the "Scan QR codes" button (full width by default). */ className?: string }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Shown | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [checking, setChecking] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const busy = useRef(false);
@@ -54,7 +79,11 @@ export function PassScanner({ disabled = false, className = "w-full" }: { disabl
 
   useEffect(() => {
     if (!open) {
-      if (wasOpen.current) opener.current?.focus();
+      if (wasOpen.current) {
+        opener.current?.focus();
+        // The register under the scanner picks up everyone just checked in (scans don't refresh it one by one).
+        router.refresh();
+      }
       return;
     }
     wasOpen.current = true;
@@ -81,15 +110,20 @@ export function PassScanner({ disabled = false, className = "w-full" }: { disabl
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("visibilitychange", onHide);
     };
-  }, [open, closeScanner]);
+  }, [open, closeScanner, router]);
 
   // A failed request isn't a bad pass: say so and keep the pass to try again.
+  // The last child's card goes while the next code is checked, so nobody is waved through on the wrong result.
   const send = useCallback(async (token: string) => {
     busy.current = true;
+    setResult(null);
+    setChecking(true);
     try {
-      setResult(await scanPass(token));
+      setResult(await checkIn(token));
     } catch {
       setResult({ ok: false, reason: "no_signal", token });
+    } finally {
+      setChecking(false);
     }
     setTimeout(() => {
       busy.current = false;
@@ -118,7 +152,9 @@ export function PassScanner({ disabled = false, className = "w-full" }: { disabl
         video.current!.srcObject = stream;
         await video.current!.play();
       } catch {
-        setError("The camera didn't open. Allow camera access for this site in your browser settings, then try again.");
+        setError(
+          "The camera didn't open. Allow the camera for this site in your phone's settings, then close this and tap Scan QR codes again. You can still use Mark here.",
+        );
         return;
       }
       const tick = async () => {
@@ -198,6 +234,8 @@ export function PassScanner({ disabled = false, className = "w-full" }: { disabl
       <div className="flex flex-1 flex-col gap-3 px-4 pt-4 pb-[max(env(safe-area-inset-bottom),20px)]" aria-live="assertive">
         {error ? (
           <p className="rounded-app bg-orange-tint p-4 text-[15px] text-ink">{error}</p>
+        ) : checking ? (
+          <p className="text-center text-[17px] font-bold">Checking…</p>
         ) : !result ? (
           <p className="text-center text-[15px] text-on-pitch-muted">Hold the parent&apos;s QR code inside the box.</p>
         ) : !result.ok && result.reason === "no_signal" ? (
@@ -214,6 +252,10 @@ export function PassScanner({ disabled = false, className = "w-full" }: { disabl
               {retrying ? "Trying…" : "Try again"}
             </button>
           </div>
+        ) : !result.ok && result.reason === "signed_out" ? (
+          <p className="rounded-app bg-orange-tint p-4 text-[17px] font-bold text-ink">
+            You&apos;ve been signed out, so nobody was checked in. Close this and sign in again.
+          </p>
         ) : !result.ok ? (
           <div className="flex items-center gap-3 rounded-app bg-orange-tint p-4 text-ink">
             <TriangleAlert aria-hidden size={28} className="shrink-0 text-kit-orange" />

@@ -39,6 +39,11 @@ function fromAddress(): string {
   return process.env.EMAIL_FROM?.trim() || "Deen Squad <onboarding@resend.dev>";
 }
 
+/** Resend allows a few requests a second per account; a wave of sign-ins can go over it, so a 429 waits and tries again. */
+const RATE_LIMIT_RETRIES = 2;
+
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 /**
  * Resend's `Idempotency-Key` for one request, only when the caller gave every email in it a key (`Email.idempotencyKey`,
  * e.g. the chase ladder's announcement + parent + "email"): that key for a single send; for a batch, a hash of its
@@ -66,12 +71,19 @@ export async function sendEmails(emails: Email[]): Promise<EmailReport> {
       const chunk = group.map((e) => ({ from: fromAddress(), to: [e.to], subject: e.subject, text: e.text, html: e.html }));
       const idempotency = requestKey(group);
       try {
-        const res = await fetch(chunk.length === 1 ? "https://api.resend.com/emails" : "https://api.resend.com/emails/batch", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...(idempotency ? { "Idempotency-Key": idempotency } : {}) },
-          body: JSON.stringify(chunk.length === 1 ? chunk[0] : chunk),
-          signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
-        });
+        let res: Response;
+        for (let attempt = 0; ; attempt++) {
+          res = await fetch(chunk.length === 1 ? "https://api.resend.com/emails" : "https://api.resend.com/emails/batch", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...(idempotency ? { "Idempotency-Key": idempotency } : {}) },
+            body: JSON.stringify(chunk.length === 1 ? chunk[0] : chunk),
+            signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+          });
+          // A 429 wasn't taken, so trying again (with the same idempotency key) can't send twice.
+          if (res.status !== 429 || attempt >= RATE_LIMIT_RETRIES) break;
+          const wait = Number(res.headers.get("retry-after"));
+          await pause(Number.isFinite(wait) && wait > 0 ? Math.min(wait, 3) * 1000 : 1000);
+        }
         // A 409 for a keyed request is Resend saying it has already had that key (an earlier try that timed out here, or
         // one still in flight, possibly with a fresh sign-in link in it): that email has gone, so it counts as sent.
         if (idempotency && res.status === 409) {

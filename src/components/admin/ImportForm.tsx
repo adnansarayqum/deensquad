@@ -145,12 +145,14 @@ export function ImportForm() {
       <div className="flex flex-wrap gap-3">
         {preview ? (
           <>
-            <button type="submit" name="intent" value="apply" className="btn-chunky btn-grass" disabled={pending || state.errors?.length === state.count}>
+            <button type="submit" name="intent" value="apply" className="btn-chunky btn-grass" disabled={pending}>
               {pending ? "Importing…" : `Import ${state.count} ${state.count === 1 ? "row" : "rows"}`}
             </button>
-            <Link href="/admin/families/import" className="btn-chunky btn-paper">
+            {/* A full load, so the preview's state is cleared (a client move to the same page would keep it). */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/admin/families/import" className="btn-chunky btn-paper">
               Start again
-            </Link>
+            </a>
           </>
         ) : (
           <button type="submit" name="intent" value="preview" className="btn-chunky btn-grass" disabled={pending}>

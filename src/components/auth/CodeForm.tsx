@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState } from "react";
+import { submitKeepingInput } from "@/components/submitKeepingInput";
 import { submitCode, type FormState } from "@/lib/auth/actions";
 import { FormError } from "./AuthShell";
 
 export function CodeForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(submitCode, {});
   return (
-    <form action={action} className="flex flex-col gap-4" noValidate>
+    <form action={action} onSubmit={submitKeepingInput(action)} className="flex flex-col gap-4" noValidate>
       <div>
         <label htmlFor="code" className="field-label">
           6-digit code
