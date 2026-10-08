@@ -17,7 +17,9 @@ export const GATE_PARENT_STATE = "e2e/.results/gate-parent-state.json";
 export const YOUR_DATA_PARENT_STATE = "e2e/.results/your-data-parent-state.json";
 /** The family with a daughter in Girls (e2e/parent-girls.spec.ts). */
 export const GIRLS_PARENT_STATE = "e2e/.results/girls-parent-state.json";
-// All five are deleted at the start of every run (e2e/global-setup.ts).
+/** The parent of Isa (U7), chosen for a message in e2e/staff-news-chosen.spec.ts. */
+export const CHOSEN_PARENT_STATE = "e2e/.results/chosen-parent-state.json";
+// All six are deleted at the start of every run (e2e/global-setup.ts).
 
 export function latestCode(email: string, outbox = OUTBOX): string {
   const lines = readFileSync(outbox, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string; text: string });

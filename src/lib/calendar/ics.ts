@@ -59,7 +59,8 @@ export function utcStamp(at: Date): string {
   return at.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 }
 
-function summary(s: CalendarSession): string {
+/** "Training (Yusuf and Musa)", or "Cancelled: Training (Yusuf)". Shared with the Google Calendar link. */
+export function summary(s: CalendarSession): string {
   const who = s.children.length ? ` (${listNames(s.children)})` : "";
   return `${s.cancelled ? "Cancelled: " : ""}${s.title}${who}`;
 }
@@ -68,7 +69,8 @@ function listNames(names: string[]): string {
   return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 }
 
-function description(s: CalendarSession): string {
+/** Arrive by, kit and notes (and why it's cancelled), one per line. Shared with the Google Calendar link. */
+export function description(s: CalendarSession): string {
   const lines: string[] = [];
   if (s.cancelled) lines.push(s.cancelReason ? `Cancelled: ${s.cancelReason}` : "This session is cancelled.");
   if (s.arriveBy) lines.push(`Arrive by: ${s.arriveBy}`);

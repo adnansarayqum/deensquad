@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { BookOpen, CalendarX, ChevronDown, ChevronRight, ClipboardList, Clock, ExternalLink, Info, MapPin, MoonStar, QrCode, Shirt } from "lucide-react";
-import { AvailabilityPicker } from "@/components/AvailabilityPicker";
+import { AvailabilityPicker, type CalendarLinks } from "@/components/AvailabilityPicker";
 import { CheckedIn } from "@/components/CheckedIn";
 import { PassCacheWriter } from "@/components/PassCacheWriter";
 import { PassCarousel } from "@/components/PassCarousel";
 import { Attachment } from "@/components/plans/Attachment";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
+import { googleCalendarUrl, sessionIcsPath } from "@/lib/calendar/session";
 import { clock, shortDay } from "@/lib/dates";
 import { attachmentTitle } from "@/lib/files";
 import { groupPlural, type Session } from "@/lib/domain";
@@ -31,6 +32,25 @@ export default async function FridayPage() {
     w.answered ? answeredLine(w.answered, family.guardian.id, now, Boolean(w.session?.squad)) : undefined;
   const todayCards = cards.filter((c) => today.some((t) => t.child.id === c.id));
   const sessions = uniqueSessions(week);
+  /** "Add to calendar" for a session the family says they're coming to, named with every child of theirs it's for. */
+  const calendar = (s: Session): CalendarLinks | undefined => {
+    if (s.cancelled) return undefined;
+    const children = [...new Set([...week.filter((w) => w.session?.id === s.id), ...invites.filter((i) => i.session.id === s.id)].map((x) => x.child.firstName))].sort();
+    const event = {
+      id: s.id,
+      title: s.title,
+      startsAt: new Date(s.startsAt),
+      endsAt: new Date(s.endsAt),
+      venue: s.venue,
+      children,
+      arriveBy: s.arriveBy,
+      kit: s.kit,
+      notes: s.notes,
+      cancelled: false,
+      cancelReason: null,
+    };
+    return { google: googleCalendarUrl(event), ics: sessionIcsPath(s.id), label: `${s.title}, ${shortDay(s.startsAt)}` };
+  };
 
   return (
     <>
@@ -98,16 +118,17 @@ export default async function FridayPage() {
               question={availabilityQuestion(single.child.firstName, single.session, shortDay(single.session.startsAt))}
               squad={Boolean(single.session.squad)}
               answered={answered(single)}
+              calendar={calendar(single.session)}
             />
           ) : (
             <NoSession name={single.child.firstName} />
           )
         ) : (
-          week.map((w) => <ChildCard key={w.child.id} week={w} answered={answered(w)} />)
+          week.map((w) => <ChildCard key={w.child.id} week={w} answered={answered(w)} calendar={w.session ? calendar(w.session) : undefined} />)
         )}
 
         {invites.map((i) => (
-          <InviteCard key={`${i.session.id}:${i.child.id}`} invite={i} answered={answered(i)} />
+          <InviteCard key={`${i.session.id}:${i.child.id}`} invite={i} answered={answered(i)} calendar={calendar(i.session)} />
         ))}
 
         {sessions.map((s) => (
@@ -199,7 +220,7 @@ function uniqueSessions(week: ChildWeek[]): Session[] {
   return [...seen.values()];
 }
 
-function ChildCard({ week: w, answered }: { week: ChildWeek; answered?: string }) {
+function ChildCard({ week: w, answered, calendar }: { week: ChildWeek; answered?: string; calendar?: CalendarLinks }) {
   const name = w.child.firstName;
   return (
     <Card className="flex flex-col gap-3 p-4">
@@ -230,6 +251,7 @@ function ChildCard({ week: w, answered }: { week: ChildWeek; answered?: string }
               question={availabilityQuestion(name, w.session, shortDay(w.session.startsAt))}
               squad={Boolean(w.session.squad)}
               answered={answered}
+              calendar={calendar}
               compact
             />
           )}
@@ -242,7 +264,7 @@ function ChildCard({ week: w, answered }: { week: ChildWeek; answered?: string }
 }
 
 /** A squad session further ahead than the child's next session: the family is asked straight away. */
-function InviteCard({ invite: { child, session, answer }, answered }: { invite: SquadInvite; answered?: string }) {
+function InviteCard({ invite: { child, session, answer }, answered, calendar }: { invite: SquadInvite; answered?: string; calendar?: CalendarLinks }) {
   const question = availabilityQuestion(child.firstName, session, shortDay(session.startsAt));
   return (
     <Card tone="gold" className="flex flex-col gap-3 p-4">
@@ -259,7 +281,7 @@ function InviteCard({ invite: { child, session, answer }, answered }: { invite: 
         <Directions venue={session.venue} />
       </div>
       {session.notes ? <p className="-mt-1.5 text-sm whitespace-pre-line">{session.notes}</p> : null}
-      <AvailabilityPicker sessionId={session.id} playerId={child.id} answer={answer} childName={child.firstName} question={question} squad answered={answered} compact />
+      <AvailabilityPicker sessionId={session.id} playerId={child.id} answer={answer} childName={child.firstName} question={question} squad answered={answered} calendar={calendar} compact />
     </Card>
   );
 }

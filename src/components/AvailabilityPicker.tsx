@@ -1,7 +1,8 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { Check, X } from "lucide-react";
+import { CalendarPlus, Check, ChevronDown, X } from "lucide-react";
+import Link from "next/link";
 import type { Availability } from "@/lib/domain";
 import { track } from "@/lib/analytics";
 import { setAvailability } from "@/lib/parent/actions";
@@ -16,6 +17,7 @@ export function AvailabilityPicker({
   compact = false,
   squad = false,
   answered,
+  calendar,
 }: {
   sessionId: string;
   playerId: string;
@@ -28,6 +30,8 @@ export function AvailabilityPicker({
   squad?: boolean;
   /** Who gave the saved answer and when ("Coming · answered by Sara, Tue 2:02pm"), shown until this person taps. */
   answered?: string;
+  /** "Add to calendar" links for this session, shown under a Coming (or "Yes, can play") answer. */
+  calendar?: CalendarLinks;
 }) {
   const [optimistic, setOptimistic] = useOptimistic(answer);
   // "Saved…" is only for the person who just tapped here; anyone else (another parent sharing the child, or this
@@ -100,6 +104,40 @@ export function AvailabilityPicker({
               : `Tap once. ${childName}'s coach sees it straight away.`}
       </p>
       )}
+      {coming && calendar && !failed ? <AddToCalendar links={calendar} /> : null}
+    </div>
+  );
+}
+
+/** `label` names the session for screen readers ("Training, Fri 9 Oct"), as several children can each have one. */
+export type CalendarLinks = { google: string; ics: string; label: string };
+
+/**
+ * A small secondary "Add to calendar" under a Coming answer: Google Calendar (its own "create event" page, in a new
+ * tab) or a one-event .ics file (Apple Calendar, Outlook and the rest), plus a line to the family's calendar feed.
+ */
+function AddToCalendar({ links }: { links: CalendarLinks }) {
+  const item = "flex min-h-12 items-center rounded-[12px] px-3 text-[15px] font-bold text-grass-text underline";
+  return (
+    <div className="flex flex-col items-center">
+      <details className="group w-full max-w-xs">
+        <summary className="mx-auto flex min-h-12 w-fit cursor-pointer list-none items-center gap-2 rounded-pill px-3 text-[15px] font-bold text-ink [&::-webkit-details-marker]:hidden">
+          <CalendarPlus aria-hidden size={18} />
+          Add to calendar<span className="sr-only">: {links.label}</span>
+          <ChevronDown aria-hidden size={16} className="transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="mt-1 flex flex-col rounded-app border-2 border-line bg-paper p-1">
+          <a href={links.google} target="_blank" rel="noopener" className={item} onClick={() => track("calendar_added", { kind: "google" })}>
+            Google Calendar
+          </a>
+          <a href={links.ics} className={item} onClick={() => track("calendar_added", { kind: "ics" })}>
+            Apple or other calendar (.ics)
+          </a>
+        </div>
+      </details>
+      <Link href="/player/calendar" className="inline-flex min-h-12 items-center text-sm text-ink-muted underline">
+        Add every session automatically
+      </Link>
     </div>
   );
 }
