@@ -2,7 +2,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { devices, expect, test, type Page } from "@playwright/test";
 import jsQR from "jsqr";
-import { ADMIN_STATE, COACH_STATE, OUTBOX, latestCode, newContext, shot, signIn, skipInstallGate, switchUser } from "./helpers";
+import { ADMIN_STATE, COACH_STATE, OUTBOX, latestCode, newContext, shot, signIn, skipInstallGate, switchUser, unfold } from "./helpers";
 
 // Signs in with real emailed codes (read from the test outbox) and walks through the parent,
 // coach and admin flows against the sample club. Screenshots land in e2e/.results/screens.
@@ -31,6 +31,7 @@ const londonDay = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Lon
  */
 async function addSessionToday(page: Page, title: string, groups: string[]): Promise<string> {
   await page.goto("/admin/sessions");
+  await unfold(page, "add-sessions");
   await page.getByLabel("Title").fill(title);
   await page.getByLabel("Date", { exact: true }).fill(londonToday());
   await page.getByLabel("Starts").fill("00:00");
@@ -126,7 +127,10 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
   await expect(page.getByText("11 of 16 coming")).toBeVisible();
   const yusuf = page.getByRole("group", { name: /Is Yusuf coming/ });
   const musa = page.getByRole("group", { name: /Is Musa coming/ });
-  await yusuf.getByRole("button", { name: "Coming" }).click();
+  // Each child's buttons say whose they are, so the repeated "Coming" / "Not this week" can be told apart.
+  await expect(page.getByRole("button", { name: "Coming", exact: true })).toHaveCount(0);
+  await expect(musa.getByRole("button", { name: "Not this week: Musa isn't coming", exact: true })).toBeVisible();
+  await yusuf.getByRole("button", { name: "Yusuf is coming", exact: true }).click();
   await expect(page.getByText("Saved. Coach can see Yusuf is coming.")).toBeVisible();
   await expect(page.getByText("12 of 16 coming")).toBeVisible();
   // The venue has directions (a Google Maps search, outside the app).
@@ -137,9 +141,9 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
   // No signal: Musa's answer doesn't save; the screen and its QR link stay, and Try again sends it once back online.
   const fridayOffline = noSignal("/friday");
   await page.route(fridayOffline, abortPosts);
-  await musa.getByRole("button", { name: "Not this week" }).click();
+  await musa.getByRole("button", { name: "Not this week: Musa isn't coming" }).click();
   await expect(page.getByRole("alert").getByText("That didn't save. Check your signal and try again.")).toBeVisible();
-  await expect(musa.getByRole("button", { name: "Not this week" })).toHaveAttribute("aria-pressed", "false");
+  await expect(musa.getByRole("button", { name: "Not this week: Musa isn't coming" })).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByText(/attendance QR codes/i).first()).toBeVisible();
   await page.unroute(fridayOffline);
   await page.getByRole("button", { name: "Try again" }).click();
@@ -165,17 +169,17 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
   await expect(sara.getByText(/^Coming · answered by Adnan, today /)).toBeVisible();
   await expect(sara.getByText(/^Not this week · answered by Adnan, today /)).toBeVisible();
   await expect(sara.getByText(/^Saved\./)).toHaveCount(0);
-  await sara.getByRole("group", { name: /Is Yusuf coming/ }).getByRole("button", { name: "Not this week" }).click();
+  await sara.getByRole("group", { name: /Is Yusuf coming/ }).getByRole("button", { name: "Not this week: Yusuf isn't coming" }).click();
   await expect(sara.getByText("Saved. Coach knows Yusuf is away this week.")).toBeVisible();
   await saraContext.close();
 
   await page.reload();
   await expect(page.getByText(/^Not this week · answered by Sara, today /).first()).toBeVisible();
-  await expect(yusuf.getByRole("button", { name: "Not this week" })).toHaveAttribute("aria-pressed", "true");
+  await expect(yusuf.getByRole("button", { name: "Not this week: Yusuf isn't coming" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText(/^Saved\./)).toHaveCount(0);
   await page.screenshot({ path: shot("friday-answered-by"), fullPage: true });
   // Adnan puts it back.
-  await yusuf.getByRole("button", { name: "Coming" }).click();
+  await yusuf.getByRole("button", { name: "Yusuf is coming" }).click();
   await expect(page.getByText("Saved. Coach can see Yusuf is coming.")).toBeVisible();
 
   await page.getByRole("link", { name: "News" }).click();
@@ -232,13 +236,19 @@ test("player: switch between children and sign out", async ({ page }) => {
   await page.screenshot({ path: shot("player"), fullPage: true });
   await page.getByRole("link", { name: "Musa" }).click();
   await expect(page.getByRole("heading", { name: "Musa S." })).toBeVisible();
-  // The privacy notice has a way back into the app.
+  const musaPage = new URL(page.url());
+  // The privacy notice has a way back into the app, to the child that was showing.
   await page.getByRole("link", { name: "Privacy", exact: true }).click();
-  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page).toHaveURL(/\/privacy\?from=%2Fplayer%3Fchild%3D[0-9a-f-]{36}$/);
   const back = page.getByRole("link", { name: "Back", exact: true });
   expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   await back.click();
-  await expect(page).toHaveURL(/\/player/);
+  await expect(page).toHaveURL(musaPage.href);
+  await expect(page.getByRole("heading", { name: "Musa S." })).toBeVisible();
+  // A made-up Back target off the site is ignored.
+  await page.goto("/privacy?from=//evil.example");
+  await expect(page.getByRole("link", { name: "Back", exact: true })).toHaveAttribute("href", "/player");
+  await page.getByRole("link", { name: "Back", exact: true }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   await page.goto("/news");
@@ -263,7 +273,8 @@ test("coach: register marks a player here; parents can't open it", async ({ page
   // A U10 session today, so marking works whatever day the suite runs. Deleted at the end.
   const session = await addSessionToday(page, "Register test", ["U10"]);
   await page.goto(`/coach?session=${session}&group=U10`);
-  await expect(page.getByRole("heading", { name: "Register test register" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Register", exact: true })).toBeVisible();
+  await expect(page.getByText(/^Register test · /)).toBeVisible();
   await expect(page.getByText(/You can mark children here on the day/)).toHaveCount(0);
   await expect(page.getByText("0 of 16 expected")).toBeVisible();
   await page.getByRole("button", { name: "Mark Yusuf S. here" }).click();
@@ -367,7 +378,7 @@ test("admin: import a family, post news, add a session", async ({ page }) => {
   await page.getByLabel("Headline").fill("Pitch closed on Saturday");
   await page.getByLabel("Message").fill("The council is reseeding the pitch.");
   // No audience chosen: the error shows and the headline and message are kept.
-  await page.getByLabel("Only these age groups:").check();
+  await page.getByLabel("Only these groups:").check();
   // Hold the action back briefly to see the button say it's working.
   await page.route("**/admin/news", async (route) => {
     if (route.request().method() === "POST") await new Promise((r) => setTimeout(r, 800));
@@ -386,6 +397,8 @@ test("admin: import a family, post news, add a session", async ({ page }) => {
   await page.screenshot({ path: shot("admin-news"), fullPage: true });
 
   await page.goto("/admin/sessions");
+
+  await unfold(page, "add-sessions");
   await page.getByLabel("Title").fill("Cup training");
   // This Friday and next already have the 6:30pm training for every group, so a two-week run adds nothing.
   const firstDate = await page.getByLabel("Date", { exact: true }).inputValue();
@@ -444,12 +457,23 @@ test("shop: a parent orders kit for a child and pays by transfer; the club is to
   await page.screenshot({ path: shot("shop-basket"), fullPage: true });
   // No SumUp key in tests, so bank transfer is the only way to pay.
   await expect(page.getByLabel(/Bank transfer/)).toBeChecked();
+  // The exact checkout request, kept so it can be sent again below as a phone that lost the reply would.
+  const checkoutRequest = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/shop/basket"));
   await page.getByRole("button", { name: "Place order" }).click();
+  const sent = await checkoutRequest;
   await expect(page.getByText(/Order placed. Send the bank transfer/)).toBeVisible();
   await expect(page.getByText("12345678")).toBeVisible();
   const reference = (await page.locator("dd").last().textContent())!.trim();
   expect(reference).toMatch(/^DS-[0-9A-F]{6}$/);
   await page.screenshot({ path: shot("shop-order"), fullPage: true });
+
+  // The same checkout sent twice more (same basket cookie, same session): still one order.
+  const replay = { method: "POST", headers: await sent.allHeaders(), data: sent.postDataBuffer()! };
+  const replies = await Promise.all([page.request.fetch(sent.url(), replay), page.request.fetch(sent.url(), replay)]);
+  expect(replies.map((r) => r.status())).toEqual([200, 200]);
+  await page.goto("/shop/orders");
+  await expect(page.getByRole("link", { name: /full zip hoodie/ })).toHaveCount(1);
+  await page.goBack();
 
   const mails = readFileSync(OUTBOX, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string });
   expect(mails.some((m) => m.to === "admin@deensquad.test" && m.subject === `New kit order ${reference} from Adnan Sample`)).toBe(true);
@@ -542,7 +566,7 @@ test("sign-up: a new parent registers their child, proves their email and lands 
 test("coach groups: a U7 coach posts to U7 only and gives a star; the parent sees it", async ({ page }) => {
   await signIn(page, "admin@deensquad.test");
   await page.goto("/admin/staff");
-  const coachGroups = page.getByRole("form", { name: "Coach Hamza's age groups" });
+  const coachGroups = page.getByRole("form", { name: "Coach Hamza's groups" });
   await coachGroups.getByLabel("U7").check();
   await coachGroups.getByRole("button", { name: "Save groups" }).click();
   await expect(coachGroups.getByLabel("U7")).toBeChecked();
@@ -551,6 +575,7 @@ test("coach groups: a U7 coach posts to U7 only and gives a star; the parent see
   const kitHref = await page.getByRole("link", { name: /New away kit/ }).getAttribute("href");
   expect(kitHref).toMatch(/^\/admin\/news\/[0-9a-f-]{36}$/);
   await page.goto("/admin/sessions");
+  await unfold(page, "add-sessions");
   await page.getByLabel("Title").fill("U10 friendly");
   // Months away, so it doesn't become the next session in later tests.
   await page.getByLabel("Date", { exact: true }).fill(new Date(Date.now() + 200 * 86400000).toISOString().slice(0, 10));
@@ -646,10 +671,13 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   const pdf = makePdf(["Warm-up: rondos", "Main: passing on the move"]);
   await signIn(page, "admin@deensquad.test");
   await page.goto("/coach/plans");
-  // Groups with no children (U6) aren't listed.
-  await expect(page.getByRole("link", { name: /U10/ }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: /^U6\b/ })).toHaveCount(0);
-  await page.getByRole("link", { name: /U10/ }).first().click();
+  // Every one of the session's groups is listed, so a plan can go in before children join; an empty one says so.
+  // Each link names its group and session, so the repeated "Add plan" links can be told apart.
+  const u10 = page.getByRole("link", { name: /^(Add|Edit) U10 plan for .+, \w{3} \d{1,2} \w{3}/ }).first();
+  await expect(u10).toBeVisible();
+  await expect(page.getByRole("link", { name: /\bU6 plan for/ }).first()).toBeVisible();
+  await expect(page.locator("main").getByText("No children yet").first()).toBeVisible();
+  await u10.click();
   const plan = page.getByLabel("What you'll work on");
   await plan.fill("Warm-up: rondos\nMain: passing on the move");
   // A scanned sheet over the limit is refused before it's sent, naming its size; the typed plan stays.
@@ -687,11 +715,8 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await expect(unreadable.getByRole("button", { name: "Try again" })).toHaveCount(0);
   await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveURL(/\/coach\/practice$/);
-  await page
-    .getByRole("heading", { name: "Broken file check" })
-    .locator("xpath=ancestor::*[.//button[normalize-space()='Remove']][1]")
-    .getByRole("button", { name: "Remove" })
-    .click();
+  // Each sheet's Remove is named for the sheet.
+  await page.getByRole("button", { name: "Remove Broken file check" }).click();
   await expect(page.getByRole("heading", { name: "Broken file check" })).toHaveCount(0);
 
   await page.getByLabel("Title").fill("Keepy-uppy challenge");
@@ -725,6 +750,9 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await expect(page.getByRole("heading", { name: "Session plan (PDF)" })).toBeVisible();
   const fileId = viewer.match(/\/files\/([0-9a-f-]{36})/)![1];
   await expect(page.getByText("2 pages", { exact: true })).toBeVisible();
+  // A screen reader gets each page's words after its picture (the pages are drawn as pictures).
+  await expect(page.locator("main figure").nth(0).locator(".sr-only")).toHaveText("Warm-up: rondos");
+  await expect(page.locator("main figure").nth(1).locator(".sr-only")).toHaveText("Main: passing on the move");
   await expect(page.getByRole("img", { name: "Page 1 of 2" })).toHaveAttribute("data-drawn", "drawn");
   const firstPage = (await page.getByRole("img", { name: "Page 1 of 2" }).boundingBox())!;
   expect(firstPage.width).toBeGreaterThan(300);
@@ -797,7 +825,9 @@ test("writing help, downloads and badges: AI tidies a draft, an admin downloads 
   await expect(page.getByLabel("Title")).toHaveValue("Pitch closed on Saturday");
   // Spreadsheet downloads and badges (same admin sign-in: the suite stays under the per-email code limit).
   await page.goto("/admin");
-  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: /Families and payments/ }).click()]);
+  // The downloads are folded away at the foot of the overview.
+  await page.getByText("Download spreadsheets").click();
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: /^Families and payments/ }).click()]);
   expect(download.suggestedFilename()).toMatch(/^deen-squad-families-\d{4}-\d{2}-\d{2}\.csv$/);
   const csv = readFileSync((await download.path())!, "utf8");
   expect(csv).toContain('"Yusuf","Sample","U10"');
@@ -815,7 +845,7 @@ test("writing help, downloads and badges: AI tidies a draft, an admin downloads 
   expect(res.status()).toBe(403);
 });
 
-test("admin dashboard: a computer gets the sidebar, four sections and a Families table; phones keep the header; a U7 coach sees only U7", async ({ browser }) => {
+test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and a Families table; phones keep the header; a U7 coach sees only U7", async ({ browser }) => {
   test.skip(!existsSync(ADMIN_STATE) || !existsSync(COACH_STATE), "run with the earlier tests: needs their saved sign-in");
   const desktop = { viewport: { width: 1280, height: 800 }, baseURL: "http://localhost:3100" };
 
@@ -829,17 +859,31 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await expect(sidebar.getByRole("link", { name: "Shop" })).toBeVisible();
   await expect(sidebar.getByRole("button", { name: "Sign out" })).toBeVisible();
   await expect(page.locator("header")).toBeHidden();
-  for (const name of ["Attendance", "Families and to-dos", "Payments and shop", "News and reminders"]) {
+  for (const name of ["Needs you", "Attendance this season", "Next session", "Families and payments", "News", "Shop"]) {
     await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
   }
   await expect(page.getByRole("img", { name: /^U10, .*: \d+ coming, \d+ not coming, \d+ not answered$/ })).toBeVisible();
-  await expect(page.getByRole("list", { name: /Children checked in at the last/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /\d+ ready to collect/ })).toBeVisible();
-  await expect(page.getByRole("progressbar", { name: /Pitch closed|parents have read it/ }).first()).toBeVisible();
+  // "Needs you": at most five rows, each a count, its words and a link; orange lives only here.
+  const needs = page.getByRole("region", { name: "Needs you" }).getByRole("listitem");
+  expect(await needs.count()).toBeGreaterThan(0);
+  expect(await needs.count()).toBeLessThanOrEqual(5);
+  await expect(page.getByRole("link", { name: /^\d+ (parent|parents) behind on news$/ }).or(page.getByRole("link", { name: /^\d+ (parent|parents) not invited yet$/ })).first()).toBeVisible();
+  // Headline tiles.
+  const tiles = page.getByRole("list", { name: "At a glance" }).getByRole("link");
+  await expect(tiles).toHaveCount(4);
+  await expect(page.getByRole("link", { name: /^Attendance this season: \d+%$/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^\d+ of \d+ parents signed in$/ })).toBeVisible();
+  // The attendance chart: a hover/keyboard tooltip and a table twin with the same numbers.
+  const chart = page.getByRole("group", { name: /^Attendance at each session this season/ });
+  await chart.focus();
+  await expect(chart.getByText(/^\d+%$/).first()).toBeVisible();
+  await page.keyboard.press("ArrowLeft");
+  await page.getByText("Show as table").click();
+  await expect(page.getByRole("table", { name: /^Attendance at each session this season/ }).getByRole("row").nth(1)).toContainText(/\d+% \d+ of \d+|No register/);
+  // News: each message one link, named for it, with its read bar.
+  await expect(page.getByRole("link", { name: /^New away kit: sizes needed by Friday: \d+ of \d+ read\./ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Paid takings: £/ })).toBeVisible();
   await expect(page.locator("main")).not.toContainText("NaN");
-  await expect(page.getByRole("heading", { name: "This season (from 1 August), sessions with the register taken" })).toBeVisible();
-  await expect(page.getByText("These count parents. Their links list the children")).toBeVisible();
-  await expect(page.getByRole("link", { name: /^\d+ (parent hasn't|parents haven't) tapped ‘I’ve read this’ on 2 or more messages \(a partner may have\)$/ })).toBeVisible();
   // Every bar and figure on the overview is at least 48px tall to tap.
   for (const link of await page.getByRole("main").getByRole("link").all()) {
     if (await link.isVisible()) expect((await link.boundingBox())!.height, await link.innerText()).toBeGreaterThanOrEqual(48);
@@ -849,16 +893,14 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await page.screenshot({ path: shot("admin-dashboard-desktop-dark"), fullPage: true });
   await page.emulateMedia({ colorScheme: "light" });
 
-  // The U10 bar links to that session's register (not just today's) and the register shows its day and time.
-  const u10 = page.locator("li", { has: page.locator("b", { hasText: /^U10$/ }) }).first();
-  const when = (await u10.locator("p").innerText()).match(/· (\w{3} \d{1,2} \w{3,4}) · (.+) (\d{1,2}:\d{2}[ap]m)$/)!;
-  const coming = u10.getByRole("link", { name: /^\d+ coming$/ });
-  const href = (await coming.getAttribute("href"))!;
+  // The U10 bar links to that session's register (not just today's) and the register shows its day.
+  const u10 = page.getByRole("link", { name: /^U10, \w{3} \d{1,2} \w{3,4}: \d+ coming, \d+ not coming, \d+ not answered\. Open the register$/ });
+  const day = (await u10.getAttribute("aria-label"))!.match(/^U10, (\w{3} \d{1,2} \w{3,4}):/)![1];
+  const href = (await u10.getAttribute("href"))!;
   expect(href).toMatch(/^\/coach\?session=[0-9a-f-]{36}&group=U10$/);
-  await coming.click();
+  await u10.click();
   await expect(page).toHaveURL(href);
-  await expect(page.getByText(`Gate check-in · ${when[1]} ${when[3]}`)).toBeVisible();
-  await expect(page.getByRole("heading", { name: `${when[2]} register` })).toBeVisible();
+  await expect(page.getByText(new RegExp(` · ${day} \\d{1,2}:\\d{2}[ap]m$`))).toBeVisible();
   await page.goto("/admin");
 
   // A to-do count opens Families filtered to those children, as a table with one row per child.
@@ -890,12 +932,25 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await expect(phone.getByRole("complementary", { name: "Club admin menu" })).toHaveCount(0);
   await expect(phone.locator("header")).toBeVisible();
   const pills = phone.locator("header").getByRole("navigation", { name: "Club admin" }).getByRole("link");
-  await expect(pills).toHaveCount(8);
+  await expect(pills).toHaveCount(10);
   const [first, second] = [(await pills.nth(0).boundingBox())!, (await pills.nth(1).boundingBox())!];
   expect(second.y).toBe(first.y); // side by side in one scrolling row
   expect(second.x).toBeGreaterThan(first.x);
   await expect(phone.locator("header").getByRole("button", { name: "Sign out" })).toBeVisible();
-  await expect(phone.getByRole("heading", { name: "Families and to-dos" })).toBeVisible();
+  await expect(phone.getByRole("heading", { name: "Families and payments" })).toBeVisible();
+  // Tapping the chart with a finger shows the session under it, and each tap shows its own (a finger lifting
+  // off is not a mouse leaving, and focus doesn't jump it to the latest session).
+  const phoneChart = phone.getByRole("group", { name: /^Attendance at each session this season/ });
+  await phoneChart.scrollIntoViewIfNeeded();
+  const plot = (await phoneChart.boundingBox())!;
+  const tapped: string[] = [];
+  for (const at of [0.05, 0.5, 0.95]) {
+    await phone.touchscreen.tap(plot.x + plot.width * at, plot.y + plot.height / 2);
+    const tip = phoneChart.locator("[aria-live]").locator("span").first();
+    await expect(tip).toBeVisible();
+    tapped.push(await tip.innerText());
+  }
+  expect(new Set(tapped).size, tapped.join(" | ")).toBe(3);
   await phone.screenshot({ path: shot("admin-dashboard-phone"), fullPage: true });
   await phoneContext.close();
 
@@ -905,14 +960,16 @@ test("admin dashboard: a computer gets the sidebar, four sections and a Families
   await coach.goto("/admin");
   await expect(coach.getByRole("complementary", { name: "Club admin menu" })).toBeVisible();
   await expect(coach.getByRole("link", { name: "Shop" })).toHaveCount(0);
-  await expect(coach.getByRole("heading", { name: "Payments", exact: true })).toBeVisible();
-  await expect(coach.getByRole("heading", { name: "Payments and shop" })).toHaveCount(0);
-  await expect(coach.getByText(/ready to collect|Paid sales/)).toHaveCount(0);
+  await expect(coach.getByRole("heading", { name: "Families and payments", exact: true })).toBeVisible();
+  await expect(coach.getByRole("heading", { name: "Shop" })).toHaveCount(0);
+  await expect(coach.getByRole("link", { name: /Paid takings|kit order/ })).toHaveCount(0);
+  // Invites are an admin's job: a coach's Needs you never asks for them.
+  await expect(coach.getByRole("link", { name: /not invited yet$/ })).toHaveCount(0);
   const main = coach.locator("main");
-  await expect(main).not.toContainText(/U6|U10|U12|U15/);
+  await expect(main).not.toContainText(/U6|U10|U12|U15|Girls/);
   await expect(coach.getByRole("img", { name: /^U7, / })).toBeVisible();
   // The five U7s: Musa's parents have finished his To-do, the other four haven't started.
-  await expect(main.getByRole("heading", { name: "Children with to-dos left (of 5 children)" })).toBeVisible();
+  await expect(main.getByRole("heading", { name: "To-dos left (of 5 children)" })).toBeVisible();
   await expect(coach.getByRole("link", { name: "4 contract not signed" })).toBeVisible();
   await expect(coach.getByRole("link", { name: "4 no emergency contact" })).toBeVisible();
   await coach.getByRole("link", { name: "4 no emergency contact" }).click();
@@ -934,6 +991,9 @@ test("families: a filtered list keeps its filter after opening a child and tappi
     await expect(child, name).toHaveAttribute("href", /^\/admin\/families\/[0-9a-f-]{36}\?need=contract$/);
     await child.click();
     await expect(page, name).toHaveURL(/\/admin\/families\/[0-9a-f-]{36}\?need=contract$/);
+    // Send invite and Remove redirect, so they carry the filter too (not used here: they'd email or delete).
+    await expect(page.locator('form:has(button:text-is("Remove")) input[name="need"]'), name).toHaveValue("contract");
+    for (const form of await page.locator('form:has(button[aria-label^="Send invite"])').all()) await expect(form.locator('input[name="need"]'), name).toHaveValue("contract");
     await page.getByRole("link", { name: "← Families" }).click();
     await expect(page, name).toHaveURL(/\/admin\/families\?need=contract$/);
     await expect(page.locator("#need"), name).toHaveValue("contract");
@@ -983,6 +1043,7 @@ test("tournament squads: the admin picks two U10s and messages them; only their 
   });
   const admin = await adminContext.newPage();
   await admin.goto("/admin/sessions");
+  await unfold(admin, "add-sessions");
   await admin.getByLabel("Title").fill("County Cup");
   await admin.getByLabel("Kind").selectOption("tournament");
   // After this week's Friday, so it's asked about beside the next training.
@@ -1025,7 +1086,7 @@ test("tournament squads: the admin picks two U10s and messages them; only their 
   await page.goto("/friday");
   const question = page.getByRole("group", { name: /^Can Bilal play in County Cup on / });
   await expect(question).toBeVisible();
-  await question.getByRole("button", { name: "Yes" }).click();
+  await question.getByRole("button", { name: "Yes, Bilal can play", exact: true }).click();
   await expect(page.getByText("Saved. The coach can see Bilal can play.")).toBeVisible();
   await page.screenshot({ path: shot("parent-squad-invite"), fullPage: true });
   await page.goto("/news");
@@ -1049,9 +1110,9 @@ test("tournament squads: the admin picks two U10s and messages them; only their 
   await expect(admin.getByText("2 picked · 1 confirmed · 0 can't play · 1 not answered")).toBeVisible();
   await admin.screenshot({ path: shot("admin-squad"), fullPage: true });
   await admin.goto("/admin/sessions");
-  await expect(admin.getByText("Squad: 2 picked")).toBeVisible();
+  await expect(admin.getByText("Squad: 2 picked").first()).toBeVisible();
   await admin.goto(`/coach?session=${sessionId}`);
-  await expect(admin.getByRole("heading", { name: "County Cup register" })).toBeVisible();
+  await expect(admin.getByText(/^County Cup · /)).toBeVisible();
   await expect(admin.getByRole("button", { name: /^Mark .+ here$/ })).toHaveCount(2);
   await expect(admin.getByRole("button", { name: "Mark Bilal R. here" })).toBeVisible();
   await expect(admin.getByRole("button", { name: "Mark Hamza T. here" })).toBeVisible();
@@ -1071,6 +1132,7 @@ test("session changes: an admin edits a session, cancels it with a reason and te
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
   const day = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }).format(new Date());
   await admin.goto("/admin/sessions");
+  await unfold(admin, "add-sessions");
   await admin.getByLabel("Title").fill("U12 extra");
   await admin.getByLabel("Date", { exact: true }).fill(today);
   await admin.getByLabel("Starts").fill("00:01");
@@ -1103,7 +1165,7 @@ test("session changes: an admin edits a session, cancels it with a reason and te
   await admin.screenshot({ path: shot("admin-session-cancel"), fullPage: true });
   await admin.getByRole("button", { name: "Cancel session" }).click();
   await expect(admin.getByText("Cancelled. The families have been told.")).toBeVisible();
-  await expect(admin.getByText("Reason: Pitch waterlogged")).toBeVisible();
+  await expect(admin.getByText("Reason: Pitch waterlogged").first()).toBeVisible();
 
   // The parent sees the cancellation with its reason, and is still asked about Zara's next session.
   await page.goto("/friday");
@@ -1112,7 +1174,7 @@ test("session changes: an admin edits a session, cancels it with a reason and te
   await expect(page.getByText("Check club news")).toHaveCount(0);
   const next = page.getByRole("group", { name: /Is Zara coming/ });
   await expect(next).toBeVisible();
-  await next.getByRole("button", { name: "Coming" }).click();
+  await next.getByRole("button", { name: "Zara is coming" }).click();
   await expect(page.getByText("Saved. Coach can see Zara is coming.")).toBeVisible();
   await page.screenshot({ path: shot("parent-friday-cancelled"), fullPage: true });
   await page.goto("/news");
@@ -1197,9 +1259,22 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
       extraHTTPHeaders: { "x-forwarded-for": "10.0.1.1" },
     });
     const coach = await context.newPage();
+    // Keep every camera stream the page opens, to check the camera is off once the scanner closes.
+    await coach.addInitScript(() => {
+      const w = window as unknown as { __streams: MediaStream[] };
+      w.__streams = [];
+      const open = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.getUserMedia = async (c) => {
+        const stream = await open(c);
+        w.__streams.push(stream);
+        return stream;
+      };
+    });
+    const cameraOn = () => coach.evaluate(() => (window as unknown as { __streams: MediaStream[] }).__streams.some((s) => s.getTracks().some((t) => t.readyState === "live")));
     await signIn(coach, "coach@deensquad.test");
     // Today's session, so the pass checks the child in whatever day the suite runs.
     await coach.goto("/admin/sessions");
+    await unfold(coach, "add-sessions");
     await coach.getByLabel("Title").fill("Gate test");
     await coach.getByLabel("Date", { exact: true }).fill(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date()));
     await coach.getByLabel("Starts").fill("00:00");
@@ -1209,7 +1284,7 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await coach.goto("/coach?group=U7");
     const gateTest = coach.getByRole("navigation", { name: "Today's sessions" }).getByRole("link", { name: /Gate test/ });
     if (await gateTest.count()) await gateTest.click();
-    await expect(coach.getByRole("heading", { name: "Gate test register" })).toBeVisible();
+    await expect(coach.getByText(/^Gate test · /)).toBeVisible();
     const here = coach.getByRole("region", { name: /^Here/ });
     await expect(here.getByRole("heading", { name: "Here (0)" })).toBeVisible();
 
@@ -1230,9 +1305,53 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await expect(scanner.getByText("U7 · Checked in", { exact: true })).toBeVisible();
     await coach.screenshot({ path: shot("coach-scan") });
     await scanner.getByRole("button", { name: "Close the scanner" }).click();
+    await expect(scanner).toHaveCount(0);
+    const scan = coach.getByRole("button", { name: "Scan QR codes" });
+    await expect(scan).toBeFocused();
+    await expect.poll(cameraOn).toBe(false);
 
     await expect(here.getByRole("heading", { name: "Here (1)" })).toBeVisible();
     await expect(here.getByText(/QR code scanned/)).toBeVisible();
+
+    // The phone's Back button closes the scanner and stays on the register; so does Escape. Focus starts on Close.
+    const register = coach.url();
+    await scan.click();
+    await expect(scanner.getByRole("button", { name: "Close the scanner" })).toBeFocused();
+    await expect.poll(cameraOn).toBe(true);
+    await coach.goBack();
+    await expect(scanner).toHaveCount(0);
+    expect(coach.url()).toBe(register);
+    await expect(coach.getByText(/^Gate test · /)).toBeVisible();
+    await expect(scan).toBeFocused();
+    await expect.poll(cameraOn).toBe(false);
+    await scan.click();
+    await expect(scanner).toBeVisible();
+    await coach.keyboard.press("Escape");
+    await expect(scanner).toHaveCount(0);
+    expect(coach.url()).toBe(register);
+    await expect(scan).toBeFocused();
+    await expect.poll(cameraOn).toBe(false);
+    // A double tap on Close goes back once only: still on the register.
+    await scan.click();
+    await expect(scanner).toBeVisible();
+    await scanner.getByRole("button", { name: "Close the scanner" }).dblclick();
+    await expect(scanner).toHaveCount(0);
+    await coach.waitForTimeout(500);
+    expect(coach.url()).toBe(register);
+    await expect(coach.getByText(/^Gate test · /)).toBeVisible();
+    // The phone is locked or the coach switches apps: the scanner closes and the camera goes off.
+    await scan.click();
+    await expect.poll(cameraOn).toBe(true);
+    await coach.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect(scanner).toHaveCount(0);
+    await expect.poll(cameraOn).toBe(false);
+    expect(coach.url()).toBe(register);
+    await coach.evaluate(() => {
+      delete (document as unknown as { visibilityState?: string }).visibilityState;
+    });
     await here.getByRole("button", { name: "Undo check-in for Musa S." }).click();
     await expect(here.getByRole("heading", { name: "Here (0)" })).toBeVisible();
 
@@ -1241,7 +1360,7 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await coach.getByRole("button", { name: "Mark Musa S. here" }).click();
     const musaRow = coach.getByRole("listitem").filter({ hasText: "Musa S." });
     await expect(musaRow.getByText("That didn't save. Check your signal and try again.")).toBeVisible();
-    await expect(coach.getByRole("heading", { name: "Gate test register" })).toBeVisible();
+    await expect(coach.getByText(/^Gate test · /)).toBeVisible();
     await expect(coach.getByRole("heading", { name: "Something went wrong" })).toHaveCount(0);
     await coach.screenshot({ path: shot("coach-mark-no-signal") });
     await coach.unroute(offline);
@@ -1285,7 +1404,7 @@ test("staff roles: an admin makes a coach an admin, who then sees the shop, and 
   expect((await makeAdmin.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   await makeAdmin.click();
   await expect(admin.getByRole("button", { name: "Make Coach Hamza a coach" })).toBeVisible();
-  await expect(admin.getByRole("form", { name: "Coach Hamza's age groups" })).toHaveCount(0);
+  await expect(admin.getByRole("form", { name: "Coach Hamza's groups" })).toHaveCount(0);
   await admin.screenshot({ path: shot("admin-staff-roles"), fullPage: true });
 
   await coach.goto("/admin");
@@ -1295,7 +1414,7 @@ test("staff roles: an admin makes a coach an admin, who then sees the shop, and 
   // And back: a coach again (of every group until their groups are ticked), with no shop.
   await admin.getByRole("button", { name: "Make Coach Hamza a coach" }).click();
   await expect(admin.getByRole("button", { name: "Make Coach Hamza an admin" })).toBeVisible();
-  await expect(admin.getByRole("form", { name: "Coach Hamza's age groups" }).getByLabel("U7")).not.toBeChecked();
+  await expect(admin.getByRole("form", { name: "Coach Hamza's groups" }).getByLabel("U7")).not.toBeChecked();
   await coach.goto("/admin");
   await expect(coach.getByRole("link", { name: "Shop", exact: true })).toHaveCount(0);
   await adminContext.close();
@@ -1348,7 +1467,7 @@ test("gate register: with 12 children in, the list still to arrive starts on the
   await expect(here.getByRole("listitem")).toHaveCount(12);
 
   // All groups: both groups' children in one list, each with their group; Mark here and Undo work the same.
-  await page.getByRole("navigation", { name: "Age groups" }).getByRole("link", { name: "All groups" }).click();
+  await page.getByRole("navigation", { name: "Groups" }).getByRole("link", { name: "All groups" }).click();
   await expect(page.getByRole("heading", { name: "All groups", level: 2 })).toBeVisible();
   const zara = notHere.getByRole("listitem").filter({ hasText: "Zara K." });
   await expect(zara.getByText("U12", { exact: true })).toBeVisible();
@@ -1373,6 +1492,7 @@ test("squad page on a phone: Save stays on screen, and a group filter keeps the 
   const context = await newContext(browser, { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: "http://localhost:3100", storageState: ADMIN_STATE });
   const page = await context.newPage();
   await page.goto("/admin/sessions");
+  await unfold(page, "add-sessions");
   await page.getByLabel("Title").fill("Filter Cup");
   await page.getByLabel("Kind").selectOption("tournament");
   // Months away, so it never becomes anyone's next session.

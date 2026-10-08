@@ -1,23 +1,12 @@
 import "server-only";
 
 import { asSystem } from "../db";
-import { MAX_FILE_BYTES, saveFile, sniff } from "../files";
+import { saveFile } from "../files";
+import { fetchImage } from "./fetch-image";
 
 // Product photos given as links (pasted by an admin, or the imported kit photos, whose links expire)
-// are copied into the app's own storage so the shop never shows a broken image.
-
-export async function fetchImage(url: string): Promise<{ data: Uint8Array; mime: string } | null> {
-  if (!/^https:\/\//.test(url)) return null;
-  const res = await fetch(url, { signal: AbortSignal.timeout(20_000), redirect: "follow" });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const size = Number(res.headers.get("content-length") ?? 0);
-  if (size > MAX_FILE_BYTES) throw new Error("too big");
-  const data = new Uint8Array(await res.arrayBuffer());
-  if (data.byteLength > MAX_FILE_BYTES) throw new Error("too big");
-  const mime = sniff(data);
-  if (!mime || mime === "application/pdf") throw new Error("not a photo");
-  return { data, mime };
-}
+// are copied into the app's own storage so the shop never shows a broken image. The fetch itself (public https
+// hosts only, redirects followed by hand) is in fetch-image.ts.
 
 /** Copies every linked product photo into club_files. Never throws; returns how many were copied. */
 export async function localiseProductImages(): Promise<number> {

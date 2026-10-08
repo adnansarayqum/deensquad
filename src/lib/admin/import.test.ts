@@ -1,8 +1,10 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS } from "../db/dev-seed";
 import { parseCsv } from "./csv";
-import { ageOnCutOff, applyImport, groupForAge, parseAgeGroup, parseDate, planImport } from "./import";
+import { ageOnCutOff, applyImport, groupForAge, parseAgeGroup, parseDate, planImport, TEMPLATE_HEADER } from "./import";
 
 const now = new Date("2026-10-05T12:00:00Z");
 
@@ -24,6 +26,61 @@ describe("planning an import", () => {
     expect(parseAgeGroup("U10")).toBe("U10");
     expect(parseAgeGroup("U6")).toBe("U6");
     expect(parseAgeGroup("U16")).toBeNull();
+  });
+
+  it("reads a cell naming girls as the Girls group, even with an age, but not the mixed U6", () => {
+    for (const cell of ["Girls", "girls", "girl", "Girls team", "Girls U10", "U12 Girls", "GIRLS"]) expect(parseAgeGroup(cell), cell).toBe("Girls");
+    expect(parseAgeGroup("U6 (boys and girls)")).toBe("U6");
+    expect(parseAgeGroup("Girlsxyz")).toBeNull();
+  });
+
+  it("never places a child in Girls by age", () => {
+    for (let age = 0; age <= 30; age++) expect(groupForAge(age), `age ${age}`).not.toBe("Girls");
+  });
+
+  it("keeps a girl of any age in Girls without an age check, and never puts a child there by date of birth", () => {
+    const plan = planImport(
+      [
+        "Child first name,Child last name,Date of birth,Age group,Parent first name,Parent email",
+        "Maryam,Ali,14/03/2018,Girls,Hina,hina@example.com",
+        "Safa,Ali,01/05/2011,Girls U10,Hina,hina@example.com",
+        "Noor,Ali,,girls team,Hina,hina@example.com",
+        "Aisha,Iqbal,14/03/2018,,Ruksana,ruksana@example.com",
+        "Huda,Iqbal,14/03/2018,Year 4 netball,Ruksana,ruksana@example.com",
+      ].join("\n"),
+      now,
+    );
+    expect(plan.errors).toEqual([]);
+    expect(plan.rows.map((r) => [r.child.firstName, r.child.ageGroup])).toEqual([
+      ["Maryam", "Girls"],
+      ["Safa", "Girls"], // 15 by date of birth, but the sheet names girls
+      ["Noor", "Girls"],
+      ["Aisha", "U10"], // by date of birth: an age group, never Girls
+      ["Huda", "U10"],
+    ]);
+    // Safa's cell also names an age, so it's listed to check; so are the two placed by date of birth. Maryam and
+    // Noor aren't: Girls has no age to check against.
+    expect(plan.checks.map((c) => c.line)).toEqual([3, 5, 6]);
+    expect(plan.checks[0].message).toBe("Safa is listed as Girls; the sheet also says U10. Check before importing.");
+  });
+
+  it("asks to check a Girls cell that also names an age", () => {
+    const plan = planImport(
+      [
+        "Child first name,Child last name,Group,Parent first name,Parent email",
+        "Hafsa,Noor,U6 girls,Amal,amal@example.com",
+        "Zainab,Noor,Under 9s girls,Amal,amal@example.com",
+        "Ruqayya,Noor,Girls,Amal,amal@example.com",
+        "Musa,Noor,U6 (boys and girls),Amal,amal@example.com",
+      ].join("\n"),
+      now,
+    );
+    expect(plan.errors).toEqual([]);
+    expect(plan.rows.map((r) => r.child.ageGroup)).toEqual(["Girls", "Girls", "Girls", "U6"]);
+    expect(plan.checks).toEqual([
+      { line: 2, message: "Hafsa is listed as Girls; the sheet also says U6. Check before importing." },
+      { line: 3, message: "Zainab is listed as Girls; the sheet also says U9. Check before importing." },
+    ]);
   });
 
   it("groups siblings by parent email and links a second parent", () => {
@@ -78,7 +135,7 @@ describe("planning an import", () => {
     ]);
     expect(plan.errors).toEqual([
       { line: 6, message: "The age group is missing, and Baby is 2 by date of birth, outside the club's groups." },
-      { line: 7, message: `"Year 4" isn't one of the app's age groups (U6, U7, U10, U12, U15).` },
+      { line: 7, message: `"Year 4" isn't one of the app's groups (U6, U7, U10, U12, U15, Girls).` },
     ]);
   });
 
@@ -106,6 +163,15 @@ describe("planning an import", () => {
       expect(Boolean(check), `${age} in ${group}`).toBe(flagged);
       if (check) expect(check.message).toBe(`Kid${i} is ${age} by date of birth but listed in ${group}. Check before importing.`);
     });
+  });
+
+  it("reads the downloadable template, whose column is called Group (sheets saying Age group still work)", () => {
+    const template = readFileSync(join(process.cwd(), "public", "families-template.csv"), "utf8");
+    expect(template.split(/\r?\n/)[0]).toBe(TEMPLATE_HEADER.join(","));
+    expect(TEMPLATE_HEADER).toContain("Group");
+    const plan = planImport(template, now);
+    expect(plan.errors).toEqual([]);
+    expect(plan.rows.map((r) => r.child.ageGroup)).toEqual(["U10", "U7"]);
   });
 
   it("takes a sheet with dates of birth and no age group column", () => {

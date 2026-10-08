@@ -100,9 +100,10 @@ export async function applyRegistration(tx: Queryable, email: string, reg: Regis
 
 /** Labels for the group picker, in the club's words. */
 export const GROUP_LABELS: Record<AgeGroup, string> = {
-  U6: "U6 (boys and girls)",
+  U6: "U6",
   U7: "U7",
   U10: "U10 (ages 8 to 10)",
   U12: "U12 (ages 11 and 12)",
   U15: "U15 (ages 13 to 15)",
+  Girls: "Girls (all ages)",
 };

@@ -52,7 +52,7 @@ export default async function PaymentPage() {
               <h2 className="text-base font-extrabold">What happens</h2>
               <ol className="flex list-decimal flex-col gap-2 pl-5 text-[15px] leading-[22px]">
                 <li>
-                  Open TeamFeePay and choose {needed.length > 1 ? "each child's age group" : `${needed[0].firstName}'s age group`} ({groups}).
+                  Open TeamFeePay and choose {needed.length > 1 ? "each child's group" : `${needed[0].firstName}'s group`} ({groups}).
                 </li>
                 <li>Set up the monthly plan with your card or Direct Debit.</li>
                 <li>Come back here and tap &ldquo;I&apos;ve set it up&rdquo;. The club checks it against TeamFeePay.</li>

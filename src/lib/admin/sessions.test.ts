@@ -67,6 +67,25 @@ describe("a U7 coach changing sessions", () => {
     expect(await cancelledAt(id)).toBeUndefined();
   });
 
+  it("deleting a session takes its plans' attached files with it", async () => {
+    const [{ id }] = await t.asSystem((tx) =>
+      tx.query<{ id: string }>(
+        `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups) values ('training', 'U7 planned', now() + interval '3 days', now() + interval '3 days 1 hour', 'Hub', '{U7}') returning id`,
+      ),
+    );
+    const [{ id: file }, { id: other }] = await t.asSystem((tx) =>
+      tx.query<{ id: string }>(
+        `insert into club_files (name, mime, size, data) values ('plan.pdf', 'application/pdf', 4, '\x25504446'), ('sheet.pdf', 'application/pdf', 4, '\x25504446') returning id`,
+      ),
+    );
+    await t.asSystem((tx) =>
+      tx.query(`insert into session_plans (session_id, age_group, body, file_id, author) values ($1, 'U7', 'Passing', $2, $3)`, [id, file, adminStaffId]),
+    );
+    expect(await t.asUser(coach, (tx) => removeSession(tx, id, ["U7"]))).toBe(true);
+    const left = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from club_files where id in ($1, $2)`, [file, other]));
+    expect(left.map((r) => r.id)).toEqual([other]);
+  });
+
   it("with no limit (an admin, or a coach with no groups) can cancel the cup", async () => {
     expect(await t.asUser(coach, (tx) => cancelSession(tx, cup, true, null))).toBe(true);
     expect(await cancelledAt(cup)).not.toBeNull();

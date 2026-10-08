@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { testDatabase } from "../../../test/db";
-import { pushToUsers, type PushSend } from "./senders";
+import { pushToUsers, sendSmsTo, type PushSend, type SmsSend } from "./senders";
+import type { ChaseTarget } from "./ladder";
 
 // Pushes go out from 10 workers at once, and only then are devices updated or forgotten, one statement at a time.
 let t: Awaited<ReturnType<typeof testDatabase>>;
@@ -117,5 +118,74 @@ describe("pushToUsers", () => {
     const reached = await t.asSystem((tx) => pushToUsers(tx, [users[4]], payload, send));
     expect(reached).toEqual(new Set([users[4]]));
     expect(sentTo.sort()).toEqual(["https://push.example/4a", "https://push.example/4b"]);
+  });
+});
+
+describe("reminder emails", () => {
+  it("carry the message + parent idempotency key, so a retried run can't email a parent twice", async () => {
+    vi.stubEnv("RESEND_API_KEY", "test");
+    vi.stubEnv("APP_URL", "https://app.test");
+    const fetch = vi.fn(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetch);
+    try {
+      const { liveSenders } = await import("./senders");
+      const target = (announcementId: string) => ({
+        announcementId,
+        title: "Kit day",
+        body: "Bring kit",
+        guardianId: "g-1",
+        userId: users[0], // signed in: no sign-in link needed
+        firstName: "Sara",
+        email: "sara@example.com",
+        phone: null,
+        children: ["Yusuf"],
+      });
+      const send = liveSenders().email!;
+      await t.asSystem((tx) => send([target("a-1")], tx));
+      await t.asSystem((tx) => send([target("a-2")], tx));
+      const keys = fetch.mock.calls.map((c) => new Headers((c as unknown as [string, RequestInit])[1].headers).get("Idempotency-Key"));
+      expect(keys).toEqual(["a-1:g-1:email", "a-2:g-1:email"]);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe("sendSmsTo", () => {
+  const target = (i: number): ChaseTarget => ({
+    announcementId: "a",
+    title: "Winter timings",
+    body: "",
+    guardianId: `g${i}`,
+    userId: null,
+    firstName: "Sara",
+    email: null,
+    phone: `07700 9${String(i).padStart(5, "0")}`,
+    children: ["Musa"],
+  });
+
+  it("texts from 10 workers at once, so one hung send holds up one worker, and reports only who was reached", async () => {
+    const TIMEOUT = 600;
+    const targets = Array.from({ length: 25 }, (_, i) => target(i));
+    const hung = new Set(["+447700900000", "+447700900005", "+447700900010"]);
+    const texted: string[] = [];
+    const send: SmsSend = async (to) => {
+      texted.push(to);
+      if (hung.has(to)) {
+        await sleep(TIMEOUT);
+        throw new Error("timed out");
+      }
+      await sleep(30);
+      return to !== "+447700900001"; // Twilio refused one
+    };
+    const started = Date.now();
+    const sent = await sendSmsTo(targets, send);
+    const took = Date.now() - started;
+    expect(took).toBeGreaterThanOrEqual(TIMEOUT);
+    expect(took).toBeLessThan(2 * TIMEOUT); // one at a time would take at least 3 x 600 ms plus 22 x 30 ms
+    expect(texted).toHaveLength(25);
+    expect(texted[0]).toBe("+447700900000");
+    expect(sent.map((t) => t.guardianId)).toEqual(targets.filter((_, i) => ![0, 1, 5, 10].includes(i)).map((t) => t.guardianId));
   });
 });

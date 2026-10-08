@@ -5,7 +5,7 @@ import { Card } from "@/components/ui";
 import { CountOrderPlaced } from "@/components/observability/TrackOnce";
 import { OrderStatusPill } from "@/components/shop/OrderStatusPill";
 import { OrderTimeline } from "@/components/shop/OrderTimeline";
-import { payAgain } from "@/lib/shop/actions";
+import { payAgain, payByBankInstead } from "@/lib/shop/actions";
 import { formatPence, type Order } from "@/lib/shop/data";
 import { getOrderPage } from "@/lib/shop/load";
 import { analyticsConfig } from "@/lib/observability/config";
@@ -16,7 +16,11 @@ function message(order: Order, query: Record<string, string | string[] | undefin
   if (order.status === "awaiting_payment" && order.payBy === "bank")
     return query.placed
       ? { tone: "done", text: "Order placed. Send the bank transfer below and we'll start on it once it arrives." }
+      : query.switched
+      ? { tone: "action", text: "The card payment didn't go through, so please pay by bank transfer instead. Use the reference so the club can match it." }
       : { tone: "action", text: "We haven't had your transfer yet. It can take a day to show once you've sent it." };
+  if (order.status === "awaiting_payment" && query.checking)
+    return { tone: "action", text: "We're still checking your card payment. Reload in a minute." };
   if (order.status === "awaiting_payment" && query.payment === "failed")
     return { tone: "action", text: "We couldn't open the payment page. Please try again in a minute." };
   if (order.status === "awaiting_payment" && query.return)
@@ -105,7 +109,16 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/sh
             <Card className="p-4 text-[15px]">The club will send you its bank details. Use the reference {order.reference} when you pay.</Card>
           )
         ) : null}
-        {order.status === "awaiting_payment" && order.payBy === "card" && canPayOnline ? (
+        {order.status === "awaiting_payment" && order.payBy === "card" && query.checking ? (
+          // The card payment may still be going through, so nothing changes unless the parent chooses bank transfer.
+          <form action={payByBankInstead} className="flex flex-col gap-2">
+            <input type="hidden" name="order" value={order.id} />
+            <button type="submit" className="btn-chunky btn-paper w-full">
+              Pay by bank transfer instead
+            </button>
+            <p className="text-sm text-ink-muted">If you already paid by card, we&apos;ll match it and refund any double payment.</p>
+          </form>
+        ) : order.status === "awaiting_payment" && order.payBy === "card" && canPayOnline ? (
           <form action={payAgain}>
             <input type="hidden" name="order" value={order.id} />
             <button type="submit" className="btn-chunky btn-grass w-full">

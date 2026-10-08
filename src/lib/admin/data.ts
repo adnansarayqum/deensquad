@@ -4,7 +4,7 @@ import { iso } from "../db/types";
 import { AGE_GROUPS, type AgeGroup, type PaymentState, type Session, type StaffRole } from "../domain";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
 import { newsReaches } from "../squads/sql";
-import { behindOnNews, needWhere, type Need } from "./needs";
+import { MISSED_LAST_3, SEASON_START_SQL, behindOnNews, needWhere, type Need } from "./needs";
 import { overlaps, within as allWithin } from "./scope";
 
 // Queries for the club admin. They run as a member of staff (row level security on: staff see the club).
@@ -172,6 +172,12 @@ export type ChildDetail = {
   photoConsent: boolean | null;
   payment: PaymentState;
   attended: number;
+  /** The child's last 3 sessions all have no check-in for them (NEEDS.missing3). */
+  missedLast3: boolean;
+  /** When they were last checked in, if that was this season (from 1 August); null if not yet this season. */
+  lastHereThisSeason: string | null;
+  /** When a parent last changed the name or date of birth from the app (migration 0021); null if never. */
+  changedByParentAt: string | null;
   guardians: (FamilyGuardian & { firstName: string; lastName: string; otherChildren: string[] })[];
   contacts: { id: string; name: string; phone: string; relationship: string | null }[];
   /** This season's club contract (CONTRACT.id): who agreed it and when, or null if nobody has yet. */
@@ -191,10 +197,15 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
     photo_consent: boolean | null;
     payment: PaymentState;
     attended: number;
+    missed_last_3: boolean;
+    last_here: Date | null;
+    updated_by_parent_at: Date | null;
   }>(
     `select p.id, p.first_name, p.last_name, p.date_of_birth::text as date_of_birth, p.age_group::text as age_group, p.shirt_number,
-       p.position, p.joined_on::text as joined_on, p.photo_consent, coalesce(ps.state, 'missing')::text as payment,
-       (select count(*) from attendance a where a.player_id = p.id)::int as attended
+       p.position, p.joined_on::text as joined_on, p.photo_consent, p.updated_by_parent_at, coalesce(ps.state, 'missing')::text as payment,
+       (select count(*) from attendance a where a.player_id = p.id)::int as attended,
+       ${MISSED_LAST_3} as missed_last_3,
+       (select max(ls.starts_at) from attendance la join sessions ls on ls.id = la.session_id where la.player_id = p.id and ls.starts_at >= ${SEASON_START_SQL}) as last_here
      from players p left join payment_status ps on ps.player_id = p.id where p.id = $1`,
     [id],
   );
@@ -237,6 +248,9 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
     photoConsent: p.photo_consent,
     payment: p.payment,
     attended: p.attended,
+    missedLast3: p.missed_last_3,
+    lastHereThisSeason: p.last_here ? iso(p.last_here) : null,
+    changedByParentAt: p.updated_by_parent_at ? iso(p.updated_by_parent_at) : null,
     guardians: guardians.map((g) => ({
       id: g.id,
       name: `${g.first_name} ${g.last_name}`,
@@ -414,6 +428,21 @@ export async function loadAdminSession(tx: Queryable, id: string, mine: readonly
   const [row] = await tx.query<AdminSessionRow>(`select ${ADMIN_SESSION_COLUMNS} from sessions s where s.id = $1`, [id]);
   if (!row || (mine && !allWithin(row.age_groups, mine))) return null;
   return toAdminSession(row);
+}
+
+/**
+ * The sessions picked for a bulk action, in date order, with those that aren't there or aren't this member of
+ * staff's to change (`notYours`) left out and counted. One query however many were ticked.
+ */
+export async function loadAdminSessions(
+  tx: Queryable,
+  ids: readonly string[],
+  mine: readonly AgeGroup[] | null,
+): Promise<{ sessions: AdminSession[]; notYours: number }> {
+  if (ids.length === 0) return { sessions: [], notYours: 0 };
+  const rows = await tx.query<AdminSessionRow>(`select ${ADMIN_SESSION_COLUMNS} from sessions s where s.id = any($1::uuid[]) order by s.starts_at`, [[...ids]]);
+  const sessions = rows.filter((r) => !mine || allWithin(r.age_groups, mine)).map(toAdminSession);
+  return { sessions, notYours: rows.length - sessions.length };
 }
 
 /** Upcoming and recent sessions; `groups` (a group coach's own) keeps those that include one of them. */

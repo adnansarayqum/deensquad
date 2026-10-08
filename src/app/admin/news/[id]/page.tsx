@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MessageCircle, Phone } from "lucide-react";
-import { Notice, ReadBar, Section } from "@/components/admin/bits";
+import { Notice, PageHeader, ReadBar, Section } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
 import { chaseOnWhatsApp, deleteNews } from "@/lib/admin/actions";
 import { loadNewsDetail } from "@/lib/admin/data";
@@ -48,16 +47,10 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
   return (
     // Forms and detail read best at phone-to-tablet width, even on a computer.
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <Link href="/admin/news" className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
-        ← News
-      </Link>
+      <PageHeader back={{ href: "/admin/news", label: "News" }} title={news.title} subtitle={`${news.topic} · ${news.squad ? `Squad · ${news.squad.title}` : news.audience ? news.audience.join(", ") : "Every family"} · ${postedLabel(news.postedAt, new Date())}${news.postedBy ? ` · ${news.postedBy}` : ""}`} />
       {flags.posted ? <Notice>Posted. Parents see it at the top of Club news.</Notice> : null}
 
-      <Section title={news.title}>
-        <p className="text-[13px] text-ink-muted">
-          {news.topic} · {news.squad ? `Squad · ${news.squad.title}` : news.audience ? news.audience.join(", ") : "Every family"} · {postedLabel(news.postedAt, new Date())}
-          {news.postedBy ? ` · ${news.postedBy}` : ""}
-        </p>
+      <Section title="Message">
         <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
         {news.requiresAck ? <ReadBar read={news.readCount} total={news.audienceCount} groupsOnly={news.groupsOnly} /> : <p className="text-sm text-ink-muted">No read receipts asked for.</p>}
       </Section>
@@ -108,7 +101,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
                     <form action={chaseOnWhatsApp}>
                       <input type="hidden" name="news" value={news.id} />
                       <input type="hidden" name="guardian" value={u.id} />
-                      <button type="submit" className="btn-chunky btn-paper btn-small">
+                      <button type="submit" className="btn-chunky btn-paper btn-small" aria-label={`WhatsApp ${u.name}`}>
                         <MessageCircle aria-hidden size={16} />
                         WhatsApp
                       </button>

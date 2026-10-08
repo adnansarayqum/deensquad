@@ -21,6 +21,8 @@ describe("normaliseUrl", () => {
     expect(normaliseUrl("https://app.example/sign-in/link?token=Zx9_Qw-12345678901234567890")).toBe("https://app.example/sign-in/link");
     expect(normaliseUrl("https://app.example/sign-in/Zx9_Qw-12345678901234567890")).toBe("https://app.example/sign-in/:id");
     expect(normaliseUrl("https://app.example/sign-in/abc")).toBe("https://app.example/sign-in/:id");
+    // A family's calendar feed: the token is the key to it.
+    expect(normaliseUrl(`https://app.example/api/calendar/${"ab12".repeat(16)}.ics`)).toBe("https://app.example/api/calendar/:id.ics");
     expect(normaliseUrl("https://app.example/sign-in/code")).toBe("https://app.example/sign-in/code");
     expect(normaliseUrl("https://app.example/sign-in/not-linked")).toBe("https://app.example/sign-in/not-linked");
     expect(normaliseUrl("https://app.example/sign-in?next=%2Fadmin%2Ffamilies%3Fneed%3Dcontract")).toBe("https://app.example/sign-in");

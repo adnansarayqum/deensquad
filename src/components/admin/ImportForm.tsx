@@ -87,7 +87,7 @@ export function ImportForm() {
           </div>
           <details className="rounded-app border-2 border-line bg-paper px-4 py-3">
             <summary className="cursor-pointer text-[15px] font-bold">Or paste the rows</summary>
-            <textarea name="csv" rows={8} className="field mt-3 font-mono !text-sm" placeholder="Child first name,Child last name,Age group,Parent first name,Parent email" />
+            <textarea name="csv" rows={8} className="field mt-3 font-mono !text-sm" placeholder="Child first name,Child last name,Group,Parent first name,Parent email" />
           </details>
         </>
       )}
@@ -119,7 +119,7 @@ export function ImportForm() {
             ))}
           </ul>
           {state.checks.length > 50 ? <p className="text-sm text-ink-muted">…and {state.checks.length - 50} more.</p> : null}
-          <p className="text-sm text-ink-muted">Groups by age are a best guess. Check against the club&apos;s rules.</p>
+          <p className="text-sm text-ink-muted">Age groups by date of birth are a best guess (no one is put in Girls by age). Check against the club&apos;s rules.</p>
         </div>
       ) : null}
       {state.warnings && state.warnings.length > 0 ? (

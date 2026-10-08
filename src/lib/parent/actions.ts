@@ -1,15 +1,20 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireParent } from "../auth/session";
 import { UUID } from "../auth/tokens";
-import { asUser } from "../db";
+import { asSystem, asUser } from "../db";
+import { deletionRequestRecipients, requestAccountDeletion } from "../data-requests";
+import { canSendEmail, sendEmails } from "../email/send";
+import { deletionRequestEmail, newChildEmail } from "../email/templates";
 import { CONTRACT } from "../documents/contract";
-import type { Availability } from "../domain";
+import { isAgeGroup, type Availability } from "../domain";
 import { cleanPhone, cleanText } from "../validate";
-import { teamFeePayUrl } from "../config";
+import { appUrl, teamFeePayUrl } from "../config";
 import { reportFamilyPayment, saveAnswer } from "./data";
+import { addMyChild, checkDateOfBirth, cleanName, haveChild, loadMyChild, updateMyChild, updateMyDetails } from "./profile";
 
 // Parent Server Actions. Each checks the session, validates its input, then writes as that parent,
 // so row level security (and the database functions) decide whether the write is allowed.
@@ -123,4 +128,120 @@ export async function signAgreement(_prev: AgreementState, formData: FormData): 
     tx.query(`select sign_agreement($1, $2, $3, $4)`, [child, CONTRACT.id, parentName, `${player.first_name} ${player.last_name}`]),
   );
   redirect("/checklist");
+}
+
+/**
+ * "Ask the club to delete my account" (Player → Your data → the confirm page). Records the request once and emails the
+ * club, naming the parent only. Nothing is deleted here: an admin decides what happens to the children's records.
+ */
+export async function askToDeleteAccount(): Promise<void> {
+  const user = await requireParent();
+  const created = await asUser(user.id, requestAccountDeletion);
+  if (created) await tellClubAboutDeletion(user.id);
+  redirect("/player/delete-account");
+}
+
+/** Emails the club about a new deletion request. Never throws: the request is on the admin overview either way. */
+async function tellClubAboutDeletion(userId: string) {
+  if (!canSendEmail()) return;
+  try {
+    const parentName = await myName(userId);
+    const admins = await asSystem((tx) => tx.query<{ email: string }>(`select email from staff where role = 'admin'`));
+    const to = deletionRequestRecipients(process.env, admins.map((a) => a.email));
+    if (!parentName || to.length === 0) return;
+    const base = await baseUrl();
+    const { failed } = await sendEmails(to.map((email) => deletionRequestEmail({ to: email, parentName, link: base ? `${base}/admin` : null, appUrl: base })));
+    if (failed.length) console.error(`[data request] club email not sent to ${failed.length} address(es).`);
+  } catch (error) {
+    console.error("[data request] club email failed:", error instanceof Error ? error.message : error);
+  }
+}
+
+async function myName(userId: string): Promise<string | null> {
+  const [parent] = await asUser(userId, (tx) =>
+    tx.query<{ first_name: string; last_name: string }>(`select first_name, last_name from guardians where id = my_guardian_id()`),
+  );
+  return parent ? `${parent.first_name} ${parent.last_name}` : null;
+}
+
+async function baseUrl(): Promise<string | null> {
+  const base = appUrl();
+  if (base || process.env.NODE_ENV === "production") return base;
+  const host = (await headers()).get("host");
+  return host ? `http://${host}` : null;
+}
+
+// Player → Your details, a child's details, Add a child. Each write goes through a function from migration 0021
+// that checks the row is this parent's own (`src/lib/parent/profile.ts`); the ids in the form are never trusted.
+
+export type ProfileFormState = { error?: string; saved?: boolean };
+
+const RELOAD = "Something went wrong. Reload and try again.";
+
+export async function saveMyDetails(_prev: ProfileFormState, formData: FormData): Promise<ProfileFormState> {
+  const user = await requireParent();
+  const firstName = cleanName(formData.get("firstName"));
+  const lastName = cleanName(formData.get("lastName"));
+  const phoneText = cleanText(formData.get("phone"), 30);
+  const phone = phoneText ? cleanPhone(phoneText) : null;
+  if (!firstName || !lastName) return { error: "Add your first and last name." };
+  if (phoneText && !phone) return { error: "Check your mobile number, like 07700 900123." };
+  await asUser(user.id, (tx) => updateMyDetails(tx, { firstName, lastName, phone }));
+  refresh();
+  return { saved: true };
+}
+
+export async function saveMyChild(_prev: ProfileFormState, formData: FormData): Promise<ProfileFormState> {
+  const user = await requireParent();
+  const id = formData.get("child");
+  if (typeof id !== "string" || !UUID.test(id)) return { error: RELOAD };
+  const firstName = cleanName(formData.get("firstName"));
+  const lastName = cleanName(formData.get("lastName"));
+  if (!firstName || !lastName) return { error: "Add your child's first and last name." };
+  const dob = checkDateOfBirth(formData.get("dateOfBirth"), firstName);
+  if (!dob.ok) return { error: dob.error };
+  const saved = await asUser(user.id, async (tx) => {
+    if (!(await loadMyChild(tx, id))) return false;
+    await updateMyChild(tx, { id, firstName, lastName, dateOfBirth: dob.dob });
+    return true;
+  });
+  if (!saved) return { error: RELOAD };
+  refresh();
+  return { saved: true };
+}
+
+/** Adds a child to the parent's own account (linked to them alone), tells the club, and opens the child on Player. */
+export async function addChild(_prev: ProfileFormState, formData: FormData): Promise<ProfileFormState> {
+  const user = await requireParent();
+  const firstName = cleanName(formData.get("firstName"));
+  const lastName = cleanName(formData.get("lastName"));
+  if (!firstName || !lastName) return { error: "Add your child's first and last name." };
+  const dob = checkDateOfBirth(formData.get("dateOfBirth"), firstName);
+  if (!dob.ok) return { error: dob.error };
+  const ageGroup = formData.get("ageGroup");
+  if (!isAgeGroup(ageGroup)) return { error: `Choose ${firstName}'s group.` };
+  const id = await asUser(user.id, async (tx) => {
+    if (await haveChild(tx, firstName, dob.dob)) return null;
+    return addMyChild(tx, { firstName, lastName, dateOfBirth: dob.dob, ageGroup });
+  });
+  if (!id) return { error: `${firstName} is already on your account.` };
+  await tellClubAboutChild(user.id, firstName, ageGroup);
+  redirect(`/player?child=${id}&added=1`);
+}
+
+/** Emails the club's admins about a child a parent added. Never throws: the child is on Families either way. */
+async function tellClubAboutChild(userId: string, childName: string, group: string) {
+  if (!canSendEmail()) return;
+  try {
+    const parentName = await myName(userId);
+    const admins = await asSystem((tx) => tx.query<{ email: string }>(`select email from staff where role = 'admin'`));
+    if (!parentName || admins.length === 0) return;
+    const base = await baseUrl();
+    const { failed } = await sendEmails(
+      admins.map((a) => newChildEmail({ to: a.email, parentName, childName, group, link: base ? `${base}/admin/families` : null, appUrl: base })),
+    );
+    if (failed.length) console.error(`[add child] club email not sent to ${failed.length} admin(s).`);
+  } catch (error) {
+    console.error("[add child] club email failed:", error instanceof Error ? error.message : error);
+  }
 }

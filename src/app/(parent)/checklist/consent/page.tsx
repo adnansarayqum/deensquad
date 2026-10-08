@@ -32,7 +32,9 @@ export default async function ConsentPage({ searchParams }: PageProps<"/checklis
               <input type="radio" name="consent" value="yes" defaultChecked={current === "yes"} required className="mt-1 h-5 w-5 accent-[var(--grass)]" />
               <span className="flex flex-col gap-0.5">
                 <span className="text-base font-bold">Yes, photos are fine</span>
-                <span className="text-sm text-ink-muted">{name} can appear in photos the club shares.</span>
+                <span className="text-sm text-ink-muted">
+                  {name} can appear in photos the club shares with parents, in the app and on the club&apos;s social media.
+                </span>
               </span>
             </label>
             <label className={option}>

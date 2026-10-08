@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { adminEmails } from "../config";
@@ -10,7 +11,14 @@ import { adminEmails } from "../config";
 //   - in production, nothing is sent. Emails to ADMIN_EMAILS are printed to the server log instead,
 //     so the first admin can sign in before email is set up. Parents' codes are never logged.
 
-export type Email = { to: string; subject: string; text: string; html: string };
+export type Email = {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  /** Set by a caller whose retries must never send the same email twice (see `requestKey`). Never sent to Resend as part of the email. */
+  idempotencyKey?: string;
+};
 
 /** What happened to each email. Never throws: a failed or timed-out request lands in `failed`. */
 export type EmailReport = { sent: Email[]; failed: Email[] };
@@ -36,6 +44,17 @@ const RATE_LIMIT_RETRIES = 2;
 
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Resend's `Idempotency-Key` for one request, only when the caller gave every email in it a key (`Email.idempotencyKey`,
+ * e.g. the chase ladder's announcement + parent + "email"): that key for a single send; for a batch, a hash of its
+ * emails' keys in order, so the same batch again has the same key. Resend keeps keys for 24 hours.
+ */
+export function requestKey(group: Email[]): string | null {
+  if (group.length === 0 || group.some((e) => !e.idempotencyKey)) return null;
+  if (group.length === 1) return group[0].idempotencyKey!;
+  return `batch-${createHash("sha256").update(group.map((e) => e.idempotencyKey).join("\n")).digest("hex")}`;
+}
+
 const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /**
@@ -50,18 +69,27 @@ export async function sendEmails(emails: Email[]): Promise<EmailReport> {
     for (let i = 0; i < emails.length; i += 100) {
       const group = emails.slice(i, i + 100);
       const chunk = group.map((e) => ({ from: fromAddress(), to: [e.to], subject: e.subject, text: e.text, html: e.html }));
+      const idempotency = requestKey(group);
       try {
         let res: Response;
         for (let attempt = 0; ; attempt++) {
           res = await fetch(chunk.length === 1 ? "https://api.resend.com/emails" : "https://api.resend.com/emails/batch", {
             method: "POST",
-            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...(idempotency ? { "Idempotency-Key": idempotency } : {}) },
             body: JSON.stringify(chunk.length === 1 ? chunk[0] : chunk),
             signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
           });
+          // A 429 wasn't taken, so trying again (with the same idempotency key) can't send twice.
           if (res.status !== 429 || attempt >= RATE_LIMIT_RETRIES) break;
           const wait = Number(res.headers.get("retry-after"));
           await pause(Number.isFinite(wait) && wait > 0 ? Math.min(wait, 3) * 1000 : 1000);
+        }
+        // A 409 for a keyed request is Resend saying it has already had that key (an earlier try that timed out here, or
+        // one still in flight, possibly with a fresh sign-in link in it): that email has gone, so it counts as sent.
+        if (idempotency && res.status === 409) {
+          console.warn(`[email] ${group.length} already sent under this idempotency key; not sent again.`);
+          report.sent.push(...group);
+          continue;
         }
         if (!res.ok) {
           const detail = await res.text().catch(() => "");

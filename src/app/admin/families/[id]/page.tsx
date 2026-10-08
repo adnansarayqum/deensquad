@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Notice, Section } from "@/components/admin/bits";
+import { Notice, PageHeader, Section } from "@/components/admin/bits";
+import { FamiliesFilterFields } from "@/components/admin/FamiliesFilterFields";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
 import { removeChild, resendInvite, saveGuardian, setPayment, unlinkGuardian, updateChild } from "@/lib/admin/actions";
 import { loadChild } from "@/lib/admin/data";
-import { familiesFilter, familiesHref, type FamiliesFilter } from "@/lib/admin/families-link";
+import { familiesFilter, familiesHref } from "@/lib/admin/families-link";
 import { UUID } from "@/lib/auth/tokens";
 import { coachLimit, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
-import { AGE_GROUPS, type PaymentState } from "@/lib/domain";
+import { AGE_GROUPS, groupPlural, type PaymentState } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Child" };
 
@@ -39,22 +39,20 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
   return (
     // Forms and detail read best at phone-to-tablet width, even on a computer.
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <Link href={familiesHref(filter)} className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
-        ← Families
-      </Link>
-      <div className="flex items-center gap-3">
-        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-pill bg-pitch font-display text-[28px] text-on-pitch">
-          {child.shirtNumber ?? child.firstName[0]}
-        </span>
-        <div>
-          <h1 className="font-display text-[40px] leading-[0.95] tracking-[0.02em]">
-            {child.firstName} {child.lastName}
-          </h1>
-          <p className="text-[15px] text-ink-muted">
-            {child.ageGroup}s · {child.attended} {child.attended === 1 ? "session" : "sessions"} attended
+      <PageHeader
+        back={{ href: familiesHref(filter), label: "Families" }}
+        title={`${child.firstName} ${child.lastName}`}
+        subtitle={`${groupPlural(child.ageGroup)} · ${child.attended} ${child.attended === 1 ? "session" : "sessions"} attended`}
+      >
+        {child.missedLast3 ? (
+          <p className="flex flex-wrap items-center gap-2 text-[15px]">
+            <Pill tone="action">Missed the last 3 sessions</Pill>
+            <span className="text-ink-muted">
+              {child.lastHereThisSeason ? `Last here ${signedOn.format(new Date(child.lastHereThisSeason))}` : "Not here yet this season"}
+            </span>
           </p>
-        </div>
-      </div>
+        ) : null}
+      </PageHeader>
 
       {flags.invited ? <Notice>Invite sent.</Notice> : null}
       {flags.invite === "failed" ? <Notice tone="action">The invite wasn&apos;t sent. Try again later.</Notice> : null}
@@ -97,15 +95,15 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                   <form action={resendInvite}>
                     <input type="hidden" name="guardian" value={g.id} />
                     <input type="hidden" name="child" value={child.id} />
-                    <FilterInputs filter={filter} />
-                    <button type="submit" className="btn-chunky btn-paper btn-small">
+                    <FamiliesFilterFields filter={filter} />
+                    <button type="submit" className="btn-chunky btn-paper btn-small" aria-label={`${g.invited ? "Send invite again" : "Send invite"} to ${g.firstName}`}>
                       {g.invited ? "Send invite again" : "Send invite"}
                     </button>
                   </form>
                 ) : null}
                 <details className="w-full rounded-app border-2 border-line px-3.5 py-2.5">
                   <summary className="cursor-pointer text-sm font-bold">Edit {g.firstName}&apos;s details</summary>
-                  <StatefulForm action={saveGuardian} submitLabel="Save parent" savedMessage="Parent saved." className="mt-3">
+                  <StatefulForm action={saveGuardian} submitLabel={`Save ${g.name}`} savedMessage="Parent saved." className="mt-3">
                     <input type="hidden" name="child" value={child.id} />
                     <input type="hidden" name="guardian" value={g.id} />
                     <GuardianFields prefix={`g-${g.id}`} first={g.firstName} last={g.lastName} email={g.email} phone={g.phone} />
@@ -113,7 +111,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                   <form action={unlinkGuardian} className="mt-4 flex flex-col gap-2 border-t border-line pt-3">
                     <input type="hidden" name="child" value={child.id} />
                     <input type="hidden" name="guardian" value={g.id} />
-                    <FilterInputs filter={filter} />
+                    <FamiliesFilterFields filter={filter} />
                     <p className="text-sm text-ink-muted">
                       If {g.firstName} has no other children at the club, their details and sign-in are deleted. This can&apos;t be undone.
                     </p>
@@ -170,6 +168,9 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
 
       {isAdmin ? (
         <Section title="Child's details">
+          {child.changedByParentAt ? (
+            <p className="text-sm text-ink-muted">Last changed by the parent on {signedOn.format(new Date(child.changedByParentAt))}.</p>
+          ) : null}
           <StatefulForm action={updateChild} submitLabel="Save details" savedMessage="Details saved.">
             <input type="hidden" name="id" value={child.id} />
             <div className="grid gap-3 sm:grid-cols-2">
@@ -177,7 +178,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
               <Field label="Last name" name="lastName" defaultValue={child.lastName} />
               <div>
                 <label htmlFor="ageGroup" className="field-label">
-                  Age group
+                  Group
                 </label>
                 <select id="ageGroup" name="ageGroup" defaultValue={child.ageGroup} className="field">
                   {AGE_GROUPS.map((g) => (
@@ -198,6 +199,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
           <summary className="cursor-pointer text-[15px] font-bold text-kit-orange">Remove {child.firstName} from the club</summary>
           <form action={removeChild} className="mt-3 flex flex-col gap-3">
             <input type="hidden" name="child" value={child.id} />
+            <FamiliesFilterFields filter={filter} />
             <p className="text-[15px] leading-[22px]">
               This deletes {child.firstName}&apos;s record, attendance and answers. Parents with no other children at the club are removed too. It
               can&apos;t be undone.
@@ -265,13 +267,3 @@ function GuardianFields({
   );
 }
 
-/** Carries the Families list's filters through a form, so "← Families" still returns to the same list afterwards. */
-function FilterInputs({ filter }: { filter: FamiliesFilter }) {
-  return (
-    <>
-      {filter.group ? <input type="hidden" name="group" value={filter.group} /> : null}
-      {filter.need ? <input type="hidden" name="need" value={filter.need} /> : null}
-      {filter.q ? <input type="hidden" name="q" value={filter.q} /> : null}
-    </>
-  );
-}

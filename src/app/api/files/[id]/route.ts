@@ -21,8 +21,8 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
     headers: {
       "Content-Type": file.mime,
       "Content-Disposition": contentDisposition(file.name, new URL(request.url).searchParams.get("download") === "1"),
-      // A file is never changed after upload (a new one gets a new id), so the phone can keep it for a day.
-      "Cache-Control": "private, max-age=86400",
+      // A file id is a UUID and its content never changes, so the browser can keep it for good (private: one person's cache).
+      "Cache-Control": "private, max-age=31536000, immutable",
       "X-Content-Type-Options": "nosniff",
     },
   });

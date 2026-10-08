@@ -16,15 +16,21 @@ export const MAX_CODE_ATTEMPTS = 5;
 export const MAX_WRONG_CODES_PER_DAY = 20;
 export const SESSION_DAYS = 90;
 // Families at one venue often share an internet address (its wifi, or a mobile network), so the per-address
-// limit is generous (a few hundred parents signing in at the ground on the same evening). Sign-ups (an email the club doesn't have yet) also have a club-wide hourly cap, so a flood
-// of made-up sign-ups can't fill the families list or send hundreds of emails; ordinary sign-ins never count towards it.
+// limit is generous (a few hundred parents signing in at the ground on the same evening). Sign-ups (an email the
+// club doesn't have yet) also have a club-wide hourly cap, so a flood of made-up sign-ups can't fill the families list or send hundreds of emails; ordinary sign-ins never count towards it.
 export const LIMITS = { perEmailPerHour: 5, perIpPerHour: 500, signUpsPerHour: 300 };
 
 export type IssuedRequest = { requestId: string; email: string; code: string | null; token: string; expiresAt: Date };
 
+/**
+ * `unknown`: the club doesn't have this email (nothing is made). `rate_limited` says which limit: `email` (this
+ * address has had its hour's codes: shown the same neutral screen as an unknown address, so the sign-in page never
+ * says who is a member), `ip` (this address, everyone alike) or `club` (sign-ups club-wide).
+ */
 export type IssueResult =
   | { ok: true; request: IssuedRequest }
-  | { ok: false; reason: "unknown" | "rate_limited"; clubWide?: true };
+  | { ok: false; reason: "unknown" }
+  | { ok: false; reason: "rate_limited"; limit: "email" | "ip" | "club" };
 
 /** Someone the club has added: a parent or a member of staff. */
 export async function isKnownEmail(tx: Queryable, email: string): Promise<boolean> {
@@ -66,7 +72,8 @@ export async function issueSignIn(
          (select count(*) from auth.sign_in_requests where ip = $3 and purpose = 'sign_in' and created_at > $2)::int as "byIp"`,
       [email, hourAgo, ip ?? ""],
     );
-    if (byEmail >= LIMITS.perEmailPerHour || (ip && byIp >= LIMITS.perIpPerHour)) return { ok: false, reason: "rate_limited" };
+    if (ip && byIp >= LIMITS.perIpPerHour) return { ok: false, reason: "rate_limited", limit: "ip" };
+    if (byEmail >= LIMITS.perEmailPerHour) return { ok: false, reason: "rate_limited", limit: "email" };
     if (registration) {
       const [{ signUps }] = await tx.query<{ signUps: number }>(
         `select count(*)::int as "signUps" from auth.sign_in_requests where registration is not null and created_at > $1`,
@@ -74,7 +81,7 @@ export async function issueSignIn(
       );
       if (signUps >= LIMITS.signUpsPerHour) {
         console.error(`[sign-up] club-wide limit reached: ${signUps} sign-up requests in the past hour. New sign-ups are refused until it drops.`);
-        return { ok: false, reason: "rate_limited", clubWide: true };
+        return { ok: false, reason: "rate_limited", limit: "club" };
       }
     }
   }
@@ -92,6 +99,21 @@ export async function issueSignIn(
   );
   if (code) await tx.query(`update auth.sign_in_requests set code_hash = $2 where id = $1`, [id, codeHash(id, code)]);
   return { ok: true, request: { requestId: id, email, code, token, expiresAt } };
+}
+
+/** The newest code still open for this email (unused, not expired), so the code screen can accept it after a refused request. */
+export async function latestOpenRequest(tx: Queryable, email: string, now: Date): Promise<string | null> {
+  const [row] = await tx.query<{ id: string }>(
+    `select id from auth.sign_in_requests where lower(email) = $1 and purpose = 'sign_in' and used_at is null and expires_at > $2
+     order by created_at desc limit 1`,
+    [email, now],
+  );
+  return row?.id ?? null;
+}
+
+/** Forgets a request whose email never went, so it doesn't count towards the hour's codes and the parent can ask again. */
+export async function dropUnsentRequest(tx: Queryable, requestId: string): Promise<void> {
+  await tx.query(`delete from auth.sign_in_requests where id = $1 and used_at is null`, [requestId]);
 }
 
 export type VerifyResult =
@@ -217,4 +239,10 @@ export async function readSession(tx: Queryable, token: string, now: Date): Prom
 
 export async function deleteSession(tx: Queryable, token: string): Promise<void> {
   await tx.query(`delete from auth.sessions where id = $1`, [sha256(token)]);
+}
+
+/** Clears sessions that expired over a week ago (the hourly job); a live cookie never points at one. Returns how many. */
+export async function purgeExpiredSessions(tx: Queryable, now = new Date()): Promise<number> {
+  const gone = await tx.query(`delete from auth.sessions where expires_at < $1::timestamptz - interval '7 days' returning id`, [now]);
+  return gone.length;
 }

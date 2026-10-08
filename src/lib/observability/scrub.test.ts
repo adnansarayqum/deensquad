@@ -169,3 +169,29 @@ describe("scrubSpan", () => {
     expect(scrubSpan(span).attributes).toEqual({});
   });
 });
+
+describe("tokens in bare paths (no query string)", () => {
+  const token = "ab12".repeat(16);
+  const signIn = "Zx9_Qw-12345678901234567890";
+
+  it("turns a calendar token in a span's name and path attributes into :id", () => {
+    const out = scrubSpan({
+      name: `GET /api/calendar/${token}.ics`,
+      attributes: { "http.target": `/api/calendar/${token}.ics`, "url.path": `/api/calendar/${token}.ics`, "http.route": "/api/calendar/[file]" },
+    });
+    expect(out.name).toBe("GET /api/calendar/:id.ics");
+    expect(out.attributes).toEqual({ "http.target": "/api/calendar/:id.ics", "url.path": "/api/calendar/:id.ics", "http.route": "/api/calendar/[file]" });
+    expect(JSON.stringify(out)).not.toMatch(/[0-9a-f]{64}/);
+  });
+
+  it("does the same in an event's transaction and its spans, and for sign-in tokens", () => {
+    const event = scrubEvent({
+      transaction: `GET /api/calendar/${token}.ics`,
+      spans: [{ description: `GET /sign-in/${signIn}`, data: { "http.target": `/sign-in/${signIn}` } }],
+    } as unknown as Event);
+    expect(event.transaction).toBe("GET /api/calendar/:id.ics");
+    expect(JSON.stringify(event)).not.toContain(token);
+    expect(JSON.stringify(event)).not.toContain(signIn);
+    expect(scrubText("GET /admin/families")).toBe("GET /admin/families");
+  });
+});

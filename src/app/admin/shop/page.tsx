@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Download } from "lucide-react";
-import { AdminTitle, Notice, Section } from "@/components/admin/bits";
+import { Notice, PageHeader, Section } from "@/components/admin/bits";
 import { OrderStatusPill } from "@/components/shop/OrderStatusPill";
 import { requireAdmin } from "@/lib/auth/session";
 import { emailConfigured } from "@/lib/email/send";
@@ -54,9 +54,10 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
 
   return (
     <>
-      <AdminTitle
-        action={
-          <div className="flex flex-wrap gap-2">
+      <PageHeader
+        title="Shop"
+        actions={
+          <>
             {/* The same spreadsheet as the overview's "Shop orders" download: every item with its size and initials. */}
             <a href="/api/admin/export/orders" download className="btn-chunky btn-paper btn-small">
               <Download aria-hidden size={16} />
@@ -65,11 +66,9 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
             <Link href="/admin/shop/products" className="btn-chunky btn-paper btn-small">
               Items and prices
             </Link>
-          </div>
+          </>
         }
-      >
-        Shop
-      </AdminTitle>
+      />
       {cancelled ? <Notice>{emailConfigured() ? "Order cancelled. The parent will be emailed." : "Order cancelled."}</Notice> : null}
 
       {paymentOptions().length < 2 ? (
@@ -165,7 +164,11 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
                     <form key={step.status} action={setOrderStatus}>
                       <input type="hidden" name="order" value={o.id} />
                       <input type="hidden" name="status" value={step.status} />
-                      <button type="submit" className={`btn-chunky btn-small ${step.primary ? "btn-grass" : "btn-paper"}`}>
+                      <button
+                        type="submit"
+                        className={`btn-chunky btn-small ${step.primary ? "btn-grass" : "btn-paper"}`}
+                        aria-label={`${step.label}: order ${o.reference}`}
+                      >
                         {step.label}
                       </button>
                     </form>

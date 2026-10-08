@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { devices, expect, test, type Browser, type BrowserContext, type BrowserContextOptions, type Locator, type Page } from "@playwright/test";
-import { ADMIN_STATE, GATE_PARENT_STATE as PARENT_STATE, shot, signIn } from "./helpers";
+import { ADMIN_STATE, GATE_PARENT_STATE as PARENT_STATE, shot, signIn, unfold } from "./helpers";
 
 // The parent screens' "add to home screen" step (src/components/InstallGate.tsx). Runs after
 // parent-app.spec.ts (files run in name order), against the same server and sample club. These are the
@@ -334,6 +334,7 @@ test("a parent who is also on the staff never gets the gate", async ({ browser }
   const adminContext = await context(browser, { ...PIXEL, storageState: ADMIN_STATE });
   const admin = await adminContext.newPage();
   await admin.goto("/admin/staff");
+  await unfold(admin, "add-staff");
   await admin.getByLabel("Name parents see").fill("Coach Idris");
   await admin.getByLabel("Email", { exact: true }).fill("parent5@example.com");
   await admin.getByRole("button", { name: "Add", exact: true }).click();
@@ -350,7 +351,7 @@ test("a parent who is also on the staff never gets the gate", async ({ browser }
   await later.getByRole("link", { name: "Coach tools" }).click();
   await expect(later).toHaveURL(/\/coach$/);
   await later.getByRole("link", { name: "Parent view" }).click();
-  await expect(later).toHaveURL(/\/player$/);
+  await expect(later).toHaveURL(/\/news$/);
   await expect(later.getByRole("link", { name: "Coach tools" })).toBeVisible();
   await phone.close();
 });

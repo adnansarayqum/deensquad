@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { refresh } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -11,24 +12,26 @@ import { asSystem, asUser, isDemo } from "../db";
 import type { Queryable } from "../db/types";
 import { readUpload, saveFile } from "../files";
 import { cleanText } from "../validate";
-import { BASKET_COOKIE, addLine, parseBasket, type BasketLine } from "./basket";
+import { BASKET_COOKIE, addLine, parseBasketCookie, sameLines, serialiseBasket, type Basket, type BasketLine } from "./basket";
 import { orderReference } from "./data";
 import { paymentOptions } from "./options";
 import { enqueue } from "../background";
 import type { OrderEmailKind } from "../email/templates";
 import { notifyNewOrder, notifyParentOrder } from "./notify";
 import { localiseProductImages } from "./images";
-import { createCheckout, sumupConfigured } from "./sumup";
+import { confirmSumupPayment } from "./payments";
+import { createCheckout, deactivateCheckout, getCheckout, sumupConfigured } from "./sumup";
 
 const basketCookie = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge: 14 * 86400 };
 
-async function readBasket(): Promise<BasketLine[]> {
-  return parseBasket((await cookies()).get(BASKET_COOKIE)?.value);
+async function readBasket(): Promise<Basket> {
+  return parseBasketCookie((await cookies()).get(BASKET_COOKIE)?.value);
 }
 
-async function writeBasket(basket: BasketLine[]) {
+/** Writes changed lines back under a new attempt id (a changed basket is a new order). An empty basket clears the cookie. */
+async function writeBasket(lines: BasketLine[]) {
   const store = await cookies();
-  if (basket.length) store.set(BASKET_COOKIE, JSON.stringify(basket), basketCookie);
+  if (lines.length) store.set(BASKET_COOKIE, serialiseBasket({ attempt: randomUUID(), lines }), basketCookie);
   else store.delete(BASKET_COOKIE);
 }
 
@@ -74,15 +77,15 @@ export async function addToBasket(_prev: AddState, formData: FormData): Promise<
   const check = await asUser(user.id, (tx) => lineProblem(tx, line));
   if (check) return { error: check };
 
-  await writeBasket(addLine(await readBasket(), line));
+  await writeBasket(addLine((await readBasket()).lines, line));
   return { added: true };
 }
 
 export async function removeFromBasket(formData: FormData): Promise<void> {
   await requireParent();
   const index = Number(formData.get("index"));
-  const basket = await readBasket();
-  if (Number.isInteger(index) && index >= 0 && index < basket.length) await writeBasket(basket.filter((_, i) => i !== index));
+  const { lines } = await readBasket();
+  if (Number.isInteger(index) && index >= 0 && index < lines.length) await writeBasket(lines.filter((_, i) => i !== index));
   refresh();
 }
 
@@ -95,10 +98,17 @@ async function baseUrl(): Promise<string | null> {
 
 export type CheckoutState = { error?: string };
 
-/** Places the order (prices from the database), then sends the parent to pay by card or shows the bank details. */
+/**
+ * Places the order (prices from the database), then sends the parent to pay by card or shows the bank details.
+ * One order per basket attempt: the same checkout arriving again (a resubmitted form, a retry after the signal
+ * dropped) finds the order already placed for the attempt and goes to its page instead of placing another. A
+ * basket that has changed since (the phone never saw the reply, the parent added something and tried again) is
+ * ordered afresh: the attempt counts only for the lines it was placed with.
+ */
 export async function checkout(_prev: CheckoutState, formData: FormData): Promise<CheckoutState> {
   const user = await requireParent();
-  const basket = await readBasket();
+  const { attempt: cookieAttempt, lines: basket } = await readBasket();
+  let attempt = cookieAttempt;
   if (basket.length === 0) return { error: "Your basket is empty." };
   const options = paymentOptions();
   const payBy = formData.get("payBy");
@@ -106,14 +116,23 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
   if (payBy !== "card" && payBy !== "bank") return { error: "Choose how you'd like to pay." };
   if (!options.includes(payBy)) return { error: "That way of paying isn't available. Choose another." };
 
+  const placedBefore = attempt ? await orderForAttempt(user.id, attempt) : null;
+  if (placedBefore && sameLines(placedBefore.lines, basket)) {
+    await writeBasket([]);
+    redirect(`/shop/orders/${placedBefore.id}?placed=1`);
+  }
+  if (placedBefore) attempt = randomUUID();
+
   // Anything that can no longer be ordered comes out of the basket (and nothing is ordered), so the parent can
   // check what's left and try again instead of starting over.
   const gone = await asUser(user.id, async (tx) => {
     const bad: { index: number; name: string | null }[] = [];
     for (const [index, line] of basket.entries()) {
       if (!(await lineProblem(tx, line))) continue;
-      const [p] = await tx.query<{ name: string }>(`select name from shop_products where id = $1`, [line.product]);
-      bad.push({ index, name: p?.name ?? null });
+      const [p] = await tx.query<{ name: string; sizes: string[] }>(`select name, sizes from shop_products where id = $1`, [line.product]);
+      // A size that's no longer offered is named, since the item itself may still be on sale in other sizes.
+      const sizeGone = p && line.size && p.sizes.length > 0 && !p.sizes.includes(line.size);
+      bad.push({ index, name: p ? (sizeGone ? `${p.name} (${line.size})` : p.name) : null });
     }
     return bad;
   });
@@ -127,7 +146,9 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
 
   let orderId: string;
   try {
-    [{ id: orderId }] = await asUser(user.id, (tx) => tx.query<{ id: string }>(`select place_order($1::text::jsonb, $2) as id`, [JSON.stringify(basket), payBy]));
+    [{ id: orderId }] = await asUser(user.id, (tx) =>
+      tx.query<{ id: string }>(`select place_order($1::text::jsonb, $2, $3::uuid) as id`, [JSON.stringify(basket), payBy, attempt]),
+    );
   } catch (error) {
     // Keep the basket: nothing was ordered, and the parent can try again.
     console.error("[shop] place_order:", error instanceof Error ? error.message : error);
@@ -135,22 +156,28 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
   }
   await writeBasket([]);
   // The parent's confirmation (what they ordered and how to pay), after the response so checkout isn't held up.
+  // Both emails go once per order (notifyParentOrder's step columns, notifyNewOrder's notified_at), so a checkout
+  // that found the order already placed doesn't send them again.
   after(() => enqueue("order placed email", () => notifyParentOrder(orderId, "placed")));
 
   if (payBy === "bank") {
-    await notifyNewOrder(orderId);
+    after(() => enqueue("new order email", () => notifyNewOrder(orderId)));
     redirect(`/shop/orders/${orderId}?placed=1`);
   }
   if (isDemo()) {
     // The demo has no payment provider: pretend the card payment went through.
-    await asSystem((tx) => tx.query(`update shop_orders set status = 'paid', paid_at = now() where id = $1`, [orderId]));
-    await notifyNewOrder(orderId);
+    await asSystem((tx) => tx.query(`update shop_orders set status = 'paid', paid_at = now() where id = $1 and status = 'awaiting_payment'`, [orderId]));
+    after(() => enqueue("new order email", () => notifyNewOrder(orderId)));
     after(() => enqueue("order paid email", () => notifyParentOrder(orderId, "paid")));
     redirect(`/shop/orders/${orderId}?paid=demo`);
   }
 
   const base = await baseUrl();
-  const [{ total_pence }] = await asSystem((tx) => tx.query<{ total_pence: number }>(`select total_pence from shop_orders where id = $1`, [orderId]));
+  const [{ total_pence, sumup_checkout_id }] = await asSystem((tx) =>
+    tx.query<{ total_pence: number; sumup_checkout_id: string | null }>(`select total_pence, sumup_checkout_id from shop_orders where id = $1`, [orderId]),
+  );
+  // Placed by a checkout that got there first and already has its SumUp page: "Pay" on the order page asks SumUp about it.
+  if (sumup_checkout_id) redirect(`/shop/orders/${orderId}`);
   let url: string;
   try {
     const sumup = await createCheckout({
@@ -160,7 +187,7 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
       redirectUrl: `${base}/shop/orders/${orderId}?return=1`,
       returnUrl: `${base}/api/sumup/webhook`,
     });
-    await asSystem((tx) => tx.query(`update shop_orders set sumup_checkout_id = $2 where id = $1`, [orderId, sumup.id]));
+    await asSystem((tx) => tx.query(`update shop_orders set sumup_checkout_id = $2 where id = $1 and sumup_checkout_id is null`, [orderId, sumup.id]));
     url = sumup.url;
   } catch (error) {
     console.error("[shop] SumUp:", error instanceof Error ? error.message : error);
@@ -169,22 +196,52 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
   redirect(url);
 }
 
-/** Try paying again for an order whose SumUp page timed out or was closed. */
+/** The order this parent already placed for a basket attempt, with its lines, if any. */
+async function orderForAttempt(userId: string, attempt: string): Promise<{ id: string; lines: BasketLine[] } | null> {
+  return asUser(userId, async (tx) => {
+    const [row] = await tx.query<{ id: string }>(`select id from shop_orders where attempt_id = $1 and guardian_id = my_guardian_id()`, [attempt]);
+    if (!row) return null;
+    const items = await tx.query<BasketLine>(
+      `select product_id as product, player_id as player, size, initials, quantity from shop_order_items where order_id = $1`,
+      [row.id],
+    );
+    return { id: row.id, lines: items };
+  });
+}
+
+/**
+ * "Pay" again on an unpaid card order (its SumUp page timed out, was closed, or never opened). SumUp references are
+ * the order id and must be unique, so an order that already has a checkout never gets a second one: SumUp is asked
+ * about the one it has. Paid: the order is confirmed. Failed or expired: the order switches to bank transfer, still
+ * awaiting payment, and the order page shows the bank details and reference. Still pending, or SumUp not answering in
+ * 10 s: nothing changes (the parent may be paying right now); the page says it's still checking and offers "Pay by
+ * bank transfer instead" (`payByBankInstead`). Only an order with no checkout yet (the first attempt failed before
+ * SumUp gave one) gets a new one.
+ */
 export async function payAgain(formData: FormData): Promise<void> {
   const user = await requireParent();
   const id = formData.get("order");
   if (typeof id !== "string" || !UUID.test(id) || !sumupConfigured()) return;
   const [order] = await asUser(user.id, (tx) =>
-    tx.query<{ id: string; total_pence: number }>(
-      `select id, total_pence from shop_orders where id = $1 and guardian_id = my_guardian_id() and status = 'awaiting_payment' and pay_by = 'card'`,
+    tx.query<{ id: string; total_pence: number; sumup_checkout_id: string | null }>(
+      `select id, total_pence, sumup_checkout_id from shop_orders
+       where id = $1 and guardian_id = my_guardian_id() and status = 'awaiting_payment' and pay_by = 'card'`,
       [id],
     ),
   );
   if (!order) redirect(`/shop/orders/${id}`);
+
+  if (order.sumup_checkout_id) {
+    const checkout = await getCheckout(order.sumup_checkout_id);
+    // Paid after all (and the reference and amount match): the order is confirmed.
+    if (checkout?.status === "PAID" && (await confirmSumupPayment(order.sumup_checkout_id))) redirect(`/shop/orders/${order.id}?return=1`);
+    if (checkout?.status === "FAILED" || checkout?.status === "EXPIRED") return switchToBank(order.id);
+    redirect(`/shop/orders/${order.id}?checking=1`);
+  }
+
   const base = await baseUrl();
   let url: string;
   try {
-    // SumUp references must be unique, so a retry gets a fresh one.
     const sumup = await createCheckout({
       orderId: order.id,
       retry: Date.now().toString(36),
@@ -193,13 +250,46 @@ export async function payAgain(formData: FormData): Promise<void> {
       redirectUrl: `${base}/shop/orders/${order.id}?return=1`,
       returnUrl: `${base}/api/sumup/webhook`,
     });
-    await asSystem((tx) => tx.query(`update shop_orders set sumup_checkout_id = $2 where id = $1`, [order.id, sumup.id]));
+    await asSystem((tx) => tx.query(`update shop_orders set sumup_checkout_id = $2 where id = $1 and sumup_checkout_id is null`, [order.id, sumup.id]));
     url = sumup.url;
   } catch (error) {
+    // SumUp refused (it may already hold a checkout with this reference) or didn't answer: pay by bank instead.
     console.error("[shop] SumUp retry:", error instanceof Error ? error.message : error);
-    redirect(`/shop/orders/${order.id}?payment=failed`);
+    return switchToBank(order.id);
   }
   redirect(url);
+}
+
+/**
+ * "Pay by bank transfer instead", tapped by the parent while a card payment is still being checked. The SumUp page is
+ * deactivated first (best-effort), so it can't also take a card; a card payment that went through anyway is still
+ * matched to the order (the order page asks SumUp) and the club refunds any double payment.
+ */
+export async function payByBankInstead(formData: FormData): Promise<void> {
+  const user = await requireParent();
+  const id = formData.get("order");
+  if (typeof id !== "string" || !UUID.test(id)) return;
+  const [order] = await asUser(user.id, (tx) =>
+    tx.query<{ id: string; sumup_checkout_id: string | null }>(
+      `select id, sumup_checkout_id from shop_orders where id = $1 and guardian_id = my_guardian_id() and status = 'awaiting_payment' and pay_by = 'card'`,
+      [id],
+    ),
+  );
+  if (!order) redirect(`/shop/orders/${id}`);
+  if (order.sumup_checkout_id && sumupConfigured()) await deactivateCheckout(order.sumup_checkout_id);
+  return switchToBank(order.id);
+}
+
+/** An unpaid card order becomes a bank transfer order (the club is told, as for any bank order), then shows the bank details. */
+async function switchToBank(orderId: string): Promise<never> {
+  const [switched] = await asSystem((tx) =>
+    tx.query(
+      `update shop_orders set pay_by = 'bank', updated_at = now() where id = $1 and status = 'awaiting_payment' and pay_by = 'card' returning id`,
+      [orderId],
+    ),
+  );
+  if (switched) after(() => enqueue("new order email", () => notifyNewOrder(orderId)));
+  redirect(`/shop/orders/${orderId}?switched=bank`);
 }
 
 // Admin ------------------------------------------------------------------------

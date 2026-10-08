@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addLine, parseBasket } from "./basket";
+import { addLine, parseBasket, sameLines, type BasketLine } from "./basket";
 
 const P = "11111111-1111-4111-8111-111111111111";
 const K = "22222222-2222-4222-8222-222222222222";
@@ -18,5 +18,19 @@ describe("basket cookie", () => {
     const basket = addLine(addLine([], line), { ...line, quantity: 2 });
     expect(basket).toEqual([{ ...line, quantity: 3 }]);
     expect(addLine(basket, { ...line, size: "M" })).toHaveLength(2);
+  });
+});
+
+describe("sameLines", () => {
+  const P = "11111111-1111-4111-8111-111111111111";
+  const Q = "22222222-2222-4222-8222-222222222222";
+  const l = (product: string, extra: Partial<BasketLine> = {}): BasketLine => ({ product, player: null, size: null, initials: null, quantity: 1, ...extra });
+  it("matches the same lines in any order, and nothing else", () => {
+    expect(sameLines([l(P), l(Q, { size: "M" })], [l(Q, { size: "M" }), l(P)])).toBe(true);
+    expect(sameLines([l(P, { initials: "ys" })], [l(P, { initials: "YS" })])).toBe(true);
+    expect(sameLines([l(P)], [l(P, { quantity: 2 })])).toBe(false);
+    expect(sameLines([l(P)], [l(P), l(Q)])).toBe(false);
+    expect(sameLines([l(P, { size: "M" })], [l(P, { size: "L" })])).toBe(false);
+    expect(sameLines([], [])).toBe(true);
   });
 });

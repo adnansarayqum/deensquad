@@ -17,6 +17,20 @@ export function familiesFilter(params: Params, groups: readonly AgeGroup[]): Fam
   return { group, need, q };
 }
 
+/** The same filters from a form's hidden fields (`FamiliesFilterFields`), checked the same way. */
+export function familiesFilterFromForm(formData: FormData, groups: readonly AgeGroup[]): FamiliesFilter {
+  const value = (key: string) => {
+    const v = formData.get(key);
+    return typeof v === "string" ? v : undefined;
+  };
+  return familiesFilter({ group: value("group"), need: value("need"), q: value("q") }, groups);
+}
+
+/** `href` with one more query parameter ("invited=1"), whether or not it already has some. */
+export function withQuery(href: string, query: string): string {
+  return `${href}${href.includes("?") ? "&" : "?"}${query}`;
+}
+
 /** The filters as a query string without the "?", or "" when there are none. */
 export function familiesQuery({ group, need, q }: FamiliesFilter): string {
   const params = new URLSearchParams();

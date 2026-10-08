@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import jsQR from "jsqr";
 import { Check, QrCode, RotateCcw, TriangleAlert, WifiOff, X } from "lucide-react";
 import type { ScanResult } from "@/lib/staff/checkin";
 import { FLAG_WORDS } from "@/lib/staff/flags";
@@ -42,7 +41,7 @@ async function checkIn(token: string): Promise<ScanResult | { ok: false; reason:
  * Full-screen camera scanner for family gate passes. Each pass checks the family in straight away.
  * `disabled` on a day with no session (the register is showing the next one): the server would refuse anyway.
  */
-export function PassScanner({ disabled = false }: { disabled?: boolean }) {
+export function PassScanner({ disabled = false, className = "w-full" }: { disabled?: boolean; /** Layout classes for the "Scan QR codes" button (full width by default). */ className?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +52,65 @@ export function PassScanner({ disabled = false }: { disabled?: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const busy = useRef(false);
   const last = useRef<{ token: string; at: number } | null>(null);
+  const opener = useRef<HTMLButtonElement>(null);
+  const closer = useRef<HTMLButtonElement>(null);
+  /** Set once the scanner has been open, so focus goes back to "Scan QR codes" only after a close, not on first load. */
+  const wasOpen = useRef(false);
+
+  /** True while the scanner's own history entry is the current one. A ref, not history.state: Next replaces that state on a refresh (after each check-in). */
+  const pushed = useRef(false);
+
+  // The scanner is a history entry of its own (same address), so a phone's Back button closes it and stays on the
+  // register. Close (X) and Escape go back through that entry too; popstate is what actually closes it.
+  const openScanner = () => {
+    setError(null);
+    setResult(null);
+    setOpen(true);
+    history.pushState({ scanner: 1 }, "");
+    pushed.current = true;
+  };
+  const closeScanner = useCallback(() => {
+    if (pushed.current) {
+      // Cleared first, so a second tap (or Escape) before popstate arrives doesn't go back a second page.
+      pushed.current = false;
+      history.back();
+    } else setOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      if (wasOpen.current) {
+        opener.current?.focus();
+        // The register under the scanner picks up everyone just checked in (scans don't refresh it one by one).
+        router.refresh();
+      }
+      return;
+    }
+    wasOpen.current = true;
+    closer.current?.focus();
+    const onPop = () => {
+      pushed.current = false;
+      setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeScanner();
+      }
+    };
+    // The phone locked or the coach switched apps: close, which stops the camera.
+    const onHide = () => {
+      if (document.visibilityState === "hidden") closeScanner();
+    };
+    window.addEventListener("popstate", onPop);
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [open, closeScanner, router]);
 
   // A failed request isn't a bad pass: say so and keep the pass to try again.
   // The last child's card goes while the next code is checked, so nobody is waved through on the wrong result.
@@ -76,9 +134,18 @@ export function PassScanner({ disabled = false }: { disabled?: boolean }) {
     if (!open) return;
     let frame = 0;
     let cancelled = false;
-    // Held here, not read back from the <video>: React has cleared the ref by the time the cleanup runs.
+    // Kept here, not read back from the <video>: by the time this effect is cleaned up on close, React has already
+    // let go of the video element, and the camera would stay on.
     let stream: MediaStream | null = null;
     (async () => {
+      // The QR decoder is loaded only when the scanner opens, so the register doesn't carry it on every visit.
+      let jsQR: typeof import("jsqr").default;
+      try {
+        jsQR = (await import("jsqr")).default;
+      } catch {
+        if (!cancelled) setError("The scanner couldn't load. Check your signal and try again.");
+        return;
+      }
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
         if (cancelled) return stream.getTracks().forEach((t) => t.stop());
@@ -124,14 +191,11 @@ export function PassScanner({ disabled = false }: { disabled?: boolean }) {
   if (!open) {
     return (
       <button
+        ref={opener}
         type="button"
-        onClick={() => {
-          setError(null);
-          setResult(null);
-          setOpen(true);
-        }}
+        onClick={openScanner}
         disabled={disabled}
-        className="btn-chunky btn-grass w-full disabled:opacity-60 disabled:shadow-none"
+        className={`btn-chunky btn-grass disabled:opacity-60 disabled:shadow-none ${className}`}
       >
         <QrCode aria-hidden size={22} />
         Scan QR codes
@@ -151,12 +215,9 @@ export function PassScanner({ disabled = false }: { disabled?: boolean }) {
       <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),16px)] pb-3">
         <h2 className="font-display text-[32px] leading-none tracking-[0.02em]">Scan QR codes</h2>
         <button
+          ref={closer}
           type="button"
-          onClick={() => {
-            setOpen(false);
-            // The register under the scanner picks up everyone just checked in.
-            router.refresh();
-          }}
+          onClick={closeScanner}
           className="grid h-12 w-12 place-items-center rounded-pill bg-pitch text-on-pitch"
           aria-label="Close the scanner"
         >

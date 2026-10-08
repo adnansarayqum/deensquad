@@ -134,7 +134,45 @@ ${link ? button(link, "See families") : ""}`,
   return { to, subject, text, html };
 }
 
-export type OrderEmailKind = "placed" | "paid" | "ready" | "cancelled";
+/** A parent added a child from the Player screen. The club checks the group and links any other parent. */
+export function newChildEmail(opts: { to: string; parentName: string; childName: string; group: string; link: string | null; appUrl: string | null }): Email {
+  const { to, parentName, childName, group, link, appUrl } = opts;
+  const subject = `New child added by ${parentName}: ${childName} (${group})`;
+  const lines = [
+    `${parentName} has added ${childName} (${group}) to their account in the app.`,
+    "",
+    "Please check the group is right, and link any other parent to the child on Families.",
+  ];
+  const text = [...lines, ...(link ? ["", `See families: ${link}`] : [])].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0"><b>${escape(parentName)}</b> has added <b>${escape(childName)}</b> (${escape(group)}) to their account in the app.</p>
+<p>Please check the group is right, and link any other parent to the child on Families.</p>
+${link ? button(link, "See families") : ""}`,
+  );
+  return { to, subject, text, html };
+}
+
+/** A parent asked the club to delete their account (Player → Your data). Names the parent only: nothing else about the family. */
+export function deletionRequestEmail(opts: { to: string; parentName: string; link: string | null; appUrl: string | null }): Email {
+  const { to, parentName, link, appUrl } = opts;
+  const subject = `Account deletion request: ${parentName}`;
+  const lines = [
+    `${parentName} has asked the club to delete their account in the parent app.`,
+    "",
+    "Nothing has been deleted yet. Please check with the family, then remove them on Families (or mark the request done on the overview). If another parent is staying, unlink this parent from each child instead, so the child stays.",
+  ];
+  const text = [...lines, ...(link ? ["", `Open the overview: ${link}`] : [])].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0"><b>${escape(parentName)}</b> has asked the club to delete their account in the parent app.</p>
+<p>Nothing has been deleted yet. Please check with the family, then remove them on Families (or mark the request done on the overview). If another parent is staying, unlink this parent from each child instead, so the child stays.</p>
+${link ? button(link, "Open the overview") : ""}`,
+  );
+  return { to, subject, text, html };
+}
+
+export type OrderEmailKind ="placed" | "paid" | "ready" | "cancelled";
 
 /**
  * What the parent hears about their kit order, once at each step: placed (with how to pay), payment received,
@@ -210,6 +248,44 @@ ${paragraphs
   .map((p) => `<p style="white-space:pre-line">${escape(p)}</p>`)
   .join("\n")}
 ${link ? button(link, "See your order") : ""}`,
+  );
+  return { to, subject, text, html };
+}
+
+/**
+ * The owner's monthly summary (src/lib/admin/summary.ts): short lines in sections, each linking to the admin page
+ * where it can be acted on. Counts only, no names.
+ */
+export function monthlySummaryEmail(opts: {
+  to: string;
+  month: string;
+  sections: { title: string; lines: { text: string; path: string }[] }[];
+  appUrl: string | null;
+}): Email {
+  const { to, month, sections, appUrl } = opts;
+  const subject = `Deen Squad: ${month} summary`;
+  const link = (path: string) => (appUrl ? `${appUrl}${path}` : null);
+  const text = [
+    `Assalamu alaikum. Here's how ${month} went in the parent app.`,
+    ...sections.flatMap((s) => ["", s.title, ...s.lines.map((l) => `- ${l.text}${link(l.path) ? ` ${link(l.path)}` : ""}`)]),
+    "",
+    "Figures under “Right now” are as they stand today. This email goes to the club's admins on the 1st of each month.",
+  ].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">Assalamu alaikum. Here's how <b>${escape(month)}</b> went in the parent app.</p>
+${sections
+  .map(
+    (s) => `<h2 style="font-size:17px;margin:20px 0 6px">${escape(s.title)}</h2>
+<ul style="margin:0;padding-left:20px">${s.lines
+      .map((l) => {
+        const href = link(l.path);
+        return `<li style="margin:4px 0">${href ? `<a href="${escape(href)}" style="color:#1f6b2a">${escape(l.text)}</a>` : escape(l.text)}</li>`;
+      })
+      .join("")}</ul>`,
+  )
+  .join("\n")}
+<p style="font-size:14px;color:#56625a;margin-top:20px">Figures under “Right now” are as they stand today. This email goes to the club's admins on the 1st of each month.</p>`,
   );
   return { to, subject, text, html };
 }

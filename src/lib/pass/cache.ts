@@ -10,7 +10,7 @@ export type CachedPass = { token: string; firstName: string; ageGroup: string };
 type Stored = { v: 1; user: string; passes: CachedPass[] };
 
 const TOKEN = /^DSP\.[0-9a-fA-F-]{36}\.[\w-]{22}$/;
-const GROUP = /^U\d{1,2}$/;
+const GROUP = /^(U\d{1,2}|Girls)$/;
 const MAX_PASSES = 12;
 
 function valid(p: unknown): p is CachedPass {

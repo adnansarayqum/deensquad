@@ -1,18 +1,13 @@
 import type { TransactionSql } from "postgres";
 import type { Database, Queryable } from "./types";
 
-/**
- * Railway (and any real Postgres): a postgres.js pool. 15 by default: a parent page runs several short transactions,
- * a news post's reminder run holds one for its whole send, and Railway's Postgres allows 100.
- * A statement running over 30 s is stopped, so a runaway query can't hold a connection for ever.
- */
+/** Railway (and any real Postgres): a small postgres.js pool. */
 export async function postgresDatabase(url: string): Promise<Database> {
   const { default: postgres } = await import("postgres");
   const sql = postgres(url, {
-    max: Number(process.env.DATABASE_POOL_MAX ?? 15),
+    max: Number(process.env.DATABASE_POOL_MAX ?? 5),
     idle_timeout: 30,
     connect_timeout: 10,
-    connection: { statement_timeout: 30_000 },
     onnotice: () => {},
   });
   // postgres.js remembers any failed statement in a transaction and rolls it all back, even if the

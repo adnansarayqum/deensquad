@@ -42,6 +42,13 @@ describe("the QR codes kept on the phone", () => {
     expect(readPassCache(storage)).toEqual([]);
   });
 
+  it("keeps a child in the Girls group, whose group has no number", () => {
+    const storage = memoryStorage();
+    const maryam: CachedPass = { token: token(3), firstName: "Maryam", ageGroup: "Girls" };
+    writePassCache(storage, "user-a", [yusuf, maryam]);
+    expect(readPassCache(storage)).toEqual([yusuf, maryam]);
+  });
+
   it("ignores anything that isn't a pass, and damaged or missing storage", () => {
     const storage = memoryStorage();
     writePassCache(storage, "user-a", [yusuf, { token: "https://example.com", firstName: "X", ageGroup: "U10" }, { ...musa, ageGroup: "<b>" }]);

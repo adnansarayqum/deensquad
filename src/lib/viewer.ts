@@ -39,3 +39,18 @@ export function renderScale(pageWidth: number, pageHeight: number, cssWidth: num
   if (pixels > maxPixels) scale *= Math.sqrt(maxPixels / pixels);
   return scale;
 }
+
+/**
+ * A PDF page's words as plain text, from PDF.js's getTextContent(): each item's string, a line break where PDF.js
+ * says a line ends, blank lines and runs of spaces squeezed. Marked-content entries (no `str`) are skipped.
+ */
+export function pageText(content: { items: ({ str: string; hasEOL?: boolean } | { type: string })[] }): string {
+  return content.items
+    .map((item) => ("str" in item ? item.str + (item.hasEOL ? "\n" : "") : ""))
+    .join("")
+    .replace(/[ \t]+/g, " ")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n");
+}

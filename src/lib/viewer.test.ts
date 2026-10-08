@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { backPath, contentDisposition, pageCount, renderScale, viewerHref } from "./viewer";
+import { backPath, contentDisposition, pageCount, pageText, renderScale, viewerHref } from "./viewer";
 
 describe("backPath", () => {
   it("keeps a screen inside the app", () => {
     expect(backPath("/friday", "/news")).toBe("/friday");
     expect(backPath("/coach/plans/abc?group=U10", "/coach")).toBe("/coach/plans/abc?group=U10");
+    // The privacy notice's Back, to the child that was showing on Player.
+    expect(backPath("/player?child=20000000-0000-4000-8000-000000000001", "/player")).toBe("/player?child=20000000-0000-4000-8000-000000000001");
   });
 
   it("falls back for anything that could leave the app or loop", () => {
@@ -50,5 +52,23 @@ describe("renderScale", () => {
   it("stays under the canvas size phones allow", () => {
     const scale = renderScale(1000, 20000, 1000, 2);
     expect(1000 * scale * 20000 * scale).toBeLessThanOrEqual(12_000_001);
+  });
+});
+
+describe("pageText", () => {
+  it("joins a page's words into lines for screen readers, skipping marked content and blank lines", () => {
+    const items = [
+      { str: "Warm-up:", hasEOL: false },
+      { str: " ", hasEOL: false },
+      { str: "rondos", hasEOL: true },
+      { type: "beginMarkedContent" },
+      { str: "   ", hasEOL: true },
+      { str: "Main:  passing", hasEOL: false },
+    ];
+    expect(pageText({ items })).toBe("Warm-up: rondos\nMain: passing");
+  });
+
+  it("is empty for a page with no text (a scan)", () => {
+    expect(pageText({ items: [] })).toBe("");
   });
 });

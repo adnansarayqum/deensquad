@@ -36,8 +36,17 @@ export async function cancelSession(
 /** Deletes a session nobody has been checked in to, so attendance history is never lost. */
 export async function removeSession(tx: Queryable, id: string, mine: readonly AgeGroup[] | null): Promise<boolean> {
   if (!(await sessionIsMine(tx, id, mine))) return false;
+  const files = await planFileIds(tx, id);
   const gone = await tx.query(`delete from sessions s where s.id = $1 and not exists (select 1 from attendance a where a.session_id = s.id) returning s.id`, [id]);
+  // Its plans went with it (cascade); their attached files would otherwise stay behind in club_files.
+  if (gone.length && files.length) await tx.query(`delete from club_files where id = any($1::uuid[])`, [files]);
   return gone.length > 0;
+}
+
+/** The files attached to a session's plans. */
+async function planFileIds(tx: Queryable, sessionId: string): Promise<string[]> {
+  const rows = await tx.query<{ file_id: string }>(`select file_id from session_plans where session_id = $1 and file_id is not null`, [sessionId]);
+  return rows.map((r) => r.file_id);
 }
 
 /** What deleting a session would take with it, for the confirmation. */
@@ -57,17 +66,18 @@ export async function sessionLosses(tx: Queryable, id: string): Promise<SessionL
 }
 
 /** "Delete Autumn Cup? 11 answers, 1 plan and the squad will be deleted. This can't be undone." */
-export function lossesSentence(l: SessionLosses): string {
+export function lossesSentence(l: SessionLosses, them = false): string {
   const n = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
   const parts = [
     l.answers ? n(l.answers, "answer", "answers") : null,
     l.plans ? n(l.plans, "session plan", "session plans") : null,
-    l.picked ? `the squad of ${l.picked}` : null,
+    l.picked ? (them ? `${n(l.picked, "squad pick", "squad picks")}` : `the squad of ${l.picked}`) : null,
     l.messages ? n(l.messages, "squad message", "squad messages") : null,
   ].filter((p): p is string => p !== null);
-  if (parts.length === 0) return "Nothing else is attached to it yet. This can't be undone.";
+  const it = them ? "them" : "it";
+  if (parts.length === 0) return `Nothing else is attached to ${it} yet. This can't be undone.`;
   const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
-  return `${list[0].toUpperCase()}${list.slice(1)} will be deleted with it. This can't be undone.`;
+  return `${list[0].toUpperCase()}${list.slice(1)} will be deleted with ${it}. This can't be undone.`;
 }
 
 // Adding sessions ---------------------------------------------------------------

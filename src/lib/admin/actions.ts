@@ -14,8 +14,9 @@ import { canSendEmail } from "../email/send";
 import { cleanBody, cleanPhone, cleanText, dialable } from "../validate";
 import { applyImport, planImport, type ImportProblem, type ImportSummary } from "./import";
 import { overlaps, within } from "./scope";
-import { familiesFilter, familiesHref, familiesInviteHref, familiesQuery } from "./families-link";
+import { familiesFilterFromForm, familiesHref, familiesInviteHref, familyChildHref, withQuery } from "./families-link";
 import { addSessionRun, addedSentence, cancelSession, editSession, postSessionNotice, removeSession, type SessionEdit } from "./sessions";
+import { BULK_MAX, bulkCancel, bulkDelete, bulkEdit, bulkResultQuery, isBulkAction, parseIds, patchIsEmpty, type BulkEditPatch } from "./bulk-sessions";
 import { changeStaffRole, removeStaffMember } from "./staff";
 import { newsReaches } from "../squads/sql";
 import { canManageSquad, saveSquad } from "../squads/squads";
@@ -23,6 +24,7 @@ import { enqueue } from "../background";
 import { runChase } from "../chase/run";
 import { sendInvites } from "./invites";
 import { deleteLeftoverAccounts, removeChildRecord, unlinkGuardianRecord } from "./remove";
+import { closeDeletionRequest } from "../data-requests";
 import { TOPICS } from "./topics";
 
 // Club admin Server Actions. Each checks the role first, then writes as that person,
@@ -122,10 +124,8 @@ export async function importFamilies(prev: ImportState, formData: FormData): Pro
  */
 export async function inviteParents(formData: FormData): Promise<void> {
   await requireAdmin();
-  const params = Object.fromEntries(["group", "need", "q"].map((k) => [k, typeof formData.get(k) === "string" ? (formData.get(k) as string) : undefined]));
-  const filter = familiesFilter(params, AGE_GROUPS);
-  const list = familiesHref(filter);
-  const back = (query: string) => redirect(`${list}${list.includes("?") ? "&" : "?"}${query}`);
+  const filter = familiesFilterFromForm(formData, AGE_GROUPS);
+  const back = (query: string) => redirect(withQuery(familiesHref(filter), query));
   if (formData.get("confirm") !== "yes") redirect(familiesInviteHref(filter));
   if (!canSendEmail()) back("invite=no-email");
   const base = await inviteBase();
@@ -134,23 +134,18 @@ export async function inviteParents(formData: FormData): Promise<void> {
   back(`invited=${sent}${failed ? `&notSent=${failed}` : ""}`);
 }
 
-/** Back to a child's page with `query`, keeping the Families list's filters the form carried. */
-function childPage(formData: FormData, child: string, query: string): never {
-  const params = Object.fromEntries(["group", "need", "q"].map((k) => [k, typeof formData.get(k) === "string" ? (formData.get(k) as string) : undefined]));
-  const filters = familiesQuery(familiesFilter(params, AGE_GROUPS));
-  redirect(`/admin/families/${child}?${query}${filters ? `&${filters}` : ""}`);
-}
-
 export async function resendInvite(formData: FormData): Promise<void> {
   await requireAdmin();
   const guardian = id(formData.get("guardian"));
   const child = id(formData.get("child"));
   if (!guardian || !child) return;
-  if (!canSendEmail()) childPage(formData, child, "invite=no-email");
+  // Back to the child with the Families filters it was opened with, so "← Families" still returns to that list.
+  const page = familyChildHref(child, familiesFilterFromForm(formData, AGE_GROUPS));
+  if (!canSendEmail()) redirect(withQuery(page, "invite=no-email"));
   const base = await inviteBase();
-  if (!base) childPage(formData, child, "invite=no-url");
+  if (!base) redirect(withQuery(page, "invite=no-url"));
   const { failed } = await sendInvites({ guardianIds: [guardian], baseUrl: base });
-  childPage(formData, child, failed ? "invite=failed" : "invited=1");
+  redirect(withQuery(page, failed ? "invite=failed" : "invited=1"));
 }
 
 // Children and parents --------------------------------------------------------
@@ -169,7 +164,7 @@ export async function updateChild(_prev: FormState, formData: FormData): Promise
   const dob = cleanText(formData.get("dateOfBirth"), 10);
   if (!child) return { error: "Something went wrong. Reload and try again." };
   if (!firstName || !lastName) return { error: "Add the child's first and last name." };
-  if (!isAgeGroup(group)) return { error: "Choose an age group." };
+  if (!isAgeGroup(group)) return { error: "Choose a group." };
   if (shirt !== null && !(Number.isInteger(shirt) && shirt >= 1 && shirt <= 99)) return { error: "Shirt numbers go from 1 to 99." };
   if (dob && !/^\d{4}-\d{2}-\d{2}$/.test(dob)) return { error: "Choose a date of birth." };
   await asUser(user.id, (tx) =>
@@ -255,7 +250,7 @@ export async function unlinkGuardian(formData: FormData): Promise<void> {
   if (!child || !guardian || formData.get("confirm") !== "yes") return;
   const removed = await asUser(user.id, (tx) => unlinkGuardianRecord(tx, child, guardian));
   await asSystem((tx) => deleteLeftoverAccounts(tx, removed));
-  childPage(formData, child, "unlinked=1");
+  redirect(withQuery(familyChildHref(child, familiesFilterFromForm(formData, AGE_GROUPS)), "unlinked=1"));
 }
 
 export async function removeChild(formData: FormData): Promise<void> {
@@ -265,7 +260,16 @@ export async function removeChild(formData: FormData): Promise<void> {
   // Parents with no other children at the club go too, with their sign-ins.
   const removed = await asUser(user.id, (tx) => removeChildRecord(tx, child));
   await asSystem((tx) => deleteLeftoverAccounts(tx, removed));
-  redirect("/admin/families?removed=1");
+  redirect(withQuery(familiesHref(familiesFilterFromForm(formData, AGE_GROUPS)), "removed=1"));
+}
+
+/** "Done" on a parent's request to be deleted (the overview): the admin has dealt with it another way. */
+export async function closeDataRequest(formData: FormData): Promise<void> {
+  const user = await requireAdmin();
+  const request = id(formData.get("request"));
+  if (!request) return;
+  await asUser(user.id, (tx) => closeDeletionRequest(tx, request));
+  refresh();
 }
 
 // News ------------------------------------------------------------------------
@@ -301,9 +305,9 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
   }
   // "Every family" is the default, so ticked groups under it would otherwise be ignored and the whole club messaged.
   if (everyone && groups.length) {
-    return { error: "You ticked age groups. Choose “Only these age groups” to send just to them, or untick them to send to every family." };
+    return { error: "You ticked groups. Choose “Only these groups” to send just to them, or untick them to send to every family." };
   }
-  if (!everyone && groups.length === 0) return { error: "Choose who it's for: everyone, or at least one age group." };
+  if (!everyone && groups.length === 0) return { error: "Choose who it's for: everyone, or at least one group." };
   if (isGroupCoach(user.staff)) {
     const mine = staffGroups(user.staff);
     if (everyone || groups.some((g) => !mine.includes(g))) return { error: `You can post to your own groups: ${mine.join(", ")}.` };
@@ -389,7 +393,7 @@ function sessionFields(formData: FormData, mine: readonly AgeGroup[] | null) {
   if (!KINDS.includes(kind as SessionKind)) return { error: "Choose the kind of session." } as const;
   if (!title) return { error: "Add a title, like Training." } as const;
   if (!venue) return { error: "Add the venue." } as const;
-  if (groups.length === 0) return { error: "Choose at least one age group." } as const;
+  if (groups.length === 0) return { error: "Choose at least one group." } as const;
   if (mine && groups.some((g) => !mine.includes(g))) return { error: `You can manage your own groups only: ${mine.join(", ")}.` } as const;
   if (!date) return { error: "Choose the date." } as const;
   if (!start || !end) return { error: "Add start and finish times." } as const;
@@ -497,6 +501,94 @@ export async function deleteSession(formData: FormData): Promise<void> {
   // Only sessions nobody has been checked in to, and for a group coach only their own groups' sessions.
   const gone = await asUser(user.id, (tx) => removeSession(tx, session, coachLimit(user.staff)));
   redirect(gone ? "/admin/sessions?deleted=1" : "/admin/sessions");
+}
+
+// Bulk changes (the ticked sessions on Admin → Sessions) ---------------------------
+
+/**
+ * The bulk bar's buttons: takes the ticked ids to the confirm page for the chosen action, as `?ids=a,b,c`
+ * (a plain form, so it works without JavaScript). None ticked, or more than the cap, goes back with a notice.
+ */
+export async function openBulk(formData: FormData): Promise<void> {
+  await requireStaff();
+  const action = formData.get("do");
+  const ids = parseIds(formData.getAll("ids"));
+  if (!isBulkAction(action)) redirect("/admin/sessions");
+  if (ids.length === 0) redirect("/admin/sessions?bulk=none");
+  if (ids.length > BULK_MAX) redirect("/admin/sessions?bulk=toomany");
+  redirect(`/admin/sessions/bulk/${action}?ids=${ids.join(",")}`);
+}
+
+/** The ids posted back by a bulk confirm page's hidden fields. */
+function bulkIds(formData: FormData): string[] {
+  return parseIds(formData.getAll("ids")).slice(0, BULK_MAX);
+}
+
+/** Bulk edit: only the fields filled in change, on every session picked. Returns an error to the form, else redirects with the notice. */
+export async function bulkEditSessions(_prev: FormState, formData: FormData): Promise<FormState> {
+  const user = await requireStaff();
+  const mine = coachLimit(user.staff);
+  const ids = bulkIds(formData);
+  if (ids.length === 0) return { error: "No sessions are picked. Go back to Sessions and tick some." };
+  const text = (name: string, max: number) => cleanText(formData.get(name), max) ?? undefined;
+  const time = (name: string) => {
+    const m = TIME.exec(String(formData.get(name) ?? ""));
+    return m ? { hour: Number(m[1]), minute: Number(m[2]) } : undefined;
+  };
+  const kindValue = formData.get("kind");
+  const kind = typeof kindValue === "string" && kindValue ? (kindValue as SessionKind) : undefined;
+  if (kind && !KINDS.includes(kind)) return { error: "Choose the kind of session." };
+  const startText = String(formData.get("start") ?? "");
+  const endText = String(formData.get("end") ?? "");
+  if ((startText && !time("start")) || (endText && !time("end"))) return { error: "Check the start and finish times." };
+  const start = time("start");
+  const end = time("end");
+  if (start && end && end.hour * 60 + end.minute <= start.hour * 60 + start.minute) return { error: "The finish time must be after the start time." };
+  let groups: AgeGroup[] | undefined;
+  if (formData.get("changeGroups") === "on") {
+    groups = formData.getAll("groups").filter(isAgeGroup);
+    if (groups.length === 0) return { error: "Choose at least one group, or untick Change groups." };
+    if (mine && groups.some((g) => !mine.includes(g))) return { error: `You can manage your own groups only: ${mine.join(", ")}.` };
+  }
+  const patch: BulkEditPatch = {
+    kind,
+    title: text("title", 60),
+    venue: text("venue", 120),
+    start,
+    end,
+    arriveBy: text("arriveBy", 20),
+    kit: text("kit", 120),
+    prayerNote: text("prayerNote", 120),
+    notes: cleanBody(formData.get("notes"), 500) ?? undefined,
+    groups,
+  };
+  if (patchIsEmpty(patch)) return { error: "Fill in at least one field to change. Blank fields are left as they are." };
+  const tell = formData.get("notify") === "on";
+  const result = await asUser(user.id, (tx) => bulkEdit(tx, ids, patch, mine, tell, user.staff.id));
+  for (const news of result.news) chaseNow(news);
+  redirect(`/admin/sessions?${bulkResultQuery("edit", result)}`);
+}
+
+/** Bulk cancel or restore, from its confirm page: one reason for all, "Tell the families now" per session. */
+export async function bulkCancelSessions(formData: FormData): Promise<void> {
+  const user = await requireStaff();
+  const ids = bulkIds(formData);
+  const cancel = formData.get("cancel") === "yes";
+  if (ids.length === 0) redirect("/admin/sessions?bulk=none");
+  const reason = cancel ? cleanText(formData.get("reason"), 120) : null;
+  const tell = formData.get("notify") === "on";
+  const result = await asUser(user.id, (tx) => bulkCancel(tx, ids, cancel, coachLimit(user.staff), reason, tell, user.staff.id));
+  for (const news of result.news) chaseNow(news);
+  redirect(`/admin/sessions?${bulkResultQuery(cancel ? "cancel" : "restore", result)}`);
+}
+
+/** Bulk delete, from its confirm page (which sends confirm=yes and leaves out sessions with check-ins; refused again here). */
+export async function bulkDeleteSessions(formData: FormData): Promise<void> {
+  const user = await requireStaff();
+  const ids = bulkIds(formData);
+  if (ids.length === 0 || formData.get("confirm") !== "yes") redirect("/admin/sessions?bulk=none");
+  const result = await asUser(user.id, (tx) => bulkDelete(tx, ids, coachLimit(user.staff)));
+  redirect(`/admin/sessions?${bulkResultQuery("delete", result)}`);
 }
 
 /** Saves the tournament squad picked on a session's Squad page (admins any session; a group coach only their own groups'). */

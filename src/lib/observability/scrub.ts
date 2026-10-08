@@ -16,7 +16,9 @@ export type MonitoringUser = { id: string; segment: Segment };
 const SEGMENTS = new Set<string>(["parent", "coach", "admin"]);
 const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,}/gi;
 const ABSOLUTE_URL = /\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>`]+/gi;
-const PATH_WITH_QUERY = /(^|[\s"'(=:])(\/[^\s"'<>`?#]*)[?#][^\s"'<>`)]*/g;
+// Any path in free text (a span's name, `http.target`, `url.path`, a transaction): its query and fragment go, and ids
+// and tokens in it become `:id` (normalisePath), with or without a query. `GET /api/calendar/<token>.ics` → `:id.ics`.
+const PATH = /(^|[\s"'(=:])(\/[^\s"'<>`?#]*)(?:[?#][^\s"'<>`)]*)?/g;
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
 /** Removes emails, query strings and ids from free text (error messages, transaction names, log lines). */
@@ -28,7 +30,7 @@ export function scrubText(text: string): string {
       const tail = url.match(/[.,;:)\]]+$/)?.[0] ?? "";
       return normaliseUrl(url.slice(0, url.length - tail.length)) + tail;
     })
-    .replace(PATH_WITH_QUERY, (_m, before: string, path: string) => before + normalisePath(path))
+    .replace(PATH, (_m, before: string, path: string) => before + normalisePath(path))
     .replace(UUID, ":id");
 }
 

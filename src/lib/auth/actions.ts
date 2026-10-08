@@ -12,7 +12,19 @@ import { PENDING_COOKIE, SESSION_COOKIE, cookieOptions, safeNext } from "./cooki
 import { clientIpFrom } from "./ip";
 import { readPending, type Pending } from "./pending";
 import { parseRegistration, type Registered } from "./registration";
-import { LIMITS, SESSION_DAYS, SIGN_IN_MINUTES, createSession, deleteSession, ensureBootstrapAdmin, issueSignIn, verifyCode, verifyLink } from "./service";
+import {
+  LIMITS,
+  SESSION_DAYS,
+  SIGN_IN_MINUTES,
+  createSession,
+  deleteSession,
+  dropUnsentRequest,
+  ensureBootstrapAdmin,
+  issueSignIn,
+  latestOpenRequest,
+  verifyCode,
+  verifyLink,
+} from "./service";
 import { cleanCode, maskEmail, normaliseEmail } from "./tokens";
 
 export type FormState = { error?: string };
@@ -35,24 +47,32 @@ export async function requestCode(_prev: FormState, formData: FormData): Promise
   if (!email) return { error: "Enter the email address you gave the club, like name@example.com." };
   const next = safeNext(formData.get("next"));
 
+  const now = new Date();
   const result = await asSystem(async (tx) => {
     await ensureBootstrapAdmin(tx, email, adminEmails());
-    return issueSignIn(tx, { email, ip: await clientIp(), now: new Date(), purpose: "sign_in" });
+    return issueSignIn(tx, { email, ip: await clientIp(), now, purpose: "sign_in" });
   });
 
-  if (!result.ok && result.reason === "rate_limited") {
+  // The per-address limit applies to everyone alike, so saying so gives nothing away.
+  if (!result.ok && result.reason === "rate_limited" && result.limit === "ip") {
     return { error: "That's a lot of codes in one hour. Wait a little while, then try again." };
   }
 
-  // For an address the club doesn't have, show the same screen without sending anything,
-  // so the sign-in page can't be used to find out who is a member.
+  // For an address the club doesn't have, or one that has had its hour's codes, show the same screen without
+  // sending anything, so the sign-in page can't be used to find out who is a member. The code screen says the
+  // latest code still works, so for a known address it's wired to the newest code still open (if any).
   let pending: Pending = { id: randomUUID(), to: maskEmail(email), next };
+  if (!result.ok && result.reason === "rate_limited") {
+    const latest = await asSystem((tx) => latestOpenRequest(tx, email, now));
+    if (latest) pending = { id: latest, to: maskEmail(email), next };
+  }
   if (result.ok) {
     const { requestId, code, token } = result.request;
     const base = await baseUrl();
     const { failed } = await sendEmails([signInEmail({ to: email, code: code!, link: base ? `${base}/sign-in/link?token=${token}` : null, appUrl: base })]);
     if (failed.length) {
-      await forgetRequest(requestId);
+      // The code never reached them: forget it, so this try doesn't count towards the hour's codes.
+      await asSystem((tx) => dropUnsentRequest(tx, requestId));
       return { error: "We couldn't send the email just now. Try again in a minute." };
     }
     pending = { id: requestId, to: maskEmail(email), next };
@@ -60,11 +80,6 @@ export async function requestCode(_prev: FormState, formData: FormData): Promise
 
   (await cookies()).set(PENDING_COOKIE, JSON.stringify(pending), cookieOptions(SIGN_IN_MINUTES * 60));
   redirect("/sign-in/code");
-}
-
-/** A code that never reached the parent shouldn't count towards their hourly limit (or the venue's). */
-async function forgetRequest(requestId: string) {
-  await asSystem((tx) => tx.query(`delete from auth.sign_in_requests where id = $1`, [requestId])).catch(() => {});
 }
 
 /** A new family signing itself up: we email a code, and the family is created once it's entered. */
@@ -77,7 +92,7 @@ export async function register(_prev: FormState, formData: FormData): Promise<Fo
   const ip = await clientIp();
   const result = await asSystem((tx) => issueSignIn(tx, { email, ip, now: new Date(), purpose: "sign_in", registration: check.registration }));
   if (!result.ok) {
-    if (result.clubWide) {
+    if (result.reason === "rate_limited" && result.limit === "club") {
       await sendErrorAlert({ message: `Sign-ups paused: more than ${LIMITS.signUpsPerHour} in the past hour across the club.`, path: "/sign-up", kind: "action" });
     }
     return { error: "That's a lot of codes in one hour. Wait a little while, then try again." };
@@ -86,7 +101,7 @@ export async function register(_prev: FormState, formData: FormData): Promise<Fo
   const base = await baseUrl();
   const { failed } = await sendEmails([signInEmail({ to: email, code: code!, link: base ? `${base}/sign-in/link?token=${token}` : null, appUrl: base })]);
   if (failed.length) {
-    await forgetRequest(requestId);
+    await asSystem((tx) => dropUnsentRequest(tx, requestId));
     return { error: "We couldn't send the email just now. Try again in a minute." };
   }
   const pending: Pending = { id: requestId, to: maskEmail(email), next: "/checklist", signUp: true };

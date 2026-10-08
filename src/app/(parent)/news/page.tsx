@@ -10,6 +10,7 @@ import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { clock, postedLabel, shortDay } from "@/lib/dates";
 import { getNewsPage } from "@/lib/parent/load";
 import { sessionsToday, weekSummary } from "@/lib/parent/views";
+import { groupsPlural } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Club news" };
 
@@ -117,7 +118,7 @@ export default async function NewsPage() {
                 <div className="flex items-center justify-between gap-2">
                   <Pill tone="action">
                     {a.topic}
-                    {a.audience === "all" ? "" : ` · ${a.audience.map((g) => `${g}s`).join(", ")}`}
+                    {a.audience === "all" ? "" : ` · ${groupsPlural(a.audience)}`}
                   </Pill>
                   <span className="text-[13px] text-ink-muted">{postedLabel(a.postedAt, now)}</span>
                 </div>

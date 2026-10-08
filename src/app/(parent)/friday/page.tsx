@@ -10,7 +10,7 @@ import { Attachment } from "@/components/plans/Attachment";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { clock, shortDay } from "@/lib/dates";
 import { attachmentTitle } from "@/lib/files";
-import type { Session } from "@/lib/domain";
+import { groupPlural, type Session } from "@/lib/domain";
 import type { SquadCounts } from "@/lib/parent/data";
 import { getFamily, getFridayPage } from "@/lib/parent/load";
 import { answeredLine, availabilityQuestion, directionsUrl, sessionsToday, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
@@ -37,7 +37,7 @@ export default async function FridayPage() {
       {single?.session ? (
         <AppHeader stripes>
           <p className="text-label text-floodlight uppercase">
-            {shortDay(single.session.startsAt)} · {single.child.ageGroup}s
+            {shortDay(single.session.startsAt)} · {groupPlural(single.child.ageGroup)}
           </p>
           <h1 className="font-display text-[48px] leading-[0.92] tracking-[0.02em]">
             {single.checkedInAt
@@ -65,12 +65,14 @@ export default async function FridayPage() {
           <TodaysCodes cards={todayCards} title={today[0].session.title} />
         ) : family.children.length > 0 ? (
           <Link href="/pass" className="flex items-center gap-3 rounded-app bg-pitch-deep px-3.5 py-3 text-on-pitch">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold">
+            {/* The icon steps aside on a very narrow screen (200% zoom), so the heading's words fit whole rather than breaking mid-word. */}
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold max-[239px]:hidden">
               <QrCode aria-hidden size={24} />
             </span>
-            <span className="flex flex-1 flex-col">
+            <span className="flex min-w-0 flex-1 flex-col">
               <span className="text-[15px] font-bold">{family.children.length > 1 ? "Attendance QR codes" : "Attendance QR code"}</span>
-              <span className="text-[13px] text-on-pitch-muted">{family.children.length > 1 ? "One for each child. Show it to the coach when you arrive" : `Show it to the coach to check ${family.children[0].firstName} in`}</span>
+              {/* Only this line can hold a long name, so only it may break inside a word. */}
+              <span className="text-[13px] break-words text-on-pitch-muted">{family.children.length > 1 ? "One for each child. Show it to the coach when you arrive" : `Show it to the coach to check ${family.children[0].firstName} in`}</span>
             </span>
             <ChevronRight aria-hidden size={20} className="shrink-0 text-on-pitch-muted" />
           </Link>
@@ -155,6 +157,10 @@ export default async function FridayPage() {
             ))}
           </section>
         ) : null}
+
+        <Link href="/player/calendar" className="inline-flex min-h-12 items-center self-start text-sm font-bold text-grass-text underline">
+          Add sessions to your calendar
+        </Link>
       </main>
     </>
   );
@@ -166,12 +172,12 @@ function TodaysCodes({ cards, title }: { cards: PassCard[]; title: string }) {
   return (
     <details className="group rounded-app bg-pitch-deep text-on-pitch">
       <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-app px-3.5 py-3 [&::-webkit-details-marker]:hidden">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold max-[239px]:hidden">
           <QrCode aria-hidden size={24} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="text-[15px] font-bold">{several ? "Show attendance QR codes" : "Show attendance QR code"}</span>
-          <span className="text-[13px] text-on-pitch-muted">
+          <span className="text-[13px] break-words text-on-pitch-muted">
             {title} today. Tap to show {several ? "them" : "it"} here for the coach.
           </span>
         </span>
@@ -199,7 +205,7 @@ function ChildCard({ week: w, answered }: { week: ChildWeek; answered?: string }
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-[19px] font-extrabold">
-          {name} <span className="text-[15px] font-bold text-ink-muted">· {w.child.ageGroup}s</span>
+          {name} <span className="text-[15px] font-bold text-ink-muted">· {groupPlural(w.child.ageGroup)}</span>
         </h2>
         {w.counts && w.session ? (
           <span className="text-[13px] text-ink-muted tabular-nums">
@@ -296,12 +302,13 @@ function Briefing({ session, labelled }: { session: Session; labelled: boolean }
       </h2>
       <ul className="flex flex-col gap-3 text-[15px]">
         {shown.map(({ icon: Icon, text, extra }) => (
-          <li key={text} className="flex items-center gap-3 whitespace-pre-line">
+          <li key={text} className="flex flex-wrap items-center gap-3 whitespace-pre-line">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-gold-tint text-gold-text">
               <Icon aria-hidden size={20} />
             </span>
-            <span className="min-w-0 flex-1">{text}</span>
-            {extra}
+            <span className="min-w-0 flex-1 break-words">{text}</span>
+            {/* Under the text when the screen is very narrow (200% zoom), so it never sits on top of it. */}
+            {extra ? <span className="max-[239px]:basis-full max-[239px]:pl-12">{extra}</span> : null}
           </li>
         ))}
       </ul>
@@ -313,10 +320,10 @@ function Headcount({ group, counts, squad }: { group: string; counts: SquadCount
   const unanswered = Math.max(0, counts.squad - counts.coming - counts.away);
   const total = Math.max(1, counts.squad);
   return (
-    <section aria-label={squad ? `${group}s in the squad` : `${group}s this week`} className="flex items-center gap-4 rounded-app bg-pitch-deep p-4 text-on-pitch">
+    <section aria-label={squad ? `${groupPlural(group)} in the squad` : `${groupPlural(group)} this week`} className="flex items-center gap-4 rounded-app bg-pitch-deep p-4 text-on-pitch">
       <span className="font-display text-[56px] leading-[0.9] text-floodlight tabular-nums">{counts.coming}</span>
       <div className="flex flex-1 flex-col gap-1.5">
-        <span className="text-[15px] font-bold">{squad ? `of the ${counts.squad} ${group}s picked can play` : `${group}s coming this week`}</span>
+        <span className="text-[15px] font-bold">{squad ? `of the ${counts.squad} ${groupPlural(group)} picked can play` : `${groupPlural(group)} coming this week`}</span>
         <div className="flex h-2.5 overflow-hidden rounded-pill bg-pitch" aria-hidden>
           <div className="bg-grass" style={{ width: `${(counts.coming / total) * 100}%` }} />
           <div className="bg-kit-orange" style={{ width: `${(counts.away / total) * 100}%` }} />

@@ -4,6 +4,7 @@
 // (src/lib/pass/cache.ts); the page itself holds no one's data.
 
 import QRCode from "qrcode";
+import { groupPlural } from "../lib/domain";
 import { phoneStorage, readPassCache } from "../lib/pass/cache";
 
 async function draw() {
@@ -16,7 +17,7 @@ async function draw() {
     const section = document.createElement("section");
     section.className = "code";
     const name = document.createElement("h2");
-    name.textContent = `${pass.firstName} · ${pass.ageGroup}s`;
+    name.textContent = `${pass.firstName} · ${groupPlural(pass.ageGroup)}`;
     const picture = document.createElement("div");
     picture.className = "qr";
     picture.setAttribute("role", "img");

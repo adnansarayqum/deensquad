@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { UUID } from "../auth/tokens";
+import { isDemo } from "../db";
 
 // A child's gate pass: "DSP.<player id>.<signature>". The signature is an HMAC with QR_SECRET,
 // so a pass can't be made up or altered, and it works without signal at the gate (it's just a picture).
@@ -7,10 +8,14 @@ import { UUID } from "../auth/tokens";
 
 const PREFIX = "DSP";
 
+/**
+ * QR_SECRET, or a fixed stand-in outside production and in the demo (`isDemo()`: DEMO_MODE with an in-memory
+ * database). Never for a real database in production: DEMO_MODE alone doesn't unlock it there.
+ */
 function secret(): string {
   const s = process.env.QR_SECRET;
   if (s) return s;
-  if (process.env.NODE_ENV !== "production" || process.env.DEMO_MODE === "1") return "development-only-qr-secret";
+  if (process.env.NODE_ENV !== "production" || isDemo()) return "development-only-qr-secret";
   throw new Error("QR_SECRET is not set.");
 }
 

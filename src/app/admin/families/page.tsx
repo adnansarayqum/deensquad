@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, Upload } from "lucide-react";
-import { AdminTitle, Notice } from "@/components/admin/bits";
+import { Notice, PageHeader } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
 import { countBehindOnNews, countUninvited, loadFamilies, type FamilyRow } from "@/lib/admin/data";
 import { familiesFilter, familiesHref, familiesInviteHref, familiesScope, familyChildHref } from "@/lib/admin/families-link";
 import { NEEDS, type Need } from "@/lib/admin/needs";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
+import { groupPlural } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Families" };
 
@@ -35,8 +36,9 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
 
   return (
     <>
-      <AdminTitle
-        action={
+      <PageHeader
+        title="Families"
+        actions={
           isAdmin ? (
             <Link href="/admin/families/import" className="btn-chunky btn-paper btn-small">
               <Upload aria-hidden size={16} />
@@ -44,9 +46,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
             </Link>
           ) : null
         }
-      >
-        Families
-      </AdminTitle>
+      />
 
       {params.invited && params.notSent ? (
         <Notice tone="action">{`Sent to ${params.invited}. ${params.notSent} not sent – try again later.`}</Notice>
@@ -75,7 +75,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
       ) : null}
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <nav aria-label="Age groups" className="flex flex-wrap gap-2">
+        <nav aria-label="Groups" className="flex flex-wrap gap-2">
           {[null, ...mine].map((g) => (
             <Link
               key={g ?? "all"}
@@ -144,7 +144,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
           {filtered
             ? "No children match."
             : group
-              ? `No players in the ${group}s.`
+              ? `No players in the ${groupPlural(group)}.`
               : "No families yet. Import them from a spreadsheet to get started."}
         </p>
       ) : (
@@ -187,7 +187,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
           {/* Computers: a table, one row per child. */}
           <div className="hidden overflow-x-auto rounded-dash border-2 border-line bg-paper lg:block">
             <table className="w-full text-[14px]">
-              <caption className="sr-only">Children{group ? ` in the ${group}s` : ""}, their parents and what they still need</caption>
+              <caption className="sr-only">Children{group ? ` in the ${groupPlural(group)}` : ""}, their parents and what they still need</caption>
               <thead>
                 <tr className="border-b-2 border-line text-left text-label text-ink-muted uppercase">
                   <th scope="col" className="px-3 py-2.5 font-bold">

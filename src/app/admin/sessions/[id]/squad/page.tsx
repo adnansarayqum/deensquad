@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Section } from "@/components/admin/bits";
+import { PageHeader, Section } from "@/components/admin/bits";
 import { SquadPicker } from "@/components/admin/SquadPicker";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { WritingHelp } from "@/components/writing/WritingHelp";
@@ -31,20 +30,17 @@ export default async function SquadPage({ params }: PageProps<"/admin/sessions/[
 
   return (
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <Link href="/admin/sessions" className="inline-flex min-h-11 items-center text-sm font-bold text-grass-text">
-        ← Sessions
-      </Link>
-      <div className="flex flex-col gap-1">
-        <h1 className="font-display text-[40px] leading-[0.95] tracking-[0.02em]">{session.title} squad</h1>
-        <p className="text-[15px] text-ink-muted">
-          {shortDay(session.startsAt)} · {clock(session.startsAt)}–{clock(session.endsAt)} · {session.venue} · {session.ageGroups.join(", ")}
-        </p>
+      <PageHeader
+        back={{ href: "/admin/sessions", label: "Sessions" }}
+        title={`${session.title} squad`}
+        subtitle={`${shortDay(session.startsAt)} · ${clock(session.startsAt)}–${clock(session.endsAt)} · ${session.venue} · ${session.ageGroups.join(", ")}`}
+      >
         {picked > 0 ? (
           <p className="text-[15px] font-bold">
             {picked} picked · {confirmed} confirmed · {declined} can&apos;t play · {picked - confirmed - declined} not answered
           </p>
         ) : null}
-      </div>
+      </PageHeader>
 
       <Section title="Pick the squad">
         <SquadPicker sessionId={session.id} title={session.title} list={children} />

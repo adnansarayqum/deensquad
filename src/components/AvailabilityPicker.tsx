@@ -47,17 +47,23 @@ export function AvailabilityPicker({
       track("availability_answered", { answer: value });
     });
 
-  const base = `flex ${compact ? "min-h-[64px] flex-row gap-2 text-base" : "min-h-[100px] flex-col gap-1.5 text-[17px]"} flex-1 items-center justify-center rounded-app border-2 font-extrabold transition-transform active:translate-y-1 active:shadow-none`;
+  const base = `flex ${compact ? "min-h-[64px] flex-row gap-2 text-base" : "min-h-[100px] flex-col gap-1.5 text-[17px]"} min-w-0 flex-1 basis-32 items-center justify-center rounded-app border-2 px-2 text-center font-extrabold transition-transform active:translate-y-1 active:shadow-none`;
   const coming = optimistic === "coming";
   const away = optimistic === "away";
   const icon = compact ? 22 : 30;
+  // Each button is named for the child, so a family with several children doesn't hear "Coming" again and again. The
+  // visible word stays in the name (voice control users say what they see).
+  const comingName = squad ? `Yes, ${childName} can play` : `${childName} is coming`;
+  const awayName = squad ? `No, ${childName} can't play` : `Not this week: ${childName} isn't coming`;
 
   return (
     <div className="flex flex-col gap-3">
-      <div role="group" aria-label={question} className="flex gap-3">
+      {/* Side by side on a phone; one above the other when the screen is very narrow (200% zoom), never wider than it. */}
+      <div role="group" aria-label={question} className="flex flex-wrap gap-3">
         <button
           type="button"
           aria-pressed={coming}
+          aria-label={comingName}
           onClick={() => choose("coming")}
           className={`${base} ${coming ? "border-grass bg-grass text-on-grass shadow-lip-grass" : "border-line bg-paper text-ink shadow-lip-neutral"}`}
         >
@@ -67,6 +73,7 @@ export function AvailabilityPicker({
         <button
           type="button"
           aria-pressed={away}
+          aria-label={awayName}
           onClick={() => choose("away")}
           className={`${base} ${away ? "border-ink bg-cream text-ink shadow-lip-neutral" : "border-line bg-paper text-ink shadow-lip-neutral"}`}
         >

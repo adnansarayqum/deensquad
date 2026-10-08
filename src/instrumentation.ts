@@ -23,9 +23,12 @@ export async function register() {
 // A page, action or API route failed: email the maintainer (throttled; see src/lib/alerts.ts).
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const err = error as { message?: string; digest?: string };
+  const err = error as { name?: string; message?: string; digest?: string };
   // Next uses errors to redirect and to show "not found"; those aren't failures.
   if (err.digest?.startsWith("NEXT_REDIRECT") || err.digest?.startsWith("NEXT_HTTP_ERROR_FALLBACK")) return;
+  // An action body Next couldn't decode (someone poking at the site): a 500 from Next, not a fault worth a report.
+  const { isMalformedActionBody } = await import("./lib/malformed-body");
+  if (isMalformedActionBody(err, context.routeType)) return;
   // Sentry too, when it's on (scrubbed and filtered in src/lib/observability/scrub.ts). The email stays as the fallback.
   if (sentryServerDsn()) {
     try {
@@ -37,7 +40,7 @@ export const onRequestError: Instrumentation.onRequestError = async (error, requ
   }
   try {
     const { sendErrorAlert } = await import("./lib/alerts");
-    await sendErrorAlert({ message: err.message ?? String(error), digest: err.digest, path: request.path, kind: `${context.routeType} ${context.routerKind}` });
+    await sendErrorAlert({ name: err.name, message: err.message ?? String(error), digest: err.digest, path: request.path, kind: `${context.routeType} ${context.routerKind}` });
   } catch {
     // never let alerting break anything
   }

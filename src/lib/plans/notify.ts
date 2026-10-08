@@ -1,5 +1,6 @@
 import type { Queryable } from "../db/types";
 import { inQuietHours } from "../chase/ladder";
+import { groupPlural } from "../domain";
 
 // Tells parents, by app notification, about a new session plan or practice sheet for their child's group.
 // Each is announced once. Overnight ones wait for the hourly job after 8am.
@@ -33,7 +34,7 @@ export async function notifyPending(tx: Queryable, now: Date, push: Push): Promi
   for (const p of plans) {
     await push(tx, await parentsOf(tx, [p.age_group], p.session_id), {
       title: `${p.age_group} session plan for ${p.day}`,
-      body: `${p.author ?? "The coach"} has shared what the ${p.age_group}s will work on.`,
+      body: `${p.author ?? "The coach"} has shared what the ${groupPlural(p.age_group)} will work on.`,
       url: "/friday",
     });
   }

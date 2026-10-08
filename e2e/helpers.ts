@@ -13,7 +13,11 @@ export const ADMIN_STATE = "e2e/.results/admin-state.json";
 export const COACH_STATE = "e2e/.results/coach-state.json";
 /** The install gate tests' parent sign-in (e2e/parent-install-gate.spec.ts). */
 export const GATE_PARENT_STATE = "e2e/.results/gate-parent-state.json";
-// All three are deleted at the start of every run (e2e/global-setup.ts).
+/** The family that signs up in e2e/parent-your-data.spec.ts. */
+export const YOUR_DATA_PARENT_STATE = "e2e/.results/your-data-parent-state.json";
+/** The family with a daughter in Girls (e2e/parent-girls.spec.ts). */
+export const GIRLS_PARENT_STATE = "e2e/.results/girls-parent-state.json";
+// All five are deleted at the start of every run (e2e/global-setup.ts).
 
 export function latestCode(email: string, outbox = OUTBOX): string {
   const lines = readFileSync(outbox, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string; text: string });
@@ -57,4 +61,13 @@ export async function newContext(browser: Browser, options?: BrowserContextOptio
   const context = await browser.newContext(options);
   await skipInstallGate(context);
   return context;
+}
+
+/**
+ * Opens a card folded on phones (FoldCard in src/components/admin/bits.tsx: Add sessions, Add a coach or admin).
+ * Folded at every size, so the list is on the first screen; nothing to tap once it's open.
+ */
+export async function unfold(page: Page, id: string) {
+  const toggle = page.locator(`label[for="${id}"]`);
+  if ((await toggle.isVisible()) && !(await page.locator(`#${id}`).isChecked())) await toggle.click();
 }
