@@ -15,6 +15,7 @@ import { cleanPhone, cleanText } from "../validate";
 import { appUrl, teamFeePayUrl } from "../config";
 import { reportFamilyPayment, saveAnswer } from "./data";
 import { readPhoto } from "../files";
+import { cleanPhoto } from "../photo-clean";
 import { addMyChild, checkDateOfBirth, cleanName, clearMyChildPhoto, haveChild, loadMyChild, setMyChildPhoto, updateMyChild, updateMyDetails } from "./profile";
 
 // Parent Server Actions. Each checks the session, validates its input, then writes as that parent,
@@ -223,11 +224,14 @@ export async function saveChildPhoto(_prev: PhotoFormState, formData: FormData):
   if (typeof id !== "string" || !UUID.test(id)) return { error: RELOAD };
   const photo = await readPhoto(formData.get("photo"), formData.get("resized") === "1");
   if (!photo.ok) return { error: photo.error };
+  // Always re-encoded here (no location or camera details kept), even when the browser already shrank it.
+  const clean = await cleanPhoto(photo.photo.data);
+  if (!clean) return { error: "We couldn't read that photo. Try another one." };
   const error = await asUser(user.id, async (tx) => {
     const child = await loadMyChild(tx, id);
     if (!child) return RELOAD;
     if (child.photoConsent !== true) return `Turn on photo consent for ${child.firstName} to add a photo.`;
-    await setMyChildPhoto(tx, id, photo.photo);
+    await setMyChildPhoto(tx, id, clean);
     return null;
   });
   if (error) return { error };

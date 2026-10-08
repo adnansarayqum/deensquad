@@ -77,7 +77,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "name, date of birth, group, shirt number and position",
               "whether they are coming to each session, and when they were checked in at the gate",
               "your answer about club photos",
-              "a photo of your child, if you add one and have said yes to photos: seen only by the club's coaches and admins (on the register, to learn names), never by other parents; deleted when you remove it or turn photo consent off",
+              "a photo of your child, if you add one and have said yes to photos: seen only by the club's coaches and admins (on the register, to learn names), never by other parents; stored small, without its location or camera details; deleted when you remove it or turn photo consent off (nightly backups keep it for up to 30 days)",
               "emergency contacts you give us (please check they are happy for you to share their details)",
               "points, stars, badges and notes from the coaches",
               "kit they have ordered from the club shop",

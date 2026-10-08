@@ -12,7 +12,10 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
   if (!user) return new Response("Sign in to open this file.", { status: 401 });
   if (!UUID.test(id)) return new Response("Not found", { status: 404 });
   const [file] = await asUser(user.id, (tx) =>
-    tx.query<{ name: string; mime: string; data: Uint8Array }>(`select name, mime, data from club_files where id = $1`, [id]),
+    tx.query<{ name: string; mime: string; data: Uint8Array; photo: boolean }>(
+      `select f.name, f.mime, f.data, exists (select 1 from players p where p.photo_file_id = f.id) as photo from club_files f where f.id = $1`,
+      [id],
+    ),
   );
   if (!file) return new Response("Not found", { status: 404 });
   // No extra copy: an 8 MB plan opened by many parents at once is already several copies in memory per request.
@@ -22,7 +25,8 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
       "Content-Type": file.mime,
       "Content-Disposition": contentDisposition(file.name, new URL(request.url).searchParams.get("download") === "1"),
       // A file id is a UUID and its content never changes, so the browser can keep it for good (private: one person's cache).
-      "Cache-Control": "private, max-age=31536000, immutable",
+      // A child's photo is the exception: removed or consent turned off, it must not live on in a coach's browser.
+      "Cache-Control": file.photo ? "private, no-store" : "private, max-age=31536000, immutable",
       "X-Content-Type-Options": "nosniff",
     },
   });

@@ -116,7 +116,8 @@ test("a parent with photo consent adds a photo; the coach's register shows it; c
   const file = await page.request.get(src);
   expect(file.status()).toBe(200);
   expect(file.headers()["content-type"]).toBe("image/jpeg");
-  expect(file.headers()["cache-control"]).toBe("private, max-age=31536000, immutable");
+  // A child photo is never cached: once removed it must not live on in a coach's browser.
+  expect(file.headers()["cache-control"]).toBe("private, no-store");
   const width = await photo.evaluate((img: HTMLImageElement) => img.naturalWidth);
   expect(width).toBe(512);
   await expect(page.getByLabel("Change photo")).toBeVisible();
