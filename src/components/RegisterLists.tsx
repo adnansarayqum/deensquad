@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { matchesName } from "@/lib/search";
 import { FLAG_WORDS, type RegisterFlag } from "@/lib/staff/flags";
 import { CheckInButton, UndoCheckInButton } from "./CheckInButton";
+import { ChildAvatar } from "./ChildAvatar";
 import { Pill } from "./ui";
 
 // The gate register's lists (not here yet, said not coming, here) with a name search that filters them as the
@@ -16,6 +17,8 @@ export type GateRow = {
   firstName: string;
   lastInitial: string;
   ageGroup: string;
+  /** The photo a parent added for the coaches, else initials. */
+  photoId: string | null;
   answer: "coming" | "away" | null;
   /** "QR code scanned · 5:58pm" for a child who is here. */
   checkedIn: string | null;
@@ -61,6 +64,8 @@ export function RegisterLists({
   const searching = query.trim() !== "";
   const name = (r: GateRow) => `${r.firstName} ${r.lastInitial}.`;
   const group = (r: GateRow) => (showGroup ? <Pill tone="neutral">{r.ageGroup}</Pill> : null);
+  // The same height as before (the 48px button sets it), so the list still to arrive stays on the first screen.
+  const face = (r: GateRow) => <ChildAvatar photoId={r.photoId} firstName={r.firstName} lastName={r.lastInitial} size={40} />;
 
   return (
     <>
@@ -95,11 +100,14 @@ export function RegisterLists({
           </h3>
           <ul className="flex flex-col gap-2.5">
             {n.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-line bg-paper py-2.5 pr-3 pl-3.5">
-                <span className="flex flex-col items-start gap-1">
-                  <span className="text-[15px] font-bold">{name(r)}</span>
-                  <span className="text-[13px] text-ink-muted">{r.answer === "coming" ? "Said they're coming" : "No answer"}</span>
-                  {group(r)}
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-line bg-paper py-2.5 pr-3 pl-3">
+                <span className="flex min-w-0 items-center gap-3">
+                  {face(r)}
+                  <span className="flex flex-col items-start gap-1">
+                    <span className="text-[15px] font-bold">{name(r)}</span>
+                    <span className="text-[13px] text-ink-muted">{r.answer === "coming" ? "Said they're coming" : "No answer"}</span>
+                    {group(r)}
+                  </span>
                 </span>
                 <CheckInButton sessionId={sessionId} playerId={r.id} name={name(r)} disabled={!open} />
               </li>
@@ -118,12 +126,15 @@ export function RegisterLists({
           <p className="text-[13px] text-ink-muted">If one of them turns up, mark them here.</p>
           <ul className="flex flex-col gap-2.5">
             {a.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-line bg-cream py-2.5 pr-3 pl-3.5">
-                <span className="flex flex-col items-start gap-1">
-                  <span className="text-[15px] font-bold">{name(r)}</span>
-                  <span className="flex flex-wrap gap-1">
-                    <Pill tone="neutral">Said not coming</Pill>
-                    {group(r)}
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-line bg-cream py-2.5 pr-3 pl-3">
+                <span className="flex min-w-0 items-center gap-3">
+                  {face(r)}
+                  <span className="flex flex-col items-start gap-1">
+                    <span className="text-[15px] font-bold">{name(r)}</span>
+                    <span className="flex flex-wrap gap-1">
+                      <Pill tone="neutral">Said not coming</Pill>
+                      {group(r)}
+                    </span>
                   </span>
                 </span>
                 <CheckInButton sessionId={sessionId} playerId={r.id} name={name(r)} disabled={!open} />
@@ -144,16 +155,19 @@ export function RegisterLists({
         ) : (
           <ul className="flex flex-col gap-2.5">
             {h.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-grass-tint py-2 pr-2 pl-3.5">
-                <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
-                  <span className="text-[15px] font-bold">{name(r)}</span>
-                  <span className="text-[13px] text-ink-muted">{r.checkedIn}</span>
-                  {showGroup || r.flags.length ? (
-                    <span className="flex flex-wrap gap-1">
-                      {group(r)}
-                      <FlagPills flags={r.flags} />
-                    </span>
-                  ) : null}
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-grass-tint py-2 pr-2 pl-3">
+                <span className="flex min-w-0 flex-1 items-center gap-3">
+                  {face(r)}
+                  <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
+                    <span className="text-[15px] font-bold">{name(r)}</span>
+                    <span className="text-[13px] text-ink-muted">{r.checkedIn}</span>
+                    {showGroup || r.flags.length ? (
+                      <span className="flex flex-wrap gap-1">
+                        {group(r)}
+                        <FlagPills flags={r.flags} />
+                      </span>
+                    ) : null}
+                  </span>
                 </span>
                 <UndoCheckInButton sessionId={sessionId} playerId={r.id} name={name(r)} disabled={!open} />
               </li>

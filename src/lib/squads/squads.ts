@@ -17,6 +17,8 @@ export type SquadChild = {
   lastName: string;
   ageGroup: AgeGroup;
   shirtNumber: number | null;
+  /** The photo a parent added for the coaches. */
+  photoId: string | null;
   picked: boolean;
   /** The family's answer: coming = confirmed, away = can't play. */
   answer: Availability | null;
@@ -50,6 +52,7 @@ export async function loadSquad(
     last_name: string;
     age_group: AgeGroup;
     shirt_number: number | null;
+    photo_file_id: string | null;
     picked: boolean;
     answer: Availability | null;
     held: number;
@@ -73,7 +76,7 @@ export async function loadSquad(
        where p.joined_on <= (s.starts_at at time zone 'Europe/London')::date or t.player_id is not null
        group by p.id
      )
-     select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number,
+     select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number, p.photo_file_id,
        q.player_id is not null as picked, a.answer::text as answer,
        coalesce(se.held, 0) as held, coalesce(se.attended, 0) as attended
      from players p
@@ -92,6 +95,7 @@ export async function loadSquad(
       lastName: r.last_name,
       ageGroup: r.age_group,
       shirtNumber: r.shirt_number,
+      photoId: r.photo_file_id,
       picked: r.picked,
       answer: r.picked ? r.answer : null,
       season: { attended: r.attended, held: r.held },

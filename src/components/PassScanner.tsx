@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, QrCode, RotateCcw, TriangleAlert, WifiOff, X } from "lucide-react";
 import type { ScanResult } from "@/lib/staff/checkin";
+import { ChildAvatar } from "./ChildAvatar";
 import { FLAG_WORDS } from "@/lib/staff/flags";
 
 const reasonText = {
@@ -274,11 +275,23 @@ function ChildResult({ child: c }: { child: Extract<ScanResult, { ok: true }>["c
   const tone = !here ? "bg-paper" : c.flags.length ? "bg-orange-tint" : "bg-grass-tint";
   return (
     <div className={`flex items-center gap-4 rounded-app p-4 text-ink ${tone}`}>
-      <span
-        className={`grid h-16 w-16 shrink-0 place-items-center rounded-pill ${here ? "bg-grass text-on-grass" : "bg-line text-ink-muted"}`}
-      >
-        {here ? <Check aria-hidden size={34} strokeWidth={3} /> : <X aria-hidden size={30} />}
-      </span>
+      {c.photoId ? (
+        // The parent's photo, with the result as a badge on it, so the coach can see it's the right child.
+        <span className="relative shrink-0">
+          <ChildAvatar photoId={c.photoId} firstName={c.firstName} size={72} />
+          <span
+            className={`absolute -right-1 -bottom-1 grid h-8 w-8 place-items-center rounded-pill border-2 border-paper ${here ? "bg-grass text-on-grass" : "bg-line text-ink-muted"}`}
+          >
+            {here ? <Check aria-hidden size={18} strokeWidth={3} /> : <X aria-hidden size={16} />}
+          </span>
+        </span>
+      ) : (
+        <span
+          className={`grid h-16 w-16 shrink-0 place-items-center rounded-pill ${here ? "bg-grass text-on-grass" : "bg-line text-ink-muted"}`}
+        >
+          {here ? <Check aria-hidden size={34} strokeWidth={3} /> : <X aria-hidden size={30} />}
+        </span>
+      )}
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="font-display text-[34px] leading-none tracking-[0.02em]">
           {c.firstName} {c.lastInitial}.

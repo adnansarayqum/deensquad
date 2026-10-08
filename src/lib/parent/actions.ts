@@ -14,7 +14,8 @@ import { isAgeGroup, type Availability } from "../domain";
 import { cleanPhone, cleanText } from "../validate";
 import { appUrl, teamFeePayUrl } from "../config";
 import { reportFamilyPayment, saveAnswer } from "./data";
-import { addMyChild, checkDateOfBirth, cleanName, haveChild, loadMyChild, updateMyChild, updateMyDetails } from "./profile";
+import { readPhoto } from "../files";
+import { addMyChild, checkDateOfBirth, cleanName, clearMyChildPhoto, haveChild, loadMyChild, setMyChildPhoto, updateMyChild, updateMyDetails } from "./profile";
 
 // Parent Server Actions. Each checks the session, validates its input, then writes as that parent,
 // so row level security (and the database functions) decide whether the write is allowed.
@@ -208,6 +209,45 @@ export async function saveMyChild(_prev: ProfileFormState, formData: FormData): 
   if (!saved) return { error: RELOAD };
   refresh();
   return { saved: true };
+}
+
+export type PhotoFormState = { error?: string; saved?: "added" | "removed" };
+
+/**
+ * Adds or replaces a child's photo for the coaches. Only the parent's own child, and only while photo consent is
+ * yes (the database refuses otherwise too). `resized` says the browser already shrank it (2 MB cap, else 8 MB).
+ */
+export async function saveChildPhoto(_prev: PhotoFormState, formData: FormData): Promise<PhotoFormState> {
+  const user = await requireParent();
+  const id = formData.get("child");
+  if (typeof id !== "string" || !UUID.test(id)) return { error: RELOAD };
+  const photo = await readPhoto(formData.get("photo"), formData.get("resized") === "1");
+  if (!photo.ok) return { error: photo.error };
+  const error = await asUser(user.id, async (tx) => {
+    const child = await loadMyChild(tx, id);
+    if (!child) return RELOAD;
+    if (child.photoConsent !== true) return `Turn on photo consent for ${child.firstName} to add a photo.`;
+    await setMyChildPhoto(tx, id, photo.photo);
+    return null;
+  });
+  if (error) return { error };
+  refresh();
+  return { saved: "added" };
+}
+
+/** Takes a child's photo off; the file is deleted with it. */
+export async function removeChildPhoto(_prev: PhotoFormState, formData: FormData): Promise<PhotoFormState> {
+  const user = await requireParent();
+  const id = formData.get("child");
+  if (typeof id !== "string" || !UUID.test(id)) return { error: RELOAD };
+  const done = await asUser(user.id, async (tx) => {
+    if (!(await loadMyChild(tx, id))) return false;
+    await clearMyChildPhoto(tx, id);
+    return true;
+  });
+  if (!done) return { error: RELOAD };
+  refresh();
+  return { saved: "removed" };
 }
 
 /** Adds a child to the parent's own account (linked to them alone), tells the club, and opens the child on Player. */

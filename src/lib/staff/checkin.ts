@@ -15,6 +15,8 @@ export type ScannedChild = {
   firstName: string;
   lastInitial: string;
   shirtNumber: number | null;
+  /** The photo a parent added for the coaches (a club_files id). */
+  photoId: string | null;
   ageGroup: AgeGroup;
   status: "checked_in" | "already_here" | "no_session_today";
   session: { title: string; startsAt: string } | null;
@@ -34,11 +36,12 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
     shirt_number: number | null;
     age_group: AgeGroup;
     photo_consent: boolean | null;
+    photo_file_id: string | null;
     payment: PaymentState;
     unread_news: boolean;
     kit_ready: boolean;
   }>(
-    `select p.id, p.first_name, p.last_name, p.shirt_number, p.age_group::text as age_group, p.photo_consent,
+    `select p.id, p.first_name, p.last_name, p.shirt_number, p.age_group::text as age_group, p.photo_consent, p.photo_file_id,
        coalesce(ps.state, 'missing')::text as payment,
        ${unreadNewsSql("$2")} as unread_news,
        exists (
@@ -76,6 +79,7 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
       firstName: c.first_name,
       lastInitial: c.last_name[0] ?? "",
       shirtNumber: c.shirt_number,
+      photoId: c.photo_file_id,
       ageGroup: c.age_group,
       status,
       session: session ? { title: session.title, startsAt: iso(session.starts_at) } : null,

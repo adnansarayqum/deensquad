@@ -4,6 +4,7 @@ import { Notice, PageHeader, Section } from "@/components/admin/bits";
 import { FamiliesFilterFields } from "@/components/admin/FamiliesFilterFields";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
+import { ChildAvatar } from "@/components/ChildAvatar";
 import { removeChild, resendInvite, saveGuardian, setPayment, unlinkGuardian, updateChild } from "@/lib/admin/actions";
 import { loadChild } from "@/lib/admin/data";
 import { familiesFilter, familiesHref } from "@/lib/admin/families-link";
@@ -140,6 +141,17 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
       </Section>
 
       <Section title="From the parents">
+        {child.photo ? (
+          <div className="flex items-center gap-4">
+            <ChildAvatar photoId={child.photo.id} firstName={child.firstName} lastName={child.lastName} size={96} />
+            <p className="text-[15px] leading-[22px]">
+              <span className="font-bold">Photo for the coaches</span>
+              {child.photo.addedAt ? (
+                <span className="block text-sm text-ink-muted">Added by the parent on {signedOn.format(new Date(child.photo.addedAt))}</span>
+              ) : null}
+            </p>
+          </div>
+        ) : null}
         <dl className="grid gap-2 text-[15px] sm:grid-cols-2">
           <div>
             <dt className="text-sm text-ink-muted">Photo consent</dt>

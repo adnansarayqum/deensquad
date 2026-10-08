@@ -68,3 +68,29 @@ export function fileLabel(f: FileRef): string {
   const size = f.size >= 1024 * 1024 ? `${(f.size / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB`;
   return `${kind} · ${size}`;
 }
+
+// A child's photo for the coaches (Player → a child's details). With JavaScript the browser shrinks it to a
+// 512px JPEG before sending (`resized`), so anything over 2 MB then is refused; without, the photo as taken, up to 8 MB.
+
+export const MAX_RESIZED_PHOTO_BYTES = 2 * 1024 * 1024;
+export const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+export type PhotoCheck = { ok: true; photo: { mime: string; data: Uint8Array } } | { ok: false; error: string };
+
+export function photoTooBig(bytes: number): string {
+  const mb = Math.ceil((bytes / (1024 * 1024)) * 10) / 10;
+  return `That photo is ${mb.toFixed(1)} MB. The limit is 8 MB. Try another photo.`;
+}
+
+/** Checks a child's photo by its bytes: a JPEG, PNG or WebP, within the size limit. */
+export async function readPhoto(value: FormDataEntryValue | null, resized: boolean): Promise<PhotoCheck> {
+  if (!value || typeof value === "string" || value.size === 0) return { ok: false, error: "Choose a photo first." };
+  const limit = resized ? MAX_RESIZED_PHOTO_BYTES : MAX_FILE_BYTES;
+  if (value.size > limit) {
+    return { ok: false, error: resized ? "That photo is still too big after shrinking it. Try another one." : photoTooBig(value.size) };
+  }
+  const data = new Uint8Array(await value.arrayBuffer());
+  const mime = sniff(data);
+  if (!mime || !(PHOTO_TYPES as readonly string[]).includes(mime)) return { ok: false, error: "Choose a photo (JPEG, PNG or WebP)." };
+  return { ok: true, photo: { mime, data } };
+}
