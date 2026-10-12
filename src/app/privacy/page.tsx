@@ -138,6 +138,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
             items={[
               "Club admins can see every family. Coaches see the children in the groups they coach.",
               "Other parents never see your details. They only see how many children in a group are coming to a session, not who.",
+              "Your child's other parents or carers in the app (added by the club, or by you or them from Players → Your family, with their own email and sign-in) see what you see about that child, and your name and answers. Adding someone sends them a sign-in link, and the club is told. To take someone off, ask the club.",
               "Messages in the app between you and the club are about one child. Both of that child's parents can read them, as can the coach they were sent to, the child's coaches and the club's admins (so no conversation with a child's family is ever hidden from the club). Other parents never see them. Messages can't be edited or deleted: they are kept as club records.",
               "Ratings and progress reports are written by the club's coaches and admins. Staff can see them; you see your own child's in the app once the club turns this on, and only reports the coach has published. Other parents never see them, and you never see other children's.",
             ]}

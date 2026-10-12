@@ -5,7 +5,7 @@ import { appUrl } from "../config";
 import { asSystem } from "../db";
 import { AGE_GROUPS } from "../domain";
 import { sendEmails, type Email } from "../email/send";
-import { inviteEmail } from "../email/templates";
+import { coParentAddedEmail, coParentInviteEmail, inviteEmail } from "../email/templates";
 import { UNINVITED, familyWhere, type FamilyFilter } from "./data";
 
 /**
@@ -68,4 +68,56 @@ export async function sendInvites(opts: {
     if (failed.length) await tx.query(`delete from auth.sign_in_requests where id = any($1::uuid[])`, [failed.map((i) => i.requestId)]);
   });
   return { sent: sent.length, failed: failed.length };
+}
+
+/**
+ * A parent added the other parent (Player → Your family): emails that parent a week-long sign-in link naming who added
+ * them and the children they were added to, and tells the club's admins. Marks them invited only if the email went;
+ * a link that never went is dropped. Run after the response (`after` + `enqueue`); never throws for an email.
+ */
+export async function sendCoParentInvite(opts: { guardianId: string; addedBy: string; children: string[]; baseUrl: string | null }): Promise<boolean> {
+  const base = opts.baseUrl ?? appUrl();
+  if (!base) return false;
+  const now = new Date();
+  const invite = await asSystem(async (tx) => {
+    const [g] = await tx.query<{ first_name: string; last_name: string; email: string | null }>(`select first_name, last_name, email from guardians where id = $1`, [
+      opts.guardianId,
+    ]);
+    if (!g?.email) return null;
+    const issued = await issueSignIn(tx, { email: g.email.toLowerCase(), ip: null, now, purpose: "invite" });
+    if (!issued.ok) return null;
+    const admins = await tx.query<{ email: string }>(`select email from staff where role = 'admin'`);
+    return {
+      requestId: issued.request.requestId,
+      email: coParentInviteEmail({
+        to: g.email,
+        firstName: g.first_name,
+        addedBy: opts.addedBy,
+        children: opts.children,
+        link: `${base}/sign-in/link?token=${issued.request.token}`,
+        appUrl: base,
+      }),
+      admins: admins.map((a) => a.email),
+      parentName: `${g.first_name} ${g.last_name}`.trim(),
+      address: g.email,
+    };
+  });
+  if (!invite) return false;
+  const report = await sendEmails([invite.email]);
+  const went = report.sent.includes(invite.email);
+  await asSystem((tx) =>
+    went
+      ? tx.query(`update guardians set invited_at = coalesce(invited_at, $2) where id = $1`, [opts.guardianId, now])
+      : tx.query(`delete from auth.sign_in_requests where id = $1`, [invite.requestId]),
+  );
+  if (!went) console.error("[add parent] invite email not sent.");
+  if (invite.admins.length) {
+    const club = await sendEmails(
+      invite.admins.map((to) =>
+        coParentAddedEmail({ to, addedBy: opts.addedBy, parentName: invite.parentName, email: invite.address, children: opts.children, invited: went, link: `${base}/admin/families`, appUrl: base }),
+      ),
+    );
+    if (club.failed.length) console.error(`[add parent] club email not sent to ${club.failed.length} admin(s).`);
+  }
+  return went;
 }

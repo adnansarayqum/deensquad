@@ -27,7 +27,7 @@ export default async function AddChildPage() {
         <Card className="p-4">
           <AddChildForm groups={AGE_GROUPS.map((g) => ({ value: g, label: GROUP_LABELS[g] }))} lastName={details.lastName} today={londonIsoDate(new Date())} />
         </Card>
-        <p className="px-1 text-sm leading-5 text-ink-muted">Other parents can be added by the club.</p>
+        <p className="px-1 text-sm leading-5 text-ink-muted">To give the other parent their own sign-in, use Add the other parent on Players.</p>
       </main>
     </>
   );

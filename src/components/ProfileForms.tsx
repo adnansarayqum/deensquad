@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, type ReactNode } from "react";
-import { addChild, saveMyChild, saveMyDetails, type ProfileFormState } from "@/lib/parent/actions";
+import { addChild, addParent, saveMyChild, saveMyDetails, type AddParentState, type ProfileFormState } from "@/lib/parent/actions";
 import { submitKeepingInput } from "@/components/submitKeepingInput";
 
 // Player → Your details, a child's details and Add a child. Each is a plain form posting a server action
@@ -145,6 +145,50 @@ export function AddChildForm({ groups, lastName, today }: { groups: Group[]; las
       <Outcome state={state} pending={pending} saved="Added." />
       <button type="submit" className="btn-chunky btn-grass" disabled={pending}>
         {pending ? "Adding…" : "Add child"}
+      </button>
+    </Form>
+  );
+}
+
+/**
+ * Player → Your family → Add the other parent. With one child the child is a hidden field; with several, a tick box
+ * each, all ticked to start. Clears itself once they're added and says so.
+ */
+export function AddParentForm({ childList: children }: { childList: { id: string; firstName: string }[] }) {
+  const [state, run, pending] = useActionState<AddParentState, FormData>(addParent, {});
+  return (
+    <Form run={run} state={state}>
+      <div className="grid grid-cols-2 gap-3">
+        <Field id="parentFirstName" name="firstName" label="First name" />
+        <Field id="parentLastName" name="lastName" label="Last name" />
+      </div>
+      <Field id="parentEmail" name="email" label="Email address" type="email" hint="We email them a link to sign in. It's how they sign in from then on." />
+      <Field id="parentPhone" name="phone" label="Mobile number (optional)" type="tel" inputMode="tel" />
+      {children.length === 1 ? (
+        <input type="hidden" name="child" value={children[0].id} />
+      ) : (
+        <fieldset className="flex flex-col gap-2">
+          <legend className="field-label">Their children</legend>
+          {children.map((c) => (
+            <label key={c.id} className="flex min-h-12 items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 text-[15px] font-bold has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
+              <input type="checkbox" name="child" value={c.id} defaultChecked className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+              {c.firstName}
+            </label>
+          ))}
+        </fieldset>
+      )}
+      {state.error ? (
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] leading-[22px] text-ink">
+          {state.error}
+        </p>
+      ) : null}
+      {state.saved && !pending ? (
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+          {state.message}
+        </p>
+      ) : null}
+      <button type="submit" className="btn-chunky btn-grass" disabled={pending}>
+        {pending ? "Adding…" : "Add parent"}
       </button>
     </Form>
   );

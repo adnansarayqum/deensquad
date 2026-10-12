@@ -118,3 +118,43 @@ export async function setMyChildPhoto(tx: Queryable, childId: string, photo: { m
 export async function clearMyChildPhoto(tx: Queryable, childId: string): Promise<void> {
   await tx.query(`select clear_my_child_photo($1)`, [childId]);
 }
+
+/** Another parent on the family's children, as the Add a parent page lists them. */
+export type FamilyParent = { id: string; firstName: string; lastName: string; you: boolean; signedIn: boolean; invited: boolean; children: string[] };
+
+/**
+ * Every parent of the caller's own children (the caller included), with which of the children they're linked to. Read
+ * as the parent: the guardians policy shows a parent the other parents of their children, never anyone else.
+ */
+export async function loadFamilyParents(tx: Queryable): Promise<FamilyParent[]> {
+  const rows = await tx.query<{ id: string; first_name: string; last_name: string; you: boolean; signed_in: boolean; invited: boolean; children: string[] }>(
+    `select g.id, g.first_name, g.last_name, g.id = my_guardian_id() as you, g.auth_user_id is not null as signed_in,
+            g.invited_at is not null as invited,
+            array_agg(p.first_name order by p.date_of_birth nulls last, p.first_name) as children
+     from guardians g
+     join player_guardians pg on pg.guardian_id = g.id
+     join players p on p.id = pg.player_id
+     where pg.player_id in (select my_player_ids())
+     group by g.id
+     order by (g.id = my_guardian_id()) desc, g.first_name`,
+  );
+  return rows.map((r) => ({ id: r.id, firstName: r.first_name, lastName: r.last_name, you: r.you, signedIn: r.signed_in, invited: r.invited, children: r.children }));
+}
+
+export type CoParentResult = { guardianId: string; created: boolean; linked: number };
+
+/**
+ * Links the other parent to some of the caller's own children (`add_my_co_parent`, migration 0029): found by email or
+ * added. The database refuses anything not the caller's, their own email, a fifth parent on a child and a sixth
+ * parent added in 24 hours; the action turns those into messages.
+ */
+export async function addMyCoParent(
+  tx: Queryable,
+  parent: { firstName: string; lastName: string; email: string; phone: string | null; children: string[] },
+): Promise<CoParentResult> {
+  const [row] = await tx.query<{ guardian_id: string; created: boolean; linked: number }>(
+    `select guardian_id, created, linked::int as linked from add_my_co_parent($1, $2, $3, $4, $5::uuid[])`,
+    [parent.firstName, parent.lastName, parent.email, parent.phone, parent.children],
+  );
+  return { guardianId: row.guardian_id, created: row.created, linked: row.linked };
+}

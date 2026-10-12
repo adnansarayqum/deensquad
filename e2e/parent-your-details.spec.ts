@@ -83,7 +83,7 @@ test("a parent adds a child in U10: on Player, on Friday, on the admin's Familie
   await page.goto("/player/add-child");
   await expect(page.getByRole("heading", { name: "Add a child" })).toBeVisible();
   await expect(page.getByLabel("Last name")).toHaveValue("Haddad");
-  await expect(page.getByText("Other parents can be added by the club.")).toBeVisible();
+  await expect(page.getByText("To give the other parent their own sign-in, use Add the other parent on Players.")).toBeVisible();
   await page.screenshot({ path: shot("player-add-child"), fullPage: true });
 
   // A child already on the account (same first name and date of birth) is refused.
@@ -123,4 +123,73 @@ test("a parent adds a child in U10: on Player, on Friday, on the admin's Familie
   await admin.goto("/admin/families?group=U10&q=Omar");
   await expect(admin.getByText("Omar Haddad").filter({ visible: true })).toBeVisible();
   await adminContext.close();
+});
+
+test("a parent adds the other parent: they're emailed a link, sign in and see the same children; the club is told", async ({ browser }) => {
+  test.skip(!existsSync(YOUR_DATA_PARENT_STATE), "needs the sign-up in parent-your-data.spec.ts");
+  const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
+  const page = await context.newPage();
+  await page.goto("/player");
+  const link = page.getByRole("region", { name: "Your family" }).getByRole("link", { name: "Add the other parent" });
+  expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  await link.click();
+  await expect(page).toHaveURL(/\/player\/add-parent$/);
+  const now = page.getByRole("region", { name: "Parents in the app now" });
+  await expect(now.getByText("Maryam Haddad")).toBeVisible();
+  // Every child starts ticked.
+  for (const child of ["Layla", "Zaid", "Omar"]) await expect(page.getByRole("checkbox", { name: child })).toBeChecked();
+
+  // Their own email is refused, with what was typed kept.
+  await page.getByLabel("First name").fill("Yasir");
+  await page.getByLabel("Last name").fill("Haddad");
+  await page.getByLabel("Email address").fill("Maryam.Haddad@example.com");
+  await page.getByRole("button", { name: "Add parent" }).click();
+  await expect(page.locator("main").getByRole("alert")).toHaveText("That's your own email. Add the other parent's email.");
+  await expect(page.getByLabel("First name")).toHaveValue("Yasir");
+
+  const before = readFileSync(OUTBOX, "utf8").trim().split("\n").length;
+  await page.getByLabel("Email address").fill("yasir.haddad@example.com");
+  await page.getByRole("checkbox", { name: "Omar" }).uncheck();
+  await page.getByRole("button", { name: "Add parent" }).click();
+  await expect(page.locator("main").getByRole("status")).toHaveText("Yasir has been added to Layla and Zaid. We're emailing them a link to sign in.");
+  await expect(now.getByText("Yasir Haddad")).toBeVisible();
+  await page.screenshot({ path: shot("player-add-parent"), fullPage: true });
+
+  // Adding him again to the same children says so.
+  await page.getByLabel("First name").fill("Yasir");
+  await page.getByLabel("Last name").fill("Haddad");
+  await page.getByLabel("Email address").fill("yasir.haddad@example.com");
+  await page.getByRole("checkbox", { name: "Omar" }).uncheck();
+  await page.getByRole("button", { name: "Add parent" }).click();
+  await expect(page.locator("main").getByRole("alert")).toHaveText("Yasir is already a parent of Layla and Zaid in the app.");
+  await context.close();
+
+  // The invite (naming who added him) and the club's email.
+  type Mail = { to: string; subject: string; text: string };
+  const mails = () =>
+    readFileSync(OUTBOX, "utf8")
+      .trim()
+      .split("\n")
+      .slice(before)
+      .map((l) => JSON.parse(l) as Mail);
+  await expect.poll(() => mails().filter((m) => m.to === "yasir.haddad@example.com").length).toBe(1);
+  const invite = mails().find((m) => m.to === "yasir.haddad@example.com")!;
+  expect(invite.subject).toBe("Maryam Haddad added you to the Deen Squad app");
+  expect(invite.text).toContain("as a parent of Layla and Zaid");
+  await expect.poll(() => mails().filter((m) => m.subject === "Parent added by Maryam Haddad: Yasir Haddad for Layla and Zaid").map((m) => m.to)).toEqual([
+    "admin@deensquad.test",
+  ]);
+
+  // Yasir signs in from the link and sees Layla and Zaid, not Omar.
+  const yasirContext = await newContext(browser, PHONE);
+  const yasir = await yasirContext.newPage();
+  await yasir.goto(invite.text.match(/http\S+\/sign-in\/link\?token=\S+/)![0]);
+  await yasir.getByRole("button", { name: "Continue" }).click();
+  await expect(yasir).not.toHaveURL(/sign-in/);
+  await yasir.goto("/player");
+  const choose = yasir.getByRole("navigation", { name: "Choose a child" });
+  await expect(choose.getByRole("link", { name: "Layla" })).toBeVisible();
+  await expect(choose.getByRole("link", { name: "Zaid" })).toBeVisible();
+  await expect(choose.getByRole("link", { name: "Omar" })).toHaveCount(0);
+  await yasirContext.close();
 });

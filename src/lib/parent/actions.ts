@@ -16,7 +16,11 @@ import { appUrl, teamFeePayUrl } from "../config";
 import { reportFamilyPayment, saveAnswer } from "./data";
 import { readPhoto } from "../files";
 import { cleanPhoto } from "../photo-clean";
-import { addMyChild, checkDateOfBirth, cleanName, clearMyChildPhoto, haveChild, loadMyChild, setMyChildPhoto, updateMyChild, updateMyDetails } from "./profile";
+import { addMyChild, addMyCoParent, checkDateOfBirth, cleanName, clearMyChildPhoto, haveChild, loadMyChild, setMyChildPhoto, updateMyChild, updateMyDetails } from "./profile";
+import { after } from "next/server";
+import { normaliseEmail } from "../auth/tokens";
+import { enqueue } from "../background";
+import { sendCoParentInvite } from "../admin/invites";
 
 // Parent Server Actions. Each checks the session, validates its input, then writes as that parent,
 // so row level security (and the database functions) decide whether the write is allowed.
@@ -288,4 +292,71 @@ async function tellClubAboutChild(userId: string, childName: string, group: stri
   } catch (error) {
     console.error("[add child] club email failed:", error instanceof Error ? error.message : error);
   }
+}
+
+export type AddParentState = { error?: string; saved?: boolean; message?: string };
+
+/** The database's refusals from `add_my_co_parent` (migration 0029), as the parent reads them. */
+function coParentRefusal(error: unknown): string | null {
+  const message = error instanceof Error ? error.message : "";
+  if (message.includes("own email")) return "That's your own email. Add the other parent's email.";
+  if (message.includes("too many parents")) return "A child can have up to 4 parents in the app. Ask the club to change who's on the account.";
+  if (message.includes("too many today")) return "You've added a lot of parents today. Try again tomorrow, or ask the club.";
+  if (message.includes("invalid email")) return "Check the email address.";
+  if (message.includes("invalid name")) return "Add their first and last name.";
+  return null;
+}
+
+/**
+ * Player → Your family → Add the other parent: links another parent to some or all of this parent's own children
+ * (found by email or added), then, after the response, emails them a sign-in link and tells the club's admins.
+ */
+export async function addParent(_prev: AddParentState, formData: FormData): Promise<AddParentState> {
+  const user = await requireParent();
+  const firstName = cleanName(formData.get("firstName"));
+  const lastName = cleanName(formData.get("lastName"));
+  const emailText = cleanText(formData.get("email"), 254);
+  const email = normaliseEmail(emailText);
+  const phoneText = cleanText(formData.get("phone"), 30);
+  const phone = phoneText ? cleanPhone(phoneText) : null;
+  const children = formData.getAll("child").filter((c): c is string => typeof c === "string" && UUID.test(c));
+  if (!firstName || !lastName) return { error: "Add their first and last name." };
+  if (!emailText) return { error: "Add their email address. It's how they sign in." };
+  if (!email) return { error: "Check the email address." };
+  if (phoneText && !phone) return { error: "Check their mobile number, like 07700 900123." };
+  if (children.length === 0) return { error: "Choose at least one child." };
+
+  let outcome: { result: Awaited<ReturnType<typeof addMyCoParent>>; names: string[]; me: string } | { error: string };
+  try {
+    outcome = await asUser(user.id, async (tx) => {
+      const names = await tx.query<{ first_name: string }>(
+        `select first_name from players where id = any($1::uuid[]) and id in (select my_player_ids()) order by date_of_birth nulls last, first_name`,
+        [children],
+      );
+      if (names.length !== new Set(children).size) return { error: RELOAD };
+      const [me] = await tx.query<{ first_name: string; last_name: string }>(`select first_name, last_name from guardians where id = my_guardian_id()`);
+      const result = await addMyCoParent(tx, { firstName, lastName, email, phone, children: [...new Set(children)] });
+      return { result, names: names.map((n) => n.first_name), me: `${me.first_name} ${me.last_name}`.trim() };
+    });
+  } catch (error) {
+    const refusal = coParentRefusal(error);
+    if (refusal) return { error: refusal };
+    throw error;
+  }
+  if ("error" in outcome) return { error: outcome.error };
+  const { result, names, me } = outcome;
+  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+  if (result.linked === 0) return { error: `${firstName} is already a parent of ${list} in the app.` };
+
+  const base = await baseUrl();
+  if (canSendEmail()) {
+    after(() => enqueue("add parent invite", () => sendCoParentInvite({ guardianId: result.guardianId, addedBy: me, children: names, baseUrl: base })));
+  }
+  refresh();
+  return {
+    saved: true,
+    message: canSendEmail()
+      ? `${firstName} has been added to ${list}. We're emailing them a link to sign in.`
+      : `${firstName} has been added to ${list}. They can sign in with ${email}.`,
+  };
 }

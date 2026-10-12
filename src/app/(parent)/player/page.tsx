@@ -219,6 +219,12 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
             Add a child
             <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
           </Link>
+          {family.children.length > 0 ? (
+            <Link href="/player/add-parent" className="flex min-h-12 items-center justify-between gap-3 border-t-2 border-line px-3 text-[15px] font-bold">
+              Add the other parent
+              <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+            </Link>
+          ) : null}
         </section>
 
         <section aria-labelledby="messages" className="mt-2 flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">

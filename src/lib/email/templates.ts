@@ -153,6 +153,63 @@ ${link ? button(link, "See families") : ""}`,
   return { to, subject, text, html };
 }
 
+const listNames = (names: string[]) => (names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`);
+
+/** A parent added the other parent from Player → Your family: a week-long sign-in link, naming who added them. */
+export function coParentInviteEmail(opts: { to: string; firstName: string; addedBy: string; children: string[]; link: string; appUrl: string | null }): Email {
+  const { to, firstName, addedBy, children, link, appUrl } = opts;
+  const names = listNames(children);
+  const subject = `${addedBy} added you to the Deen Squad app`;
+  const intro = `${addedBy} has added you as a parent of ${names} in the Deen Squad Football Academy app. You'll see club news, can tell the coach if ${names} ${children.length > 1 ? "are" : "is"} coming on Friday, and follow their progress.`;
+  const text = [
+    `Assalamu alaikum ${firstName},`,
+    "",
+    intro,
+    "",
+    "Open this link to sign in. It works for 7 days:",
+    link,
+    "",
+    "To keep the app on your phone, open it in your browser and choose Add to Home Screen. If it asks you to sign in again, enter this email address and we'll send you a 6-digit code.",
+    "",
+    "Not expecting this? Reply to this email and the club will take you off.",
+  ].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">Assalamu alaikum ${escape(firstName)},</p>
+<p>${escape(intro)}</p>
+${button(link, "Open the app")}
+<p style="color:#56625a">This link works for 7 days.</p>
+<p style="color:#56625a">To keep the app on your phone, open it in your browser and choose <b>Add to Home Screen</b>. If it asks you to sign in again, enter this email address and we'll send you a 6-digit code.</p>
+<p style="color:#56625a;margin-bottom:0">Not expecting this? Reply to this email and the club will take you off.</p>`,
+  );
+  return { to, subject, text, html };
+}
+
+/** Tells the club's admins a parent added another parent to their children. */
+export function coParentAddedEmail(opts: {
+  to: string;
+  addedBy: string;
+  parentName: string;
+  email: string;
+  children: string[];
+  invited: boolean;
+  link: string | null;
+  appUrl: string | null;
+}): Email {
+  const { to, addedBy, parentName, email, children, invited, link, appUrl } = opts;
+  const names = listNames(children);
+  const subject = `Parent added by ${addedBy}: ${parentName} for ${names}`;
+  const line = `${addedBy} has added ${parentName} (${email}) as a parent of ${names} in the app${invited ? ", and they've been sent a sign-in link" : ". Their sign-in link didn't send: use Send invite on Families"}.`;
+  const text = [line, "", "If that doesn't look right, take them off the child on Families.", ...(link ? ["", `See families: ${link}`] : [])].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">${escape(line)}</p>
+<p>If that doesn't look right, take them off the child on Families.</p>
+${link ? button(link, "See families") : ""}`,
+  );
+  return { to, subject, text, html };
+}
+
 /** A coach published a child's monthly progress report (only sent while progress is switched on for parents). */
 export function progressReportEmail(opts: { to: string; firstName: string; childName: string; month: string; link: string | null; appUrl: string | null }): Email {
   const { to, firstName, childName, month, link, appUrl } = opts;
