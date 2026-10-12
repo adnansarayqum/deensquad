@@ -50,6 +50,7 @@ describe("download my data", () => {
         [DEV_IDS.yusuf],
       );
     });
+    await t.asSystem((tx) => tx.query(`insert into club_settings (key, value) values ('progress_for_parents', 'false'::jsonb)`));
     const adnan = await t.signIn(DEV_EMAILS.parent);
     // Off: the app hides them, and so does the download.
     expect(await t.asUser(adnan, (tx) => tx.query(`select 1 from player_ratings`))).toHaveLength(0);
@@ -57,7 +58,7 @@ describe("download my data", () => {
     expect(off.children.find((c) => c.firstName === "Yusuf")!.ratings).toEqual([]);
     expect(off.children.find((c) => c.firstName === "Yusuf")!.progressReports).toEqual([]);
     // On: the download has them.
-    await t.asSystem((tx) => tx.query(`insert into club_settings (key, value) values ('progress_for_parents', 'true'::jsonb)`));
+    await t.asSystem((tx) => tx.query(`update club_settings set value = 'true'::jsonb where key = 'progress_for_parents'`));
     const data = await t.asUser(adnan, (tx) => buildFamilyExport(tx, now));
     const yusuf = data.children.find((c) => c.firstName === "Yusuf")!;
     expect(yusuf.ratings).toEqual([

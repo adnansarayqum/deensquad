@@ -1,7 +1,8 @@
 import type { Queryable } from "./db/types";
 
 // Club settings (migration 0026 `club_settings`): one JSON value per key, read by anyone signed in, written by admins
-// only (row level security). An absent key means the default: off, except the weekly attendance reminder (on).
+// only (row level security). An absent key means the default: on, for both progress for parents (migration 0028: the
+// club switched everything on; switching off stores false) and the weekly attendance reminder.
 
 /** Whether parents see their children's ratings and published progress reports (Admin: on /coach/ratings). */
 export const PROGRESS_FOR_PARENTS = "progress_for_parents";

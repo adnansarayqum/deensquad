@@ -16,7 +16,15 @@ async function rate(page: Page, child: string, scores: number[]) {
 }
 
 test("a coach rates two children after a session and writes Yunus's report; his parent sees nothing yet", async ({ browser }) => {
-  test.skip(!existsSync(COACH_STATE), "run with parent-app.spec.ts: needs its saved coach sign-in");
+  test.skip(!existsSync(COACH_STATE) || !existsSync(ADMIN_STATE), "run with parent-app.spec.ts: needs its saved coach and admin sign-ins");
+  // On unless switched off (migration 0028): the admin switches it off first, so the coach's work stays hidden.
+  const off = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
+  const offPage = await off.newPage();
+  await offPage.goto("/coach/ratings");
+  await expect(offPage.getByRole("heading", { name: "Parents see ratings and progress reports: On" })).toBeVisible();
+  await offPage.getByRole("button", { name: "Switch off" }).click();
+  await expect(offPage.getByRole("heading", { name: "Parents see ratings and progress reports: Off" })).toBeVisible();
+  await off.close();
   const context = await newContext(browser, { ...PHONE, storageState: COACH_STATE });
   const page = await context.newPage();
   await page.goto("/coach/awards");

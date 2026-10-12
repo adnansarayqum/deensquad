@@ -39,6 +39,8 @@ beforeAll(async () => {
   [{ id: futureFriday }] = await t.asSystem((tx) =>
     tx.query<{ id: string }>(`select id from sessions where starts_at > $1 and title = 'Training' order by starts_at limit 1`, [now]),
   );
+  // These tests start with progress switched off (absent means on since migration 0028).
+  await t.asSystem((tx) => tx.query(`insert into club_settings (key, value) values ('progress_for_parents', 'false'::jsonb)`));
 });
 
 describe("the database", () => {
@@ -65,8 +67,15 @@ describe("the database", () => {
       /row-level security/,
     );
     expect(await t.asUser(adnan, progressForParents)).toBe(false);
-    // Everyone signed in can read it; nobody signed out.
-    expect(await t.asUser(adnan, (tx) => tx.query(`select 1 from club_settings`))).toHaveLength(0);
+    // Everyone signed in can read it.
+    expect(await t.asUser(adnan, (tx) => tx.query(`select 1 from club_settings`))).toHaveLength(1);
+  });
+
+  it("is on when no admin has ever set it", async () => {
+    await t.asSystem((tx) => tx.query(`delete from club_settings where key = 'progress_for_parents'`));
+    expect(await t.asUser(adnan, progressForParents)).toBe(true);
+    await t.asSystem((tx) => tx.query(`insert into club_settings (key, value) values ('progress_for_parents', 'false'::jsonb)`));
+    expect(await t.asUser(adnan, progressForParents)).toBe(false);
   });
 });
 
