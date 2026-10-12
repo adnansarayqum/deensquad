@@ -69,6 +69,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "which children you look after and your relationship to them",
               "whether you have read club news, and the date you signed the club contract",
               "if you ask us to delete your account, the date you asked",
+              "your own entry code for the sports hub, if you add it on the attendance QR code screen: only you can see it (not the club or the coaches); it's kept until you remove it, and a copy stays on your phone for when there's no signal",
             ]}
           />
           <p>About your child:</p>
@@ -92,7 +93,16 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
             link itself. Your calendar app (or a calendar service you choose, such as Google Calendar) then fetches your children&apos;s sessions (with their first names) from the app every few hours. Anyone you give
             the link to can see them too, so keep it to yourself; resetting it stops the old link working.
           </p>
-          <p>We do not ask for health information in the app. If your child has a medical need the coaches should know about, please tell a coach directly.</p>
+          <p>
+            <b>Medical and additional needs (optional).</b> On your child&apos;s details you can tell the club about conditions or needs (for example
+            ADHD, autism or asthma), allergies, medication and how the coaches can help, so they can look after your child and know how best to work with
+            them. This is health information, so we only keep it with your explicit consent: you tick a box agreeing to it each time you save. Only you
+            (and your child&apos;s other parents in the app), the coaches of your child&apos;s group and the club&apos;s admins can see it. Other parents
+            never see it, it isn&apos;t shown on the register list at the gate (the coach taps to read it), and it never goes into club news, emails,
+            spreadsheets or the writing help (Anthropic). You can change it or remove it at any time; removing it deletes it straight away (nightly
+            backups keep a copy for up to 30 days). Otherwise we keep it until you remove it or your child leaves the club. Tell a coach in person
+            about anything urgent on the day.
+          </p>
         </Part>
 
         <Part title="Why we use it">
@@ -107,6 +117,10 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               </>,
               <>
                 <b>To keep in touch</b> (club news, reminders to read important messages, session plans): our legitimate interest in running the club well.
+              </>,
+              <>
+                <b>Medical and additional needs</b>: only with your explicit consent, to look after your child (UK GDPR Article 9(2)(a)). You can
+                withdraw it at any time by removing the information.
               </>,
               <>
                 <b>Photos</b>: only with your consent, which you can change at any time on your child&apos;s To-do list. Saying yes covers photos shared
@@ -214,7 +228,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
           <List
             items={[
               "see the information we hold about you or your child",
-              "correct anything that is wrong (you can change your own name and mobile, your children's names and dates of birth, contacts and photo consent yourself in the app, on the player screen)",
+              "correct anything that is wrong (you can change your own name and mobile, your children's names and dates of birth, contacts, photo consent and medical and additional needs yourself in the app, on the player screen)",
               "delete information we no longer need",
               "stop or limit how we use it, or object to how we use it",
               "give you a copy to take elsewhere",
