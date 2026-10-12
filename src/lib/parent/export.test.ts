@@ -38,6 +38,31 @@ describe("download my data", () => {
     expect(text).not.toContain("07700 900002");
   });
 
+  it("always includes the children's ratings and published reports, even while parents don't see them in the app", async () => {
+    await t.asSystem(async (tx) => {
+      await tx.query(
+        `insert into player_ratings (player_id, rated_on, rated_by, technique, game_understanding, physical, attitude, teamwork)
+         values ($1, '2026-10-02', (select id from staff where email = $3), 4, 3, 5, 4, 2), ($2, '2026-10-02', null, 1, 1, 1, 1, 1)`,
+        [DEV_IDS.yusuf, (await tx.query<{ id: string }>(`select id from players where first_name = 'Ahmed'`))[0].id, DEV_EMAILS.coach],
+      );
+      await tx.query(
+        `insert into progress_reports (player_id, month, body, published_at) values ($1, '2026-09-01', 'A good September.', now()), ($1, '2026-10-01', 'Draft for October.', null)`,
+        [DEV_IDS.yusuf],
+      );
+    });
+    const adnan = await t.signIn(DEV_EMAILS.parent);
+    // Off: the app hides them…
+    expect(await t.asUser(adnan, (tx) => tx.query(`select 1 from player_ratings`))).toHaveLength(0);
+    // …but the download has them.
+    const data = await t.asUser(adnan, (tx) => buildFamilyExport(tx, now));
+    const yusuf = data.children.find((c) => c.firstName === "Yusuf")!;
+    expect(yusuf.ratings).toEqual([
+      { ratedOn: "2026-10-02", ratedBy: "Coach Hamza", Technique: 4, "Game understanding": 3, Physical: 5, "Attitude and effort": 4, Teamwork: 2 },
+    ]);
+    expect(yusuf.progressReports).toEqual([{ month: "2026-09", report: "A good September.", writtenBy: null, publishedAt: expect.any(String) }]);
+    expect(data.children.find((c) => c.firstName === "Musa")!.ratings).toEqual([]);
+  });
+
   it("gives a parent who is also an admin only their own family, never the club", async () => {
     // The admin is also the parent of a child of their own.
     await t.asSystem((tx) =>
