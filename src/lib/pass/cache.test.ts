@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { clearPassCache, PASS_CACHE_KEY, readPassCache, writePassCache, type CachedPass } from "./cache";
+import { OFFLINE_IMAGE_MAX } from "../venue-pass/qr";
+import { clearPassCache, PASS_CACHE_KEY, readHubCache, readPassCache, writePassCache, type CachedPass } from "./cache";
 
 /** A plain in-memory Storage. */
 function memoryStorage(): Storage {
@@ -61,5 +62,48 @@ describe("the QR codes kept on the phone", () => {
     expect(() => writePassCache(null, "user-a", [yusuf])).not.toThrow();
     const full = { ...memoryStorage(), setItem: () => { throw new Error("QuotaExceededError"); } } as Storage;
     expect(() => writePassCache(full, "user-a", [yusuf])).not.toThrow();
+  });
+});
+
+describe("the parent's sports hub entry code kept with them", () => {
+  const FILE = "30000000-0000-4000-8000-0000000000aa";
+  const png = "data:image/png;base64,iVBORw0KGgo=";
+
+  it("keeps its text, or a small screenshot with its file id, for the same user only", () => {
+    const storage = memoryStorage();
+    writePassCache(storage, "user-a", [yusuf], { text: "HUB-123" });
+    expect(readHubCache(storage)).toEqual({ text: "HUB-123" });
+    expect(readHubCache(storage, "user-b")).toBeNull();
+    // The children's codes are kept exactly as before, and an older offline page reads them unchanged.
+    expect(readPassCache(storage)).toEqual([yusuf]);
+    writePassCache(storage, "user-a", [yusuf], { image: png, id: FILE });
+    expect(readHubCache(storage)).toEqual({ image: png, id: FILE });
+    writePassCache(storage, "user-a", [yusuf]);
+    expect(readHubCache(storage)).toBeNull();
+  });
+
+  it("is kept for a parent with no child's code yet; nothing at all clears it", () => {
+    const storage = memoryStorage();
+    writePassCache(storage, "user-a", [], { text: "HUB-123" });
+    expect(readHubCache(storage)).toEqual({ text: "HUB-123" });
+    expect(readPassCache(storage)).toEqual([]);
+    writePassCache(storage, "user-a", [], null);
+    expect(storage.getItem(PASS_CACHE_KEY)).toBeNull();
+  });
+
+  it("refuses anything else: a remote or script address, a picture over the limit, extra fields, blank text", () => {
+    const storage = memoryStorage();
+    for (const hub of [
+      { image: "https://evil.example/x.png", id: FILE },
+      { image: "data:text/html;base64,PHNjcmlwdD4=", id: FILE },
+      { image: `data:image/png;base64,${"A".repeat(OFFLINE_IMAGE_MAX)}`, id: FILE },
+      { image: png, id: "not-an-id" },
+      { text: "   " },
+    ]) {
+      writePassCache(storage, "user-a", [yusuf], hub as never);
+      expect(readHubCache(storage)).toBeNull();
+    }
+    writePassCache(storage, "user-a", [yusuf], { text: "HUB-1", extra: "x" } as never);
+    expect(JSON.parse(storage.getItem(PASS_CACHE_KEY)!).hub).toEqual({ text: "HUB-1" });
   });
 });

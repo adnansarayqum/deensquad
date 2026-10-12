@@ -10,7 +10,8 @@ export function fitWithin(width: number, height: number, max = PHOTO_MAX_PX): { 
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 
-async function decode(file: File): Promise<{ image: CanvasImageSource; width: number; height: number; done: () => void }> {
+/** The file as a drawable picture, the right way up; `done` frees it. Throws when the browser can't read it. */
+export async function decode(file: File): Promise<{ image: CanvasImageSource; width: number; height: number; done: () => void }> {
   if (typeof createImageBitmap === "function") {
     // Turned the right way up from its EXIF orientation, as the browser shows it.
     const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });

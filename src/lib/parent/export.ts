@@ -15,7 +15,7 @@ export type FamilyExport = Awaited<ReturnType<typeof buildFamilyExport>>;
 
 export async function buildFamilyExport(tx: Queryable, now: Date) {
   const season = seasonStart(now);
-  const [[parent], children, contacts, agreements, payments, availability, attendance, awards, badges, notes, reads, orders, items] =
+  const [[parent], children, contacts, agreements, payments, availability, attendance, awards, badges, notes, reads, orders, items, [hub], medical] =
     await Promise.all([
       tx.query<{ first_name: string; last_name: string; email: string | null; phone: string | null; language: string; created_at: Date; calendar_at: Date | null }>(
         `select first_name, last_name, email, phone, language, created_at, calendar_token_created_at as calendar_at from guardians where id = my_guardian_id()`,
@@ -94,6 +94,12 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
          from shop_order_items i join shop_orders o on o.id = i.order_id left join players p on p.id = i.player_id
          where o.guardian_id = my_guardian_id() order by i.product_name`,
       ),
+      // That a sports hub entry code is saved and when; never the code (it's on /pass).
+      tx.query<{ updated_at: Date }>(`select updated_at from guardian_venue_passes where guardian_id = my_guardian_id()`),
+      tx.query<{ player_id: string; conditions: string | null; allergies: string | null; medication: string | null; how_to_help: string | null; consent_at: Date; updated_at: Date }>(
+        `select player_id, conditions, allergies, medication, how_to_help, consent_at, updated_at from player_medical
+         where player_id in (select my_player_ids())`,
+      ),
     ]);
 
   const forChild = <T extends { player_id: string }>(rows: T[], id: string) => rows.filter((r) => r.player_id === id);
@@ -113,6 +119,7 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
           addedOn: at(parent.created_at),
           // That a private calendar link exists and when it was made; never the link itself (only its hash is kept).
           calendarLink: parent.calendar_at ? { madeAt: at(parent.calendar_at) } : null,
+          sportsHubEntryCode: hub ? `saved ${at(hub.updated_at)}` : null,
         }
       : null,
     children: children.map((c) => ({
@@ -142,6 +149,15 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
       awards: forChild(awards, c.id).map((a) => ({ stars: a.stars, points: a.points, reason: a.reason, givenBy: a.given_by, givenAt: at(a.created_at) })),
       badges: forChild(badges, c.id).map((b) => ({ badge: b.name, earnedOn: b.earned_on })),
       coachNotes: forChild(notes, c.id).map((n) => ({ note: n.body, writtenBy: n.written_by, writtenAt: at(n.created_at) })),
+      medicalAndAdditionalNeeds:
+        forChild(medical, c.id).map((m) => ({
+          conditions: m.conditions,
+          allergies: m.allergies,
+          medication: m.medication,
+          howTheCoachesCanHelp: m.how_to_help,
+          consentGivenAt: at(m.consent_at),
+          updatedAt: at(m.updated_at),
+        }))[0] ?? null,
     })),
     newsRead: reads.map((r) => ({ title: r.title, postedAt: at(r.posted_at), readAt: at(r.read_at) })),
     shopOrders: orders.map((o) => ({

@@ -4,6 +4,8 @@ import { cache } from "react";
 import { requireParent } from "../auth/session";
 import { loadAwards } from "../awards/data";
 import { loadPlans, loadPracticeSheets } from "../plans/data";
+import { venuePassView } from "../venue-pass/card";
+import { loadMyVenuePass } from "../venue-pass/data";
 import { asUser } from "../db";
 import type { Child, Session } from "../domain";
 import {
@@ -96,7 +98,9 @@ export async function getFridayPage() {
     ...cancelled.map((s) => s.id),
   ]);
   const groups = familyGroups(family);
-  const [plans, sheets] = await asUser(user.id, (tx) => Promise.all([loadPlans(tx, [...shown], groups), loadPracticeSheets(tx, groups, 3)]));
+  const [plans, sheets, venuePass] = await asUser(user.id, (tx) =>
+    Promise.all([loadPlans(tx, [...shown], groups), loadPracticeSheets(tx, groups, 3), loadMyVenuePass(tx)]),
+  );
   // Only the plan for each child's own group at the session they're going to.
   const wanted = new Set(week.flatMap((w) => (w.session && !w.session.cancelled ? [`${w.session.id}|${w.child.ageGroup}`] : [])));
   return {
@@ -108,6 +112,8 @@ export async function getFridayPage() {
     upcoming: sessions.filter((s) => !shown.has(s.id)).slice(0, 4),
     plans: plans.filter((p) => wanted.has(`${p.sessionId}|${p.ageGroup}`)),
     latestSheet: sheets[0] ?? null,
+    /** The parent's own sports hub entry code, shown with the children's codes on a session day and kept on the phone. */
+    venuePass: await venuePassView(venuePass),
   };
 }
 
@@ -118,13 +124,20 @@ function uniqueById(sessions: Session[]): Session[] {
 /** The QR code screen: the family, and who has already been checked in today ("Musa was checked in at 5:58pm"). */
 export async function getPassPage() {
   const { user, family } = await getFamily();
-  const checkIns = await asUser(user.id, (tx) => loadCheckInsToday(tx, family.children.map((c) => c.id), new Date()));
+  const [checkIns, venuePass] = await asUser(user.id, (tx) =>
+    Promise.all([loadCheckInsToday(tx, family.children.map((c) => c.id), new Date()), loadMyVenuePass(tx)]),
+  );
   const at = new Map<string, string>();
   for (const [key, when] of checkIns) {
     const child = key.split(":")[1];
     if (!at.has(child)) at.set(child, when);
   }
-  return { user, family, checkedIn: family.children.flatMap((child) => (at.has(child.id) ? [{ child, at: at.get(child.id)! }] : [])) };
+  return {
+    user,
+    family,
+    checkedIn: family.children.flatMap((child) => (at.has(child.id) ? [{ child, at: at.get(child.id)! }] : [])),
+    venuePass: await venuePassView(venuePass),
+  };
 }
 
 export async function getPracticePage() {

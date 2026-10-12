@@ -8,6 +8,7 @@ import { PassCacheWriter } from "@/components/PassCacheWriter";
 import { PassCarousel } from "@/components/PassCarousel";
 import { Attachment } from "@/components/plans/Attachment";
 import { VideoCard } from "@/components/plans/VideoCard";
+import { VenuePassPicture } from "@/components/VenuePassPicture";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { googleCalendarUrl, sessionIcsPath } from "@/lib/calendar/session";
 import { clock, shortDay } from "@/lib/dates";
@@ -18,11 +19,12 @@ import { getFamily, getFridayPage } from "@/lib/parent/load";
 import { answeredLine, availabilityQuestion, directionsUrl, sessionsToday, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
 import { cachedPasses, passCards, type PassCard } from "@/lib/pass/cards";
 import type { SessionPlan } from "@/lib/plans/data";
+import type { VenuePassView } from "@/lib/venue-pass/card";
 
 export const metadata: Metadata = { title: "Friday" };
 
 export default async function FridayPage() {
-  const [{ family, week, cancelled, invites, upcoming, plans, latestSheet }, { user }] = await Promise.all([getFridayPage(), getFamily()]);
+  const [{ family, week, cancelled, invites, upcoming, plans, latestSheet, venuePass }, { user }] = await Promise.all([getFridayPage(), getFamily()]);
   const single = week.length === 1 ? week[0] : null;
   // Every child's QR code is kept on the phone for no signal; on a session day, today's children's codes are shown here too.
   const cards = await passCards(family.children);
@@ -81,9 +83,9 @@ export default async function FridayPage() {
       )}
 
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
-        <PassCacheWriter user={user.id} passes={cachedPasses(cards)} />
+        <PassCacheWriter user={user.id} passes={cachedPasses(cards)} hub={venuePass?.cache ?? null} />
         {todayCards.length > 0 ? (
-          <TodaysCodes cards={todayCards} title={today[0].session.title} />
+          <TodaysCodes cards={todayCards} title={today[0].session.title} venuePass={venuePass} />
         ) : family.children.length > 0 ? (
           <Link href="/pass" className="flex items-center gap-3 rounded-app bg-pitch-deep px-3.5 py-3 text-on-pitch">
             {/* The icon steps aside on a very narrow screen (200% zoom), so the heading's words fit whole rather than breaking mid-word. */}
@@ -193,7 +195,7 @@ export default async function FridayPage() {
 }
 
 /** On a session day: the children's QR codes on Friday itself, one tap to open (they're in the page, so no signal needed). */
-function TodaysCodes({ cards, title }: { cards: PassCard[]; title: string }) {
+function TodaysCodes({ cards, title, venuePass }: { cards: PassCard[]; title: string; venuePass: VenuePassView | null }) {
   const several = cards.length > 1;
   return (
     <details className="group rounded-app bg-pitch-deep text-on-pitch">
@@ -214,6 +216,19 @@ function TodaysCodes({ cards, title }: { cards: PassCard[]; title: string }) {
         <Link href="/pass" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
           Open full screen
         </Link>
+        {/* The parent's own entry code for the sports hub, ready at the same gate. Added and changed on /pass. */}
+        <section aria-labelledby="friday-hub-code" className="flex w-full flex-col items-center gap-2 border-t-2 border-line px-2 pt-3 pb-2">
+          <h2 id="friday-hub-code" className="text-[17px] font-extrabold">
+            Your sports hub entry code
+          </h2>
+          {venuePass ? (
+            <VenuePassPicture view={venuePass} />
+          ) : (
+            <Link href="/pass" className="inline-flex min-h-12 items-center text-center text-sm font-bold text-grass-text underline">
+              Add your sports hub entry code
+            </Link>
+          )}
+        </section>
       </div>
     </details>
   );

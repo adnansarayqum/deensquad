@@ -4,7 +4,8 @@ import { asUser } from "@/lib/db";
 import { contentDisposition } from "@/lib/viewer";
 
 // Serves an attached plan or practice sheet. Row level security decides who can open it:
-// staff, or a family whose group the plan or sheet is for. The in-app viewer (/files/[id]) reads it from here;
+// staff, or a family whose group the plan or sheet is for. Also a child's photo for the coaches (staff and the child's
+// own parents) and a parent's sports hub screenshot (that parent only). The in-app viewer (/files/[id]) reads it from here;
 // `?download=1` asks the browser to save it instead of showing it.
 export async function GET(request: Request, { params }: RouteContext<"/api/files/[id]">) {
   const { id } = await params;
@@ -13,7 +14,10 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
   if (!UUID.test(id)) return new Response("Not found", { status: 404 });
   const [file] = await asUser(user.id, (tx) =>
     tx.query<{ name: string; mime: string; data: Uint8Array; photo: boolean }>(
-      `select f.name, f.mime, f.data, exists (select 1 from players p where p.photo_file_id = f.id) as photo from club_files f where f.id = $1`,
+      `select f.name, f.mime, f.data,
+         exists (select 1 from players p where p.photo_file_id = f.id)
+           or exists (select 1 from guardian_venue_passes v where v.image_file_id = f.id) as photo
+       from club_files f where f.id = $1`,
       [id],
     ),
   );
@@ -26,6 +30,7 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
       "Content-Disposition": contentDisposition(file.name, new URL(request.url).searchParams.get("download") === "1"),
       // A file id is a UUID and its content never changes, so the browser can keep it for good (private: one person's cache).
       // A child's photo is the exception: removed or consent turned off, it must not live on in a coach's browser.
+      // So is a parent's sports hub screenshot (only they can open it): replaced or removed, it's gone.
       "Cache-Control": file.photo ? "private, no-store" : "private, max-age=31536000, immutable",
       "X-Content-Type-Options": "nosniff",
     },

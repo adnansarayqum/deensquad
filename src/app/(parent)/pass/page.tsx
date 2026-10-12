@@ -4,13 +4,14 @@ import { BackHeader } from "@/components/BackHeader";
 import { CheckedIn } from "@/components/CheckedIn";
 import { PassCacheWriter } from "@/components/PassCacheWriter";
 import { PassCarousel } from "@/components/PassCarousel";
+import { VenuePassCard } from "@/components/VenuePassCard";
 import { getPassPage } from "@/lib/parent/load";
 import { cachedPasses, passCards } from "@/lib/pass/cards";
 
 export const metadata: Metadata = { title: "Attendance QR code" };
 
 export default async function PassPage() {
-  const { user, family, checkedIn } = await getPassPage();
+  const { user, family, checkedIn, venuePass } = await getPassPage();
   const cards = await passCards(family.children);
   const several = cards.length > 1;
 
@@ -21,7 +22,7 @@ export default async function PassPage() {
           ? "Show the QR code for each child who's here. Swipe to the next child."
           : `Show this to the coach when you arrive to check ${cards[0]?.firstName ?? "your child"} in.`}
       </BackHeader>
-      <PassCacheWriter user={user.id} passes={cachedPasses(cards)} />
+      <PassCacheWriter user={user.id} passes={cachedPasses(cards)} hub={venuePass?.cache ?? null} />
       <main className="flex flex-col items-center gap-4 px-4 pt-5 pb-4">
         {cards.length === 0 ? (
           <p className="rounded-app border-2 border-line bg-paper p-4 text-[15px]">No players are linked to your email yet. Ask the club to add your child.</p>
@@ -44,6 +45,8 @@ export default async function PassPage() {
             </p>
           </>
         )}
+        {/* The parent's own entry code for the sports hub, under the children's: no more digging through photos at the gate. */}
+        <VenuePassCard view={venuePass} />
       </main>
     </>
   );
