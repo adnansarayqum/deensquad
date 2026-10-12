@@ -302,11 +302,11 @@ describe("notifications", () => {
     await t.asSystem((tx) => tx.query(`update conversation_messages set created_at = '2030-06-04T09:00:00Z' where conversation_id = $1`, [thread]));
   });
 
-  it("pushes a parent's message to the group's coach (not the admin), with a short preview", async () => {
+  it("pushes a parent's message to the group's coach (not the admin), never with the message text", async () => {
     const due = await t.asSystem((tx) => dueNotices(tx, at("2030-06-04T09:01:00Z"), thread));
     expect(due.map((d) => d.recipientId)).toEqual([u7CoachStaffId]);
     expect(await run("2030-06-04T09:01:00Z")).toMatchObject({ push: 1, email: 0 });
-    expect(pushes.at(-1)).toMatchObject({ users: [u7Coach], title: "Adnan about Musa", body: "Is training on?", url: `/admin/messages/${thread}` });
+    expect(pushes.at(-1)).toMatchObject({ users: [u7Coach], title: "Adnan about Musa", body: "Open the app to read it.", url: `/admin/messages/${thread}` });
     // Nothing new: nothing more.
     expect(await run("2030-06-04T09:30:00Z")).toMatchObject({ push: 0 });
   });
@@ -315,7 +315,7 @@ describe("notifications", () => {
     await send(adnan, "parent", "Sorry, one more thing.", "2030-06-04T09:05:00Z");
     expect(await run("2030-06-04T09:10:00Z")).toMatchObject({ push: 0 });
     expect(await run("2030-06-04T09:16:00Z")).toMatchObject({ push: 1 });
-    expect(pushes.at(-1)!.body).toBe("Sorry, one more thing.");
+    expect(pushes.at(-1)!.body).toBe("Open the app to read it.");
   });
 
   it("says nothing between 9pm and 8am London, then one notification after 8am if it's still unread", async () => {

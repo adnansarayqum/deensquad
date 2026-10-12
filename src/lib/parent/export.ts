@@ -101,12 +101,13 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
         `select player_id, conditions, allergies, medication, how_to_help, consent_at, updated_at from player_medical
          where player_id in (select my_player_ids())`,
       ),
-      // Ratings and published progress reports are always included, even while parents don't see them in the app.
+      // Ratings and published progress reports, only while the club shows them to parents (Player's Progress card):
+      // while switched off the download says nothing about them, as the admin's switch promises.
       tx.query<{ player_id: string; rated_on: string; rated_by: string | null } & Record<CategoryKey, number>>(
-        `select player_id, rated_on::text as rated_on, rated_by, ${CATEGORY_KEYS.join(", ")} from my_children_ratings()`,
+        `select player_id, rated_on::text as rated_on, rated_by, ${CATEGORY_KEYS.join(", ")} from my_children_ratings() where progress_visible()`,
       ),
       tx.query<{ player_id: string; month: string; body: string; written_by: string | null; published_at: Date }>(
-        `select player_id, month::text as month, body, written_by, published_at from my_children_reports()`,
+        `select player_id, month::text as month, body, written_by, published_at from my_children_reports() where progress_visible()`,
       ),
     ]);
 

@@ -2,7 +2,6 @@ import type { Queryable } from "../db/types";
 import { inQuietHours } from "../chase/ladder";
 import type { Email, EmailReport } from "../email/send";
 import { messageEmail } from "../email/templates";
-import { preview } from "./data";
 
 // Tells people about a new message in a conversation (migration 0025). Runs without row level security (asSystem),
 // right after a message is sent (in after() + enqueue) and from the hourly cron.
@@ -14,14 +13,13 @@ import { preview } from "./data";
 //   a staff message     every parent of the child (not the one who wrote it, on either side)
 // How: an app notification to anyone with one turned on, else an email when we have their address. The email names
 // who wrote and which child, never the message itself (emails get forwarded and stored elsewhere); the app
-// notification shows a short preview, like any messaging app.
+// notification never carries it either (a lock screen can be seen by anyone): "Open the app to read it."
 // When: at most one notification per conversation per person every 15 minutes, and never 9pm to 8am London. A message
 // held back (quiet hours, or within 15 minutes of the last one) goes out at the next run after that, if it's still
 // unread, as one notification however many came in. Messages over a week old are left alone.
 
 export const NOTICE_GAP_MINUTES = 15;
 export const NOTICE_MAX_AGE_DAYS = 7;
-export const PUSH_PREVIEW = 140;
 
 export type Recipient = {
   conversationId: string;
@@ -134,7 +132,8 @@ export async function notifyMessages(tx: Queryable, now: Date, senders: NoticeSe
   for (const r of due.filter((d) => d.userId && withPush.has(d.userId))) {
     const reached = await senders.push!(tx, [r.userId!], {
       title: `${r.author} about ${r.child}`,
-      body: preview(r.body, PUSH_PREVIEW),
+      // Never the message text: a lock screen can be seen by anyone, and staff may write about behaviour or health.
+      body: "Open the app to read it.",
       url: threadPath(r),
     });
     if (reached.has(r.userId!)) told.push(r);

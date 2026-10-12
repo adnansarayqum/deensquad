@@ -167,7 +167,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               </>,
               <>
                 <b>Apple, Google and your browser&apos;s notification service</b> deliver notifications if you turn them on. A notification about a
-                new message from the club shows its first line, as messaging apps do.
+                new message from the club says who it&apos;s from and which child, never the message itself.
               </>,
               ...(sms
                 ? [

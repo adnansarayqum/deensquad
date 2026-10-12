@@ -38,7 +38,7 @@ describe("download my data", () => {
     expect(text).not.toContain("07700 900002");
   });
 
-  it("always includes the children's ratings and published reports, even while parents don't see them in the app", async () => {
+  it("includes the children's ratings and published reports only while the club shows them to parents", async () => {
     await t.asSystem(async (tx) => {
       await tx.query(
         `insert into player_ratings (player_id, rated_on, rated_by, technique, game_understanding, physical, attitude, teamwork)
@@ -51,9 +51,13 @@ describe("download my data", () => {
       );
     });
     const adnan = await t.signIn(DEV_EMAILS.parent);
-    // Off: the app hides them…
+    // Off: the app hides them, and so does the download.
     expect(await t.asUser(adnan, (tx) => tx.query(`select 1 from player_ratings`))).toHaveLength(0);
-    // …but the download has them.
+    const off = await t.asUser(adnan, (tx) => buildFamilyExport(tx, now));
+    expect(off.children.find((c) => c.firstName === "Yusuf")!.ratings).toEqual([]);
+    expect(off.children.find((c) => c.firstName === "Yusuf")!.progressReports).toEqual([]);
+    // On: the download has them.
+    await t.asSystem((tx) => tx.query(`insert into club_settings (key, value) values ('progress_for_parents', 'true'::jsonb)`));
     const data = await t.asUser(adnan, (tx) => buildFamilyExport(tx, now));
     const yusuf = data.children.find((c) => c.firstName === "Yusuf")!;
     expect(yusuf.ratings).toEqual([
