@@ -205,6 +205,8 @@ test("medical and additional needs: saved by the parent with consent; the U7 coa
     const link = row.getByRole("link", { name: "Medical info for Zaid H." });
     await expect(link).toBeVisible();
     await expect(row).not.toContainText("Autism");
+    // The pill wraps under the name, never pushing Mark here under the row.
+    expect((await row.getByRole("button", { name: "Mark Zaid H. here" }).boundingBox())!.x).toBeGreaterThan(200);
     await expect(coach.getByRole("link", { name: /^Medical info for/ })).toHaveCount(1);
     await row.scrollIntoViewIfNeeded();
     await coach.screenshot({ path: shot("coach-register-medical") });

@@ -88,7 +88,7 @@ export function RegisterLists({
   const [n, a, h] = [keep(notHere), keep(away), keep(here)];
   const searching = query.trim() !== "";
   const name = (r: GateRow) => `${r.firstName} ${r.lastInitial}.`;
-  /** The child's name, with "Medical info" beside it when there is some (wrapping under it only on a narrow screen). */
+  /** The child's name, with "Medical info" beside it when there is some (under it on a phone, so Mark here stays on the right). */
   const title = (r: GateRow) => (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span className="text-[15px] font-bold">{name(r)}</span>
@@ -133,7 +133,7 @@ export function RegisterLists({
           <ul className="flex flex-col gap-2.5">
             {n.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-line bg-paper py-2.5 pr-3 pl-3">
-                <span className="flex min-w-0 items-center gap-3">
+                <span className="flex min-w-0 flex-1 basis-40 items-center gap-3">
                   {face(r)}
                   <span className="flex flex-col items-start gap-1">
                     {title(r)}
@@ -159,7 +159,7 @@ export function RegisterLists({
           <ul className="flex flex-col gap-2.5">
             {a.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-line bg-cream py-2.5 pr-3 pl-3">
-                <span className="flex min-w-0 items-center gap-3">
+                <span className="flex min-w-0 flex-1 basis-40 items-center gap-3">
                   {face(r)}
                   <span className="flex flex-col items-start gap-1">
                     {title(r)}
