@@ -12,7 +12,8 @@ export const STAFF_NAV = [
   { href: "/admin/sessions", label: "Sessions" },
   { href: "/coach/plans", label: "Plans" },
   { href: "/coach/practice", label: "Practice sheets" },
-  { href: "/coach/awards", label: "Points and stars" },
+  // Ratings (/coach/ratings) are reached from Points and stars, so it stays lit there.
+  { href: "/coach/awards", label: "Points and stars", also: "/coach/ratings" },
   { href: "/admin/shop", label: "Shop", adminOnly: true },
   { href: "/admin/staff", label: "Staff", adminOnly: true },
 ] as const;
@@ -21,7 +22,7 @@ export const STAFF_NAV = [
 export function AdminNav({ isAdmin, layout = "pills" }: { isAdmin: boolean; layout?: "pills" | "sidebar" }) {
   const path = usePathname();
   const items = STAFF_NAV.filter((item) => isAdmin || !("adminOnly" in item && item.adminOnly));
-  const isActive = (item: (typeof STAFF_NAV)[number]) => ("exact" in item && item.exact ? path === item.href : path.startsWith(item.href));
+  const isActive = (item: (typeof STAFF_NAV)[number]) => ("exact" in item && item.exact ? path === item.href : path.startsWith(item.href) || ("also" in item && path.startsWith(item.also)));
 
   if (layout === "sidebar") {
     return (

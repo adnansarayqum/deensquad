@@ -165,6 +165,12 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
           </RegisterLists>
         )}
       </section>
+      {/* After the lists, so it never pushes the children still to arrive down the first screen. */}
+      {open ? (
+        <Link href={`/coach/ratings?${new URLSearchParams({ session: session.id, ...(all ? {} : { group }) })}`} className="btn-chunky btn-paper self-start">
+          Rate players
+        </Link>
+      ) : null}
     </>
   );
 }

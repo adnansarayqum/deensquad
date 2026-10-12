@@ -153,6 +153,25 @@ ${link ? button(link, "See families") : ""}`,
   return { to, subject, text, html };
 }
 
+/** A coach published a child's monthly progress report (only sent while progress is switched on for parents). */
+export function progressReportEmail(opts: { to: string; firstName: string; childName: string; month: string; link: string | null; appUrl: string | null }): Email {
+  const { to, firstName, childName, month, link, appUrl } = opts;
+  const subject = `${childName}'s progress report for ${month} is ready`;
+  const text = [
+    `Assalamu alaikum ${firstName},`,
+    "",
+    `${childName}'s coach has written their progress report for ${month}. Read it in the app, on ${childName}'s player screen.`,
+    ...(link ? ["", link] : []),
+  ].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">Assalamu alaikum ${escape(firstName)},</p>
+<p>${escape(childName)}'s coach has written their progress report for ${escape(month)}. Read it in the app, on ${escape(childName)}'s player screen.</p>
+${link ? button(link, "Read the report") : ""}`,
+  );
+  return { to, subject, text, html };
+}
+
 /** A parent asked the club to delete their account (Player → Your data). Names the parent only: nothing else about the family. */
 export function deletionRequestEmail(opts: { to: string; parentName: string; link: string | null; appUrl: string | null }): Email {
   const { to, parentName, link, appUrl } = opts;
