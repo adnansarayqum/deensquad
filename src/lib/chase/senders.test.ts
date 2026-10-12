@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { testDatabase } from "../../../test/db";
-import { pushToUsers, sendSmsTo, type PushSend, type SmsSend } from "./senders";
+import { pushToEach, pushToUsers, sendSmsTo, type PushSend, type SmsSend } from "./senders";
 import type { ChaseTarget } from "./ladder";
 
 // Pushes go out from 10 workers at once, and only then are devices updated or forgotten, one statement at a time.
@@ -42,6 +42,27 @@ beforeEach(async () => {
 });
 
 const endpoints = () => t.asSystem((tx) => tx.query<{ endpoint: string; seen: boolean }>(`select endpoint, last_success_at is not null as seen from push_subscriptions order by endpoint`));
+
+describe("pushToEach", () => {
+  it("sends each person their own notification, to every one of their devices", async () => {
+    const got: { endpoint: string; body: string }[] = [];
+    const send: PushSend = async (sub, body) => {
+      got.push({ endpoint: sub.endpoint, body });
+    };
+    const payloads = new Map([
+      [users[0], { title: "Is Musa coming on Friday?", body: "Training 6:30pm. Tap to answer.", url: "/friday" }],
+      [users[1], { title: "Is Nuh coming on Friday?", body: "Training 6:30pm. Tap to answer.", url: "/friday" }],
+    ]);
+    const reached = await t.asSystem((tx) => pushToEach(tx, payloads, send));
+    expect(reached).toEqual(new Set([users[0], users[1]]));
+    expect(got.map((g) => [g.endpoint, JSON.parse(g.body).title]).sort()).toEqual([
+      ["https://push.example/0a", "Is Musa coming on Friday?"],
+      ["https://push.example/0b", "Is Musa coming on Friday?"],
+      ["https://push.example/1a", "Is Nuh coming on Friday?"],
+      ["https://push.example/1b", "Is Nuh coming on Friday?"],
+    ]);
+  });
+});
 
 describe("pushToUsers", () => {
   it("sends to many devices at once rather than one after another", async () => {

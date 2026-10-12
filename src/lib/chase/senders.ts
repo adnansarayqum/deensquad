@@ -61,15 +61,23 @@ export async function inWorkers<T, R>(items: readonly T[], limit: number, fn: (i
  * one at a time, as one transaction can't run statements in parallel (postgres.js).
  */
 export async function pushToUsers(tx: Queryable, userIds: string[], payload: PushPayload, send: PushSend = sendWebPush): Promise<Set<string>> {
+  return pushToEach(tx, new Map(userIds.map((id) => [id, payload])), send);
+}
+
+/**
+ * As `pushToUsers`, with each user's own notification (the weekly attendance reminder names each family's children),
+ * all from the same pool of workers.
+ */
+export async function pushToEach(tx: Queryable, payloads: Map<string, PushPayload>, send: PushSend = sendWebPush): Promise<Set<string>> {
   const reached = new Set<string>();
-  if (!pushConfigured() || userIds.length === 0) return reached;
+  if (!pushConfigured() || payloads.size === 0) return reached;
   if (send === sendWebPush) {
     webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:admin@example.com", process.env.VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!);
   }
-  const subs = await tx.query<Subscription>(`select id, user_id, endpoint, p256dh, auth from push_subscriptions where user_id = any($1::uuid[])`, [userIds]);
-  const body = JSON.stringify(payload);
+  const subs = await tx.query<Subscription>(`select id, user_id, endpoint, p256dh, auth from push_subscriptions where user_id = any($1::uuid[])`, [[...payloads.keys()]]);
+  const bodies = new Map([...payloads].map(([id, p]) => [id, JSON.stringify(p)]));
   // Only the network calls are caught: a failed statement must abort the transaction, not be swallowed.
-  const results = await inWorkers(subs, PUSH_WORKERS, (s) => send({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body));
+  const results = await inWorkers(subs, PUSH_WORKERS, (s) => send({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, bodies.get(s.user_id)!));
   const ok: string[] = [];
   const gone: string[] = [];
   results.forEach((result, i) => {

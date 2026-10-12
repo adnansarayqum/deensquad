@@ -5,6 +5,7 @@ import { SessionFields } from "@/components/admin/SessionFields";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
 import { BulkBar, SelectAll, SelectRow } from "@/components/admin/SessionBulk";
+import { WeeklyReminderCard } from "@/components/admin/WeeklyReminderCard";
 import { addSessions, openBulk } from "@/lib/admin/actions";
 import { bulkNotice } from "@/lib/admin/bulk-sessions";
 import { loadSessionsAdmin, type AdminSession } from "@/lib/admin/data";
@@ -13,6 +14,8 @@ import { coachLimit, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { clock, londonDate, nextFridaySession, shortDay } from "@/lib/dates";
 import { defaultSessionGroups } from "@/lib/domain";
+import { lastReminderSent } from "@/lib/reminders/attendance";
+import { attendanceReminderSetting } from "@/lib/settings";
 import type { AgeGroup } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Sessions" };
@@ -25,7 +28,12 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
   const params = await searchParams;
   const now = new Date();
   const mine = coachLimit(user.staff);
-  const { upcoming, recent, lastVenue } = await asUser(user.id, (tx) => loadSessionsAdmin(tx, now, mine));
+  const isAdmin = user.staff.role === "admin";
+  const { upcoming, recent, lastVenue, reminder } = await asUser(user.id, async (tx) => ({
+    ...(await loadSessionsAdmin(tx, now, mine)),
+    // The weekly reminder card is the admins' (coaches see the sessions as before).
+    reminder: isAdmin ? { setting: await attendanceReminderSetting(tx), last: await lastReminderSent(tx) } : null,
+  }));
   const friday = londonDate(nextFridaySession(now).start);
   const firstDate = `${friday.year}-${String(friday.month).padStart(2, "0")}-${String(friday.day).padStart(2, "0")}`;
   const showAll = params.all === "1" || upcoming.length <= UPCOMING_SHOWN;
@@ -44,6 +52,14 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
       {bulk ? <Notice tone={params.bulk === "none" || params.bulk === "toomany" ? "action" : "done"}>{bulk}</Notice> : null}
 
       {/* Folded at every size (the eight-column table needs the whole column), open when there's nothing to list yet. */}
+      {reminder ? (
+        <WeeklyReminderCard
+          setting={reminder.setting}
+          last={reminder.last}
+          notice={params.reminder === "saved" || params.reminder === "invalid" ? params.reminder : undefined}
+        />
+      ) : null}
+
       <FoldCard id="add-sessions" title="Add sessions" open={upcoming.length === 0}>
         <div className="lg:max-w-3xl">
           <StatefulForm action={addSessions} submitLabel="Add sessions" savedMessage="Sessions added. Parents can answer straight away.">

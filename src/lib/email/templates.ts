@@ -210,6 +210,21 @@ ${button(link, "Read the message")}
   return { to, subject, text, html };
 }
 
+/** The weekly reminder, for a parent without app notifications: the question as the subject, one big "Answer now". */
+export function attendanceReminderEmail(opts: { to: string; firstName: string; question: string; detail: string; link: string; appUrl: string | null }): Email {
+  const { to, firstName, question, detail, link, appUrl } = opts;
+  const text = [`Assalamu alaikum ${firstName},`, "", question, detail, "", "Answer now:", link].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">Assalamu alaikum ${escape(firstName)},</p>
+<p style="font-size:18px;font-weight:700">${escape(question)}</p>
+<p>${escape(detail)}</p>
+${button(link, "Answer now")}
+<p style="color:#56625a;margin-bottom:0">It helps the coaches plan the session.</p>`,
+  );
+  return { to, subject: question, text, html };
+}
+
 export type OrderEmailKind ="placed" | "paid" | "ready" | "cancelled";
 
 /**
