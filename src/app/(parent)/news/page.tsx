@@ -204,10 +204,13 @@ function ReplyLink({ a }: { a: AnnouncementView }) {
   if (!a.allowReplies || a.reaches.length === 0) return null;
   const href = `/messages/new?about=${a.id}${a.reaches.length === 1 ? `&child=${a.reaches[0]}` : ""}`;
   return (
-    <Link href={href} className="inline-flex min-h-12 items-center gap-2 self-start text-[15px] font-bold text-grass-text underline">
+    <Link
+      href={href}
+      aria-label={`Reply to ${a.postedBy ?? "the club"}: ${a.title}`}
+      className="inline-flex min-h-12 items-center gap-2 self-start text-[15px] font-bold text-grass-text underline"
+    >
       <Reply aria-hidden size={18} />
       Reply to {a.postedBy ?? "the club"}
-      <span className="sr-only">: {a.title}</span>
     </Link>
   );
 }
