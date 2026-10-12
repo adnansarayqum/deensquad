@@ -9,6 +9,9 @@ import { loadMyVenuePass } from "../venue-pass/data";
 import { asUser } from "../db";
 import type { Queryable } from "../db/types";
 import { loadParentConversations, loadParentUnreadMessages } from "../messages/data";
+import { londonIsoDate } from "../dates";
+import { loadProgress, loadReports } from "../progress/data";
+import { progressForParents } from "../settings";
 import type { Child, Session } from "../domain";
 import {
   answerKey,
@@ -200,7 +203,30 @@ async function getStats(userId: string, child: Child, now: Date) {
 
 export async function getPlayerPage(childParam: unknown) {
   const { family, child, userId } = await getChild(childParam);
-  if (!child) return { family, child: null, stats: null, badges: [], note: null, awards: null };
-  const [{ facts, ...stats }, awards] = await Promise.all([getStats(userId, child, new Date()), asUser(userId, (tx) => loadAwards(tx, child.id))]);
-  return { family, child, stats, badges: facts.badges, note: facts.note, awards };
+  if (!child) return { family, child: null, stats: null, badges: [], note: null, awards: null, progress: null };
+  const now = new Date();
+  const [{ facts, ...stats }, awards, progress] = await Promise.all([
+    getStats(userId, child, now),
+    asUser(userId, (tx) => loadAwards(tx, child.id)),
+    asUser(userId, (tx) => loadChildProgress(tx, child.id, now)),
+  ]);
+  return { family, child, stats, badges: facts.badges, note: facts.note, awards, progress };
+}
+
+/**
+ * The child's ratings and latest published reports, only while an admin has switched progress on for parents (row
+ * level security also hides both while it's off). Null when off, or when there's nothing to show yet.
+ */
+async function loadChildProgress(tx: Queryable, childId: string, now: Date) {
+  if (!(await progressForParents(tx))) return null;
+  const [summary, reports] = await Promise.all([loadProgress(tx, childId, londonIsoDate(now)), loadReports(tx, childId, { published: true, limit: 2 })]);
+  if (!summary.current && reports.length === 0) return null;
+  return { summary, latest: reports[0] ?? null, earlier: reports.length > 1 };
+}
+
+/** /player/progress: every published report for one child, or null while progress is off for parents. */
+export async function getProgressPage(childParam: unknown) {
+  const { family, child, userId } = await getChild(childParam);
+  if (!child) return null;
+  return asUser(userId, async (tx) => ((await progressForParents(tx)) ? { family, child, reports: await loadReports(tx, child.id, { published: true }) } : null));
 }

@@ -16,7 +16,8 @@ export const STAFF_NAV = [
   // into three rows at 390px, which the register's first-screen rule depends on.
   { href: "/admin/shop", label: "Shop", adminOnly: true },
   { href: "/coach/practice", label: "Practice sheets" },
-  { href: "/coach/awards", label: "Points and stars" },
+  // Ratings (/coach/ratings) are reached from Points and stars, so it stays lit there.
+  { href: "/coach/awards", label: "Points and stars", also: "/coach/ratings" },
   { href: "/admin/staff", label: "Staff", adminOnly: true },
 ] as const;
 
@@ -24,7 +25,7 @@ export const STAFF_NAV = [
 export function AdminNav({ isAdmin, layout = "pills", unreadMessages = 0 }: { isAdmin: boolean; layout?: "pills" | "sidebar"; unreadMessages?: number }) {
   const path = usePathname();
   const items = STAFF_NAV.filter((item) => isAdmin || !("adminOnly" in item && item.adminOnly));
-  const isActive = (item: (typeof STAFF_NAV)[number]) => ("exact" in item && item.exact ? path === item.href : path.startsWith(item.href));
+  const isActive = (item: (typeof STAFF_NAV)[number]) => ("exact" in item && item.exact ? path === item.href : path.startsWith(item.href) || ("also" in item && path.startsWith(item.also)));
   // Messages carries how many conversations have a parent's message this person hasn't read. The link is named
   // "Messages, 3 unread" (an aria-label, so it reads the same everywhere); the badge shows the number.
   const unread = (item: (typeof STAFF_NAV)[number]) => item.href === "/admin/messages" && unreadMessages > 0;

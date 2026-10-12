@@ -82,6 +82,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "a photo of your child, if you add one and have said yes to photos: seen only by the club's coaches and admins (on the register, to learn names), never by other parents; stored small, without its location or camera details; deleted when you remove it or turn photo consent off (nightly backups keep it for up to 30 days)",
               "emergency contacts you give us (please check they are happy for you to share their details)",
               "points, stars, badges and notes from the coaches",
+              "ratings from the coaches after sessions (technique, game understanding, physical, attitude and effort, and teamwork, each from 1 to 5) and the progress reports they write about your child",
               "kit they have ordered from the club shop",
             ]}
           />
@@ -138,6 +139,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "Club admins can see every family. Coaches see the children in the groups they coach.",
               "Other parents never see your details. They only see how many children in a group are coming to a session, not who.",
               "Messages in the app between you and the club are about one child. Both of that child's parents can read them, as can the coach they were sent to, the child's coaches and the club's admins (so no conversation with a child's family is ever hidden from the club). Other parents never see them. Messages can't be edited or deleted: they are kept as club records.",
+              "Ratings and progress reports are written by the club's coaches and admins. Staff can see them; you see your own child's in the app once the club turns this on, and only reports the coach has published. Other parents never see them, and you never see other children's.",
             ]}
           />
           <p>We use a few trusted companies to run the app. They handle information only on our instructions:</p>
@@ -151,7 +153,8 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
                 says who wrote and about which child, never the message itself.
               </>,
               <>
-                <b>Anthropic</b> (Claude) helps coaches tidy up text they write, such as session plans and notes. Coaches are asked not to include
+                <b>Anthropic</b> (Claude) helps coaches tidy up text they write, such as session plans and notes, and can draft a progress report
+                from your child&apos;s first name, ratings, attendance, points and the coaches&apos; notes. Coaches are asked not to include
                 children&apos;s surnames, and nothing is sent to parents without a coach checking it.
               </>,
               <>
@@ -221,6 +224,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "While your child is at the club, we keep their record.",
               "When they leave, we delete their record and your account within 12 months, unless you ask us to do it sooner.",
               "We may keep attendance and safeguarding records for longer where the law or our safeguarding duties require it.",
+              "Ratings and progress reports are kept for the season they were written in and one more year.",
               "Shop orders and payment records are kept for 6 years for accounting.",
               "Messages with the club are kept as club records while your child is at the club, and deleted with their record when they leave, unless our safeguarding duties mean we must keep them longer.",
               "Sign-in codes expire after 15 minutes and old sign-in records are deleted after 30 days.",

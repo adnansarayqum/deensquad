@@ -11,6 +11,13 @@ import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { UUID } from "@/lib/auth/tokens";
 import { asUser } from "@/lib/db";
 import { groupPlural } from "@/lib/domain";
+import { londonIsoDate } from "@/lib/dates";
+import { ProgressReportForm } from "@/components/progress/ProgressReportForm";
+import { ProgressSummaryView } from "@/components/progress/ProgressSummary";
+import { loadProgress, loadReport } from "@/lib/progress/data";
+import { monthOnly, pickMonth, reportMonths } from "@/lib/progress/ratings";
+import { progressForParents } from "@/lib/settings";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Points and stars" };
 
@@ -18,10 +25,13 @@ const badgeIcons: Record<string, typeof Star> = { star: Star, clock: Clock, trop
 
 const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
 
-export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awards/[id]">) {
+export default async function PlayerAwardsPage({ params, searchParams }: PageProps<"/coach/awards/[id]">) {
   const user = await requireStaff();
   const { id } = await params;
   if (!UUID.test(id)) notFound();
+  const today = londonIsoDate(new Date());
+  const months = reportMonths(today);
+  const month = pickMonth((await searchParams).month, months);
   const page = await asUser(user.id, async (tx) => {
     const [player] = await tx.query<{ id: string; first_name: string; last_name: string; age_group: string }>(
       `select id, first_name, last_name, age_group::text as age_group from players where id = $1 and age_group::text = any ($2::text[])`,
@@ -32,10 +42,12 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
        left join player_badges pb on pb.badge_id = b.id and pb.player_id = $1 order by b.name`,
       [id],
     );
-    return player ? { player, badges, ...(await loadAwards(tx, id, 10)) } : null;
+    if (!player) return null;
+    const [awards, progress, report, shown] = await Promise.all([loadAwards(tx, id, 10), loadProgress(tx, id, today), loadReport(tx, id, month), progressForParents(tx)]);
+    return { player, badges, ...awards, progress, report, shown };
   });
   if (!page) notFound();
-  const { player, totals, recent, badges } = page;
+  const { player, totals, recent, badges, progress, report, shown } = page;
   const isAdmin = user.staff.role === "admin";
 
   return (
@@ -118,6 +130,53 @@ export default async function PlayerAwardsPage({ params }: PageProps<"/coach/awa
             </ul>
           </Card>
         ) : null}
+
+      <Section
+        title="Progress"
+        aside={
+          <Link href="/coach/ratings" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+            Rate players
+          </Link>
+        }
+      >
+        {progress.current ? (
+          <ProgressSummaryView firstName={player.first_name} progress={progress} by />
+        ) : (
+          <p className="text-[15px] text-ink-muted">{player.first_name} hasn&apos;t been rated in the last 3 months.</p>
+        )}
+      </Section>
+
+      <Section title="Progress report" aside={<span className="text-[13px] text-ink-muted">{shown ? "Parents see published reports" : "Parents don't see reports yet"}</span>}>
+        <nav aria-label="Report month" className="flex flex-wrap gap-2">
+          {months.map((m) => (
+            <Link
+              key={m}
+              href={`/coach/awards/${player.id}?month=${m.slice(0, 7)}`}
+              aria-current={m === month ? "page" : undefined}
+              className={`inline-flex min-h-12 items-center justify-center rounded-pill px-4 text-sm font-extrabold ${m === month ? "bg-floodlight text-on-gold" : "border-2 border-line bg-paper text-ink"}`}
+            >
+              {monthOnly(m)}
+            </Link>
+          ))}
+        </nav>
+        <p className="text-[14px] text-ink-muted">
+          {report
+            ? report.publishedAt
+              ? `Published ${day.format(new Date(report.publishedAt))}${report.by ? ` · last saved by ${report.by}` : ""}`
+              : `Draft${report.by ? ` · last saved by ${report.by}` : ""}`
+            : "Not written yet"}
+        </p>
+        <ProgressReportForm
+          key={month}
+          playerId={player.id}
+          firstName={player.first_name}
+          month={month}
+          monthName={monthOnly(month)}
+          body={report?.body ?? ""}
+          published={Boolean(report?.publishedAt)}
+          ai={aiConfigured()}
+        />
+      </Section>
 
       <Card className="p-4">
         <NoteForm playerId={player.id} firstName={player.first_name} ai={aiConfigured()} />

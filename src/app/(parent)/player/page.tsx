@@ -9,6 +9,8 @@ import { getFamily, getPlayerPage } from "@/lib/parent/load";
 import { DownloadMyData } from "@/components/DownloadMyData";
 import { SignOutForm } from "@/components/SignOutForm";
 import { StaffSwitch } from "@/components/StaffSwitch";
+import { ProgressSummaryView } from "@/components/progress/ProgressSummary";
+import { monthLabel } from "@/lib/progress/ratings";
 
 export const metadata: Metadata = { title: "Player" };
 
@@ -16,7 +18,7 @@ const badgeIcons: Record<Badge["icon"], typeof Star> = { star: Star, clock: Cloc
 
 export default async function PlayerPage({ searchParams }: PageProps<"/player">) {
   const flags = await searchParams;
-  const [{ family, child, stats, badges, note, awards }, { user }] = await Promise.all([getPlayerPage(flags.child), getFamily()]);
+  const [{ family, child, stats, badges, note, awards, progress }, { user }] = await Promise.all([getPlayerPage(flags.child), getFamily()]);
   const deletionAsked = await asUser(user.id, loadMyDeletionRequest);
   // Back from Add a child: the child it opened on was just added (only said for the child that's showing).
   const justAdded = child && flags.added === "1" && flags.child === child.id;
@@ -162,6 +164,28 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                 );
               })}
             </ul>
+          </Card>
+        ) : null}
+
+        {child && progress ? (
+          // Only while an admin has switched progress on for parents; this child's own ratings and reports, nothing else.
+          <Card className="flex flex-col gap-3 p-3.5">
+            <h2 className="text-base font-extrabold">Progress</h2>
+            <ProgressSummaryView firstName={child.firstName} progress={progress.summary} />
+            {progress.latest ? (
+              <section aria-labelledby="latest-report" className="flex flex-col gap-1.5 border-t-2 border-line pt-3">
+                <h3 id="latest-report" className="text-[15px] font-extrabold">
+                  Progress report: {monthLabel(progress.latest.month)}
+                </h3>
+                {progress.latest.by ? <p className="text-[13px] text-ink-muted">From {progress.latest.by}</p> : null}
+                <p className="text-[15px] leading-[22px] whitespace-pre-line">{progress.latest.body}</p>
+                {progress.earlier ? (
+                  <Link href={`/player/progress?child=${child.id}`} className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-grass-text underline">
+                    Earlier reports
+                  </Link>
+                ) : null}
+              </section>
+            ) : null}
           </Card>
         ) : null}
 

@@ -2,6 +2,7 @@ import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { seasonStart } from "../exports/reports";
 import { orderReference } from "../shop/data";
+import { CATEGORIES, CATEGORY_KEYS, type CategoryKey } from "../progress/ratings";
 
 // "Download my data" (Player → Your data, GET /api/me/export): what the club holds about a parent and their
 // children, as one JSON file. Runs as the parent (row level security on), and every query is also limited to
@@ -15,7 +16,7 @@ export type FamilyExport = Awaited<ReturnType<typeof buildFamilyExport>>;
 
 export async function buildFamilyExport(tx: Queryable, now: Date) {
   const season = seasonStart(now);
-  const [[parent], children, contacts, agreements, payments, availability, attendance, awards, badges, notes, reads, orders, items, [hub], medical] =
+  const [[parent], children, contacts, agreements, payments, availability, attendance, awards, badges, notes, reads, orders, items, [hub], medical, ratings, reports] =
     await Promise.all([
       tx.query<{ first_name: string; last_name: string; email: string | null; phone: string | null; language: string; created_at: Date; calendar_at: Date | null }>(
         `select first_name, last_name, email, phone, language, created_at, calendar_token_created_at as calendar_at from guardians where id = my_guardian_id()`,
@@ -99,6 +100,13 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
       tx.query<{ player_id: string; conditions: string | null; allergies: string | null; medication: string | null; how_to_help: string | null; consent_at: Date; updated_at: Date }>(
         `select player_id, conditions, allergies, medication, how_to_help, consent_at, updated_at from player_medical
          where player_id in (select my_player_ids())`,
+      ),
+      // Ratings and published progress reports are always included, even while parents don't see them in the app.
+      tx.query<{ player_id: string; rated_on: string; rated_by: string | null } & Record<CategoryKey, number>>(
+        `select player_id, rated_on::text as rated_on, rated_by, ${CATEGORY_KEYS.join(", ")} from my_children_ratings()`,
+      ),
+      tx.query<{ player_id: string; month: string; body: string; written_by: string | null; published_at: Date }>(
+        `select player_id, month::text as month, body, written_by, published_at from my_children_reports()`,
       ),
     ]);
 
@@ -188,6 +196,12 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
             message: m.body,
           })),
       })),
+      ratings: forChild(ratings, c.id).map((r) => ({
+        ratedOn: r.rated_on,
+        ratedBy: r.rated_by,
+        ...Object.fromEntries(CATEGORIES.map((k) => [k.label, Number(r[k.key])])),
+      })),
+      progressReports: forChild(reports, c.id).map((r) => ({ month: r.month.slice(0, 7), report: r.body, writtenBy: r.written_by, publishedAt: at(r.published_at) })),
     })),
     newsRead: reads.map((r) => ({ title: r.title, postedAt: at(r.posted_at), readAt: at(r.read_at) })),
     shopOrders: orders.map((o) => ({
