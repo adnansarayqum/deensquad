@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MessageCircle } from "lucide-react";
 import { Notice, PageHeader, Section } from "@/components/admin/bits";
 import { FamiliesFilterFields } from "@/components/admin/FamiliesFilterFields";
 import { StatefulForm } from "@/components/admin/StatefulForm";
@@ -52,6 +54,12 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
         back={{ href: familiesHref(filter), label: "Families" }}
         title={`${child.firstName} ${child.lastName}`}
         subtitle={`${groupPlural(child.ageGroup)} · ${child.attended} ${child.attended === 1 ? "session" : "sessions"} attended`}
+        actions={
+          <Link href={`/admin/messages/new?child=${child.id}`} className="btn-chunky btn-paper btn-small min-h-12">
+            <MessageCircle aria-hidden size={16} />
+            Message this family
+          </Link>
+        }
       >
         {child.missedLast3 ? (
           <p className="flex flex-wrap items-center gap-2 text-[15px]">
@@ -227,7 +235,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
             <input type="hidden" name="child" value={child.id} />
             <FamiliesFilterFields filter={filter} />
             <p className="text-[15px] leading-[22px]">
-              This deletes {child.firstName}&apos;s record, attendance and answers. Parents with no other children at the club are removed too. It
+              This deletes {child.firstName}&apos;s record, attendance, answers and messages with the club. Parents with no other children at the club are removed too. It
               can&apos;t be undone.
             </p>
             <label className="flex min-h-11 items-center gap-3 text-[15px] font-bold">

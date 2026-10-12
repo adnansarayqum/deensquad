@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, Flame, ListChecks, QrCode } from "lucide-react";
+import { ChevronRight, Flame, ListChecks, MessageCircle, QrCode, Reply } from "lucide-react";
 import { AcknowledgeButton } from "@/components/AcknowledgeButton";
+import { QuickAnswers } from "@/components/messages/QuickAnswers";
 import { NotificationsCard } from "@/components/NotificationsCard";
 import { ReadFocus } from "@/components/ReadFocus";
 import { StaffSwitch } from "@/components/StaffSwitch";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { clock, postedLabel, shortDay } from "@/lib/dates";
 import { getNewsPage } from "@/lib/parent/load";
+import type { AnnouncementView, Family } from "@/lib/parent/data";
 import { sessionsToday, weekSummary } from "@/lib/parent/views";
 import { groupsPlural } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Club news" };
 
 export default async function NewsPage() {
-  const { family, news, week, streakWeeks, stepsLeft } = await getNewsPage();
+  const { family, news, week, streakWeeks, stepsLeft, unreadMessages } = await getNewsPage();
   const now = new Date();
   const unread = news.filter((a) => !a.read);
   const earlier = news.filter((a) => a.read);
@@ -81,6 +83,23 @@ export default async function NewsPage() {
             <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
           </Link>
         ) : null}
+        {unreadMessages > 0 ? (
+          <Link
+            href="/messages"
+            className="flex items-center gap-3 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 py-3 text-ink transition-transform active:translate-y-1"
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-kit-orange text-on-orange">
+              <MessageCircle aria-hidden size={24} />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-[15px] font-bold">
+                {unreadMessages === 1 ? "1 new message from the club" : `${unreadMessages} new messages from the club`}
+              </span>
+              <span className="text-[13px]">Open Messages to read and reply</span>
+            </span>
+            <ChevronRight aria-hidden size={20} className="shrink-0" />
+          </Link>
+        ) : null}
         {stepsLeft > 0 ? (
           <Link
             href="/checklist"
@@ -125,7 +144,8 @@ export default async function NewsPage() {
                 <h2 className="text-[19px] leading-[25px] font-bold">{a.title}</h2>
                 <p className="text-[15px] leading-[22px] whitespace-pre-line">{a.body}</p>
                 {a.postedBy ? <p className="text-[13px] text-ink-muted">From {a.postedBy}</p> : null}
-                <AcknowledgeButton announcementId={a.id} title={a.title} />
+                {a.quickAnswers && a.reaches.length ? <Answers a={a} family={family} /> : <AcknowledgeButton announcementId={a.id} title={a.title} />}
+                <ReplyLink a={a} />
               </Card>
             ))}
           </section>
@@ -156,11 +176,41 @@ export default async function NewsPage() {
                 </div>
                 <h2 className="text-base leading-[22px] font-bold">{a.title}</h2>
                 <p className="text-[14px] leading-5 whitespace-pre-line text-ink-muted">{a.body}</p>
+                {a.quickAnswers && a.reaches.length ? <Answers a={a} family={family} /> : null}
+                <ReplyLink a={a} />
               </ReadFocus>
             ))}
           </section>
         ) : null}
       </main>
     </>
+  );
+}
+
+/** The quick-answer buttons for each of the family's children the message reaches (one child: plain "Yes"/"No"). */
+function Answers({ a, family }: { a: AnnouncementView; family: Family }) {
+  const several = a.reaches.length > 1;
+  const rows = a.reaches.flatMap((id) => {
+    const child = family.children.find((c) => c.id === id);
+    if (!child) return [];
+    const given = a.answers[id];
+    return [{ childId: id, childName: several ? child.firstName : null, answer: given?.answer ?? null, answeredBy: given && !given.mine ? given.byName : null }];
+  });
+  return <QuickAnswers announcementId={a.id} title={a.title} options={a.quickAnswers ?? []} rows={rows} />;
+}
+
+/** "Reply to Coach Monju": starts (or opens) a conversation with whoever posted it, about the child it's for. */
+function ReplyLink({ a }: { a: AnnouncementView }) {
+  if (!a.allowReplies || a.reaches.length === 0) return null;
+  const href = `/messages/new?about=${a.id}${a.reaches.length === 1 ? `&child=${a.reaches[0]}` : ""}`;
+  return (
+    <Link
+      href={href}
+      aria-label={`Reply to ${a.postedBy ?? "the club"}: ${a.title}`}
+      className="inline-flex min-h-12 items-center gap-2 self-start text-[15px] font-bold text-grass-text underline"
+    >
+      <Reply aria-hidden size={18} />
+      Reply to {a.postedBy ?? "the club"}
+    </Link>
   );
 }

@@ -72,6 +72,40 @@ describe("download my data", () => {
     expect(text).not.toContain(DEV_EMAILS.parent);
   });
 
+  it("includes the family's messages with the club and quick answers, and none of another family's", async () => {
+    const adnan = await t.signIn(DEV_EMAILS.parent);
+    const sara = await t.signIn(DEV_EMAILS.secondParent);
+    const nuhsParent = await t.signIn("parent16@example.com");
+    const coach = await t.signIn(DEV_EMAILS.coach);
+    const [{ id: nuh }] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from players where first_name = 'Nuh'`));
+    const start = (user: string, child: string, body: string) =>
+      t.asUser(user, async (tx) => {
+        const [{ id }] = await tx.query<{ id: string }>(`insert into conversations (player_id, started_by_user, started_by_kind) values ($1, auth.uid(), 'parent') returning id`, [child]);
+        await tx.query(`insert into conversation_messages (conversation_id, author_user, author_kind, author_name, body) values ($1, auth.uid(), 'parent', '', $2)`, [id, body]);
+        return id;
+      });
+    const musa = await start(adnan, DEV_IDS.musa, "Musa has a cold.");
+    await t.asUser(coach, (tx) => tx.query(`insert into conversation_messages (conversation_id, author_user, author_kind, author_name, body) values ($1, auth.uid(), 'staff', '', 'Get well soon.')`, [musa]));
+    await t.asUser(sara, (tx) => tx.query(`insert into conversation_messages (conversation_id, author_user, author_kind, author_name, body) values ($1, auth.uid(), 'parent', '', 'Thanks.')`, [musa]));
+    await start(nuhsParent, nuh, "Nuh's private message.");
+    const [{ id: news }] = await t.asSystem((tx) =>
+      tx.query<{ id: string }>(`insert into announcements (topic, title, body, audience, quick_answers) values ('Matches', 'Cup?', 'Can they play?', '{U7}', '{Yes,No}') returning id`),
+    );
+    await t.asUser(sara, (tx) => tx.query(`select answer_announcement($1, $2, 'Yes')`, [news, DEV_IDS.musa]));
+
+    const data = await t.asUser(adnan, (tx) => buildFamilyExport(tx, now));
+    const child = data.children.find((c) => c.firstName === "Musa")!;
+    expect(child.messagesWithTheClub).toHaveLength(1);
+    expect(child.messagesWithTheClub[0].messages.map((m) => [m.from, m.message])).toEqual([
+      ["you", "Musa has a cold."],
+      ["the club (Coach Hamza)", "Get well soon."],
+      ["another parent", "Thanks."],
+    ]);
+    expect(child.quickAnswers).toEqual([expect.objectContaining({ message: "Cup?", answer: "Yes", answeredByYou: false })]);
+    expect(JSON.stringify(data)).not.toContain("Nuh's private message.");
+    expect(JSON.stringify(data)).not.toContain('"Sara"');
+  });
+
   it("lists the parent's own shop orders with what was ordered for which child", async () => {
     const adnan = await t.signIn(DEV_EMAILS.parent);
     const [{ id: product }] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from shop_products where active and cardinality(sizes) = 0 limit 1`));

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MessageCircle, Phone } from "lucide-react";
 import { Notice, PageHeader, ReadBar, Section } from "@/components/admin/bits";
@@ -14,6 +15,8 @@ import { LADDER } from "@/lib/chase/ladder";
 import { pushConfigured, smsConfigured } from "@/lib/chase/senders";
 import { canSendEmail } from "@/lib/email/send";
 import { dialable } from "@/lib/validate";
+import { countReplies, loadNewsAnswers } from "@/lib/messages/data";
+import { tallyAnswers } from "@/lib/messages/quick-answers";
 
 export const metadata: Metadata = { title: "Message" };
 
@@ -23,9 +26,13 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
   const flags = await searchParams;
   if (!UUID.test(id)) notFound();
   const mine = coachLimit(user.staff);
-  const detail = await asUser(user.id, (tx) => loadNewsDetail(tx, id, mine));
+  const detail = await asUser(user.id, async (tx) => {
+    const found = await loadNewsDetail(tx, id, mine);
+    return found ? { ...found, answers: await loadNewsAnswers(tx, id, mine), replies: await countReplies(tx, id) } : null;
+  });
   if (!detail) notFound();
-  const { news, unread } = detail;
+  const { news, unread, answers, replies } = detail;
+  const tally = answers?.options ? tallyAnswers(answers.options, answers.children) : null;
   // A group coach can delete only messages that went to their own groups alone.
   const canDelete = !mine || within(news.audience, mine);
   const chase = unread.filter((u) => !u.partnerRead);
@@ -59,6 +66,41 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
         <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
         {news.requiresAck ? <ReadBar read={news.readCount} total={news.audienceCount} groupsOnly={news.groupsOnly} /> : <p className="text-sm text-ink-muted">No read receipts asked for.</p>}
       </Section>
+
+      {tally ? (
+        <Section title="Quick answers" aside={<span className="text-sm text-ink-muted">{answers!.children.length - tally.none.length} of {answers!.children.length} answered</span>}>
+          <p className="text-sm text-ink-muted">One answer per child; either parent can give or change it. Answering counts as reading it.</p>
+          <ul className="flex flex-col gap-2 text-[15px]">
+            {tally.tally.map((t) => (
+              <li key={t.answer} className="border-t border-line pt-2 first:border-0 first:pt-0">
+                <b>
+                  {t.answer} ({t.children.length})
+                </b>
+                {t.children.length ? `: ${t.children.join(", ")}` : null}
+              </li>
+            ))}
+            <li className="border-t border-line pt-2">
+              <b>No answer yet ({tally.none.length})</b>
+              {tally.none.length ? <span className="text-ink-muted">: {tally.none.join(", ")}</span> : null}
+            </li>
+          </ul>
+        </Section>
+      ) : null}
+
+      {answers?.allowReplies || replies > 0 ? (
+        <Section title="Replies">
+          <p className="text-[15px]">
+            {replies === 0
+              ? "No replies yet. Each parent's reply starts a private conversation in Messages."
+              : `${replies} ${replies === 1 ? "conversation" : "conversations"} with families about this message.`}
+          </p>
+          {replies > 0 ? (
+            <Link href={`/admin/messages?about=${news.id}`} className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-grass-text underline underline-offset-4">
+              See the replies
+            </Link>
+          ) : null}
+        </Section>
+      ) : null}
 
       {news.requiresAck ? (
         <Section title="Automatic reminders">

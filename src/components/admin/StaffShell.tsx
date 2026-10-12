@@ -4,14 +4,18 @@ import Link from "next/link";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { SignOutForm } from "@/components/SignOutForm";
 import type { CurrentUser } from "@/lib/auth/session";
+import { asUser } from "@/lib/db";
+import { loadStaffUnread } from "@/lib/messages/data";
 
 /**
  * The one frame for every staff page (/admin and /coach): phones get the pitch header with wrapping pill
  * navigation; computers (lg and up) a pitch sidebar and a wide main column. Only one of the two is shown, so the
  * page has one "Club admin" nav. Pages put a PageHeader first and cards (Section) after it.
  */
-export function StaffShell({ user, children }: { user: CurrentUser & { staff: NonNullable<CurrentUser["staff"]> }; children: ReactNode }) {
+export async function StaffShell({ user, children }: { user: CurrentUser & { staff: NonNullable<CurrentUser["staff"]> }; children: ReactNode }) {
   const isAdmin = user.staff.role === "admin";
+  // Parents' messages this person hasn't read, for the Messages badge (their own groups' and those addressed to them).
+  const unreadMessages = await asUser(user.id, loadStaffUnread);
   return (
     <div className="min-h-dvh bg-cream lg:flex">
       <aside aria-label="Club admin menu" className="hidden w-60 shrink-0 bg-pitch text-on-pitch lg:block">
@@ -20,7 +24,7 @@ export function StaffShell({ user, children }: { user: CurrentUser & { staff: No
             <Image src="/crest.png" alt="" width={40} height={40} className="rounded-[8px]" />
             <span className="font-display text-[30px] leading-none tracking-[0.02em]">Club admin</span>
           </Link>
-          <AdminNav isAdmin={isAdmin} layout="sidebar" />
+          <AdminNav isAdmin={isAdmin} layout="sidebar" unreadMessages={unreadMessages} />
           <div className="mt-auto flex flex-col gap-1 border-t border-pitch-stripe pt-4 text-[15px] font-bold text-on-pitch-muted">
             {user.guardian ? (
               <Link href="/news" className="flex min-h-12 items-center rounded-dash px-3 hover:bg-pitch-deep">
@@ -56,7 +60,7 @@ export function StaffShell({ user, children }: { user: CurrentUser & { staff: No
                 </SignOutForm>
               </div>
             </div>
-            <AdminNav isAdmin={isAdmin} />
+            <AdminNav isAdmin={isAdmin} unreadMessages={unreadMessages} />
           </div>
         </header>
         <main className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-5 pb-[max(env(safe-area-inset-bottom),32px)] lg:max-w-6xl lg:px-8 lg:py-8">
