@@ -9,6 +9,7 @@ export const STAFF_NAV = [
   { href: "/coach", label: "Register", exact: true },
   { href: "/admin/families", label: "Families" },
   { href: "/admin/news", label: "News" },
+  { href: "/admin/messages", label: "Messages" },
   { href: "/admin/sessions", label: "Sessions" },
   { href: "/coach/plans", label: "Plans" },
   { href: "/coach/practice", label: "Practice sheets" },
@@ -18,10 +19,19 @@ export const STAFF_NAV = [
 ] as const;
 
 /** The staff sections: wrapping pills in the phone header, or a list down the desktop sidebar. */
-export function AdminNav({ isAdmin, layout = "pills" }: { isAdmin: boolean; layout?: "pills" | "sidebar" }) {
+export function AdminNav({ isAdmin, layout = "pills", unreadMessages = 0 }: { isAdmin: boolean; layout?: "pills" | "sidebar"; unreadMessages?: number }) {
   const path = usePathname();
   const items = STAFF_NAV.filter((item) => isAdmin || !("adminOnly" in item && item.adminOnly));
   const isActive = (item: (typeof STAFF_NAV)[number]) => ("exact" in item && item.exact ? path === item.href : path.startsWith(item.href));
+  // Messages carries how many conversations have a parent's message this person hasn't read: "Messages, 3 unread".
+  const badge = (item: (typeof STAFF_NAV)[number]) =>
+    item.href === "/admin/messages" && unreadMessages > 0 ? (
+      <span className="ml-1.5 inline-grid h-6 min-w-6 place-items-center rounded-pill bg-kit-orange px-1.5 text-xs font-extrabold text-on-orange">
+        <span className="sr-only">, </span>
+        {unreadMessages}
+        <span className="sr-only"> unread</span>
+      </span>
+    ) : null;
 
   if (layout === "sidebar") {
     return (
@@ -39,6 +49,7 @@ export function AdminNav({ isAdmin, layout = "pills" }: { isAdmin: boolean; layo
                   }`}
                 >
                   {item.label}
+                  {badge(item)}
                 </Link>
               </li>
             );
@@ -63,6 +74,7 @@ export function AdminNav({ isAdmin, layout = "pills" }: { isAdmin: boolean; layo
             }`}
           >
             {item.label}
+            {badge(item)}
           </Link>
         );
       })}

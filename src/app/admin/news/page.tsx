@@ -6,6 +6,7 @@ import { postNews } from "@/lib/admin/actions";
 import { audienceLabel, loadNewsList } from "@/lib/admin/data";
 import { loadNewsChildren } from "@/lib/admin/news";
 import { NewsAudience } from "@/components/admin/NewsAudience";
+import { NewsReplyOptions } from "@/components/admin/NewsReplyOptions";
 import { TOPICS } from "@/lib/admin/topics";
 import { WritingHelp } from "@/components/writing/WritingHelp";
 import { aiConfigured } from "@/lib/ai/claude";
@@ -58,6 +59,7 @@ export default async function AdminNewsPage() {
               </div>
             </div>
             <NewsAudience limited={limited} myGroups={myGroups} list={children} />
+            <NewsReplyOptions />
             <label className="flex min-h-11 items-center gap-3 text-[15px]">
               <input type="checkbox" name="requiresAck" defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
               <span>
