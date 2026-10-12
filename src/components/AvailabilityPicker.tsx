@@ -1,7 +1,7 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
-import { CalendarPlus, Check, ChevronDown, X } from "lucide-react";
+import { useOptimistic, useState, useSyncExternalStore, useTransition } from "react";
+import { CalendarPlus, Check, X } from "lucide-react";
 import Link from "next/link";
 import type { Availability } from "@/lib/domain";
 import { track } from "@/lib/analytics";
@@ -110,31 +110,51 @@ export function AvailabilityPicker({
 }
 
 /** `label` names the session for screen readers ("Training, Fri 9 Oct"), as several children can each have one. */
-export type CalendarLinks = { google: string; ics: string; label: string };
+export type CalendarLinks = { google: string; ics: string; icsOpen: string; android: string; label: string };
+
+type Platform = "android" | "apple" | "other";
+const noSubscribe = () => () => {};
+function detectPlatform(): Platform {
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) return "android";
+  // iPadOS reports itself as a Mac; a touch screen gives it away.
+  if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) return "apple";
+  return "other";
+}
 
 /**
- * A small secondary "Add to calendar" under a Coming answer: Google Calendar (its own "create event" page, in a new
- * tab) or a one-event .ics file (Apple Calendar, Outlook and the rest), plus a line to the family's calendar feed.
+ * One "Add to my calendar" button under a Coming answer that puts the session into the calendar already on the
+ * phone: Android opens its own calendar app on a filled-in event (an intent; no website or sign-in), iPhone/iPad open
+ * the event file, which Safari offers to add at once, and computers get the file (with Google Calendar on the web as
+ * a second choice). Before the page knows the phone it links the file, which works everywhere.
  */
 function AddToCalendar({ links }: { links: CalendarLinks }) {
-  const item = "flex min-h-12 items-center rounded-[12px] px-3 text-[15px] font-bold text-grass-text underline";
+  // null while rendering on the server (and in the first paint), the phone's platform after that.
+  const platform = useSyncExternalStore(noSubscribe, detectPlatform, () => null);
+  const href = platform === "android" ? links.android : platform === "apple" ? links.icsOpen : links.ics;
   return (
-    <div className="flex flex-col items-center">
-      <details className="group w-full max-w-xs">
-        <summary className="mx-auto flex min-h-12 w-fit cursor-pointer list-none items-center gap-2 rounded-pill px-3 text-[15px] font-bold text-ink [&::-webkit-details-marker]:hidden">
-          <CalendarPlus aria-hidden size={18} />
-          Add to calendar<span className="sr-only">: {links.label}</span>
-          <ChevronDown aria-hidden size={16} className="transition-transform group-open:rotate-180" />
-        </summary>
-        <div className="mt-1 flex flex-col rounded-app border-2 border-line bg-paper p-1">
-          <a href={links.google} target="_blank" rel="noopener" className={item} onClick={() => track("calendar_added", { kind: "google" })}>
-            Google Calendar
-          </a>
-          <a href={links.ics} className={item} onClick={() => track("calendar_added", { kind: "ics" })}>
-            Apple or other calendar (.ics)
-          </a>
-        </div>
-      </details>
+    <div className="flex flex-col items-center gap-1">
+      <a
+        href={href}
+        aria-label={`Add to my calendar: ${links.label}`}
+        className="btn-chunky btn-paper btn-small inline-flex min-h-12 items-center gap-2"
+        onClick={() => track("calendar_added", { kind: platform === "android" ? "android" : "ics" })}
+      >
+        <CalendarPlus aria-hidden size={18} />
+        Add to my calendar
+      </a>
+      {platform === "other" ? (
+        <a
+          href={links.google}
+          target="_blank"
+          rel="noopener"
+          aria-label={`Or use Google Calendar on the web: ${links.label}`}
+          className="inline-flex min-h-12 items-center text-sm text-ink-muted underline"
+          onClick={() => track("calendar_added", { kind: "google" })}
+        >
+          Or use Google Calendar on the web
+        </a>
+      ) : null}
       <Link href="/player/calendar" className="inline-flex min-h-12 items-center text-sm text-ink-muted underline">
         Add every session automatically
       </Link>

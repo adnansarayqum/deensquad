@@ -10,7 +10,8 @@ import { Attachment } from "@/components/plans/Attachment";
 import { VideoCard } from "@/components/plans/VideoCard";
 import { VenuePassPicture } from "@/components/VenuePassPicture";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
-import { googleCalendarUrl, sessionIcsPath } from "@/lib/calendar/session";
+import { androidCalendarIntent, googleCalendarUrl, sessionIcsOpenPath, sessionIcsPath } from "@/lib/calendar/session";
+import { appUrl } from "@/lib/config";
 import { clock, shortDay } from "@/lib/dates";
 import { attachmentTitle } from "@/lib/files";
 import { groupPlural, type Session } from "@/lib/domain";
@@ -52,7 +53,14 @@ export default async function FridayPage() {
       cancelled: false,
       cancelReason: null,
     };
-    return { google: googleCalendarUrl(event), ics: sessionIcsPath(s.id), label: `${s.title}, ${shortDay(s.startsAt)}` };
+    const base = appUrl();
+    return {
+      google: googleCalendarUrl(event),
+      ics: sessionIcsPath(s.id),
+      icsOpen: sessionIcsOpenPath(s.id),
+      android: androidCalendarIntent(event, base ? `${base}${sessionIcsPath(s.id)}` : null),
+      label: `${s.title}, ${shortDay(s.startsAt)}`,
+    };
   };
 
   return (

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { buildCalendar, type CalendarSession } from "./ics";
-import { googleCalendarUrl, loadCalendarSession, sessionIcsFilename, sessionIcsPath } from "./session";
+import { androidCalendarIntent, googleCalendarUrl, loadCalendarSession, sessionIcsFilename, sessionIcsPath } from "./session";
 
 const event = (over: Partial<CalendarSession> = {}): CalendarSession => ({
   id: "5f0c1a7e-0000-4000-8000-000000000001",
@@ -101,5 +101,34 @@ describe("one session as a calendar file", () => {
   it("gives staff any session, without anyone's children", async () => {
     const s = (await t.asUser(coach, (tx) => loadCalendarSession(tx, ids.u12, true)))!;
     expect([s.title, s.children]).toEqual(["U12 training", []]);
+  });
+});
+
+describe("androidCalendarIntent", () => {
+  const s = {
+    id: "00000000-0000-4000-8000-000000000001",
+    title: "Training; U7 & U10",
+    startsAt: new Date("2026-10-16T17:30:00Z"),
+    endsAt: new Date("2026-10-16T19:00:00Z"),
+    venue: "Bobby Moore Sports Hub",
+    children: ["Musa"],
+    arriveBy: null,
+    kit: null,
+    notes: null,
+    cancelled: false,
+    cancelReason: null,
+  };
+  it("opens the phone's calendar on a filled-in event, falling back to the file", () => {
+    const url = androidCalendarIntent(s, "https://app.example/api/sessions/x/ics");
+    expect(url.startsWith("intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;")).toBe(true);
+    expect(url.endsWith(";end")).toBe(true);
+    expect(url).toContain(`l.beginTime=${s.startsAt.getTime()};l.endTime=${s.endsAt.getTime()}`);
+    expect(url).toContain("S.title=Training%3B%20U7%20%26%20U10%20(Musa)");
+    expect(url).toContain("S.browser_fallback_url=https%3A%2F%2Fapp.example%2Fapi%2Fsessions%2Fx%2Fics");
+    // Every value is encoded, so a ";" in a title can't end the intent early.
+    expect(url.split(";").filter((p) => p.startsWith("S.title")).length).toBe(1);
+  });
+  it("leaves the fallback out when the app's address isn't known", () => {
+    expect(androidCalendarIntent(s, null)).not.toContain("browser_fallback_url");
   });
 });

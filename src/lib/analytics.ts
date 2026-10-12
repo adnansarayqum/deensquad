@@ -12,7 +12,7 @@ type Events = {
   availability_answered: { answer: "coming" | "away" };
   news_acknowledged: undefined;
   order_placed: { pay: "card" | "bank" };
-  calendar_added: { kind: "google" | "ics" };
+  calendar_added: { kind: "google" | "ics" | "android" };
 };
 export type AnalyticsEventName = keyof Events;
 

@@ -22,8 +22,32 @@ export function googleCalendarUrl(s: CalendarSession): string {
   return `https://calendar.google.com/calendar/render?${params.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&")}`;
 }
 
+/**
+ * Android: an intent that opens the phone's own calendar app (Google Calendar, Samsung, Outlook…) on a new event
+ * already filled in, signed into whatever account the parent uses there. No website and no sign-in, which the Google
+ * Calendar web page needed. If no app takes it, Chrome opens `fallback` (the session's .ics file) instead.
+ */
+export function androidCalendarIntent(s: CalendarSession, fallback: string | null): string {
+  const enc = (v: string) => encodeURIComponent(v);
+  const parts = [
+    "action=android.intent.action.INSERT",
+    "type=vnd.android.cursor.item/event",
+    `S.title=${enc(summary(s))}`,
+    `l.beginTime=${s.startsAt.getTime()}`,
+    `l.endTime=${s.endsAt.getTime()}`,
+    `S.eventLocation=${enc(s.venue)}`,
+  ];
+  const details = description(s);
+  if (details) parts.push(`S.description=${enc(details)}`);
+  if (fallback) parts.push(`S.browser_fallback_url=${enc(fallback)}`);
+  return `intent:#Intent;${parts.join(";")};end`;
+}
+
 /** The address of a session's one-event calendar file. */
 export const sessionIcsPath = (sessionId: string) => `/api/sessions/${sessionId}/ics`;
+
+/** The same file to open rather than save: iPhone and iPad show "Add to Calendar" for it straight away. */
+export const sessionIcsOpenPath = (sessionId: string) => `/api/sessions/${sessionId}/ics?open=1`;
 
 /** "deen-squad-2026-10-09.ics", by the session's London date. */
 export function sessionIcsFilename(startsAt: Date): string {
