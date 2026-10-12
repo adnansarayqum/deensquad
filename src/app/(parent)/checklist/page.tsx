@@ -1,13 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Camera, Check, ChevronRight, CreditCard, FileSignature, IdCard, Phone, Shirt } from "lucide-react";
+import { Camera, Check, ChevronRight, CreditCard, FileSignature, HeartPulse, IdCard, Phone, Shirt } from "lucide-react";
 import { AppHeader, Card, Eyebrow, Progress } from "@/components/ui";
 import { getChecklistPage } from "@/lib/parent/load";
 import { countSteps, type ChecklistItemView } from "@/lib/parent/views";
 
 export const metadata: Metadata = { title: "To-do" };
 
-const icons: Record<ChecklistItemView["icon"], typeof Camera> = { card: CreditCard, camera: Camera, phone: Phone, id: IdCard, contract: FileSignature };
+const icons: Record<ChecklistItemView["icon"], typeof Camera> = {
+  card: CreditCard,
+  camera: Camera,
+  phone: Phone,
+  id: IdCard,
+  contract: FileSignature,
+  medical: HeartPulse,
+};
 
 export default async function ChecklistPage() {
   const { family, groups, familyItems, done, total } = await getChecklistPage();
@@ -51,8 +58,10 @@ export default async function ChecklistPage() {
         ) : null}
 
         {sections.map(({ key, label, heading, items }) => {
-          const todo = items.filter((i) => !i.done);
-          const finished = items.filter((i) => i.done);
+          const todo = items.filter((i) => !i.done && !i.optional);
+          const finished = items.filter((i) => i.done && !i.optional);
+          // Optional lines (medical and additional needs) sit apart, in neutral colours: they're never "to do".
+          const optional = items.filter((i) => i.optional);
           // Counted like the progress bar (the contract counts each child).
           const steps = countSteps(items);
           return (
@@ -96,6 +105,9 @@ export default async function ChecklistPage() {
                   </div>
                 );
               })}
+              {optional.map((item) => (
+                <OptionalRow key={item.id} item={item} />
+              ))}
             </section>
           );
         })}
@@ -136,6 +148,24 @@ function TodoRow({ item }: { item: ChecklistItemView }) {
         {item.note ? <span className="text-sm font-bold">{item.note}</span> : null}
       </span>
       <span className="rounded-xl bg-grass px-3 py-2 text-sm font-extrabold text-on-grass shadow-[0_3px_0_var(--grass-lip)]">{item.actionLabel}</span>
+    </Link>
+  );
+}
+
+/** A line the parent may fill in or leave: neutral, not kit-orange (it isn't an action the club is waiting for). */
+function OptionalRow({ item }: { item: ChecklistItemView }) {
+  const Icon = icons[item.icon];
+  return (
+    <Link href={item.href ?? "/checklist"} className="flex min-h-12 items-center gap-3.5 rounded-app border-2 border-dashed border-line bg-paper px-3.5 py-3">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cream text-ink-muted">
+        <Icon aria-hidden size={22} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-[15px] font-bold">{item.title}</span>
+        <span className="text-[13px] text-ink-muted">{item.detail}</span>
+      </span>
+      <span className="text-sm font-bold text-grass-text">{item.actionLabel}</span>
+      <ChevronRight aria-hidden size={18} className="shrink-0 text-ink-muted" />
     </Link>
   );
 }

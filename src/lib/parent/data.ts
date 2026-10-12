@@ -2,6 +2,7 @@ import { CONTRACT } from "../documents/contract";
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { londonDate, londonTime } from "../dates";
+import { myChildrenWithMedical } from "../medical/data";
 import type { AgeGroup, Announcement, Availability, Badge, Child, CoachNote, PaymentState, Session } from "../domain";
 
 // Queries for the parent screens. They run inside asUser(), so row level security applies,
@@ -237,11 +238,17 @@ export async function loadSquadCounts(tx: Queryable, sessionId: string, group: A
   return row ?? { coming: 0, away: 0, squad: 0 };
 }
 
-export type ChecklistFacts = { contacts: Map<string, number>; payment: Map<string, PaymentState>; agreed?: Set<string> };
+export type ChecklistFacts = {
+  contacts: Map<string, number>;
+  payment: Map<string, PaymentState>;
+  agreed?: Set<string>;
+  /** Children with medical and additional needs added (an optional To-do line, never counted as a step). */
+  medical?: Set<string>;
+};
 
 export async function loadChecklistFacts(tx: Queryable, childIds: string[]): Promise<ChecklistFacts> {
-  if (childIds.length === 0) return { contacts: new Map(), payment: new Map(), agreed: new Set() };
-  const [contacts, payment, agreed] = await Promise.all([
+  if (childIds.length === 0) return { contacts: new Map(), payment: new Map(), agreed: new Set(), medical: new Set() };
+  const [contacts, payment, agreed, medical] = await Promise.all([
     tx.query<{ player_id: string; n: number }>(
       `select player_id, count(*)::int as n from emergency_contacts where player_id = any($1::uuid[]) group by player_id`,
       [childIds],
@@ -251,11 +258,13 @@ export async function loadChecklistFacts(tx: Queryable, childIds: string[]): Pro
       [childIds],
     ),
     tx.query<{ player_id: string }>(`select player_id from agreements where player_id = any($1::uuid[]) and document = $2`, [childIds, CONTRACT.id]),
+    myChildrenWithMedical(tx, childIds),
   ]);
   return {
     contacts: new Map(contacts.map((r) => [r.player_id, r.n])),
     payment: new Map(payment.map((r) => [r.player_id, r.state])),
     agreed: new Set(agreed.map((r) => r.player_id)),
+    medical,
   };
 }
 

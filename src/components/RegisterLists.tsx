@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
-import { Search } from "lucide-react";
+import Link from "next/link";
+import { HeartPulse, Search } from "lucide-react";
 import { matchesName } from "@/lib/search";
 import { FLAG_WORDS, type RegisterFlag } from "@/lib/staff/flags";
 import { CheckInButton, UndoCheckInButton } from "./CheckInButton";
@@ -23,7 +24,28 @@ export type GateRow = {
   /** "QR code scanned · 5:58pm" for a child who is here. */
   checkedIn: string | null;
   flags: RegisterFlag[];
+  /** The parents added medical and additional needs this member of staff may read. */
+  medical: boolean;
 };
+
+/**
+ * "Medical info" beside a child's name, for those whose parents added some (and only for staff allowed to read it).
+ * Neutral, not kit-orange: it isn't an action. A link to the details on their own page, never the details on the
+ * list, which other parents can see over a coach's shoulder at the gate. `from` is the register to come back to.
+ */
+export function MedicalLink({ id, name, from }: { id: string; name: string; from: string }) {
+  return (
+    <Link
+      href={`/coach/child/${id}/medical?from=${encodeURIComponent(from)}`}
+      aria-label={`Medical info for ${name}`}
+      // The pill stays small so the row keeps its height; the tap area reaches 48px tall around it.
+      className="relative inline-flex items-center gap-1 rounded-pill border border-line bg-cream px-2.5 py-0.5 text-label text-ink uppercase underline-offset-2 after:absolute after:-inset-x-1 after:-inset-y-3 after:content-[''] hover:underline"
+    >
+      <HeartPulse aria-hidden size={13} />
+      Medical info
+    </Link>
+  );
+}
 
 export function FlagPills({ flags }: { flags: readonly RegisterFlag[] }) {
   if (flags.length === 0) return null;
@@ -40,6 +62,7 @@ export function FlagPills({ flags }: { flags: readonly RegisterFlag[] }) {
 
 export function RegisterLists({
   sessionId,
+  from,
   open,
   showGroup,
   notHere,
@@ -48,6 +71,8 @@ export function RegisterLists({
   children,
 }: {
   sessionId: string;
+  /** This register's address, for the way back from a child's medical info. */
+  from: string;
   open: boolean;
   /** The "All groups" view: each row says its group. */
   showGroup: boolean;
@@ -63,6 +88,13 @@ export function RegisterLists({
   const [n, a, h] = [keep(notHere), keep(away), keep(here)];
   const searching = query.trim() !== "";
   const name = (r: GateRow) => `${r.firstName} ${r.lastInitial}.`;
+  /** The child's name, with "Medical info" beside it when there is some (wrapping under it only on a narrow screen). */
+  const title = (r: GateRow) => (
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span className="text-[15px] font-bold">{name(r)}</span>
+      {r.medical ? <MedicalLink id={r.id} name={name(r)} from={from} /> : null}
+    </span>
+  );
   const group = (r: GateRow) => (showGroup ? <Pill tone="neutral">{r.ageGroup}</Pill> : null);
   // The same height as before (the 48px button sets it), so the list still to arrive stays on the first screen.
   const face = (r: GateRow) => <ChildAvatar photoId={r.photoId} firstName={r.firstName} lastName={r.lastInitial} size={40} />;
@@ -104,7 +136,7 @@ export function RegisterLists({
                 <span className="flex min-w-0 items-center gap-3">
                   {face(r)}
                   <span className="flex flex-col items-start gap-1">
-                    <span className="text-[15px] font-bold">{name(r)}</span>
+                    {title(r)}
                     <span className="text-[13px] text-ink-muted">{r.answer === "coming" ? "Said they're coming" : "No answer"}</span>
                     {group(r)}
                   </span>
@@ -130,7 +162,7 @@ export function RegisterLists({
                 <span className="flex min-w-0 items-center gap-3">
                   {face(r)}
                   <span className="flex flex-col items-start gap-1">
-                    <span className="text-[15px] font-bold">{name(r)}</span>
+                    {title(r)}
                     <span className="flex flex-wrap gap-1">
                       <Pill tone="neutral">Said not coming</Pill>
                       {group(r)}
@@ -159,7 +191,7 @@ export function RegisterLists({
                 <span className="flex min-w-0 flex-1 items-center gap-3">
                   {face(r)}
                   <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
-                    <span className="text-[15px] font-bold">{name(r)}</span>
+                    {title(r)}
                     <span className="text-[13px] text-ink-muted">{r.checkedIn}</span>
                     {showGroup || r.flags.length ? (
                       <span className="flex flex-wrap gap-1">

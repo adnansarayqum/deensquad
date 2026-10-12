@@ -87,7 +87,7 @@ export type Announcement = {
 
 export type PaymentState = "active" | "missing" | "overdue" | "self_reported";
 
-export type ChecklistItemId = "registered" | "emergency-contacts" | "payment-plan" | "agreement" | "photo-consent";
+export type ChecklistItemId = "registered" | "emergency-contacts" | "payment-plan" | "agreement" | "photo-consent" | "medical";
 
 export type Badge = {
   id: string;

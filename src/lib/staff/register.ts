@@ -3,6 +3,7 @@ import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { isAgeGroup, type AgeGroup, type Availability, type PaymentState, type Session } from "../domain";
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
+import { medicalMarkerSql } from "../medical/data";
 import { newsReaches } from "../squads/sql";
 import type { RegisterFlag } from "./flags";
 
@@ -27,6 +28,11 @@ export type RegisterRow = {
   /** How they were checked in: their gate pass or a coach's Mark here. */
   method: "qr" | "manual" | null;
   flags: RegisterFlag[];
+  /**
+   * The parents added medical and additional needs that this member of staff may read (admins and the child's
+   * group's coaches): the register shows a neutral "Medical info" link, never the details themselves.
+   */
+  medical: boolean;
 };
 
 export type RegisterView = {
@@ -125,10 +131,11 @@ export async function loadRegister(
     method: "qr" | "manual" | null;
     unread_news: boolean;
     kit_ready: boolean;
+    medical: boolean;
   }>(
     `select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number, p.photo_consent, p.photo_file_id,
        coalesce(ps.state, 'missing')::text as payment, a.answer::text as answer, at.checked_in_at, at.method,
-       ${unreadNewsSql("$3")} as unread_news,
+       ${unreadNewsSql("$3")} as unread_news, ${medicalMarkerSql("p")} as medical,
        exists (
          select 1 from shop_order_items i join shop_orders o on o.id = i.order_id where i.player_id = p.id and o.status = 'ready'
        ) as kit_ready
@@ -162,6 +169,7 @@ export async function loadRegister(
         ...(r.unread_news ? (["unread_news"] as const) : []),
         ...(r.kit_ready ? (["kit_ready"] as const) : []),
       ],
+      medical: r.medical,
     })),
   };
 }

@@ -2,6 +2,7 @@ import { londonDate, londonTime, sameLondonDay, shortDay } from "../dates";
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import type { AgeGroup, PaymentState } from "../domain";
+import { medicalMarkerSql } from "../medical/data";
 import { readPass } from "../pass/token";
 import { sessionIsFor } from "../squads/sql";
 import { unreadNewsSql, type RegisterFlag } from "./register";
@@ -21,6 +22,8 @@ export type ScannedChild = {
   status: "checked_in" | "already_here" | "no_session_today";
   session: { title: string; startsAt: string } | null;
   flags: RegisterFlag[];
+  /** Medical and additional needs this member of staff may read (a neutral marker on the result card). */
+  medical: boolean;
 };
 
 export type ScanResult = { ok: true; child: ScannedChild } | { ok: false; reason: "not_a_pass" | "unknown_child" };
@@ -40,10 +43,11 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
     payment: PaymentState;
     unread_news: boolean;
     kit_ready: boolean;
+    medical: boolean;
   }>(
     `select p.id, p.first_name, p.last_name, p.shirt_number, p.age_group::text as age_group, p.photo_consent, p.photo_file_id,
        coalesce(ps.state, 'missing')::text as payment,
-       ${unreadNewsSql("$2")} as unread_news,
+       ${unreadNewsSql("$2")} as unread_news, ${medicalMarkerSql("p")} as medical,
        exists (
          select 1 from shop_order_items i join shop_orders o on o.id = i.order_id where i.player_id = p.id and o.status = 'ready'
        ) as kit_ready
@@ -89,6 +93,7 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
         ...(c.unread_news ? (["unread_news"] as const) : []),
         ...(c.kit_ready ? (["kit_ready"] as const) : []),
       ],
+      medical: c.medical,
     },
   };
 }

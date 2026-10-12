@@ -148,8 +148,10 @@ export type ChecklistItemView = {
   title: string;
   detail: string;
   actionLabel: string;
-  icon: "card" | "camera" | "phone" | "id" | "contract";
+  icon: "card" | "camera" | "phone" | "id" | "contract" | "medical";
   done: boolean;
+  /** A line the parent may do or leave (medical and additional needs): shown apart, never counted as a step. */
+  optional?: boolean;
   href?: string;
   /** "Covers Yusuf, Ali and Maryam": a family-wide step names the children it's for. */
   note?: string;
@@ -192,6 +194,19 @@ export function buildChecklist(child: Child, facts: ChecklistFacts): ChecklistIt
       icon: "camera",
       done: child.photoConsent !== null,
       href: `/checklist/consent${q}`,
+    },
+    {
+      id: "medical",
+      title: "Medical and additional needs (optional)",
+      detail: facts.medical?.has(child.id)
+        ? `Added. The coaches of ${child.firstName}'s group can see it`
+        : `Anything the coaches should know to look after ${child.firstName}`,
+      actionLabel: facts.medical?.has(child.id) ? "Change" : "Add",
+      icon: "medical",
+      done: Boolean(facts.medical?.has(child.id)),
+      href: `/player/child/${child.id}/medical`,
+      optional: true,
+      steps: { done: 0, total: 0 },
     },
   ];
 }

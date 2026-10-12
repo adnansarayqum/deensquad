@@ -27,6 +27,7 @@ const gate = (r: RegisterRow): GateRow => ({
   answer: r.answer,
   checkedIn: r.checkedInAt ? `${r.method === "qr" ? "QR code scanned" : "Marked here"} · ${clock(r.checkedInAt)}` : null,
   flags: r.flags,
+  medical: r.medical,
 });
 
 const tab = (active: boolean) =>
@@ -145,7 +146,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
         {view.rows.length === 0 ? (
           <p className="text-[15px] text-ink-muted">No players in the {groupPlural(group)} yet. A club admin adds families.</p>
         ) : (
-          <RegisterLists sessionId={session.id} open={open} showGroup={all} notHere={s.notHere.map(gate)} away={s.away.map(gate)} here={s.here.map(gate)}>
+          <RegisterLists sessionId={session.id} from={link({ group })} open={open} showGroup={all} notHere={s.notHere.map(gate)} away={s.away.map(gate)} here={s.here.map(gate)}>
             {needsAWord ? (
               // One line for everyone already in who needs a word; the names (and their pills in Here) are a tap away.
               <details className="mt-2 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 text-ink">

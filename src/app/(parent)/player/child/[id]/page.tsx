@@ -13,6 +13,7 @@ import { asUser } from "@/lib/db";
 import { groupPlural } from "@/lib/domain";
 import { getFamily } from "@/lib/parent/load";
 import { loadMyChild } from "@/lib/parent/profile";
+import { myChildrenWithMedical } from "@/lib/medical/data";
 
 export const metadata: Metadata = { title: "Child's details" };
 
@@ -22,8 +23,9 @@ export default async function ChildDetailsPage({ params }: PageProps<"/player/ch
   if (!UUID.test(id)) notFound();
   const { user } = await getFamily();
   // Only the parent's own children: anyone else's id (guessed or mistyped) is a 404, never a page.
-  const child = await asUser(user.id, (tx) => loadMyChild(tx, id));
+  const [child, medical] = await asUser(user.id, (tx) => Promise.all([loadMyChild(tx, id), myChildrenWithMedical(tx, [id])]));
   if (!child) notFound();
+  const hasMedical = medical.has(child.id);
   const back = `/player?child=${child.id}`;
 
   return (
@@ -51,6 +53,23 @@ export default async function ChildDetailsPage({ params }: PageProps<"/player/ch
           <p className="text-sm leading-5 text-ink-muted">
             Only the club&apos;s coaches see this, to learn names. It&apos;s deleted if you turn off photo consent or remove the photo.
           </p>
+        </Card>
+
+        <Card className="flex flex-col p-1">
+          <Link href={`/player/child/${child.id}/medical`} className="flex min-h-12 items-center justify-between gap-3 px-3 py-3">
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-base font-extrabold">Medical and additional needs</span>
+              <span className="text-sm leading-5 text-ink-muted">
+                {hasMedical
+                  ? `Added. ${child.firstName}'s coaches and the club's admins can see it.`
+                  : `Optional. Anything ${child.firstName}'s coaches should know, like ADHD, autism, asthma or allergies.`}
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-1 text-sm font-bold text-grass-text">
+              {hasMedical ? "Change" : "Add"}
+              <ChevronRight aria-hidden size={20} className="text-ink-muted" />
+            </span>
+          </Link>
         </Card>
 
         <Card className="flex flex-col gap-1 p-4">

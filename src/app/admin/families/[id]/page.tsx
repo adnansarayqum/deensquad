@@ -5,6 +5,7 @@ import { FamiliesFilterFields } from "@/components/admin/FamiliesFilterFields";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
 import { ChildAvatar } from "@/components/ChildAvatar";
+import { MedicalDetails } from "@/components/admin/MedicalDetails";
 import { removeChild, resendInvite, saveGuardian, setPayment, unlinkGuardian, updateChild } from "@/lib/admin/actions";
 import { loadChild } from "@/lib/admin/data";
 import { familiesFilter, familiesHref } from "@/lib/admin/families-link";
@@ -12,6 +13,7 @@ import { UUID } from "@/lib/auth/tokens";
 import { coachLimit, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { AGE_GROUPS, groupPlural, type PaymentState } from "@/lib/domain";
+import { loadMedicalForStaff } from "@/lib/medical/data";
 
 export const metadata: Metadata = { title: "Child" };
 
@@ -29,7 +31,13 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
   const { id } = await params;
   const flags = await searchParams;
   if (!UUID.test(id)) notFound();
-  const child = await asUser(user.id, (tx) => loadChild(tx, id));
+  const [child, medical] = await asUser(user.id, (tx) =>
+    Promise.all([
+      loadChild(tx, id),
+      // Admins and the child's group's coaches only (can_see_medical); null for anyone else, who sees no section.
+      tx.query<{ allowed: boolean }>(`select can_see_medical($1) as allowed`, [id]).then(async ([r]) => (r?.allowed ? { data: await loadMedicalForStaff(tx, id) } : null)),
+    ]),
+  );
   if (!child) notFound();
   // A coach with their own groups sees only those children.
   const mine = coachLimit(user.staff);
@@ -177,6 +185,12 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
           </div>
         </dl>
       </Section>
+
+      {medical ? (
+        <Section title="Medical and additional needs">
+          <MedicalDetails medical={medical.data} firstName={child.firstName} />
+        </Section>
+      ) : null}
 
       {isAdmin ? (
         <Section title="Child's details">
