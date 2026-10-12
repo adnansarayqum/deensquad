@@ -932,7 +932,7 @@ test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and
   await expect(phone.getByRole("complementary", { name: "Club admin menu" })).toHaveCount(0);
   await expect(phone.locator("header")).toBeVisible();
   const pills = phone.locator("header").getByRole("navigation", { name: "Club admin" }).getByRole("link");
-  await expect(pills).toHaveCount(10);
+  await expect(pills).toHaveCount(11);
   const [first, second] = [(await pills.nth(0).boundingBox())!, (await pills.nth(1).boundingBox())!];
   expect(second.y).toBe(first.y); // side by side in one scrolling row
   expect(second.x).toBeGreaterThan(first.x);

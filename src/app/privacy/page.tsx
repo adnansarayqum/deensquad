@@ -67,7 +67,8 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
             items={[
               "your name, email address and phone number",
               "which children you look after and your relationship to them",
-              "whether you have read club news, and the date you signed the club contract",
+              "whether you have read club news, your quick answers to club messages (such as Yes or No for your child), and the date you signed the club contract",
+              "messages between you and the club in the app (who wrote each one and when)",
               "if you ask us to delete your account, the date you asked",
             ]}
           />
@@ -122,6 +123,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
             items={[
               "Club admins can see every family. Coaches see the children in the groups they coach.",
               "Other parents never see your details. They only see how many children in a group are coming to a session, not who.",
+              "Messages in the app between you and the club are about one child. Both of that child's parents can read them, as can the coach they were sent to, the child's coaches and the club's admins (so no conversation with a child's family is ever hidden from the club). Other parents never see them. Messages can't be edited or deleted: they are kept as club records.",
             ]}
           />
           <p>We use a few trusted companies to run the app. They handle information only on our instructions:</p>
@@ -131,7 +133,8 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
                 <b>Railway</b> hosts the app and its database.
               </>,
               <>
-                <b>Resend</b> sends the app&apos;s emails, such as sign-in codes and reminders.
+                <b>Resend</b> sends the app&apos;s emails, such as sign-in codes and reminders. An email telling you about a new message from the club
+                says who wrote and about which child, never the message itself.
               </>,
               <>
                 <b>Anthropic</b> (Claude) helps coaches tidy up text they write, such as session plans and notes. Coaches are asked not to include
@@ -146,7 +149,8 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
                 privacy notice.
               </>,
               <>
-                <b>Apple, Google and your browser&apos;s notification service</b> deliver notifications if you turn them on.
+                <b>Apple, Google and your browser&apos;s notification service</b> deliver notifications if you turn them on. A notification about a
+                new message from the club shows its first line, as messaging apps do.
               </>,
               ...(sms
                 ? [
@@ -204,6 +208,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "When they leave, we delete their record and your account within 12 months, unless you ask us to do it sooner.",
               "We may keep attendance and safeguarding records for longer where the law or our safeguarding duties require it.",
               "Shop orders and payment records are kept for 6 years for accounting.",
+              "Messages with the club are kept as club records while your child is at the club, and deleted with their record when they leave, unless our safeguarding duties mean we must keep them longer.",
               "Sign-in codes expire after 15 minutes and old sign-in records are deleted after 30 days.",
             ]}
           />
