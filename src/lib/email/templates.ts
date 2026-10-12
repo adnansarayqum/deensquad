@@ -172,6 +172,25 @@ ${link ? button(link, "Open the overview") : ""}`,
   return { to, subject, text, html };
 }
 
+/**
+ * A new message in a conversation, for someone without app notifications. Says who wrote and which child, never the
+ * message itself: the app is where the club's messages are kept.
+ */
+export function messageEmail(opts: { to: string; firstName: string; author: string; child: string; toStaff: boolean; link: string; appUrl: string | null }): Email {
+  const { to, firstName, author, child, toStaff, link, appUrl } = opts;
+  const subject = `New message from ${author} about ${child}`;
+  const line = toStaff ? `${author} has sent a message about ${child} in the club app.` : `${author} from the club has sent you a message about ${child}.`;
+  const text = [`Assalamu alaikum ${firstName},`, "", line, "", "Open the app to read it and reply:", link].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">Assalamu alaikum ${escape(firstName)},</p>
+<p>${escape(line)}</p>
+${button(link, "Read the message")}
+<p style="color:#56625a;margin-bottom:0">For privacy, messages are kept in the app rather than in email.</p>`,
+  );
+  return { to, subject, text, html };
+}
+
 export type OrderEmailKind ="placed" | "paid" | "ready" | "cancelled";
 
 /**

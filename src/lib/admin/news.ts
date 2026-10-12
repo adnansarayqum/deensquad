@@ -58,15 +58,30 @@ export type NewNews = {
   squadSession: string | null;
   /** The chosen children, for a "Chosen children" message (checked with checkChosenChildren first). */
   children: readonly string[] | null;
+  /** "Let parents reply to you" (migration 0025): replies start a conversation addressed to the poster. */
+  allowReplies?: boolean;
+  /** "Ask for a quick answer": 2 to 4 options (checked with parseQuickAnswers), one answer per child. */
+  quickAnswers?: readonly string[] | null;
 };
 
 /** Writes the message (and its chosen children, in the same transaction). Returns its id. */
 export async function insertNews(tx: Queryable, n: NewNews): Promise<string> {
   const chosen = n.children && n.children.length ? [...new Set(n.children)] : null;
   const [row] = await tx.query<{ id: string }>(
-    `insert into announcements (topic, title, body, audience, requires_ack, posted_by, squad_session_id, to_children)
-     values ($1, $2, $3, $4::text[]::age_group[], $5, $6, $7, $8) returning id`,
-    [n.topic, n.title, n.body, n.audience ? [...n.audience] : null, n.requiresAck, n.postedBy, n.squadSession, chosen !== null],
+    `insert into announcements (topic, title, body, audience, requires_ack, posted_by, squad_session_id, to_children, allow_replies, quick_answers)
+     values ($1, $2, $3, $4::text[]::age_group[], $5, $6, $7, $8, $9, $10::text[]) returning id`,
+    [
+      n.topic,
+      n.title,
+      n.body,
+      n.audience ? [...n.audience] : null,
+      n.requiresAck,
+      n.postedBy,
+      n.squadSession,
+      chosen !== null,
+      Boolean(n.allowReplies),
+      n.quickAnswers && n.quickAnswers.length ? [...n.quickAnswers] : null,
+    ],
   );
   if (chosen) {
     await tx.query(`insert into announcement_players (announcement_id, player_id) select $1::uuid, unnest($2::uuid[])`, [row.id, chosen]);

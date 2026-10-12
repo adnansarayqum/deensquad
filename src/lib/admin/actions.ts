@@ -27,6 +27,7 @@ import { deleteLeftoverAccounts, removeChildRecord, unlinkGuardianRecord } from 
 import { closeDeletionRequest } from "../data-requests";
 import { TOPICS } from "./topics";
 import { checkChosenChildren, insertNews } from "./news";
+import { parseQuickAnswers } from "../messages/quick-answers";
 
 // Club admin Server Actions. Each checks the role first, then writes as that person,
 // so row level security still applies (staff manage the club; only admins manage staff).
@@ -294,6 +295,10 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
   if (!title) return { error: "Add a headline." };
   if (!body) return { error: "Write the message." };
   const requiresAck = formData.get("requiresAck") === "on";
+  const allowReplies = formData.get("allowReplies") === "on";
+  const quick = parseQuickAnswers(formData.get("quickAnswer") === "on", formData.getAll("option"));
+  if ("error" in quick) return quick;
+  const quickAnswers = quick.answers;
   if (!squadSession && formData.get("audience") === "children") {
     // The group ticks belong to "Only these groups" (hidden under this choice), so they're ignored here. The children
     // are checked and the message written in one transaction, so a child removed meanwhile can't fail the insert.
@@ -302,7 +307,7 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
       const checked = await checkChosenChildren(tx, ids, coachLimit(user.staff));
       if ("error" in checked) return checked;
       return {
-        id: await insertNews(tx, { topic: topic as string, title, body, audience: checked.groups, requiresAck, postedBy: user.staff.id, squadSession: null, children: ids }),
+        id: await insertNews(tx, { topic: topic as string, title, body, audience: checked.groups, requiresAck, postedBy: user.staff.id, squadSession: null, children: ids, allowReplies, quickAnswers }),
       };
     });
     if ("error" in result) return result;
@@ -331,7 +336,7 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
     if (everyone || groups.some((g) => !mine.includes(g))) return { error: `You can post to your own groups: ${mine.join(", ")}.` };
   }
   const newsId = await asUser(user.id, (tx) =>
-    insertNews(tx, { topic: topic as string, title, body, audience: everyone ? null : groups, requiresAck, postedBy: user.staff.id, squadSession: squadSession ?? null, children: null }),
+    insertNews(tx, { topic: topic as string, title, body, audience: everyone ? null : groups, requiresAck, postedBy: user.staff.id, squadSession: squadSession ?? null, children: null, allowReplies, quickAnswers }),
   );
   return posted(newsId, requiresAck);
 }

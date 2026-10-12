@@ -2,6 +2,7 @@ import { CONTRACT } from "../documents/contract";
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { londonDate, londonTime } from "../dates";
+import { newsReaches } from "../squads/sql";
 import type { AgeGroup, Announcement, Availability, Badge, Child, CoachNote, PaymentState, Session } from "../domain";
 
 // Queries for the parent screens. They run inside asUser(), so row level security applies,
@@ -83,7 +84,19 @@ export async function loadFamily(tx: Queryable): Promise<Family | null> {
   return { guardian: { id: g.id, firstName: g.first_name }, children: rows.map(toChild) };
 }
 
-export type AnnouncementView = Announcement & { read: boolean };
+/** A quick answer given for one child: the option, and which parent gave it (their first name; null if unknown). */
+export type QuickAnswer = { answer: string; byName: string | null; mine: boolean };
+
+export type AnnouncementView = Announcement & {
+  read: boolean;
+  /** Replies and quick answers (migration 0025). */
+  allowReplies: boolean;
+  quickAnswers: string[] | null;
+  /** The family's children this message is for (a group message: those in its groups). */
+  reaches: string[];
+  /** Answers given so far, by child id. */
+  answers: Record<string, QuickAnswer>;
+};
 
 /**
  * Messages for this family, given its age groups and children as parameters: a squad message only when
@@ -107,9 +120,16 @@ export async function loadNews(tx: Queryable, family: Family, limit = 50): Promi
     posted_at: Date;
     posted_by: string | null;
     read: boolean;
+    allow_replies: boolean;
+    quick_answers: string[] | null;
+    reaches: string[] | null;
   }>(
     `select a.id, a.topic, a.title, a.body, a.audience::text[] as audience, a.requires_ack, a.posted_at, sn.display_name as posted_by,
-       exists (select 1 from announcement_reads r where r.announcement_id = a.id and r.guardian_id = $1) as read
+       exists (select 1 from announcement_reads r where r.announcement_id = a.id and r.guardian_id = $1) as read,
+       a.allow_replies, a.quick_answers,
+       case when a.allow_replies or a.quick_answers is not null then
+         (select array_agg(p.id::text order by p.date_of_birth nulls last, p.first_name) from players p where p.id = any ($4::uuid[]) and ${newsReaches("a", "p")})
+       end as reaches
      from announcements a
      left join staff_names sn on sn.id = a.posted_by
      where ${familyNews("$2", "$4")}
@@ -127,7 +147,40 @@ export async function loadNews(tx: Queryable, family: Family, limit = 50): Promi
     postedAt: iso(r.posted_at),
     postedBy: r.posted_by,
     read: !r.requires_ack || r.read,
+    allowReplies: r.allow_replies,
+    quickAnswers: r.quick_answers,
+    reaches: r.reaches ?? [],
+    answers: {},
   }));
+}
+
+/**
+ * The quick answers given for the family's children on these messages, keyed by message then child, with the first
+ * name of the parent who answered while they're still linked to the child (as `loadAnswers` does for sessions).
+ */
+export async function loadQuickAnswers(tx: Queryable, announcementIds: string[], childIds: string[], guardianId: string): Promise<Map<string, Record<string, QuickAnswer>>> {
+  const out = new Map<string, Record<string, QuickAnswer>>();
+  if (announcementIds.length === 0 || childIds.length === 0) return out;
+  const rows = await tx.query<{ announcement_id: string; player_id: string; answer: string; guardian_id: string | null; name: string | null }>(
+    `select aa.announcement_id, aa.player_id, aa.answer, aa.guardian_id, g.first_name as name
+     from announcement_answers aa
+     left join guardians g on g.id = aa.guardian_id
+       and exists (select 1 from player_guardians pg where pg.player_id = aa.player_id and pg.guardian_id = g.id)
+     where aa.announcement_id = any ($1::uuid[]) and aa.player_id = any ($2::uuid[])`,
+    [announcementIds, childIds],
+  );
+  for (const r of rows) {
+    const forMessage = out.get(r.announcement_id) ?? {};
+    forMessage[r.player_id] = { answer: r.answer, byName: r.name, mine: r.guardian_id === guardianId };
+    out.set(r.announcement_id, forMessage);
+  }
+  return out;
+}
+
+/** A parent's quick answer for one of their children (`answer_announcement` checks the rest). Also marks it read. */
+export async function saveQuickAnswer(tx: Queryable, announcementId: string, playerId: string, answer: string): Promise<boolean> {
+  const [row] = await tx.query<{ ok: boolean }>(`select answer_announcement($1, $2, $3) as ok`, [announcementId, playerId, answer]);
+  return row?.ok === true;
 }
 
 export async function loadUnreadCount(tx: Queryable, family: Family): Promise<number> {

@@ -96,6 +96,24 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
       ),
     ]);
 
+  // Messages with the club (migration 0025): every conversation about the family's children, and their quick answers.
+  // Run after the rest, one at a time. The other parent's own messages are in the family's shared thread, so they're
+  // included, marked as from "another parent" without their name or details.
+  const conversations = await tx.query<{ id: string; player_id: string; subject: string | null; news_title: string | null; created_at: Date }>(
+    `select c.id, c.player_id, c.subject, a.title as news_title, c.created_at from conversations c left join announcements a on a.id = c.announcement_id
+     where c.player_id in (select my_player_ids()) order by c.created_at`,
+  );
+  const messages = await tx.query<{ conversation_id: string; author_kind: string; author_name: string; by_you: boolean; body: string; created_at: Date }>(
+    `select m.conversation_id, m.author_kind, m.author_name, coalesce(m.author_user = auth.uid(), false) as by_you, m.body, m.created_at
+     from conversation_messages m join conversations c on c.id = m.conversation_id
+     where c.player_id in (select my_player_ids()) order by m.created_at, m.id`,
+  );
+  const quickAnswers = await tx.query<{ player_id: string; title: string; answer: string; answered_at: Date; by_you: boolean }>(
+    `select aa.player_id, a.title, aa.answer, aa.answered_at, coalesce(aa.guardian_id = my_guardian_id(), false) as by_you
+     from announcement_answers aa join announcements a on a.id = aa.announcement_id
+     where aa.player_id in (select my_player_ids()) order by aa.answered_at`,
+  );
+
   const forChild = <T extends { player_id: string }>(rows: T[], id: string) => rows.filter((r) => r.player_id === id);
   const pounds = (pence: number) => (pence / 100).toFixed(2);
 
@@ -142,6 +160,18 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
       awards: forChild(awards, c.id).map((a) => ({ stars: a.stars, points: a.points, reason: a.reason, givenBy: a.given_by, givenAt: at(a.created_at) })),
       badges: forChild(badges, c.id).map((b) => ({ badge: b.name, earnedOn: b.earned_on })),
       coachNotes: forChild(notes, c.id).map((n) => ({ note: n.body, writtenBy: n.written_by, writtenAt: at(n.created_at) })),
+      quickAnswers: forChild(quickAnswers, c.id).map((q) => ({ message: q.title, answer: q.answer, answeredAt: at(q.answered_at), answeredByYou: q.by_you })),
+      messagesWithTheClub: forChild(conversations, c.id).map((v) => ({
+        subject: v.subject ?? (v.news_title ? `Re: ${v.news_title}` : null),
+        startedAt: at(v.created_at),
+        messages: messages
+          .filter((m) => m.conversation_id === v.id)
+          .map((m) => ({
+            from: m.by_you ? "you" : m.author_kind === "staff" ? `the club (${m.author_name})` : "another parent",
+            sentAt: at(m.created_at),
+            message: m.body,
+          })),
+      })),
     })),
     newsRead: reads.map((r) => ({ title: r.title, postedAt: at(r.posted_at), readAt: at(r.read_at) })),
     shopOrders: orders.map((o) => ({
