@@ -5,6 +5,8 @@ import { requireParent } from "../auth/session";
 import { loadAwards } from "../awards/data";
 import { loadPlans, loadPracticeSheets } from "../plans/data";
 import { asUser } from "../db";
+import type { Queryable } from "../db/types";
+import { loadParentConversations, loadParentUnreadMessages } from "../messages/data";
 import type { Child, Session } from "../domain";
 import {
   answerKey,
@@ -15,6 +17,7 @@ import {
   loadContacts,
   loadFamily,
   loadNews,
+  loadQuickAnswers,
   loadPlayerFacts,
   loadSquadCounts,
   loadUnreadCount,
@@ -67,13 +70,30 @@ async function loadWeek(userId: string, family: Family, now: Date) {
 export async function getNewsPage() {
   const { user, family } = await getFamily();
   const now = new Date();
-  const [news, { week }, facts] = await Promise.all([
-    family.children.length ? asUser(user.id, (tx) => loadNews(tx, family)) : Promise.resolve([]),
+  const childIds = family.children.map((c) => c.id);
+  const [news, { week }, facts, unreadMessages] = await Promise.all([
+    family.children.length ? asUser(user.id, (tx) => loadNewsWithAnswers(tx, family)) : Promise.resolve([]),
     loadWeek(user.id, family, now),
-    family.children.length ? asUser(user.id, (tx) => loadChecklistFacts(tx, family.children.map((c) => c.id))) : Promise.resolve(null),
+    family.children.length ? asUser(user.id, (tx) => loadChecklistFacts(tx, childIds)) : Promise.resolve(null),
+    family.children.length ? asUser(user.id, (tx) => loadParentUnreadMessages(tx, childIds)) : Promise.resolve(0),
   ]);
   const stats = family.children.length === 1 ? await getStats(user.id, family.children[0], now) : null;
-  return { family, news: sortNews(news), week, streakWeeks: stats?.streakWeeks ?? null, stepsLeft: facts ? stepsLeft(family, facts) : 0 };
+  return { family, news: sortNews(news), week, streakWeeks: stats?.streakWeeks ?? null, stepsLeft: facts ? stepsLeft(family, facts) : 0, unreadMessages };
+}
+
+/** News with the family's quick answers filled in (only messages that ask for one need a look). */
+async function loadNewsWithAnswers(tx: Queryable, family: Family) {
+  const news = await loadNews(tx, family);
+  const asking = news.filter((n) => n.quickAnswers && n.reaches.length).map((n) => n.id);
+  const answers = await loadQuickAnswers(tx, asking, family.children.map((c) => c.id), family.guardian.id);
+  return news.map((n) => ({ ...n, answers: answers.get(n.id) ?? {} }));
+}
+
+/** Messages: the family's conversations with the club, newest first. */
+export async function getMessagesPage() {
+  const { user, family } = await getFamily();
+  const conversations = await asUser(user.id, (tx) => loadParentConversations(tx, family.children.map((c) => c.id)));
+  return { family, conversations };
 }
 
 /**
