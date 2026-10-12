@@ -163,6 +163,12 @@ describe("the to-do list", () => {
     const items = [...buildFamilyChecklist(kids, facts([], ["b"]), null), ...kids.flatMap((k) => buildChecklist(k, facts([], [])))];
     expect(countSteps(items)).toEqual({ done: 3 + 1, total: 9 + 1 + 3 });
   });
+  it("offers the parent's sports hub entry code as an optional family line, never a step", () => {
+    const [, , hub] = buildFamilyChecklist(kids, facts([], []), null);
+    expect(hub).toMatchObject({ id: "hub-code", optional: true, done: false, actionLabel: "Add", href: "/pass#hub-code", steps: { done: 0, total: 0 } });
+    const saved = buildFamilyChecklist(kids, { ...facts([], []), hubCode: true }, null)[2];
+    expect(saved).toMatchObject({ done: true, actionLabel: "Change", detail: "Saved. It shows with the QR codes for the barrier" });
+  });
   it("one child: the same wording as before, no per-child parts", () => {
     const [payment, contract] = buildFamilyChecklist(kids.slice(0, 1), facts([], []), null);
     expect(payment.note).toBeUndefined();

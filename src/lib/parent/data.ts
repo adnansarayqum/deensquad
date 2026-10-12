@@ -297,11 +297,13 @@ export type ChecklistFacts = {
   agreed?: Set<string>;
   /** Children with medical and additional needs added (an optional To-do line, never counted as a step). */
   medical?: Set<string>;
+  /** The parent has saved their sports hub entry code (an optional To-do line, never counted as a step). */
+  hubCode?: boolean;
 };
 
 export async function loadChecklistFacts(tx: Queryable, childIds: string[]): Promise<ChecklistFacts> {
-  if (childIds.length === 0) return { contacts: new Map(), payment: new Map(), agreed: new Set(), medical: new Set() };
-  const [contacts, payment, agreed, medical] = await Promise.all([
+  if (childIds.length === 0) return { contacts: new Map(), payment: new Map(), agreed: new Set(), medical: new Set(), hubCode: false };
+  const [contacts, payment, agreed, medical, hub] = await Promise.all([
     tx.query<{ player_id: string; n: number }>(
       `select player_id, count(*)::int as n from emergency_contacts where player_id = any($1::uuid[]) group by player_id`,
       [childIds],
@@ -312,12 +314,16 @@ export async function loadChecklistFacts(tx: Queryable, childIds: string[]): Pro
     ),
     tx.query<{ player_id: string }>(`select player_id from agreements where player_id = any($1::uuid[]) and document = $2`, [childIds, CONTRACT.id]),
     myChildrenWithMedical(tx, childIds),
+    tx.query<{ saved: boolean }>(
+      `select exists (select 1 from guardian_venue_passes where guardian_id = my_guardian_id() and (code_text is not null or image_file_id is not null)) as saved`,
+    ),
   ]);
   return {
     contacts: new Map(contacts.map((r) => [r.player_id, r.n])),
     payment: new Map(payment.map((r) => [r.player_id, r.state])),
     agreed: new Set(agreed.map((r) => r.player_id)),
     medical,
+    hubCode: Boolean(hub[0]?.saved),
   };
 }
 

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Camera, Check, ChevronRight, CreditCard, FileSignature, HeartPulse, IdCard, Phone, Shirt } from "lucide-react";
+import { Camera, Check, ChevronRight, CreditCard, FileSignature, HeartPulse, IdCard, Phone, QrCode, Shirt } from "lucide-react";
 import { AppHeader, Card, Eyebrow, Progress } from "@/components/ui";
 import { getChecklistPage } from "@/lib/parent/load";
 import { countSteps, type ChecklistItemView } from "@/lib/parent/views";
@@ -14,6 +14,7 @@ const icons: Record<ChecklistItemView["icon"], typeof Camera> = {
   id: IdCard,
   contract: FileSignature,
   medical: HeartPulse,
+  qr: QrCode,
 };
 
 export default async function ChecklistPage() {

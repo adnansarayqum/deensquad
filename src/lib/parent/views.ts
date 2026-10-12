@@ -148,7 +148,7 @@ export type ChecklistItemView = {
   title: string;
   detail: string;
   actionLabel: string;
-  icon: "card" | "camera" | "phone" | "id" | "contract" | "medical";
+  icon: "card" | "camera" | "phone" | "id" | "contract" | "medical" | "qr";
   done: boolean;
   /** A line the parent may do or leave (medical and additional needs): shown apart, never counted as a step. */
   optional?: boolean;
@@ -249,7 +249,19 @@ export function buildFamilyChecklist(children: Child[], facts: ChecklistFacts, f
     done: needed.length === 0,
     href: "/checklist/payment",
   };
-  if (!facts.agreed) return [payment];
+  // The parent's own Bobby Moore Sports Hub entry code, kept beside the children's QR codes: optional, never a step.
+  const hub: ChecklistItemView = {
+    id: "hub-code",
+    title: "Sports hub entry code (optional)",
+    detail: facts.hubCode ? "Saved. It shows with the QR codes for the barrier" : "Your Bobby Moore entry QR, ready at the barrier",
+    actionLabel: facts.hubCode ? "Change" : "Add",
+    icon: "qr",
+    done: Boolean(facts.hubCode),
+    href: "/pass#hub-code",
+    optional: true,
+    steps: { done: 0, total: 0 },
+  };
+  if (!facts.agreed) return [payment, hub];
   const agreed = facts.agreed;
   const signed = children.filter((c) => agreed.has(c.id));
   const unsigned = children.filter((c) => !agreed.has(c.id));
@@ -272,7 +284,7 @@ export function buildFamilyChecklist(children: Child[], facts: ChecklistFacts, f
       : undefined,
     steps: { done: signed.length, total: children.length },
   };
-  return [payment, contract];
+  return [payment, contract, hub];
 }
 
 /** Steps done and in all, counting a row by its `steps` (the contract counts each child). */
