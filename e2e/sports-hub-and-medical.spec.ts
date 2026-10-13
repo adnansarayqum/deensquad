@@ -67,6 +67,9 @@ test("a parent keeps their sports hub entry code beside the QR codes: read from 
   await expect(card.getByText(/Only you can see it/)).toBeVisible();
   await page.screenshot({ path: shot("pass-hub-empty"), fullPage: true });
 
+  // One button opens the picker and saves straight away: no separate Save to press after it's saved.
+  await expect(card.getByRole("button", { name: "Save screenshot" })).toHaveCount(0);
+  expect((await card.locator('label[for="hub-screenshot"]').boundingBox())!.height).toBeGreaterThanOrEqual(48);
   // The phone reads the code in the screenshot and the page draws it again, crisp.
   await card.getByLabel("Add screenshot").setInputFiles({ name: "IMG_0042.PNG", mimeType: "image/png", buffer: await hubScreenshot() });
   await expect(card.getByRole("status")).toHaveText("Saved. Your code is ready for the gate.");

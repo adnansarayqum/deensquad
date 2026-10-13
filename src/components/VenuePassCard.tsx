@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useState, type FormEvent } from "react";
+import { startTransition, useActionState, useState, useSyncExternalStore, type FormEvent } from "react";
 import { MAX_FILE_BYTES } from "@/lib/files";
 import { removeVenuePass, saveVenuePass, type VenuePassState } from "@/lib/venue-pass/actions";
 import type { VenuePassView } from "@/lib/venue-pass/card";
@@ -10,7 +10,11 @@ import { VenuePassPicture } from "./VenuePassPicture";
 // /pass → "Your sports hub entry code": the parent's own entry QR code for Bobby Moore Sports Hub, kept here so it's
 // on screen at the gate with the children's codes. Plain forms posting server actions, so a screenshot can be saved
 // before the page has loaded (stored as it is). With JavaScript, the phone reads the QR code in the screenshot and
-// sends only its text, which the app draws again crisp; when it can't, the screenshot is sent instead.
+// sends only its text, which the app draws again crisp; when it can't, the screenshot is sent instead. With
+// JavaScript, choosing a picture saves it at once, so there's one button that opens the picker and no separate Save
+// (a parent pressed Save after it had already saved, and nothing happened); without, the file box and Save remain.
+
+const noSubscribe = () => () => {};
 
 export function VenuePassCard({ view }: { view: VenuePassView | null }) {
   const [saved, save, saving] = useActionState<VenuePassState, FormData>(saveVenuePass, {});
@@ -21,6 +25,9 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
   const [which, setWhich] = useState<"save" | "remove">("save");
   const last = which === "save" ? saved : removed;
   const busy = saving || removing || reading;
+  // True once the page's script runs (false on the server and in the first paint), so without JavaScript the plain
+  // file box and Save button still work.
+  const live = useSyncExternalStore(noSubscribe, () => true, () => false);
 
   const send = async (form: HTMLFormElement) => {
     const file = new FormData(form).get("screenshot");
@@ -76,23 +83,34 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
 
       {/* A new key after each change clears the chosen file. */}
       <form key={view?.savedAt ?? "none"} action={save} onSubmit={onSubmit} className="flex flex-col gap-2" noValidate>
-        <label htmlFor="hub-screenshot" className="field-label">
-          {view ? "Replace screenshot" : "Add screenshot"}
+        <label
+          htmlFor="hub-screenshot"
+          className={
+            live
+              ? `${view ? "btn-chunky btn-paper" : "btn-chunky btn-grass"} cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink ${busy ? "pointer-events-none opacity-70" : ""}`
+              : "field-label"
+          }
+        >
+          {live && reading ? "Reading the code…" : live && saving ? "Saving…" : view ? "Replace screenshot" : "Add screenshot"}
+          <input
+            id="hub-screenshot"
+            name="screenshot"
+            type="file"
+            accept="image/*"
+            disabled={busy}
+            onChange={(e) => {
+              if (e.currentTarget.files?.length) e.currentTarget.form?.requestSubmit();
+            }}
+            className={live ? "sr-only" : "field mt-2 py-3 text-[15px]"}
+          />
         </label>
-        <input
-          id="hub-screenshot"
-          name="screenshot"
-          type="file"
-          accept="image/*"
-          disabled={busy}
-          onChange={(e) => {
-            if (e.currentTarget.files?.length) e.currentTarget.form?.requestSubmit();
-          }}
-          className="field py-3 text-[15px]"
-        />
-        <button type="submit" className={view ? "btn-chunky btn-paper" : "btn-chunky btn-grass"} disabled={busy}>
-          {reading ? "Reading the code…" : saving ? "Saving…" : "Save screenshot"}
-        </button>
+        {live ? (
+          <p className="text-sm leading-5 text-ink-muted">Choose the screenshot from your photos. It saves straight away.</p>
+        ) : (
+          <button type="submit" className={view ? "btn-chunky btn-paper" : "btn-chunky btn-grass"} disabled={busy}>
+            {saving ? "Saving…" : "Save screenshot"}
+          </button>
+        )}
       </form>
       {view ? (
         <form
