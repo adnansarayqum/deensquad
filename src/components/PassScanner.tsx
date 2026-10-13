@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, HeartPulse, QrCode, RotateCcw, TriangleAlert, WifiOff, X } from "lucide-react";
 import type { ScanResult } from "@/lib/staff/checkin";
 import { ChildAvatar } from "./ChildAvatar";
-import { FLAG_WORDS } from "@/lib/staff/flags";
+import { FLAG_WORDS, PAYING_WORDS } from "@/lib/staff/flags";
 
 const reasonText = {
   not_a_pass: "That isn't a Deen Squad attendance QR code.",
@@ -301,6 +301,12 @@ function ChildResult({ child: c }: { child: Extract<ScanResult, { ok: true }>["c
           {c.status === "checked_in" ? "Checked in" : c.status === "already_here" ? "Already checked in" : "No session for this group today"}
         </span>
         {here && c.flags.length ? <span className="text-[14px]">Needs a word: {c.flags.map((f) => FLAG_WORDS[f]).join(", ")}</span> : null}
+        {/* How the family pays: pay as you go means taking today's session fee. */}
+        {c.paying ? (
+          <span className="mt-1 inline-flex items-center self-start rounded-pill border border-line bg-cream px-2.5 py-0.5 text-label text-ink uppercase">
+            {PAYING_WORDS[c.paying]}
+          </span>
+        ) : null}
         {/* Only a marker (the details are on the register, a tap away): other parents are at the gate. */}
         {c.medical ? (
           <span className="mt-1 inline-flex items-center gap-1 self-start rounded-pill border border-line bg-cream px-2.5 py-0.5 text-label text-ink uppercase">

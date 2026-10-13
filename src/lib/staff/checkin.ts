@@ -6,6 +6,7 @@ import { medicalMarkerSql } from "../medical/data";
 import { readPass } from "../pass/token";
 import { sessionIsFor } from "../squads/sql";
 import { unreadNewsSql, type RegisterFlag } from "./register";
+import { paymentFlags, payingBy, type PayingBy } from "./flags";
 
 // Checking a child in from their gate pass. Runs as the member of staff scanning (row level security on).
 // The child goes into today's session for their age group, or a tournament squad session they're picked for
@@ -24,6 +25,8 @@ export type ScannedChild = {
   flags: RegisterFlag[];
   /** Medical and additional needs this member of staff may read (a neutral marker on the result card). */
   medical: boolean;
+  /** Monthly plan or pay as you go (a quiet pill: pay as you go means taking the session fee). */
+  paying: PayingBy;
 };
 
 export type ScanResult = { ok: true; child: ScannedChild } | { ok: false; reason: "not_a_pass" | "unknown_child" };
@@ -88,12 +91,13 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
       status,
       session: session ? { title: session.title, startsAt: iso(session.starts_at) } : null,
       flags: [
-        ...(c.payment === "missing" || c.payment === "overdue" ? (["no_payment_plan"] as const) : []),
+        ...paymentFlags(c.payment),
         ...(c.photo_consent === null ? (["missing_consent"] as const) : []),
         ...(c.unread_news ? (["unread_news"] as const) : []),
         ...(c.kit_ready ? (["kit_ready"] as const) : []),
       ],
       medical: c.medical,
+      paying: payingBy(c.payment),
     },
   };
 }

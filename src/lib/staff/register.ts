@@ -5,7 +5,7 @@ import { isAgeGroup, type AgeGroup, type Availability, type PaymentState, type S
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
 import { medicalMarkerSql } from "../medical/data";
 import { newsReaches } from "../squads/sql";
-import type { RegisterFlag } from "./flags";
+import { paymentFlags, payingBy, type PayingBy, type RegisterFlag } from "./flags";
 
 export type { RegisterFlag } from "./flags";
 
@@ -33,6 +33,8 @@ export type RegisterRow = {
    * group's coaches): the register shows a neutral "Medical info" link, never the details themselves.
    */
   medical: boolean;
+  /** Monthly plan or pay as you go, for a quiet pill (null with no plan: the flags say that). */
+  paying: PayingBy;
 };
 
 export type RegisterView = {
@@ -164,12 +166,13 @@ export async function loadRegister(
       checkedInAt: r.checked_in_at ? iso(r.checked_in_at) : null,
       method: r.checked_in_at ? r.method : null,
       flags: [
-        ...(r.payment === "missing" || r.payment === "overdue" ? (["no_payment_plan"] as const) : []),
+        ...paymentFlags(r.payment),
         ...(r.photo_consent === null ? (["missing_consent"] as const) : []),
         ...(r.unread_news ? (["unread_news"] as const) : []),
         ...(r.kit_ready ? (["kit_ready"] as const) : []),
       ],
       medical: r.medical,
+      paying: payingBy(r.payment),
     })),
   };
 }

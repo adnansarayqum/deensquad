@@ -6,7 +6,7 @@ import { UndoCheckInButton } from "@/components/CheckInButton";
 import { ChildAvatar } from "@/components/ChildAvatar";
 import { PassScanner } from "@/components/PassScanner";
 import { RegisterAutoRefresh } from "@/components/RegisterAutoRefresh";
-import { FlagPills, RegisterLists, type GateRow } from "@/components/RegisterLists";
+import { FlagPills, PayingPill, RegisterLists, type GateRow } from "@/components/RegisterLists";
 import { Progress } from "@/components/ui";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
@@ -28,6 +28,7 @@ const gate = (r: RegisterRow): GateRow => ({
   checkedIn: r.checkedInAt ? `${r.method === "qr" ? "QR code scanned" : "Marked here"} · ${clock(r.checkedInAt)}` : null,
   flags: r.flags,
   medical: r.medical,
+  paying: r.paying,
 });
 
 const tab = (active: boolean) =>
@@ -125,6 +126,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
                 <span className="text-[13px] text-ink-muted">
                   {groupPlural(r.ageGroup)} · {clock(r.checkedInAt!)}
                 </span>
+                <PayingPill paying={r.paying} />
               </span>
               <UndoCheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} disabled={!open} />
             </div>

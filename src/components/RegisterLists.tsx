@@ -4,7 +4,7 @@ import { useId, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { HeartPulse, Search } from "lucide-react";
 import { matchesName } from "@/lib/search";
-import { FLAG_WORDS, type RegisterFlag } from "@/lib/staff/flags";
+import { FLAG_WORDS, PAYING_WORDS, type PayingBy, type RegisterFlag } from "@/lib/staff/flags";
 import { CheckInButton, UndoCheckInButton } from "./CheckInButton";
 import { ChildAvatar } from "./ChildAvatar";
 import { Pill } from "./ui";
@@ -26,7 +26,14 @@ export type GateRow = {
   flags: RegisterFlag[];
   /** The parents added medical and additional needs this member of staff may read. */
   medical: boolean;
+  /** Monthly plan or pay as you go: a quiet pill, so the gate knows who pays for the session. */
+  paying: PayingBy;
 };
+
+/** "Monthly plan" / "Pay as you go" beside a child's name: neutral, never kit-orange (nothing to chase). */
+export function PayingPill({ paying }: { paying: PayingBy }) {
+  return paying ? <Pill tone="neutral">{PAYING_WORDS[paying]}</Pill> : null;
+}
 
 /**
  * "Medical info" beside a child's name, for those whose parents added some (and only for staff allowed to read it).
@@ -92,6 +99,7 @@ export function RegisterLists({
   const title = (r: GateRow) => (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span className="text-[15px] font-bold">{name(r)}</span>
+      <PayingPill paying={r.paying} />
       {r.medical ? <MedicalLink id={r.id} name={name(r)} from={from} /> : null}
     </span>
   );

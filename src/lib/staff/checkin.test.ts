@@ -30,7 +30,7 @@ describe("gate pass", () => {
 describe("scanning a pass", () => {
   it("checks in only that child, into their own group's session, once", async () => {
     const first = await t.asUser(coach, (tx) => checkInByPass(tx, passToken(DEV_IDS.musa), atGate));
-    expect(first).toMatchObject({ ok: true, child: { firstName: "Musa", ageGroup: "U7", status: "checked_in", flags: ["no_payment_plan", "missing_consent"] } });
+    expect(first).toMatchObject({ ok: true, child: { firstName: "Musa", ageGroup: "U7", status: "checked_in", flags: ["no_payment_plan", "missing_consent"], paying: null } });
     const again = await t.asUser(coach, (tx) => checkInByPass(tx, passToken(DEV_IDS.musa), atGate));
     expect(again).toMatchObject({ ok: true, child: { status: "already_here" } });
 
@@ -49,8 +49,18 @@ describe("scanning a pass", () => {
     const saturday = new Date("2026-10-10T10:00:00Z");
     expect(await t.asUser(coach, (tx) => checkInByPass(tx, passToken(DEV_IDS.yusuf), saturday))).toMatchObject({
       ok: true,
-      child: { status: "no_session_today" },
+      child: { status: "no_session_today", paying: "monthly" },
     });
+    // A pay-as-you-go family's child says so on the card, so the gate takes the session fee.
+    await t.asSystem((tx) => tx.query(`update payment_status set state = 'pay_as_you_go' where player_id = $1`, [DEV_IDS.yusuf]));
+    expect(await t.asUser(coach, (tx) => checkInByPass(tx, passToken(DEV_IDS.yusuf), saturday))).toMatchObject({
+      child: { paying: "pay_as_you_go", flags: [] },
+    });
+    await t.asSystem((tx) => tx.query(`update payment_status set state = 'overdue' where player_id = $1`, [DEV_IDS.yusuf]));
+    expect(await t.asUser(coach, (tx) => checkInByPass(tx, passToken(DEV_IDS.yusuf), saturday))).toMatchObject({
+      child: { paying: null, flags: ["payment_overdue"] },
+    });
+    await t.asSystem((tx) => tx.query(`update payment_status set state = 'active' where player_id = $1`, [DEV_IDS.yusuf]));
   });
 
   it("picks the same session every time when two overlap: earliest start, then id", async () => {

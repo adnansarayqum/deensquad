@@ -3,7 +3,7 @@ import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
 import { passToken } from "../pass/token";
 import { checkInByPass, markHere } from "./checkin";
-import { flagSummary } from "./flags";
+import { flagSummary, payingBy, paymentFlags } from "./flags";
 import { ALL_GROUPS, loadRegister, summarise } from "./register";
 
 // A Friday: the sample club's training (6:30pm, every age group) is today. Two U10s (Adam F. and Ilyas C.) said not coming.
@@ -125,6 +125,20 @@ describe("the unread news flag at the gate", () => {
     // "Winter timings" (club-wide, three days old) is unread by Bilal's family, who were here when it went out.
     expect(rows.find((r) => r.firstName === "Bilal")!.flags).toContain("unread_news");
     expect(rows.find((r) => r.firstName === "Late")!.flags).not.toContain("unread_news");
+  });
+});
+
+describe("payment at the gate", () => {
+  it("flags no plan and an overdue plan apart, and says monthly or pay as you go quietly", () => {
+    expect(paymentFlags("missing")).toEqual(["no_payment_plan"]);
+    expect(paymentFlags("overdue")).toEqual(["payment_overdue"]);
+    for (const s of ["active", "self_reported", "pay_as_you_go"] as const) expect(paymentFlags(s)).toEqual([]);
+    expect(payingBy("active")).toBe("monthly");
+    expect(payingBy("self_reported")).toBe("monthly");
+    expect(payingBy("pay_as_you_go")).toBe("pay_as_you_go");
+    expect(payingBy("missing")).toBeNull();
+    expect(payingBy("overdue")).toBeNull();
+    expect(flagSummary([{ flags: ["payment_overdue"] }])).toBe("1 child needs a word (1 payment overdue)");
   });
 });
 
