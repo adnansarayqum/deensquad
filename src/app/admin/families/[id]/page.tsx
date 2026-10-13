@@ -24,6 +24,7 @@ const paymentLabel: Record<PaymentState, string> = {
   self_reported: "Parent says it's set up",
   missing: "No payment plan",
   overdue: "Payment overdue",
+  pay_as_you_go: "Pay as you go",
 };
 
 const signedOn = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
@@ -79,15 +80,15 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
       ) : null}
       {flags.unlinked ? <Notice>Parent unlinked.</Notice> : null}
 
-      <Section title="Payment" aside={<Pill tone={child.payment === "active" ? "done" : child.payment === "self_reported" ? "gold" : "action"}>{paymentLabel[child.payment]}</Pill>}>
-        <p className="text-sm text-ink-muted">Set this after checking TeamFeePay.</p>
+      <Section title="Payment" aside={<Pill tone={child.payment === "active" ? "done" : child.payment === "self_reported" ? "gold" : child.payment === "pay_as_you_go" ? "neutral" : "action"}>{paymentLabel[child.payment]}</Pill>}>
+        <p className="text-sm text-ink-muted">Set this after checking TeamFeePay. Pay as you go: the family pays for each session.</p>
         <div className="flex flex-wrap gap-2">
-          {(["active", "missing", "overdue"] as const).map((state) => (
+          {(["active", "pay_as_you_go", "missing", "overdue"] as const).map((state) => (
             <form key={state} action={setPayment}>
               <input type="hidden" name="child" value={child.id} />
               <input type="hidden" name="state" value={state} />
               <button type="submit" disabled={child.payment === state} className="btn-chunky btn-paper btn-small">
-                {state === "active" ? "Mark as active" : state === "missing" ? "No plan" : "Overdue"}
+                {state === "active" ? "Mark as active" : state === "pay_as_you_go" ? "Pay as you go" : state === "missing" ? "No plan" : "Overdue"}
               </button>
             </form>
           ))}

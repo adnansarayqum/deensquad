@@ -92,6 +92,7 @@ export const NEEDS = {
   missing: { label: "No payment plan set up", where: `${paymentState} = 'missing'` },
   overdue: { label: "Payment overdue", where: `${paymentState} = 'overdue'` },
   check: { label: "Payment to check", where: `${paymentState} = 'self_reported'` },
+  payg: { label: "Pay as you go", where: `${paymentState} = 'pay_as_you_go'` },
   missing3: { label: "Missed the last 3 sessions", where: MISSED_LAST_3 },
   // Children with a parent who's behind on news (see behindOnNews); `within` is the list's groups.
   unread: {

@@ -336,10 +336,26 @@ export async function reportFamilyPayment(tx: Queryable, childIds: string[]): Pr
   const rows = await tx.query<{ id: string }>(
     `select p.id from players p
      where p.id = any($1::uuid[]) and p.id in (select my_player_ids())
-       and coalesce((select ps.state::text from payment_status ps where ps.player_id = p.id), 'missing') in ('missing', 'overdue')`,
+       and coalesce((select ps.state::text from payment_status ps where ps.player_id = p.id), 'missing') in ('missing', 'overdue', 'pay_as_you_go')`,
     [childIds],
   );
   for (const { id } of rows) await tx.query(`select report_payment_setup($1)`, [id]);
+  return rows.map((r) => r.id);
+}
+
+/**
+ * The family stays on pay as you go (paying each session) for each of these children that's the parent's own and has
+ * no plan yet (`report_pay_as_you_go`, migration 0030, which checks the child again). Overdue plans are left for the
+ * club. Returns the children it covered.
+ */
+export async function reportFamilyPayAsYouGo(tx: Queryable, childIds: string[]): Promise<string[]> {
+  const rows = await tx.query<{ id: string }>(
+    `select p.id from players p
+     where p.id = any($1::uuid[]) and p.id in (select my_player_ids())
+       and coalesce((select ps.state::text from payment_status ps where ps.player_id = p.id), 'missing') = 'missing'`,
+    [childIds],
+  );
+  for (const { id } of rows) await tx.query(`select report_pay_as_you_go($1)`, [id]);
   return rows.map((r) => r.id);
 }
 

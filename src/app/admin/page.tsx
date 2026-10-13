@@ -321,12 +321,13 @@ function FamiliesSection({ d }: { d: Dashboard }) {
         max={d.players}
         rows={TODO_NEEDS.map((n) => ({ key: n, label: TODO_LABEL[n], value: d.families.todo[n], href: `/admin/families?need=${n}` }))}
       />
-      <SubLabel>Monthly plans (TeamFeePay)</SubLabel>
+      <SubLabel>Payments (TeamFeePay or pay as you go)</SubLabel>
       <StackedBar
-        label="Monthly plans"
+        label="Payments"
         hideZero
         segments={[
           { label: "active", value: p.active, tone: "done", href: "/admin/families" },
+          { label: "pay as you go", value: p.pay_as_you_go, tone: "done", href: "/admin/families?need=payg" },
           { label: "to check", value: p.self_reported, tone: "neutral", href: "/admin/families?need=check" },
           { label: "overdue", value: p.overdue, tone: "strong", href: "/admin/families?need=overdue" },
           { label: "no plan yet", value: p.missing, tone: "rest", href: "/admin/families?need=missing" },

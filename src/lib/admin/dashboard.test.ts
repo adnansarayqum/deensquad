@@ -69,7 +69,7 @@ describe("admin overview numbers", () => {
     expect(d.families).toMatchObject({ parents: 21, signedIn: 0, invited: 0, notInvited: 21, childrenAwaitingSignIn: 0 });
     // Only Yusuf has a contact, a photo answer and an active plan; nobody has signed the contract yet.
     expect(d.families.todo).toEqual({ contacts: 20, payment: 20, contract: 21, consent: 20 });
-    expect(d.payments).toEqual({ active: 1, self_reported: 0, missing: 20, overdue: 0 });
+    expect(d.payments).toEqual({ active: 1, self_reported: 0, pay_as_you_go: 0, missing: 20, overdue: 0 });
 
     expect(d.shop).toEqual({ awaitingPayment: 1, toOrder: 1, ordered: 0, ready: 1, orders: 5, monthPence: 3500, seasonPence: 4200 });
 
@@ -256,7 +256,7 @@ describe("admin overview numbers", () => {
     // Musa's two parents and the four other U7 parents.
     expect(d.families).toMatchObject({ parents: 6, notInvited: 6 });
     expect(d.families.todo).toEqual({ contacts: 5, payment: 5, contract: 5, consent: 5 });
-    expect(d.payments).toEqual({ active: 0, self_reported: 0, missing: 5, overdue: 0 });
+    expect(d.payments).toEqual({ active: 0, self_reported: 0, pay_as_you_go: 0, missing: 5, overdue: 0 });
     expect(d.shop).toBeNull();
     // The U10 kit message isn't theirs; the club-wide ones count U7 parents only.
     expect(d.news.recent.map((n) => [n.title.slice(0, 12), n.read, n.total])).toEqual([

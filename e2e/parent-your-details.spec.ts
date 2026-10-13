@@ -193,3 +193,33 @@ test("a parent adds the other parent: they're emailed a link, sign in and see th
   await expect(choose.getByRole("link", { name: "Omar" })).toHaveCount(0);
   await yasirContext.close();
 });
+
+test("a family staying on pay as you go says so on the payment step; it's done, and the club sees it", async ({ browser }) => {
+  test.skip(!existsSync(YOUR_DATA_PARENT_STATE), "needs the sign-up in parent-your-data.spec.ts");
+  const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
+  const page = await context.newPage();
+  await page.goto("/checklist/payment");
+  await expect(page.getByRole("heading", { name: "Staying on pay as you go?" })).toBeVisible();
+  const payg = page.getByRole("button", { name: "We're paying as we go" });
+  expect((await payg.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  await expect(page.getByText("Covers Layla, Omar and Zaid").last()).toBeVisible();
+  await page.screenshot({ path: shot("payment-pay-as-you-go"), fullPage: true });
+  await payg.click();
+  await expect(page).toHaveURL(/\/checklist$/);
+  await expect(page.getByText("Paying as you go, each session")).toBeVisible();
+
+  // The step is done; moving to the monthly plan later is still offered.
+  await page.goto("/checklist/payment");
+  await expect(page.getByText("Paying as you go for Layla, Omar and Zaid. You pay for each session.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "We're paying as we go" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "I've set up the monthly plan" })).toBeVisible();
+  await context.close();
+
+  test.skip(!existsSync(ADMIN_STATE), "run with parent-app.spec.ts: needs its saved admin sign-in");
+  const adminContext = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
+  const admin = await adminContext.newPage();
+  await admin.goto("/admin/families?need=payg");
+  await expect(admin.getByText("Layla Haddad").filter({ visible: true })).toBeVisible();
+  await expect(admin.getByText("Pay as you go").filter({ visible: true }).first()).toBeVisible();
+  await adminContext.close();
+});

@@ -23,7 +23,7 @@ function dashboard(over: Partial<Dashboard> = {}): Dashboard {
       missedLast3: 15,
     },
     families: { parents: 21, signedIn: 0, invited: 0, notInvited: 21, childrenAwaitingSignIn: 0, todo: { contacts: 20, payment: 20, contract: 21, consent: 20 } },
-    payments: { active: 1, self_reported: 0, missing: 20, overdue: 0 },
+    payments: { active: 1, self_reported: 0, pay_as_you_go: 0, missing: 20, overdue: 0 },
     shop: { awaitingPayment: 0, toOrder: 0, ordered: 0, ready: 0, orders: 0, monthPence: 0, seasonPence: 0 },
     news: { recent: [], reminders: { app: 0, email: 0, sms: 0, whatsapp: 0, gate: 0 }, behind: 20 },
     deletionRequests: null,
@@ -65,7 +65,7 @@ describe("overview: Needs you", () => {
 
   it("puts money and kit ahead of invites, and says one child in the singular", () => {
     const d = dashboard({
-      payments: { active: 0, self_reported: 1, missing: 0, overdue: 2 },
+      payments: { active: 0, self_reported: 1, pay_as_you_go: 0, missing: 0, overdue: 2 },
       shop: { awaitingPayment: 0, toOrder: 3, ordered: 0, ready: 0, orders: 3, monthPence: 0, seasonPence: 0 },
       attendance: { ...dashboard().attendance, missedLast3: 1 },
     });
@@ -99,7 +99,7 @@ describe("overview: Needs you", () => {
     const d = dashboard({
       attendance: { ...dashboard().attendance, missedLast3: 0, next: [] },
       families: { parents: 2, signedIn: 2, invited: 0, notInvited: 0, childrenAwaitingSignIn: 0, todo: { contacts: 0, payment: 0, contract: 0, consent: 0 } },
-      payments: { active: 2, self_reported: 0, missing: 0, overdue: 0 },
+      payments: { active: 2, self_reported: 0, pay_as_you_go: 0, missing: 0, overdue: 0 },
       shop: null,
       news: { recent: [], reminders: { app: 0, email: 0, sms: 0, whatsapp: 0, gate: 0 }, behind: 0 },
     });

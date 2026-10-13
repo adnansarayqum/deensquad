@@ -13,7 +13,7 @@ import { CONTRACT } from "../documents/contract";
 import { isAgeGroup, type Availability } from "../domain";
 import { cleanPhone, cleanText } from "../validate";
 import { appUrl, teamFeePayUrl } from "../config";
-import { reportFamilyPayment, saveAnswer } from "./data";
+import { reportFamilyPayAsYouGo, reportFamilyPayment, saveAnswer } from "./data";
 import { readPhoto } from "../files";
 import { cleanPhoto } from "../photo-clean";
 import { addMyChild, addMyCoParent, checkDateOfBirth, cleanName, clearMyChildPhoto, haveChild, loadMyChild, setMyChildPhoto, updateMyChild, updateMyDetails } from "./profile";
@@ -112,6 +112,14 @@ export async function reportPaymentSetup(formData: FormData): Promise<void> {
   if (!teamFeePayUrl()) redirect("/checklist/payment");
   const children = formData.getAll("child").filter((v): v is string => typeof v === "string" && UUID.test(v));
   if (children.length) await asUser(user.id, (tx) => reportFamilyPayment(tx, children));
+  redirect("/checklist");
+}
+
+/** The family stays on pay as you go, paying each session: for each child still without a plan. */
+export async function choosePayAsYouGo(formData: FormData): Promise<void> {
+  const user = await requireParent();
+  const children = formData.getAll("child").filter((v): v is string => typeof v === "string" && UUID.test(v));
+  if (children.length) await asUser(user.id, (tx) => reportFamilyPayAsYouGo(tx, children));
   redirect("/checklist");
 }
 

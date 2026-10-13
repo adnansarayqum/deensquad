@@ -183,7 +183,7 @@ export async function setPayment(formData: FormData): Promise<void> {
   const user = await requireStaff();
   const child = id(formData.get("child"));
   const state = formData.get("state");
-  if (!child || !["active", "missing", "overdue", "self_reported"].includes(String(state))) return;
+  if (!child || !["active", "missing", "overdue", "self_reported", "pay_as_you_go"].includes(String(state))) return;
   const mine = coachLimit(user.staff);
   await asUser(user.id, async (tx) => {
     if (mine) {

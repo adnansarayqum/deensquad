@@ -63,7 +63,7 @@ export async function buildExport(tx: Queryable, kind: ExportKind, now: Date): P
          order by p.age_group, p.last_name, p.first_name`,
         [CONTRACT.id],
       );
-      const payment: Record<string, string> = { active: "Active", missing: "No plan", overdue: "Overdue", self_reported: "Parent says set up" };
+      const payment: Record<string, string> = { active: "Active", missing: "No plan", overdue: "Overdue", self_reported: "Parent says set up", pay_as_you_go: "Pay as you go" };
       return {
         header: ["Child first name", "Child last name", "Group", "Date of birth", "Shirt", "Parents", "Emails", "Phones", "In the app", "Payment", "Photo consent", "Emergency contacts", "Contract signed by", "Contract signed on"],
         rows: rows.map((r) => [

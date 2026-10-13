@@ -171,6 +171,8 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
                           <Pill tone="action">{f.payment === "overdue" ? "Payment overdue" : "No payment plan"}</Pill>
                         ) : f.payment === "self_reported" ? (
                           <Pill tone="gold">Payment to check</Pill>
+                        ) : f.payment === "pay_as_you_go" ? (
+                          <Pill tone="neutral">Pay as you go</Pill>
                         ) : null}
                         {f.consent === null ? <Pill tone="action">No photo answer</Pill> : null}
                         {f.contacts === 0 ? <Pill tone="action">No emergency contact</Pill> : null}
@@ -236,6 +238,8 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
                           <Pill tone="done">Plan active</Pill>
                         ) : f.payment === "self_reported" ? (
                           <Pill tone="gold">To check</Pill>
+                        ) : f.payment === "pay_as_you_go" ? (
+                          <Pill tone="neutral">Pay as you go</Pill>
                         ) : f.payment === "overdue" ? (
                           <Pill tone="action">Overdue</Pill>
                         ) : (

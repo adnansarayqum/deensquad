@@ -230,7 +230,11 @@ export const feeLine = (feeText: string | null) => feeText ?? "Ask the club abou
 export function buildFamilyChecklist(children: Child[], facts: ChecklistFacts, feeText: string | null): ChecklistItemView[] {
   if (children.length === 0) return [];
   const { needed, overdue } = paymentNeeds(children, facts.payment);
-  const allActive = children.every((c) => facts.payment.get(c.id) === "active");
+  const state = (c: Child) => facts.payment.get(c.id) ?? "missing";
+  const allActive = children.every((c) => state(c) === "active");
+  const payg = children.filter((c) => state(c) === "pay_as_you_go");
+  // Pay as you go and an active plan are both settled; only a plan the parent reported is still for the club to confirm.
+  const settled = children.every((c) => state(c) === "active" || state(c) === "pay_as_you_go");
   const several = children.length > 1;
   const payment: ChecklistItemView = {
     id: "payment-plan",
@@ -239,7 +243,11 @@ export function buildFamilyChecklist(children: Child[], facts: ChecklistFacts, f
       needed.length === 0
         ? allActive
           ? "Monthly plan active"
-          : "You've set it up · the club will confirm"
+          : settled && payg.length > 0
+            ? payg.length === children.length || !several
+              ? "Paying as you go, each session"
+              : `Paying as you go for ${joinNames(payg.map((c) => c.firstName))}`
+            : "You've set it up · the club will confirm"
         : overdue.length > 0
           ? `A payment is overdue${several ? ` for ${joinNames(overdue.map((c) => c.firstName))}` : ""}. Check TeamFeePay`
           : feeLine(feeText),

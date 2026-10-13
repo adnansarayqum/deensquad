@@ -229,7 +229,7 @@ export async function loadDashboard(
          (select count(*)::int from parents where auth_user_id is null and invited_at is null) as "notInvited",
          (select count(*)::int from mine p where ${NEEDS.signin.where}) as "childrenAwaitingSignIn",
          ${TODO_NEEDS.map((n) => `(select count(*)::int from mine p where ${NEEDS[n].where}) as "todo_${n}"`).join(",\n         ")},
-         ${(["active", "self_reported", "missing", "overdue"] as const)
+         ${(["active", "self_reported", "pay_as_you_go", "missing", "overdue"] as const)
            .map((st) => `(select count(*)::int from mine p left join payment_status ps on ps.player_id = p.id where coalesce(ps.state::text, 'missing') = '${st}') as "pay_${st}"`)
            .join(",\n         ")}`,
       [groups],
@@ -302,7 +302,7 @@ export async function loadDashboard(
       childrenAwaitingSignIn: f.childrenAwaitingSignIn,
       todo: Object.fromEntries(TODO_NEEDS.map((n) => [n, f[`todo_${n}`]])) as Dashboard["families"]["todo"],
     },
-    payments: { active: f.pay_active, self_reported: f.pay_self_reported, missing: f.pay_missing, overdue: f.pay_overdue },
+    payments: { active: f.pay_active, self_reported: f.pay_self_reported, pay_as_you_go: f.pay_pay_as_you_go, missing: f.pay_missing, overdue: f.pay_overdue },
     shop: s
       ? {
           awaitingPayment: s.awaiting_payment,

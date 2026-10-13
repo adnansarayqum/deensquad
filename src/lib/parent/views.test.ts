@@ -140,7 +140,7 @@ describe("player stats", () => {
 
 describe("the to-do list", () => {
   const kids = [child("a", "Yusuf", "U10"), child("b", "Ali", "U10"), child("c", "Maryam", "U7")];
-  const facts = (payment: [string, "active" | "missing" | "overdue" | "self_reported"][], agreed: string[]) => ({
+  const facts = (payment: [string, "active" | "missing" | "overdue" | "self_reported" | "pay_as_you_go"][], agreed: string[]) => ({
     contacts: new Map<string, number>(),
     payment: new Map(payment),
     agreed: new Set(agreed),
@@ -152,6 +152,14 @@ describe("the to-do list", () => {
     expect(buildFamilyChecklist(kids, facts([["b", "overdue"]], []), null)[0]).toMatchObject({ detail: "A payment is overdue for Ali. Check TeamFeePay", actionLabel: "Check" });
     const done = buildFamilyChecklist(kids, facts([["a", "active"], ["b", "self_reported"], ["c", "active"]], []), null)[0];
     expect(done).toMatchObject({ done: true, detail: "You've set it up · the club will confirm", note: undefined });
+  });
+  it("counts pay as you go as done, and says so", () => {
+    const all = buildFamilyChecklist(kids, facts([["a", "pay_as_you_go"], ["b", "pay_as_you_go"], ["c", "pay_as_you_go"]], []), null)[0];
+    expect(all).toMatchObject({ done: true, detail: "Paying as you go, each session" });
+    const mixed = buildFamilyChecklist(kids, facts([["a", "active"], ["b", "pay_as_you_go"], ["c", "active"]], []), null)[0];
+    expect(mixed).toMatchObject({ done: true, detail: "Paying as you go for Ali" });
+    const toCheck = buildFamilyChecklist(kids, facts([["a", "self_reported"], ["b", "pay_as_you_go"], ["c", "active"]], []), null)[0];
+    expect(toCheck.detail).toBe("You've set it up · the club will confirm");
   });
   it("keeps the contract per child but in one row, each child with their own state", () => {
     const [, contract] = buildFamilyChecklist(kids, facts([], ["b"]), null);

@@ -85,7 +85,7 @@ export type Announcement = {
   postedBy: string | null;
 };
 
-export type PaymentState = "active" | "missing" | "overdue" | "self_reported";
+export type PaymentState = "active" | "missing" | "overdue" | "self_reported" | "pay_as_you_go";
 
 export type ChecklistItemId = "registered" | "emergency-contacts" | "payment-plan" | "agreement" | "photo-consent" | "medical" | "hub-code";
 
