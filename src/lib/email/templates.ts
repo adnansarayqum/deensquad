@@ -399,3 +399,85 @@ ${sections
   );
   return { to, subject, text, html };
 }
+
+/**
+ * An accident or incident was logged (src/lib/incidents): to each admin. Who and what kind only, never the details
+ * (emails can be read on a shared screen); the record and the message to the parents are in the app.
+ */
+export function incidentAdminEmail(opts: { to: string; childName: string; group: string; kind: string; by: string; link: string | null; appUrl: string | null }): Email {
+  const { to, childName, group, kind, by, link, appUrl } = opts;
+  const subject = `${kind} logged for ${childName} (${group})`;
+  const lines = [`${by} logged ${kind.toLowerCase() === "something else" ? "an incident" : `"${kind}"`} for ${childName} (${group}).`, "", "The parents have been sent it in the app. The details are on the child's page."];
+  const text = [...lines, ...(link ? ["", `Open it: ${link}`] : [])].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">${escape(lines[0])}</p>
+<p>The parents have been sent it in the app. The details are on the child's page.</p>
+${link ? button(link, "Open the child's page") : ""}`,
+  );
+  return { to, subject, text, html };
+}
+
+/** A family booked a paid trial on /trial: what, when, where, the fee and what to do at the gate. */
+export function trialBookedEmail(opts: {
+  to: string;
+  parentFirstName: string;
+  childFirstName: string;
+  session: string;
+  when: string;
+  venue: string | null;
+  fee: string;
+  appUrl: string | null;
+}): Email {
+  const { to, parentFirstName, childFirstName, session, when, venue, fee, appUrl } = opts;
+  const subject = `${childFirstName}'s trial: ${session}, ${when}`;
+  const lines = [
+    `Assalamu alaikum ${parentFirstName},`,
+    "",
+    `${childFirstName}'s trial session with Deen Squad Football Academy is booked: ${session}, ${when}${venue ? `, at ${venue}` : ""}.`,
+    "",
+    `The trial costs ${fee}, paid by card at the gate on the day. Tell the coach at the gate you're here for ${childFirstName}'s trial.`,
+    "",
+    "If you can't make it, reply to this email and let the club know.",
+  ];
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">Assalamu alaikum ${escape(parentFirstName)},</p>
+<p><b>${escape(childFirstName)}'s trial session</b> with Deen Squad Football Academy is booked: ${escape(session)}, ${escape(when)}${venue ? `, at ${escape(venue)}` : ""}.</p>
+<p>The trial costs ${escape(fee)}, paid by card at the gate on the day. Tell the coach at the gate you're here for ${escape(childFirstName)}'s trial.</p>
+<p>If you can't make it, reply to this email and let the club know.</p>`,
+  );
+  return { to, subject, text: lines.join("\n"), html };
+}
+
+/** To each admin: a trial was booked (who, which group and session; the contact details are on Admin → Trials). */
+export function trialAdminEmail(opts: { to: string; childFirstName: string; group: string; session: string; when: string; link: string | null; appUrl: string | null }): Email {
+  const { to, childFirstName, group, session, when, link, appUrl } = opts;
+  const subject = `Trial booked: ${childFirstName} (${group}), ${when}`;
+  const line = `A family has booked a trial for ${childFirstName} (${group}) at ${session}, ${when}. They'll pay the session fee at the gate.`;
+  const html = layout(appUrl, `<p style="margin:0">${escape(line)}</p>${link ? button(link, "See trials") : ""}`);
+  return { to, subject, text: [line, ...(link ? ["", `See trials: ${link}`] : [])].join("\n"), html };
+}
+
+/** After a trial the child came to: thanks, and the link to join the club. */
+export function trialFollowUpEmail(opts: { to: string; parentFirstName: string; childFirstName: string; joinUrl: string; appUrl: string | null }): Email {
+  const { to, parentFirstName, childFirstName, joinUrl, appUrl } = opts;
+  const subject = `Thanks for bringing ${childFirstName} to Deen Squad`;
+  const lines = [
+    `Assalamu alaikum ${parentFirstName},`,
+    "",
+    `Thank you for bringing ${childFirstName} to try Deen Squad Football Academy. We hope ${childFirstName} enjoyed it.`,
+    "",
+    `If you'd like ${childFirstName} to join, sign up in the club's app. It's where you'll get club news, tell the coach who's coming each week and follow ${childFirstName}'s progress.`,
+    "",
+    `Join the club: ${joinUrl}`,
+  ];
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">Assalamu alaikum ${escape(parentFirstName)},</p>
+<p>Thank you for bringing ${escape(childFirstName)} to try Deen Squad Football Academy. We hope ${escape(childFirstName)} enjoyed it.</p>
+<p>If you'd like ${escape(childFirstName)} to join, sign up in the club's app. It's where you'll get club news, tell the coach who's coming each week and follow ${escape(childFirstName)}'s progress.</p>
+${button(joinUrl, "Join the club")}`,
+  );
+  return { to, subject, text: lines.join("\n"), html };
+}

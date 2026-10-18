@@ -85,8 +85,15 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "points, stars, badges and notes from the coaches",
               "ratings from the coaches after sessions (technique, game understanding, physical, attitude and effort, and teamwork, each from 1 to 5) and the progress reports they write about your child",
               "kit they have ordered from the club shop",
+              "if you pay for each session, the session fees taken at the gate (the date and amount; card payments go through the club's card machine, and the app never sees card details)",
+              "a record of any accident or incident at the club (what happened and what the coaches did), written by the coach: you are sent it in the app straight away, and the club's coaches and admins can see it",
             ]}
           />
+          <p>
+            <b>Trial sessions.</b> If you book a trial on the club&apos;s booking page before joining, we keep your name, email and mobile, and your child&apos;s
+            name, date of birth and group, so the coaches know to expect your child and can contact you. We email you the details, and a link to join
+            the club after the trial. The club&apos;s coaches and admins can see it. We remove these details 6 months after the trial.
+          </p>
           <p>
             When you use the app we also keep a record of when you signed in and the device&apos;s internet address, to keep accounts secure. If you turn on
             notifications, we store the address your phone gives us to send them.
@@ -227,7 +234,9 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "When they leave, we delete their record and your account within 12 months, unless you ask us to do it sooner.",
               "We may keep attendance and safeguarding records for longer where the law or our safeguarding duties require it.",
               "Ratings and progress reports are kept for the season they were written in and one more year.",
-              "Shop orders and payment records are kept for 6 years for accounting.",
+              "Shop orders and payment records (including session fees paid at the gate) are kept for 6 years for accounting.",
+              "Accident and incident records are kept as safeguarding records: at least while your child is at the club, and longer where the law or our safeguarding duties require it.",
+              "Trial bookings: names and contact details are removed 6 months after the trial.",
               "Messages with the club are kept as club records while your child is at the club, and deleted with their record when they leave, unless our safeguarding duties mean we must keep them longer.",
               "Sign-in codes expire after 15 minutes and old sign-in records are deleted after 30 days.",
             ]}

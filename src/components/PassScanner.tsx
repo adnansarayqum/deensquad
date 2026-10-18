@@ -6,6 +6,7 @@ import { Check, HeartPulse, QrCode, RotateCcw, TriangleAlert, WifiOff, X } from 
 import type { ScanResult } from "@/lib/staff/checkin";
 import { ChildAvatar } from "./ChildAvatar";
 import { FLAG_WORDS, PAYING_WORDS } from "@/lib/staff/flags";
+import { poundsText } from "@/lib/settings";
 
 const reasonText = {
   not_a_pass: "That isn't a Deen Squad attendance QR code.",
@@ -275,7 +276,7 @@ export function PassScanner({ disabled = false, className = "w-full" }: { disabl
             <p className="text-[17px] font-bold">{reasonText[result.reason]}</p>
           </div>
         ) : (
-          <ChildResult child={result.child} />
+          <ChildResult key={`${result.child.id}:${result.child.session?.id ?? ""}`} child={result.child} />
         )}
       </div>
     </div>
@@ -319,6 +320,7 @@ function ChildResult({ child: c }: { child: Extract<ScanResult, { ok: true }>["c
             {PAYING_WORDS[c.paying]}
           </span>
         ) : null}
+        {here && c.session && (c.paysAtGate || c.paidPence) ? <ScannerPay child={c} sessionId={c.session.id} /> : null}
         {/* Only a marker (the details are on the register, a tap away): other parents are at the gate. */}
         {c.medical ? (
           <span className="mt-1 inline-flex items-center gap-1 self-start rounded-pill border border-line bg-cream px-2.5 py-0.5 text-label text-ink uppercase">
@@ -328,5 +330,64 @@ function ChildResult({ child: c }: { child: Extract<ScanResult, { ok: true }>["c
         ) : null}
       </span>
     </div>
+  );
+}
+
+/**
+ * "Paid £7" on the scanner's card for a child who pays at the gate, through /api/coach/payment (a route, so it never
+ * waits behind a scan). The same 10 s timeout as a scan; a payment that didn't save says so with Try again.
+ */
+function ScannerPay({ child: c, sessionId }: { child: Extract<ScanResult, { ok: true }>["child"]; sessionId: string }) {
+  const [paid, setPaid] = useState<number | null>(c.paidPence);
+  const [state, setState] = useState<"idle" | "saving" | "failed">("idle");
+  const [message, setMessage] = useState<string | null>(null);
+  const name = `${c.firstName} ${c.lastInitial}.`;
+  const send = async () => {
+    setState("saving");
+    setMessage(null);
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), SCAN_TIMEOUT_MS);
+    try {
+      const res = await fetch("/api/coach/payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session: sessionId, child: c.id }),
+        signal: abort.signal,
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok || body.error) {
+        setState("failed");
+        setMessage(res.status === 401 ? "You've been signed out. Close this and sign in again." : (body.error ?? "That didn't save. Check your signal and try again."));
+        return;
+      }
+      setPaid(c.feePence);
+      setState("idle");
+    } catch {
+      setState("failed");
+      setMessage("That didn't save. Check your signal and try again.");
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  if (paid) {
+    return <span className="mt-2 inline-flex items-center self-start rounded-pill bg-grass px-3 py-1 text-sm font-extrabold text-on-grass">Paid {poundsText(paid)}</span>;
+  }
+  return (
+    <span className="mt-2 flex flex-col items-start gap-1">
+      <button
+        type="button"
+        onClick={send}
+        disabled={state === "saving"}
+        aria-label={`${name} paid ${poundsText(c.feePence)}`}
+        className="btn-chunky btn-paper btn-small min-h-12"
+      >
+        {state === "saving" ? "Saving…" : state === "failed" ? "Try again" : `Paid ${poundsText(c.feePence)}`}
+      </button>
+      {message ? (
+        <span role="alert" className="text-[14px]">
+          {message}
+        </span>
+      ) : null}
+    </span>
   );
 }

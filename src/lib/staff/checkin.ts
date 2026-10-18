@@ -6,7 +6,8 @@ import { medicalMarkerSql } from "../medical/data";
 import { readPass } from "../pass/token";
 import { sessionIsFor } from "../squads/sql";
 import { unreadNewsSql, type RegisterFlag } from "./register";
-import { paymentFlags, payingBy, type PayingBy } from "./flags";
+import { sessionFeePence } from "../settings";
+import { paymentFlags, payingBy, paysAtGate, type PayingBy } from "./flags";
 
 // Checking a child in from their gate pass. Runs as the member of staff scanning (row level security on).
 // The child goes into today's session for their age group, or a tournament squad session they're picked for
@@ -21,12 +22,18 @@ export type ScannedChild = {
   photoId: string | null;
   ageGroup: AgeGroup;
   status: "checked_in" | "already_here" | "no_session_today";
-  session: { title: string; startsAt: string } | null;
+  session: { id: string; title: string; startsAt: string } | null;
   flags: RegisterFlag[];
   /** Medical and additional needs this member of staff may read (a neutral marker on the result card). */
   medical: boolean;
   /** Monthly plan or pay as you go (a quiet pill: pay as you go means taking the session fee). */
   paying: PayingBy;
+  /** Pays the session fee at the gate (pay as you go or no plan): the card offers "Paid £7". */
+  paysAtGate: boolean;
+  /** Taken for this session already, in pence. */
+  paidPence: number | null;
+  /** Today's fee in pence. */
+  feePence: number;
 };
 
 export type ScanResult = { ok: true; child: ScannedChild } | { ok: false; reason: "not_a_pass" | "unknown_child" };
@@ -79,6 +86,9 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
     );
     status = inserted.length ? "checked_in" : "already_here";
   }
+  const [paid] = session
+    ? await tx.query<{ amount_pence: number }>(`select amount_pence from session_payments where session_id = $1 and player_id = $2`, [session.id, c.id])
+    : [];
   return {
     ok: true,
     child: {
@@ -89,7 +99,7 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
       photoId: c.photo_file_id,
       ageGroup: c.age_group,
       status,
-      session: session ? { title: session.title, startsAt: iso(session.starts_at) } : null,
+      session: session ? { id: session.id, title: session.title, startsAt: iso(session.starts_at) } : null,
       flags: [
         ...paymentFlags(c.payment),
         ...(c.photo_consent === null ? (["missing_consent"] as const) : []),
@@ -98,6 +108,9 @@ export async function checkInByPass(tx: Queryable, token: unknown, now: Date): P
       ],
       medical: c.medical,
       paying: payingBy(c.payment),
+      paysAtGate: paysAtGate(c.payment),
+      paidPence: paid?.amount_pence ?? null,
+      feePence: await sessionFeePence(tx),
     },
   };
 }
@@ -126,7 +139,7 @@ export function registerClosedMessage(startsAt: string, now: Date): string {
 }
 
 /** Why a session's register can't be changed at `now` (gone, or not its day), or null when it's open. */
-async function registerRefusal(tx: Queryable, sessionId: string, now: Date): Promise<string | null> {
+export async function registerRefusal(tx: Queryable, sessionId: string, now: Date): Promise<string | null> {
   const [s] = await tx.query<{ starts_at: Date; cancelled: boolean }>(
     `select starts_at, cancelled_at is not null as cancelled from sessions where id = $1`,
     [sessionId],

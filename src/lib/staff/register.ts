@@ -5,7 +5,7 @@ import { isAgeGroup, type AgeGroup, type Availability, type PaymentState, type S
 import { SESSION_COLUMNS, toSession, type SessionRow } from "../parent/data";
 import { medicalMarkerSql } from "../medical/data";
 import { newsReaches } from "../squads/sql";
-import { paymentFlags, payingBy, type PayingBy, type RegisterFlag } from "./flags";
+import { paymentFlags, payingBy, paysAtGate, type PayingBy, type RegisterFlag } from "./flags";
 
 export type { RegisterFlag } from "./flags";
 
@@ -37,6 +37,10 @@ export type RegisterRow = {
   medical: boolean;
   /** Monthly plan or pay as you go, for a quiet pill (null with no plan: the flags say that). */
   paying: PayingBy;
+  /** Pays the session fee at the gate (pay as you go, or no plan yet): the register offers "Paid £7" once they're in. */
+  paysAtGate: boolean;
+  /** The fee taken at the gate for this session, if it has been. */
+  paidPence: number | null;
 };
 
 export type RegisterView = {
@@ -137,8 +141,9 @@ export async function loadRegister(
     unread_news: boolean;
     kit_ready: boolean;
     medical: boolean;
+    paid_pence: number | null;
   }>(
-    `select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number, p.photo_consent, p.photo_file_id,
+    `select sp.amount_pence as paid_pence, p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number, p.photo_consent, p.photo_file_id,
        coalesce(ps.state, 'missing')::text as payment, a.answer::text as answer, a.away_reason, at.checked_in_at, at.method,
        ${unreadNewsSql("$3")} as unread_news, ${medicalMarkerSql("p")} as medical,
        exists (
@@ -148,6 +153,7 @@ export async function loadRegister(
      left join payment_status ps on ps.player_id = p.id
      left join availability a on a.player_id = p.id and a.session_id = $1
      left join attendance at on at.player_id = p.id and at.session_id = $1
+     left join session_payments sp on sp.player_id = p.id and sp.session_id = $1
      where p.age_group = any ($2::text[]::age_group[]) and squad_allows($1, p.id)
      order by p.first_name, p.last_name`,
     [session.id, listed, opts.now],
@@ -177,6 +183,8 @@ export async function loadRegister(
       ],
       medical: r.medical,
       paying: payingBy(r.payment),
+      paysAtGate: paysAtGate(r.payment),
+      paidPence: r.paid_pence,
     })),
   };
 }

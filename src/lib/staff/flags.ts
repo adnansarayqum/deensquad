@@ -45,3 +45,8 @@ export function payingBy(state: PaymentState): PayingBy {
 }
 
 export const PAYING_WORDS: Record<Exclude<PayingBy, null>, string> = { monthly: "Monthly plan", pay_as_you_go: "Pay as you go" };
+
+/** Who pays the session fee at the gate (src/lib/gate): pay as you go, and anyone with no plan yet (monthly families never). */
+export function paysAtGate(state: PaymentState): boolean {
+  return state === "pay_as_you_go" || state === "missing";
+}

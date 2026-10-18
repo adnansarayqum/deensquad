@@ -5,6 +5,7 @@ import Link from "next/link";
 import { HeartPulse, Search } from "lucide-react";
 import { matchesName } from "@/lib/search";
 import { FLAG_WORDS, PAYING_WORDS, type PayingBy, type RegisterFlag } from "@/lib/staff/flags";
+import { GatePayButton } from "./GatePayButton";
 import { CheckInButton, UndoCheckInButton } from "./CheckInButton";
 import { ChildAvatar } from "./ChildAvatar";
 import { Pill } from "./ui";
@@ -30,11 +31,20 @@ export type GateRow = {
   paying: PayingBy;
   /** Why the parent said not coming ("poorly"), shown under the name in Said not coming. */
   awayReason: string | null;
+  /** Pays the session fee at the gate: "Paid £7" once they're in. */
+  paysAtGate: boolean;
+  /** What was taken at the gate ("£7"), if it has been. */
+  paid: string | null;
 };
 
 /** "Monthly plan" / "Pay as you go" beside a child's name: neutral, never kit-orange (nothing to chase). */
 export function PayingPill({ paying }: { paying: PayingBy }) {
-  return paying ? <Pill tone="neutral">{PAYING_WORDS[paying]}</Pill> : null;
+  // Never broken over lines (a narrow column squeezed "Pay as you go" into a tall blob).
+  return paying ? (
+    <span className="whitespace-nowrap">
+      <Pill tone="neutral">{PAYING_WORDS[paying]}</Pill>
+    </span>
+  ) : null;
 }
 
 /**
@@ -77,9 +87,12 @@ export function RegisterLists({
   notHere,
   away,
   here,
+  fee,
   children,
 }: {
   sessionId: string;
+  /** Today's session fee ("£7"), for "Paid £7". */
+  fee: string;
   /** This register's address, for the way back from a child's medical info. */
   from: string;
   open: boolean;
@@ -204,6 +217,7 @@ export function RegisterLists({
                   <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
                     {title(r)}
                     <span className="text-[13px] text-ink-muted">{r.checkedIn}</span>
+                    {r.paid ? <GatePayButton sessionId={sessionId} id={r.id} name={name(r)} fee={fee} paid={r.paid} disabled={!open} /> : null}
                     {showGroup || r.flags.length ? (
                       <span className="flex flex-wrap gap-1">
                         {group(r)}
@@ -212,7 +226,10 @@ export function RegisterLists({
                     ) : null}
                   </span>
                 </span>
-                <UndoCheckInButton sessionId={sessionId} playerId={r.id} name={name(r)} disabled={!open} />
+                <span className="flex flex-wrap items-center justify-end gap-1">
+                  {r.paysAtGate && !r.paid ? <GatePayButton sessionId={sessionId} id={r.id} name={name(r)} fee={fee} paid={null} disabled={!open} /> : null}
+                  <UndoCheckInButton sessionId={sessionId} playerId={r.id} name={name(r)} disabled={!open} />
+                </span>
               </li>
             ))}
           </ul>

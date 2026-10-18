@@ -8,6 +8,8 @@ import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
 import { ChildAvatar } from "@/components/ChildAvatar";
 import { MedicalDetails } from "@/components/admin/MedicalDetails";
+import { INCIDENT_KINDS, loadIncidents } from "@/lib/incidents/data";
+import { clock, shortDay } from "@/lib/dates";
 import { removeChild, resendInvite, saveGuardian, setPayment, unlinkGuardian, updateChild } from "@/lib/admin/actions";
 import { loadChild } from "@/lib/admin/data";
 import { familiesFilter, familiesHref } from "@/lib/admin/families-link";
@@ -42,6 +44,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
     ]),
   );
   if (!child) notFound();
+  const incidents = await asUser(user.id, (tx) => loadIncidents(tx, { playerId: id, mine: null, limit: 20 }));
   // A coach with their own groups sees only those children.
   const mine = coachLimit(user.staff);
   if (mine && !mine.includes(child.ageGroup)) notFound();
@@ -200,6 +203,32 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
           <MedicalDetails medical={medical.data} firstName={child.firstName} />
         </Section>
       ) : null}
+
+      <Section
+        title="Accidents and incidents"
+        aside={
+          <Link href={`/coach/incidents/new?child=${child.id}`} className="text-sm font-bold text-grass-text underline">
+            Log one
+          </Link>
+        }
+      >
+        {incidents.length === 0 ? (
+          <p className="text-[15px] text-ink-muted">Nothing logged.</p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {incidents.map((i) => (
+              <li key={i.id} className="flex flex-col gap-1 border-t-2 border-line pt-3 first:border-t-0 first:pt-0">
+                <span className="text-[15px] font-bold">
+                  {INCIDENT_KINDS[i.kind]} · {shortDay(i.happenedAt)} {clock(i.happenedAt)}
+                </span>
+                <span className="text-[15px] whitespace-pre-line">{i.whatHappened}</span>
+                <span className="text-sm whitespace-pre-line text-ink-muted">What we did: {i.actionTaken}</span>
+                <span className="text-sm text-ink-muted">Logged by {i.reportedBy}. The parents were sent it in the app.</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
 
       {isAdmin ? (
         <Section title="Child's details">

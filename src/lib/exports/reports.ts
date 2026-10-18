@@ -8,6 +8,7 @@ export const EXPORTS = {
   attendance: { label: "Attendance", detail: "Every check-in this season, one row per child per session" },
   orders: { label: "Shop orders", detail: "Every item ordered, with payment and collection status" },
   awards: { label: "Points, stars and badges", detail: "Each child's totals this season" },
+  "gate-payments": { label: "Paid at the gate", detail: "Every session fee taken at the gate this season (pay as you go and trials)" },
 } as const;
 
 export type ExportKind = keyof typeof EXPORTS;
@@ -138,6 +139,47 @@ export async function buildExport(tx: Queryable, kind: ExportKind, now: Date): P
           r.initials ?? "",
           r.quantity,
           pounds(r.line_pence),
+        ]),
+      };
+    }
+    case "gate-payments": {
+      const rows = await tx.query<{
+        starts_at: Date;
+        title: string;
+        first_name: string;
+        last_name: string;
+        age_group: string;
+        trial: boolean;
+        amount_pence: number;
+        method: string;
+        taken_at: Date;
+        taken_by: string | null;
+      }>(
+        `select s.starts_at, s.title,
+           coalesce(p.first_name, t.child_first_name) as first_name, coalesce(p.last_name, t.child_last_name) as last_name,
+           coalesce(p.age_group, t.age_group)::text as age_group, t.id is not null as trial,
+           sp.amount_pence, sp.method, sp.taken_at, sn.display_name as taken_by
+         from session_payments sp join sessions s on s.id = sp.session_id
+         left join players p on p.id = sp.player_id
+         left join trial_bookings t on t.id = sp.trial_id
+         left join staff_names sn on sn.id = sp.taken_by
+         where s.starts_at >= $1
+         order by s.starts_at, age_group, last_name, first_name`,
+        [seasonStart(now)],
+      );
+      return {
+        header: ["Session date", "Session", "Group", "Child first name", "Child last name", "Trial", "Amount (£)", "How", "Taken", "Taken by"],
+        rows: rows.map((r) => [
+          day(r.starts_at),
+          r.title,
+          r.age_group,
+          r.first_name,
+          r.last_name,
+          r.trial ? "Trial" : "",
+          pounds(r.amount_pence),
+          r.method === "cash" ? "Cash" : "Card",
+          london(r.taken_at),
+          r.taken_by ?? "",
         ]),
       };
     }

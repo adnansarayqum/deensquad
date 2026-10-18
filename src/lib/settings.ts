@@ -59,3 +59,41 @@ export async function setAttendanceReminder(tx: Queryable, value: AttendanceRemi
     [ATTENDANCE_REMINDER, JSON.stringify(value), staffId],
   );
 }
+
+/**
+ * The session fee taken at the gate from pay-as-you-go families and trial children (src/lib/gate), in pence. Absent
+ * means £7 (the owner's figure, Oct 2026: paid by card on the club's machine). Admins change it on Admin → Sessions.
+ */
+export const SESSION_FEE = "session_fee_pence";
+export const DEFAULT_SESSION_FEE_PENCE = 700;
+/** The most an admin can set (a typo guard). */
+export const MAX_SESSION_FEE_PENCE = 10_000;
+
+export async function sessionFeePence(tx: Queryable): Promise<number> {
+  const [row] = await tx.query<{ value: string }>(`select value::text as value from club_settings where key = $1`, [SESSION_FEE]);
+  const n = row ? Number(JSON.parse(row.value)) : NaN;
+  return Number.isInteger(n) && n > 0 && n <= MAX_SESSION_FEE_PENCE ? n : DEFAULT_SESSION_FEE_PENCE;
+}
+
+/** Saves the session fee as the signed-in admin (a coach's write matches no policy and throws). */
+export async function setSessionFeePence(tx: Queryable, pence: number, staffId: string): Promise<void> {
+  await tx.query(
+    `insert into club_settings (key, value, updated_at, updated_by) values ($1, $2::text::jsonb, now(), $3)
+     on conflict (key) do update set value = excluded.value, updated_at = now(), updated_by = excluded.updated_by`,
+    [SESSION_FEE, JSON.stringify(pence), staffId],
+  );
+}
+
+/** "£7" or "£7.50". */
+export function poundsText(pence: number): string {
+  return pence % 100 === 0 ? `£${pence / 100}` : `£${(pence / 100).toFixed(2)}`;
+}
+
+/** "12" → 1200, "7.50" → 750; null for anything that isn't a sensible fee. */
+export function parseFee(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const m = value.trim().replace(/^£/, "").match(/^(\d{1,3})(?:\.(\d{1,2}))?$/);
+  if (!m) return null;
+  const pence = Number(m[1]) * 100 + Number((m[2] ?? "0").padEnd(2, "0"));
+  return pence > 0 && pence <= MAX_SESSION_FEE_PENCE ? pence : null;
+}

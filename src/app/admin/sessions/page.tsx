@@ -6,6 +6,7 @@ import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
 import { BulkBar, SelectAll, SelectRow } from "@/components/admin/SessionBulk";
 import { WeeklyReminderCard } from "@/components/admin/WeeklyReminderCard";
+import { SessionFeeCard } from "@/components/admin/SessionFeeCard";
 import { addSessions, openBulk } from "@/lib/admin/actions";
 import { bulkNotice } from "@/lib/admin/bulk-sessions";
 import { loadSessionsAdmin, type AdminSession } from "@/lib/admin/data";
@@ -15,7 +16,7 @@ import { asUser } from "@/lib/db";
 import { clock, londonDate, nextFridaySession, shortDay } from "@/lib/dates";
 import { defaultSessionGroups } from "@/lib/domain";
 import { lastReminderSent } from "@/lib/reminders/attendance";
-import { attendanceReminderSetting } from "@/lib/settings";
+import { attendanceReminderSetting, sessionFeePence } from "@/lib/settings";
 import type { AgeGroup } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Sessions" };
@@ -32,7 +33,7 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
   const { upcoming, recent, lastVenue, reminder } = await asUser(user.id, async (tx) => ({
     ...(await loadSessionsAdmin(tx, now, mine)),
     // The weekly reminder card is the admins' (coaches see the sessions as before).
-    reminder: isAdmin ? { setting: await attendanceReminderSetting(tx), last: await lastReminderSent(tx) } : null,
+    reminder: isAdmin ? { setting: await attendanceReminderSetting(tx), last: await lastReminderSent(tx), fee: await sessionFeePence(tx) } : null,
   }));
   const friday = londonDate(nextFridaySession(now).start);
   const firstDate = `${friday.year}-${String(friday.month).padStart(2, "0")}-${String(friday.day).padStart(2, "0")}`;
@@ -44,7 +45,15 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
 
   return (
     <>
-      <PageHeader title="Sessions" subtitle={upcoming.length ? `${upcoming.length} coming up` : "Nothing coming up yet"} />
+      <PageHeader
+        title="Sessions"
+        subtitle={upcoming.length ? `${upcoming.length} coming up` : "Nothing coming up yet"}
+        actions={
+          <Link href="/admin/trials" className="btn-chunky btn-paper btn-small min-h-12">
+            Trials
+          </Link>
+        }
+      />
 
       {params.cancelled ? <Notice>{params.told ? "Cancelled. The families have been told." : "Cancelled."}</Notice> : null}
       {params.restored ? <Notice>{params.told ? "Back on. The families have been told." : "Back on."}</Notice> : null}
@@ -59,6 +68,7 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
           notice={params.reminder === "saved" || params.reminder === "invalid" ? params.reminder : undefined}
         />
       ) : null}
+      {reminder ? <SessionFeeCard pence={reminder.fee} notice={params.fee === "saved" || params.fee === "invalid" ? params.fee : undefined} /> : null}
 
       <FoldCard id="add-sessions" title="Add sessions" open={upcoming.length === 0}>
         <div className="lg:max-w-3xl">

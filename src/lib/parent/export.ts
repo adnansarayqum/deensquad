@@ -128,6 +128,14 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
      from announcement_answers aa join announcements a on a.id = aa.announcement_id
      where aa.player_id in (select my_player_ids()) order by aa.answered_at`,
   );
+  const incidents = await tx.query<{ player_id: string; kind: string; happened_at: Date; what_happened: string; action_taken: string; reported_by_name: string }>(
+    `select player_id, kind, happened_at, what_happened, action_taken, reported_by_name from incidents
+     where player_id in (select my_player_ids()) order by happened_at`,
+  );
+  const gatePayments = await tx.query<{ player_id: string; title: string; starts_at: Date; amount_pence: number; method: string }>(
+    `select sp.player_id, s.title, s.starts_at, sp.amount_pence, sp.method from session_payments sp join sessions s on s.id = sp.session_id
+     where sp.player_id in (select my_player_ids()) order by s.starts_at`,
+  );
 
   const forChild = <T extends { player_id: string }>(rows: T[], id: string) => rows.filter((r) => r.player_id === id);
   const pounds = (pence: number) => (pence / 100).toFixed(2);
@@ -186,6 +194,14 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
           consentGivenAt: at(m.consent_at),
           updatedAt: at(m.updated_at),
         }))[0] ?? null,
+      accidentsAndIncidents: forChild(incidents, c.id).map((i) => ({
+        kind: i.kind,
+        happenedAt: at(i.happened_at),
+        whatHappened: i.what_happened,
+        whatWeDid: i.action_taken,
+        loggedBy: i.reported_by_name,
+      })),
+      paidAtTheGate: forChild(gatePayments, c.id).map((g) => ({ session: g.title, startsAt: at(g.starts_at), amount: pounds(g.amount_pence), how: g.method })),
       quickAnswers: forChild(quickAnswers, c.id).map((q) => ({ message: q.title, answer: q.answer, answeredAt: at(q.answered_at), answeredByYou: q.by_you })),
       messagesWithTheClub: forChild(conversations, c.id).map((v) => ({
         subject: v.subject ?? (v.news_title ? `Re: ${v.news_title}` : null),

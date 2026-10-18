@@ -15,6 +15,12 @@ import { registerClosedMessage, registerOpen } from "@/lib/staff/checkin";
 import { flagSummary } from "@/lib/staff/flags";
 import { ALL_GROUPS, loadRegister, summarise, type RegisterRow } from "@/lib/staff/register";
 import { groupPlural } from "@/lib/domain";
+import { loadSessionPayments } from "@/lib/gate/payments";
+import { loadSessionTrials } from "@/lib/trials/data";
+import { TrialsOnRegister } from "@/components/trials/TrialsOnRegister";
+import type { AgeGroup } from "@/lib/domain";
+import { poundsText, sessionFeePence } from "@/lib/settings";
+import { GatePayButton } from "@/components/GatePayButton";
 
 export const metadata: Metadata = { title: "Register" };
 
@@ -30,6 +36,8 @@ const gate = (r: RegisterRow): GateRow => ({
   medical: r.medical,
   paying: r.paying,
   awayReason: r.awayReason,
+  paysAtGate: r.paysAtGate,
+  paid: r.paidPence ? poundsText(r.paidPence) : null,
 });
 
 const tab = (active: boolean) =>
@@ -39,7 +47,16 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
   const user = await requireStaff();
   const params = await searchParams;
   const now = new Date();
-  const view = await asUser(user.id, (tx) => loadRegister(tx, { now, sessionId: params.session, group: params.group, allowed: staffGroups(user.staff) }));
+  const { view, feePence, taken, trials } = await asUser(user.id, async (tx) => {
+    const view = await loadRegister(tx, { now, sessionId: params.session, group: params.group, allowed: staffGroups(user.staff) });
+    return {
+      view,
+      feePence: await sessionFeePence(tx),
+      taken: view ? await loadSessionPayments(tx, view.session.id) : null,
+      trials: view ? await loadSessionTrials(tx, view.session.id, view.group === ALL_GROUPS ? view.groups : [view.group as AgeGroup]) : [],
+    };
+  });
+  const fee = poundsText(feePence);
   const time = clock(now.toISOString());
 
   if (!view) {
@@ -121,14 +138,22 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-grass font-display text-[22px] text-on-grass">{r.shirtNumber ?? r.firstName[0]}</span>
               )}
               <span className="flex min-w-0 flex-1 flex-col items-start">
+                {/* With "Paid £7" beside it the words get shorter, so the card stays two lines and the list still to arrive
+                    stays on the first screen. */}
                 <span className="text-[15px] font-bold">
-                  {r.firstName} {r.lastInitial}. checked in
+                  {r.firstName} {r.lastInitial}.{r.paysAtGate && !r.paidPence ? "" : " checked in"}
                 </span>
                 <span className="text-[13px] text-ink-muted">
-                  {groupPlural(r.ageGroup)} · {clock(r.checkedInAt!)}
+                  {r.paysAtGate && !r.paidPence ? `In at ${clock(r.checkedInAt!)}` : `${groupPlural(r.ageGroup)} · ${clock(r.checkedInAt!)}`}
                 </span>
                 <PayingPill paying={r.paying} />
+                {r.paidPence ? (
+                  <GatePayButton sessionId={session.id} id={r.id} name={`${r.firstName} ${r.lastInitial}.`} fee={fee} paid={poundsText(r.paidPence)} disabled={!open} />
+                ) : null}
               </span>
+              {r.paysAtGate && !r.paidPence ? (
+                <GatePayButton sessionId={session.id} id={r.id} name={`${r.firstName} ${r.lastInitial}.`} fee={fee} paid={null} disabled={!open} />
+              ) : null}
               <UndoCheckInButton sessionId={session.id} playerId={r.id} name={`${r.firstName} ${r.lastInitial}.`} disabled={!open} />
             </div>
           ))}
@@ -149,7 +174,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
         {view.rows.length === 0 ? (
           <p className="text-[15px] text-ink-muted">No players in the {groupPlural(group)} yet. A club admin adds families.</p>
         ) : (
-          <RegisterLists sessionId={session.id} from={link({ group })} open={open} showGroup={all} notHere={s.notHere.map(gate)} away={s.away.map(gate)} here={s.here.map(gate)}>
+          <RegisterLists sessionId={session.id} from={link({ group })} open={open} showGroup={all} notHere={s.notHere.map(gate)} away={s.away.map(gate)} here={s.here.map(gate)} fee={fee}>
             {needsAWord ? (
               // One line for everyone already in who needs a word; the names (and their pills in Here) are a tap away.
               <details className="mt-2 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 text-ink">
@@ -169,12 +194,40 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
           </RegisterLists>
         )}
       </section>
-      {/* After the lists, so it never pushes the children still to arrive down the first screen. */}
-      {open ? (
-        <Link href={`/coach/ratings?${new URLSearchParams({ session: session.id, ...(all ? {} : { group }) })}`} className="btn-chunky btn-paper self-start">
-          Rate players
-        </Link>
+      {trials.length > 0 ? (
+        <TrialsOnRegister
+          sessionId={session.id}
+          fee={fee}
+          open={open}
+          trials={trials.map((t) => ({
+            id: t.id,
+            childName: t.childName,
+            ageGroup: t.ageGroup,
+            parentName: t.parentName,
+            phone: t.phone,
+            arrived: Boolean(t.arrivedAt),
+            paid: t.paidPence ? poundsText(t.paidPence) : null,
+          }))}
+        />
       ) : null}
+      {/* What's been taken at the gate for this session (every group), after the lists. */}
+      {taken && taken.count > 0 ? (
+        <p className="text-[15px] text-ink-muted">
+          Paid at the gate for this session: <span className="font-bold text-ink">{poundsText(taken.total)}</span> from {taken.count}{" "}
+          {taken.count === 1 ? "child" : "children"}.
+        </p>
+      ) : null}
+      {/* After the lists, so it never pushes the children still to arrive down the first screen. */}
+      <div className="flex flex-wrap gap-3">
+        {open ? (
+          <Link href={`/coach/ratings?${new URLSearchParams({ session: session.id, ...(all ? {} : { group }) })}`} className="btn-chunky btn-paper">
+            Rate players
+          </Link>
+        ) : null}
+        <Link href={`/coach/incidents/new?session=${session.id}`} className="btn-chunky btn-paper">
+          Log an accident or incident
+        </Link>
+      </div>
     </>
   );
 }
