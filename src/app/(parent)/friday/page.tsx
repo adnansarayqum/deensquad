@@ -129,6 +129,7 @@ export default async function FridayPage() {
               question={availabilityQuestion(single.child.firstName, single.session, shortDay(single.session.startsAt))}
               squad={Boolean(single.session.squad)}
               answered={answered(single)}
+              reason={single.answered?.reason ?? null}
               calendar={calendar(single.session)}
             />
           ) : (
@@ -279,6 +280,7 @@ function ChildCard({ week: w, answered, calendar }: { week: ChildWeek; answered?
               question={availabilityQuestion(name, w.session, shortDay(w.session.startsAt))}
               squad={Boolean(w.session.squad)}
               answered={answered}
+              reason={w.answered?.reason ?? null}
               calendar={calendar}
               compact
             />
@@ -292,7 +294,7 @@ function ChildCard({ week: w, answered, calendar }: { week: ChildWeek; answered?
 }
 
 /** A squad session further ahead than the child's next session: the family is asked straight away. */
-function InviteCard({ invite: { child, session, answer }, answered, calendar }: { invite: SquadInvite; answered?: string; calendar?: CalendarLinks }) {
+function InviteCard({ invite: { child, session, answer, answered: record }, answered, calendar }: { invite: SquadInvite; answered?: string; calendar?: CalendarLinks }) {
   const question = availabilityQuestion(child.firstName, session, shortDay(session.startsAt));
   return (
     <Card tone="gold" className="flex flex-col gap-3 p-4">
@@ -309,7 +311,7 @@ function InviteCard({ invite: { child, session, answer }, answered, calendar }: 
         <Directions venue={session.venue} />
       </div>
       {session.notes ? <p className="-mt-1.5 text-sm whitespace-pre-line">{session.notes}</p> : null}
-      <AvailabilityPicker sessionId={session.id} playerId={child.id} answer={answer} childName={child.firstName} question={question} squad answered={answered} calendar={calendar} compact />
+      <AvailabilityPicker sessionId={session.id} playerId={child.id} answer={answer} childName={child.firstName} question={question} squad answered={answered} reason={record?.reason ?? null} calendar={calendar} compact />
     </Card>
   );
 }

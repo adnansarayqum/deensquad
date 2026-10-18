@@ -53,8 +53,8 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
       tx.query<{ player_id: string; state: string; updated_at: Date }>(
         `select player_id, state::text as state, updated_at from payment_status where player_id in (select my_player_ids())`,
       ),
-      tx.query<{ player_id: string; title: string; starts_at: Date; answer: string; answered_at: Date; by_you: boolean }>(
-        `select v.player_id, s.title, s.starts_at, v.answer::text as answer, v.answered_at, coalesce(v.answered_by = my_guardian_id(), false) as by_you
+      tx.query<{ player_id: string; title: string; starts_at: Date; answer: string; answered_at: Date; by_you: boolean; away_reason: string | null }>(
+        `select v.player_id, s.title, s.starts_at, v.answer::text as answer, v.answered_at, v.away_reason, coalesce(v.answered_by = my_guardian_id(), false) as by_you
          from availability v join sessions s on s.id = v.session_id
          where v.player_id in (select my_player_ids()) and s.starts_at >= $1
          order by s.starts_at`,
@@ -171,6 +171,7 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
         answer: v.answer,
         answeredAt: at(v.answered_at),
         answeredByYou: v.by_you,
+        reasonForNotComing: v.away_reason,
       })),
       attendance: forChild(attendance, c.id).map((a) => ({ session: a.title, startsAt: at(a.starts_at), checkedInAt: at(a.checked_in_at), how: a.method })),
       awards: forChild(awards, c.id).map((a) => ({ stars: a.stars, points: a.points, reason: a.reason, givenBy: a.given_by, givenAt: at(a.created_at) })),

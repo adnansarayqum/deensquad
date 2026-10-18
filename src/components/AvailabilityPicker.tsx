@@ -1,12 +1,16 @@
 "use client";
 
-import { useOptimistic, useState, useSyncExternalStore, useTransition } from "react";
-import { CalendarPlus, Check, X } from "lucide-react";
+import { useActionState, useId, useOptimistic, useState, useSyncExternalStore, useTransition } from "react";
+import { CalendarPlus, Check, MessageSquare, X } from "lucide-react";
 import Link from "next/link";
 import type { Availability } from "@/lib/domain";
 import { track } from "@/lib/analytics";
-import { setAvailability } from "@/lib/parent/actions";
+import { sendAwayReason, setAvailability, type AwayReasonState } from "@/lib/parent/actions";
+import { submitKeepingInput } from "./submitKeepingInput";
 import { tapAction, TapProblem, type Problem } from "./TapProblem";
+
+/** The longest reason (as AWAY_REASON_MAX on the server). */
+const REASON_MAX = 200;
 
 export function AvailabilityPicker({
   sessionId,
@@ -17,6 +21,7 @@ export function AvailabilityPicker({
   compact = false,
   squad = false,
   answered,
+  reason = null,
   calendar,
 }: {
   sessionId: string;
@@ -30,6 +35,8 @@ export function AvailabilityPicker({
   squad?: boolean;
   /** Who gave the saved answer and when ("Coming · answered by Sara, Tue 2:02pm"), shown until this person taps. */
   answered?: string;
+  /** The reason already sent for Not this week ("poorly"), shown under that answer with Change. */
+  reason?: string | null;
   /** "Add to calendar" links for this session, shown under a Coming (or "Yes, can play") answer. */
   calendar?: CalendarLinks;
 }) {
@@ -105,7 +112,81 @@ export function AvailabilityPicker({
       </p>
       )}
       {coming && calendar && !failed ? <AddToCalendar links={calendar} /> : null}
+      {away && !pending && !failed ? <AwayReason sessionId={sessionId} playerId={playerId} childName={childName} saved={reason} /> : null}
     </div>
+  );
+}
+
+/**
+ * Under Not this week: an optional reason for the coaches ("poorly", "family wedding"). Sent as a message in the
+ * thread for this session and child, so the coaches are told (and can reply), and shown on the register beside the
+ * child. Once sent it shows what was sent, with Change. A plain form: it works before the page's script has loaded.
+ */
+function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: string; playerId: string; childName: string; saved: string | null }) {
+  const [state, run, sending] = useActionState<AwayReasonState, FormData>(sendAwayReason, {});
+  const [editing, setEditing] = useState(false);
+  const [sentAt, setSentAt] = useState<AwayReasonState | null>(null);
+  const id = useId();
+  // Show what was sent once the action answers (and leave the form when Change was tapped before).
+  if (state.sent && state !== sentAt) {
+    setSentAt(state);
+    setEditing(false);
+  }
+  const sent = state.sent && state === sentAt ? state.sent : saved;
+  const thread = state.conversation ? `/messages/${state.conversation}` : "/messages";
+
+  if (sent && !editing) {
+    return (
+      <div className="flex flex-col gap-1 rounded-app border-2 border-line bg-paper px-3.5 py-3" role="status">
+        <p className="flex items-start gap-2 text-[15px] leading-[22px]">
+          <MessageSquare aria-hidden size={18} className="mt-0.5 shrink-0 text-ink-muted" />
+          <span className="min-w-0 break-words">
+            Sent to the coaches: <span className="font-bold">{sent}</span>
+          </span>
+        </p>
+        <div className="flex flex-wrap gap-x-4">
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            aria-label={`Change the reason for ${childName}`}
+            className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline"
+          >
+            Change
+          </button>
+          <Link href={thread} className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+            See in Messages
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <form action={run} onSubmit={submitKeepingInput(run)} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper px-3.5 py-3">
+      <input type="hidden" name="session" value={sessionId} />
+      <input type="hidden" name="child" value={playerId} />
+      <label htmlFor={id} className="text-[15px] font-bold">
+        Tell the coaches why? <span className="font-normal text-ink-muted">(optional)</span>
+      </label>
+      <input
+        id={id}
+        name="reason"
+        type="text"
+        maxLength={REASON_MAX}
+        defaultValue={editing ? (saved ?? "") : ""}
+        placeholder="For example: poorly, family wedding"
+        autoComplete="off"
+        className="field text-base"
+      />
+      {state.error ? (
+        <p role="alert" className="rounded-app bg-orange-tint px-3 py-2 text-sm text-ink">
+          {state.error}
+        </p>
+      ) : null}
+      <button type="submit" disabled={sending} aria-label={`Send the reason for ${childName} to the coaches`} className="btn-chunky btn-paper btn-small min-h-12">
+        {sending ? "Sending…" : "Send to the coaches"}
+      </button>
+    </form>
   );
 }
 

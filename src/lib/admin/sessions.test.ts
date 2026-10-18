@@ -35,7 +35,7 @@ beforeEach(async () => {
   [{ id: adminStaffId }] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from staff where email = $1`, [DEV_EMAILS.admin]));
   [{ id: cup }] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from sessions where title = 'Autumn Cup'`));
   [{ id: friday }, { id: nextFriday }] = await t.asSystem((tx) =>
-    tx.query<{ id: string }>(`select id from sessions where starts_at in ($1, $2) order by starts_at`, [coming.start, addDays(coming.start, 7)]),
+    tx.query<{ id: string }>(`select id from sessions where starts_at in ($1, $2) order by starts_at`, [coming.start, nextFridaySession(addDays(coming.end, 1)).start]),
   );
 });
 

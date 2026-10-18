@@ -13,13 +13,13 @@ const day = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", 
 /** The text inside a QR picture on the page, read the way a coach's scanner would. */
 async function readQr(page: Page, name: string): Promise<string | null> {
   const picture = await page.getByRole("img", { name }).evaluate(async (el) => {
-    const svg = el.querySelector("svg")!;
-    const img = new Image();
-    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+    // The QR picture is the <img> itself: a small PNG the phone shows scaled up with sharp edges.
+    const img = el as HTMLImageElement;
     await img.decode();
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 300;
     const ctx = canvas.getContext("2d")!;
+    ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, 300, 300);
     ctx.drawImage(img, 0, 0, 300, 300);
@@ -69,7 +69,7 @@ test("no signal at the gate: the codes saved on the phone show for /pass and /fr
     await page.goto("/friday");
     await page.getByText("Show attendance QR code", { exact: true }).click();
     await expect(page.getByRole("img", { name: "QR code that checks Idris in" })).toBeVisible();
-    expect(await readQr(page, "QR code that checks Idris in")).toMatch(/^DSP\.[0-9a-f-]{36}\./);
+    expect(await readQr(page, "QR code that checks Idris in")).toMatch(/^DSP\.[0-9A-F-]{36}\./);
     await page.screenshot({ path: shot("friday-session-day-qr"), fullPage: true });
 
     // Opening Friday online saved the child's code on the phone (QR text, first name and group only), and the

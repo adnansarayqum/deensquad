@@ -123,6 +123,22 @@ test("the parent sees the reply on News and in Messages; another parent can't op
   await expect(parent.getByText("Coach", { exact: true })).toBeVisible();
   await parent.goto("/news");
   await expect(parent.getByRole("link", { name: /new message from the club/ })).toHaveCount(0);
+
+  // Not this week, with an optional reason for the coaches (sent as a message; changeable).
+  await parent.goto("/friday");
+  await parent.getByRole("button", { name: "Not this week: Yunus isn't coming" }).click();
+  await expect(parent.getByText("Saved. Coach knows Yunus is away this week.")).toBeVisible();
+  await parent.getByLabel(/Tell the coaches why\?/).fill("Poorly");
+  await parent.getByRole("button", { name: "Send the reason for Yunus to the coaches" }).click();
+  await expect(parent.getByRole("status").filter({ hasText: "Sent to the coaches: Poorly" })).toBeVisible();
+  await parent.getByRole("button", { name: "Change the reason for Yunus" }).click();
+  await expect(parent.getByLabel(/Tell the coaches why\?/)).toHaveValue("Poorly");
+  await parent.getByLabel(/Tell the coaches why\?/).fill("Poorly, back next week");
+  await parent.getByRole("button", { name: "Send the reason for Yunus to the coaches" }).click();
+  await expect(parent.getByRole("status").filter({ hasText: "Sent to the coaches: Poorly, back next week" })).toBeVisible();
+  await parent.screenshot({ path: shot("friday-away-reason"), fullPage: true });
+  await parent.reload();
+  await expect(parent.getByText("Poorly, back next week")).toBeVisible();
   await context.close();
 
   const other = await newContext(browser, PHONE);
@@ -133,4 +149,22 @@ test("the parent sees the reply on News and in Messages; another parent can't op
   await nuh.goto("/messages");
   await expect(nuh.getByText("No messages yet.", { exact: false })).toBeVisible();
   await other.close();
+});
+
+test("the coaches get the reason as a message and see it on the register", async ({ browser }) => {
+  test.skip(!existsSync(ADMIN_STATE) || !threadUrl, "needs the tests above");
+  const admin = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
+  const page = await admin.newPage();
+  await page.goto("/admin/messages");
+  const nav = page.getByRole("navigation", { name: "Club admin" });
+  await expect(nav.getByRole("link", { name: "Messages, 1 unread" })).toBeVisible();
+  const row = page.getByRole("link", { name: /Not coming: / });
+  await expect(row).toContainText("Yunus V");
+  await row.click();
+  await expect(page.getByText("Poorly", { exact: true })).toBeVisible();
+  await expect(page.getByText("Poorly, back next week", { exact: true })).toBeVisible();
+  await page.goto("/coach?group=U7");
+  const away = page.getByRole("region", { name: /Said not coming/ });
+  await expect(away.getByText("Reason: Poorly, back next week")).toBeVisible();
+  await admin.close();
 });

@@ -1212,19 +1212,19 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
   await page.screenshot({ path: shot("pass"), fullPage: true });
   // The pass as the parent's screen draws it (its QR picture, 300px across, on white).
   const picture: Picture = await qr.evaluate(async (el) => {
-    const svg = el.querySelector("svg")!;
-    const img = new Image();
-    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+    // The QR picture is the <img> itself: a small PNG the phone shows scaled up with sharp edges.
+    const img = el as HTMLImageElement;
     await img.decode();
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 300;
     const ctx = canvas.getContext("2d")!;
+    ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, 300, 300);
     ctx.drawImage(img, 0, 0, 300, 300);
     return { data: Array.from(ctx.getImageData(0, 0, 300, 300).data), width: 300, height: 300 };
   });
-  expect(jsQR(new Uint8ClampedArray(picture.data), picture.width, picture.height)?.data).toMatch(/^DSP\.[0-9a-f-]{36}\./);
+  expect(jsQR(new Uint8ClampedArray(picture.data), picture.width, picture.height)?.data).toMatch(/^DSP\.[0-9A-F-]{36}\./);
   const video = resolve("e2e/.results/musa-pass.y4m");
   writeFileSync(video, cameraVideo(picture));
 

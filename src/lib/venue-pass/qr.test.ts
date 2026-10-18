@@ -2,21 +2,22 @@ import jsQR from "jsqr";
 import QRCode from "qrcode";
 import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
-import { cleanVenueCode, fitsOffline, OFFLINE_IMAGE_MAX, readQrPixels, VENUE_CODE_MAX, VENUE_QR_OPTIONS } from "./qr";
+import { cleanVenueCode, fitsOffline, OFFLINE_IMAGE_MAX, readQrPixels, VENUE_CODE_MAX } from "./qr";
+import { QR_OPTIONS, qrDataUrl } from "../qr-picture";
 
 vi.mock("server-only", () => ({}));
 const { cleanScreenshot, SCREENSHOT_SIDE } = await import("../photo-clean");
 
-/** A QR code drawn as RGBA pixels, `scale` pixels a module, the way it's drawn with VENUE_QR_OPTIONS (quiet zone included). */
+/** A QR code drawn as RGBA pixels, `scale` pixels a module, the way it's drawn with QR_OPTIONS (quiet zone included). */
 function pixels(text: string, scale = 4, invert = false) {
-  const qr = QRCode.create(text, { errorCorrectionLevel: VENUE_QR_OPTIONS.errorCorrectionLevel });
+  const qr = QRCode.create(text, { errorCorrectionLevel: QR_OPTIONS.errorCorrectionLevel });
   const n = qr.modules.size;
-  const side = (n + 2 * VENUE_QR_OPTIONS.margin) * scale;
+  const side = (n + 2 * QR_OPTIONS.margin) * scale;
   const out = new Uint8ClampedArray(side * side * 4);
   for (let y = 0; y < side; y++) {
     for (let x = 0; x < side; x++) {
-      const mx = Math.floor(x / scale) - VENUE_QR_OPTIONS.margin;
-      const my = Math.floor(y / scale) - VENUE_QR_OPTIONS.margin;
+      const mx = Math.floor(x / scale) - QR_OPTIONS.margin;
+      const my = Math.floor(y / scale) - QR_OPTIONS.margin;
       const dark = mx >= 0 && my >= 0 && mx < n && my < n && qr.modules.get(my, mx) === 1;
       const v = dark !== invert ? 0 : 255;
       out.set([v, v, v, 255], (y * side + x) * 4);
@@ -39,12 +40,14 @@ describe("reading a sports hub entry code", () => {
     expect(readQrPixels(jsQR, blank, 200, 200)).toBeNull();
   });
 
-  it("draws the code back as a crisp SVG (black on white, quiet zone) that reads back the same", async () => {
-    const svg = await QRCode.toString("HUB-0042-7781", { type: "svg", ...VENUE_QR_OPTIONS });
-    expect(svg).toContain('fill="#ffffff"');
-    expect(svg).toContain('stroke="#000000"');
-    // Rasterised as a gate scanner would see it.
-    const raster = await sharp(Buffer.from(svg)).resize(400, 400).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  it("draws the code back as a picture (black on white, quiet zone) that reads back the same", async () => {
+    const url = await qrDataUrl("HUB-0042-7781");
+    // Scaled up as the phone shows it.
+    const raster = await sharp(Buffer.from(url.split(",")[1], "base64"))
+      .resize(400, 400, { kernel: "nearest" })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
     expect(readQrPixels(jsQR, new Uint8ClampedArray(raster.data), raster.info.width, raster.info.height)).toBe("HUB-0042-7781");
   });
 

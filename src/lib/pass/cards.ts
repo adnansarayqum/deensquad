@@ -1,11 +1,11 @@
 import "server-only";
 
-import QRCode from "qrcode";
 import type { Child } from "../domain";
+import { qrDataUrl } from "../qr-picture";
 import { passToken } from "./token";
 
-/** Each child's attendance QR code: its text (also kept on the phone for no signal) and the picture /pass shows. */
-export type PassCard = { id: string; firstName: string; ageGroup: string; token: string; svg: string };
+/** Each child's attendance QR code: its text (also kept on the phone for no signal) and the picture /pass shows (a PNG data URL, see qr-picture.ts). */
+export type PassCard = { id: string; firstName: string; ageGroup: string; token: string; src: string };
 
 export function passCards(children: Child[]): Promise<PassCard[]> {
   return Promise.all(
@@ -16,7 +16,7 @@ export function passCards(children: Child[]): Promise<PassCard[]> {
         firstName: c.firstName,
         ageGroup: c.ageGroup,
         token,
-        svg: await QRCode.toString(token, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#13201a", light: "#ffffff" } }),
+        src: await qrDataUrl(token),
       };
     }),
   );

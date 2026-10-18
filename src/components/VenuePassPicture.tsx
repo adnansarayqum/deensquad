@@ -1,3 +1,4 @@
+import { QR_IMG_CLASS } from "@/lib/qr-picture";
 import type { VenuePassView } from "@/lib/venue-pass/card";
 
 // The parent's sports hub entry code as a picture: drawn again from its text (black on white, with a quiet zone), or
@@ -5,12 +6,10 @@ import type { VenuePassView } from "@/lib/venue-pass/card";
 
 export function VenuePassPicture({ view }: { view: VenuePassView }) {
   return view.kind === "code" ? (
-    <div
-      role="img"
-      aria-label="Your sports hub entry QR code"
-      className="mx-auto w-full max-w-[300px] rounded-app border-2 border-line bg-white p-2 [&_svg]:block [&_svg]:h-auto [&_svg]:w-full"
-      dangerouslySetInnerHTML={{ __html: view.svg }}
-    />
+    <div className="mx-auto w-full max-w-[300px] rounded-app border-2 border-line bg-white p-2">
+      {/* eslint-disable-next-line @next/next/no-img-element -- a small PNG data URL drawn on the server */}
+      <img src={view.src} alt="Your sports hub entry QR code" className={QR_IMG_CLASS} />
+    </div>
   ) : (
     // eslint-disable-next-line @next/next/no-img-element -- the parent's own file, served by /api/files with no-store
     <img

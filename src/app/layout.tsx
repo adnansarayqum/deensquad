@@ -24,6 +24,9 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#1f3d27" },
     { media: "(prefers-color-scheme: dark)", color: "#0b150e" },
   ],
+  // Says the app has its own dark look, so Android browsers that darken websites (Chrome's "dark theme for sites",
+  // Samsung Internet's dark mode) leave it alone: their darkening washed out the QR codes at the gate.
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

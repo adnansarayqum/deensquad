@@ -24,6 +24,8 @@ export type RegisterRow = {
   /** The photo a parent added for the coaches (a club_files id). */
   photoId: string | null;
   answer: Availability | null;
+  /** The parent's reason for Not this week ("poorly"), if they gave one. */
+  awayReason: string | null;
   checkedInAt: string | null;
   /** How they were checked in: their gate pass or a coach's Mark here. */
   method: "qr" | "manual" | null;
@@ -129,6 +131,7 @@ export async function loadRegister(
     photo_file_id: string | null;
     payment: PaymentState;
     answer: Availability | null;
+    away_reason: string | null;
     checked_in_at: Date | null;
     method: "qr" | "manual" | null;
     unread_news: boolean;
@@ -136,7 +139,7 @@ export async function loadRegister(
     medical: boolean;
   }>(
     `select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number, p.photo_consent, p.photo_file_id,
-       coalesce(ps.state, 'missing')::text as payment, a.answer::text as answer, at.checked_in_at, at.method,
+       coalesce(ps.state, 'missing')::text as payment, a.answer::text as answer, a.away_reason, at.checked_in_at, at.method,
        ${unreadNewsSql("$3")} as unread_news, ${medicalMarkerSql("p")} as medical,
        exists (
          select 1 from shop_order_items i join shop_orders o on o.id = i.order_id where i.player_id = p.id and o.status = 'ready'
@@ -163,6 +166,7 @@ export async function loadRegister(
       shirtNumber: r.shirt_number,
       photoId: r.photo_file_id,
       answer: r.answer,
+      awayReason: r.answer === "away" ? r.away_reason : null,
       checkedInAt: r.checked_in_at ? iso(r.checked_in_at) : null,
       method: r.checked_in_at ? r.method : null,
       flags: [

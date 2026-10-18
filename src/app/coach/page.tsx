@@ -29,6 +29,7 @@ const gate = (r: RegisterRow): GateRow => ({
   flags: r.flags,
   medical: r.medical,
   paying: r.paying,
+  awayReason: r.awayReason,
 });
 
 const tab = (active: boolean) =>

@@ -28,6 +28,8 @@ export type GateRow = {
   medical: boolean;
   /** Monthly plan or pay as you go: a quiet pill, so the gate knows who pays for the session. */
   paying: PayingBy;
+  /** Why the parent said not coming ("poorly"), shown under the name in Said not coming. */
+  awayReason: string | null;
 };
 
 /** "Monthly plan" / "Pay as you go" beside a child's name: neutral, never kit-orange (nothing to chase). */
@@ -175,6 +177,7 @@ export function RegisterLists({
                       <Pill tone="neutral">Said not coming</Pill>
                       {group(r)}
                     </span>
+                    {r.awayReason ? <span className="text-[13px] leading-[18px] break-words text-ink-muted">Reason: {r.awayReason}</span> : null}
                   </span>
                 </span>
                 <CheckInButton sessionId={sessionId} playerId={r.id} name={name(r)} disabled={!open} />

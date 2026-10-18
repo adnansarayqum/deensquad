@@ -148,7 +148,12 @@ export function PassScanner({ disabled = false, className = "w-full" }: { disabl
         return;
       }
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        // HD where the camera has it (an "ideal", so a camera without it still opens): the code on a parent's phone
+        // is small in the picture, and more pixels a square is what makes a dim or glary screen read.
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
         if (cancelled) return stream.getTracks().forEach((t) => t.stop());
         video.current!.srcObject = stream;
         await video.current!.play();
@@ -158,18 +163,25 @@ export function PassScanner({ disabled = false, className = "w-full" }: { disabl
         );
         return;
       }
+      let frames = 0;
       const tick = async () => {
         if (cancelled) return;
         const v = video.current;
         const c = canvas.current;
-        if (v && c && v.readyState >= 2 && !busy.current) {
-          const w = 480;
-          const h = Math.round((v.videoHeight / v.videoWidth) * w) || 360;
-          c.width = w;
-          c.height = h;
+        if (v && c && v.readyState >= 2 && v.videoWidth > 0 && !busy.current) {
+          // The middle square of the camera's picture (what's inside the frame on screen), at up to 640 pixels a
+          // side: the code fills more of it than of the whole picture squeezed to 480 wide, as it used to be.
+          const side = Math.min(v.videoWidth, v.videoHeight);
+          const size = Math.min(side, 640);
+          c.width = size;
+          c.height = size;
           const ctx = c.getContext("2d", { willReadFrequently: true })!;
-          ctx.drawImage(v, 0, 0, w, h);
-          const code = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: "dontInvert" });
+          ctx.drawImage(v, (v.videoWidth - side) / 2, (v.videoHeight - side) / 2, side, side, 0, 0, size, size);
+          // Every other frame looks for a light-on-dark code too: a phone that darkens websites can show one that way.
+          frames += 1;
+          const code = jsQR(ctx.getImageData(0, 0, size, size).data, size, size, {
+            inversionAttempts: frames % 2 ? "dontInvert" : "onlyInvert",
+          });
           const now = Date.now();
           // Ignore the same pass held up for a few seconds after it was scanned.
           if (code?.data && !(last.current?.token === code.data && now - last.current.at < 6000)) {

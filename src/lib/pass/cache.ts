@@ -16,7 +16,8 @@ export type CachedHub = { text: string } | { image: string; id: string };
 export type HubForCache = { text: string } | { imageId: string };
 type Stored = { v: 1; user: string; passes: CachedPass[]; hub?: CachedHub };
 
-const TOKEN = /^DSP\.[0-9a-fA-F-]{36}\.[\w-]{22}$/;
+// Today's codes (an upper-case id and a 16-letter signature) and the longer ones made before October 2026.
+const TOKEN = /^DSP\.[0-9a-fA-F-]{36}\.(?:[A-Z2-7]{16}|[\w-]{22})$/;
 const GROUP = /^(U\d{1,2}|Girls)$/;
 const FILE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATA_URL = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/;

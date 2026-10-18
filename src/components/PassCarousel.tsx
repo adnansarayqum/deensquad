@@ -3,8 +3,9 @@
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { groupPlural } from "@/lib/domain";
+import { QR_IMG_CLASS } from "@/lib/qr-picture";
 
-export type PassCard = { id: string; firstName: string; ageGroup: string; svg: string };
+export type PassCard = { id: string; firstName: string; ageGroup: string; src: string };
 
 /**
  * One QR pass per child. With two or more: swipe sideways, tap a child's name, or use Previous child / Next child
@@ -66,12 +67,10 @@ export function PassCarousel({ cards }: { cards: PassCard[] }) {
             <h2 className="text-center font-display text-[40px] leading-none tracking-[0.02em] break-words">
               {c.firstName} <span className="text-ink-muted">· {groupPlural(c.ageGroup)}</span>
             </h2>
-            <div
-              role="img"
-              aria-label={`QR code that checks ${c.firstName} in`}
-              className="w-full max-w-[300px] rounded-app border-2 border-line bg-white p-4 [&_svg]:h-auto [&_svg]:w-full"
-              dangerouslySetInnerHTML={{ __html: c.svg }}
-            />
+            <div className="w-full max-w-[300px] rounded-app border-2 border-line bg-white p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a small PNG data URL drawn on the server */}
+              <img src={c.src} alt={`QR code that checks ${c.firstName} in`} className={QR_IMG_CLASS} />
+            </div>
           </section>
         ))}
       </div>

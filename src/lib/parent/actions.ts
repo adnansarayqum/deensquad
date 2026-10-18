@@ -13,7 +13,8 @@ import { CONTRACT } from "../documents/contract";
 import { isAgeGroup, type Availability } from "../domain";
 import { cleanPhone, cleanText } from "../validate";
 import { appUrl, teamFeePayUrl } from "../config";
-import { reportFamilyPayAsYouGo, reportFamilyPayment, saveAnswer } from "./data";
+import { AWAY_REASON_MAX, reportFamilyPayAsYouGo, reportFamilyPayment, saveAnswer, saveAwayReason } from "./data";
+import { runMessageNotices } from "../messages/run";
 import { readPhoto } from "../files";
 import { cleanPhoto } from "../photo-clean";
 import { addMyChild, addMyCoParent, checkDateOfBirth, cleanName, clearMyChildPhoto, haveChild, loadMyChild, setMyChildPhoto, updateMyChild, updateMyDetails } from "./profile";
@@ -50,6 +51,30 @@ export async function setAvailability(sessionId: string, playerId: string, answe
   // Refused: the session has finished or been cancelled (or the child isn't in its squad any more). Show the page as it is now.
   refresh();
   return saved ? {} : { error: "That didn't save. This session has finished or changed, so it can't be answered now." };
+}
+
+export type AwayReasonState = { error?: string; sent?: string; conversation?: string };
+
+/**
+ * The optional reason under Not this week ("poorly"): saved on the answer and sent to the coaches as a message in the
+ * thread for that session and child, which notifies them as any parent's message does.
+ */
+export async function sendAwayReason(_prev: AwayReasonState, formData: FormData): Promise<AwayReasonState> {
+  const user = await requireParent();
+  const sessionId = formData.get("session");
+  const playerId = formData.get("child");
+  if (typeof sessionId !== "string" || typeof playerId !== "string" || !UUID.test(sessionId) || !UUID.test(playerId)) {
+    return { error: "That didn't send. Reload the page and try again." };
+  }
+  const raw = String(formData.get("reason") ?? "");
+  if (raw.trim().length > AWAY_REASON_MAX) return { error: `Keep it to ${AWAY_REASON_MAX} characters.` };
+  const reason = cleanText(raw, AWAY_REASON_MAX);
+  if (!reason) return { error: "Write a few words first, or leave it: it's optional." };
+  const conversation = await asUser(user.id, (tx) => saveAwayReason(tx, sessionId, playerId, reason));
+  refresh();
+  if (!conversation) return { error: "That didn't send. This session has finished or changed, or the answer isn't Not this week any more." };
+  after(() => enqueue("message notify", () => runMessageNotices({ conversationId: conversation })));
+  return { sent: reason, conversation };
 }
 
 export type ContactFormState = { error?: string; saved?: boolean };

@@ -111,16 +111,20 @@
       .qr {
         width: 100%;
         max-width: 300px;
-        padding: 16px;
+        padding: 8px;
         border: 2px solid var(--line);
         border-radius: 18px;
         background: #ffffff;
       }
-      .qr svg,
       .qr img {
         display: block;
         width: 100%;
         height: auto;
+      }
+      /* The QR codes are small PNGs (src/lib/qr-picture.ts): scaled up, they keep sharp edges. */
+      .qr img.code-picture {
+        aspect-ratio: 1;
+        image-rendering: pixelated;
       }
       h2.small {
         font-size: 20px;

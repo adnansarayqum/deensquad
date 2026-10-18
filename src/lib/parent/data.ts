@@ -1,7 +1,9 @@
 import { CONTRACT } from "../documents/contract";
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
-import { londonDate, londonTime } from "../dates";
+import { londonDate, londonTime, shortDay } from "../dates";
+import { addMessage } from "../messages/data";
+import { SUBJECT_MAX } from "../messages/limits";
 import { myChildrenWithMedical } from "../medical/data";
 import { newsReaches } from "../squads/sql";
 import type { AgeGroup, Announcement, Availability, Badge, Child, CoachNote, PaymentState, Session } from "../domain";
@@ -220,14 +222,22 @@ export async function loadUpcomingSessions(tx: Queryable, children: Child[], now
 export const answerKey = (sessionId: string, playerId: string) => `${sessionId}:${playerId}`;
 
 /** An answer as saved: which guardian gave it (their first name, if this parent can see it) and when. */
-export type AnswerRecord = { answer: Availability; by: { id: string; name: string | null } | null; at: string };
+export type AnswerRecord = { answer: Availability; by: { id: string; name: string | null } | null; at: string; reason: string | null };
 
 export async function loadAnswers(tx: Queryable, sessionIds: string[], childIds: string[]): Promise<Map<string, AnswerRecord>> {
   if (sessionIds.length === 0 || childIds.length === 0) return new Map();
   // The guardian's name only while they're still linked to the child (a parent who is also staff can read every
   // guardian under row level security, so that alone isn't enough).
-  const rows = await tx.query<{ session_id: string; player_id: string; answer: Availability; answered_by: string | null; name: string | null; answered_at: Date }>(
-    `select v.session_id, v.player_id, v.answer::text as answer, v.answered_by, g.first_name as name, v.answered_at
+  const rows = await tx.query<{
+    session_id: string;
+    player_id: string;
+    answer: Availability;
+    answered_by: string | null;
+    name: string | null;
+    answered_at: Date;
+    away_reason: string | null;
+  }>(
+    `select v.session_id, v.player_id, v.answer::text as answer, v.answered_by, g.first_name as name, v.answered_at, v.away_reason
      from availability v
      left join guardians g on g.id = v.answered_by
        and exists (select 1 from player_guardians pg where pg.player_id = v.player_id and pg.guardian_id = g.id)
@@ -237,7 +247,7 @@ export async function loadAnswers(tx: Queryable, sessionIds: string[], childIds:
   return new Map(
     rows.map((r) => [
       answerKey(r.session_id, r.player_id),
-      { answer: r.answer, by: r.answered_by ? { id: r.answered_by, name: r.name } : null, at: iso(r.answered_at) },
+      { answer: r.answer, by: r.answered_by ? { id: r.answered_by, name: r.name } : null, at: iso(r.answered_at), reason: r.away_reason },
     ]),
   );
 }
@@ -254,11 +264,42 @@ export async function saveAnswer(tx: Queryable, sessionId: string, playerId: str
      where s.id = $1 and s.ends_at > now() and s.cancelled_at is null and $2::uuid in (select my_player_ids())
        and squad_allows(s.id, $2::uuid)
      on conflict (session_id, player_id) do update
-       set answer = excluded.answer, answered_by = excluded.answered_by, answered_at = excluded.answered_at
+       set answer = excluded.answer, answered_by = excluded.answered_by, answered_at = excluded.answered_at,
+         away_reason = case when excluded.answer = 'coming' then null else availability.away_reason end
      returning player_id`,
     [sessionId, playerId, answer],
   );
   return rows.length > 0;
+}
+
+/** The longest reason a parent can give for a child not coming. */
+export const AWAY_REASON_MAX = 200;
+
+/**
+ * A parent's optional reason for a child not coming (their answer must already be Not this week, for a session still
+ * to come): kept on the answer for the register, and sent to the coaches as a message in the thread for that session
+ * and child (started the first time, by whichever parent). Returns the thread, or null when it can't be saved now.
+ */
+export async function saveAwayReason(tx: Queryable, sessionId: string, playerId: string, reason: string): Promise<string | null> {
+  const [row] = await tx.query<{ title: string; starts_at: Date }>(
+    `update availability v set away_reason = $3
+     from sessions s
+     where v.session_id = $1 and v.player_id = $2 and v.answer = 'away' and s.id = v.session_id
+       and s.ends_at > now() and s.cancelled_at is null and $2::uuid in (select my_player_ids())
+     returning s.title, s.starts_at`,
+    [sessionId, playerId, reason],
+  );
+  if (!row) return null;
+  const subject = `Not coming: ${row.title}, ${shortDay(iso(row.starts_at))}`.slice(0, SUBJECT_MAX);
+  const [made] = await tx.query<{ id: string }>(
+    `insert into conversations (player_id, session_id, started_by_user, started_by_kind, subject) values ($2, $1, auth.uid(), 'parent', $3)
+     on conflict (session_id, player_id) where session_id is not null do nothing returning id`,
+    [sessionId, playerId, subject],
+  );
+  const id = made?.id ?? (await tx.query<{ id: string }>(`select id from conversations where session_id = $1 and player_id = $2`, [sessionId, playerId]))[0]?.id;
+  if (!id) return null;
+  await addMessage(tx, id, "parent", reason);
+  return id;
 }
 
 /** The start of today and of tomorrow in London. */

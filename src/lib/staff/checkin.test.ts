@@ -17,10 +17,17 @@ beforeEach(async () => {
 });
 
 describe("gate pass", () => {
-  it("can't be made up or altered", () => {
+  it("can't be made up or altered", async () => {
     const pass = passToken(DEV_IDS.yusuf);
     expect(readPass(pass)).toBe(DEV_IDS.yusuf);
-    expect(readPass(pass.replace(DEV_IDS.yusuf, DEV_IDS.musa))).toBeNull();
+    expect(pass).toMatch(/^[A-Z0-9.-]+$/);
+    expect(readPass(pass.replace(DEV_IDS.yusuf.toUpperCase(), DEV_IDS.musa.toUpperCase()))).toBeNull();
+    // A code made before October 2026 (lower-case id, 22-character signature) still reads.
+    const { createHmac } = await import("node:crypto");
+    const legacySig = createHmac("sha256", "development-only-qr-secret").update(`DSP.${DEV_IDS.yusuf}`).digest("base64url").slice(0, 22);
+    expect(readPass(`DSP.${DEV_IDS.yusuf}.${legacySig}`)).toBe(DEV_IDS.yusuf);
+    expect(readPass(`DSP.${DEV_IDS.musa}.${legacySig}`)).toBeNull();
+    expect(readPass(`${pass}.extra`)).toBeNull();
     expect(readPass(`DSP.${DEV_IDS.musa}.made-up-signature-xx`)).toBeNull();
     expect(readPass("https://example.com")).toBeNull();
     expect(readPass(undefined)).toBeNull();

@@ -3,10 +3,9 @@
 // (scripts/build-offline.mjs) with the same QR library the app uses. Draws the codes saved on this phone
 // (src/lib/pass/cache.ts), and the parent's own sports hub entry code saved with them; the page itself holds no one's data.
 
-import QRCode from "qrcode";
 import { groupPlural } from "../lib/domain";
 import { phoneStorage, readHubCache, readPassCache } from "../lib/pass/cache";
-import { VENUE_QR_OPTIONS } from "../lib/venue-pass/qr";
+import { qrDataUrl } from "../lib/qr-picture";
 
 async function draw() {
   const list = document.getElementById("codes");
@@ -23,11 +22,9 @@ async function draw() {
     name.textContent = `${pass.firstName} · ${groupPlural(pass.ageGroup)}`;
     const picture = document.createElement("div");
     picture.className = "qr";
-    picture.setAttribute("role", "img");
-    picture.setAttribute("aria-label", `QR code that checks ${pass.firstName} in`);
     try {
       // The same picture /pass draws on the server.
-      picture.innerHTML = await QRCode.toString(pass.token, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#13201a", light: "#ffffff" } });
+      picture.append(qrImage(await qrDataUrl(pass.token), `QR code that checks ${pass.firstName} in`));
     } catch {
       continue;
     }
@@ -47,10 +44,8 @@ async function drawHub(list: HTMLElement, hub: NonNullable<ReturnType<typeof rea
   const picture = document.createElement("div");
   picture.className = "qr";
   if ("text" in hub) {
-    picture.setAttribute("role", "img");
-    picture.setAttribute("aria-label", "Your sports hub entry QR code");
     try {
-      picture.innerHTML = await QRCode.toString(hub.text, { type: "svg", ...VENUE_QR_OPTIONS });
+      picture.append(qrImage(await qrDataUrl(hub.text), "Your sports hub entry QR code"));
     } catch {
       return;
     }
@@ -62,6 +57,14 @@ async function drawHub(list: HTMLElement, hub: NonNullable<ReturnType<typeof rea
   }
   section.append(name, picture);
   list.append(section);
+}
+
+function qrImage(src: string, alt: string): HTMLImageElement {
+  const img = document.createElement("img");
+  img.src = src;
+  img.alt = alt;
+  img.className = "code-picture";
+  return img;
 }
 
 document.getElementById("retry")?.addEventListener("click", () => location.reload());

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { addDays, nextFridaySession } from "../dates";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
-import { answerKey, loadAnswers, loadCheckInsToday, saveAnswer } from "./data";
+import { answerKey, loadAnswers, loadCheckInsToday, saveAnswer, saveAwayReason } from "./data";
+import { loadRegister } from "../staff/register";
 
 let t: Awaited<ReturnType<typeof testDatabase>>;
 let adnan: string;
@@ -50,6 +51,47 @@ describe("who answered for a shared child", () => {
     await t.asSystem((tx) => tx.query(`insert into availability (session_id, player_id, answer) values ($1, $2, 'coming')`, [friday, DEV_IDS.musa]));
     const seen = await t.asUser(sara, (tx) => loadAnswers(tx, [friday], [DEV_IDS.musa]));
     expect(seen.get(answerKey(friday, DEV_IDS.musa))).toMatchObject({ answer: "coming", by: null });
+  });
+});
+
+describe("a reason for not coming", () => {
+  it("is kept on a Not this week answer, sent to the coaches in one thread per session and child, and cleared by Coming", async () => {
+    // Not until the answer is Not this week.
+    expect(await t.asUser(adnan, (tx) => saveAwayReason(tx, friday, DEV_IDS.yusuf, "Poorly"))).toBeNull();
+    await t.asUser(adnan, (tx) => saveAnswer(tx, friday, DEV_IDS.yusuf, "away"));
+    const thread = await t.asUser(adnan, (tx) => saveAwayReason(tx, friday, DEV_IDS.yusuf, "Poorly"));
+    expect(thread).toBeTruthy();
+    // The other parent changing it lands in the same thread.
+    expect(await t.asUser(sara, (tx) => saveAwayReason(tx, friday, DEV_IDS.yusuf, "Poorly, back next week"))).toBe(thread);
+    const rows = await t.asSystem((tx) =>
+      tx.query<{ subject: string; started_by_kind: string; staff_id: string | null; body: string; author_kind: string; author_name: string }>(
+        `select c.subject, c.started_by_kind, c.staff_id, m.body, m.author_kind, m.author_name
+         from conversations c join conversation_messages m on m.conversation_id = c.id where c.id = $1 order by m.created_at`,
+        [thread],
+      ),
+    );
+    expect(rows.map((r) => [r.body, r.author_name])).toEqual([
+      ["Poorly", "Adnan"],
+      ["Poorly, back next week", "Sara"],
+    ]);
+    expect(rows[0]).toMatchObject({ started_by_kind: "parent", staff_id: null, author_kind: "parent" });
+    expect(rows[0].subject).toMatch(/^Not coming: .+, \w{3} \d{1,2} \w{3}$/);
+    expect((await t.asUser(sara, (tx) => loadAnswers(tx, [friday], [DEV_IDS.yusuf]))).get(answerKey(friday, DEV_IDS.yusuf))?.reason).toBe(
+      "Poorly, back next week",
+    );
+    // The coach sees it on the register.
+    const coach = await t.signIn(DEV_EMAILS.coach);
+    const register = await t.asUser(coach, (tx) => loadRegister(tx, { now, sessionId: friday, group: "U10" }));
+    expect(register?.rows.find((r) => r.id === DEV_IDS.yusuf)?.awayReason).toBe("Poorly, back next week");
+    // Coming clears it.
+    await t.asUser(adnan, (tx) => saveAnswer(tx, friday, DEV_IDS.yusuf, "coming"));
+    expect((await t.asUser(adnan, (tx) => loadAnswers(tx, [friday], [DEV_IDS.yusuf]))).get(answerKey(friday, DEV_IDS.yusuf))?.reason).toBeNull();
+  });
+
+  it("only for the family's own child", async () => {
+    const other = await t.signIn("parent1@example.com");
+    await t.asUser(adnan, (tx) => saveAnswer(tx, friday, DEV_IDS.yusuf, "away"));
+    expect(await t.asUser(other, (tx) => saveAwayReason(tx, friday, DEV_IDS.yusuf, "Made up"))).toBeNull();
   });
 });
 

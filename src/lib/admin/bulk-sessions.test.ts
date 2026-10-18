@@ -22,7 +22,7 @@ beforeEach(async () => {
   [{ id: adminStaffId }] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from staff where email = $1`, [DEV_EMAILS.admin]));
   [{ id: cup }] = await t.asSystem((tx) => tx.query<{ id: string }>(`select id from sessions where title = 'Autumn Cup'`));
   [{ id: friday }, { id: nextFriday }] = await t.asSystem((tx) =>
-    tx.query<{ id: string }>(`select id from sessions where starts_at in ($1, $2) order by starts_at`, [coming.start, addDays(coming.start, 7)]),
+    tx.query<{ id: string }>(`select id from sessions where starts_at in ($1, $2) order by starts_at`, [coming.start, nextFridaySession(addDays(coming.end, 1)).start]),
   );
 });
 
@@ -70,8 +70,12 @@ describe("bulk edit", () => {
     expect(result.done).toHaveLength(2);
     const a = await row(friday);
     const b = await row(nextFriday);
-    expect(b.starts_at.getTime() - a.starts_at.getTime()).toBe(7 * 86400000);
-    expect(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(a.starts_at)).toBe("19:00");
+    // 7pm London on each one's own day (a week apart, which isn't always 7 × 24 hours: the clocks can change between).
+    const london = (d: Date) =>
+      new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(d);
+    expect(london(a.starts_at)).toBe("19:00");
+    expect(london(b.starts_at)).toBe("19:00");
+    expect(Math.round((b.starts_at.getTime() - a.starts_at.getTime()) / 86400000)).toBe(7);
     // A finish before the (kept) start is skipped and named, the rest still saved.
     const bad = await t.asUser(admin, (tx) => bulkEdit(tx, [friday], { end: { hour: 18, minute: 0 } }, null, false, adminStaffId));
     expect(bad.done).toEqual([]);

@@ -26,7 +26,7 @@ describe("passToken without QR_SECRET", () => {
     vi.stubEnv("QR_SECRET", "");
     vi.stubEnv("DEMO_MODE", "1");
     vi.stubEnv("DATABASE_URL", "pglite://memory");
-    expect(await token()).toMatch(/^DSP\.20000000-0000-4000-8000-000000000001\.[A-Za-z0-9_-]{22}$/);
+    expect(await token()).toMatch(/^DSP\.20000000-0000-4000-8000-000000000001\.[A-Z2-7]{16}$/);
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("DEMO_MODE", "");
     vi.stubEnv("DATABASE_URL", "postgres://x");

@@ -21,16 +21,16 @@ const HUB = "https://hub.example/entry/HADDAD-0042?pass=7781";
 const londonToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
 const londonDay = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }).format(new Date());
 
-/** The text inside a QR picture (an SVG in an element with this accessible name), read the way a scanner would. */
+/** The text inside a QR picture (an <img> with this name), read the way a scanner would. */
 async function readQr(page: Page, name: string): Promise<string | null> {
   const picture = await page.getByRole("img", { name, exact: true }).evaluate(async (el) => {
-    const svg = el.querySelector("svg")!;
-    const img = new Image();
-    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+    // The QR picture is the <img> itself: a small PNG the phone shows scaled up with sharp edges.
+    const img = el as HTMLImageElement;
     await img.decode();
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 400;
     const ctx = canvas.getContext("2d")!;
+    ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, 400, 400);
     ctx.drawImage(img, 0, 0, 400, 400);

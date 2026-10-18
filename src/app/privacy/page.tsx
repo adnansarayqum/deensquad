@@ -69,6 +69,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "which children you look after and your relationship to them",
               "whether you have read club news, your quick answers to club messages (such as Yes or No for your child), and the date you signed the club contract",
               "messages between you and the club in the app (who wrote each one and when)",
+              "if you say your child isn't coming to a session and choose to tell the coaches why, what you wrote: it's sent to them as a message and shown to the coaches on that session's register, so only write what you're happy for them to know",
               "if you ask us to delete your account, the date you asked",
               "your own entry code for the sports hub, if you add it on the attendance QR code screen: only you can see it (not the club or the coaches); it's kept until you remove it, and a copy stays on your phone for when there's no signal",
             ]}
