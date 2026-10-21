@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Check, Compass, Copy, Ellipsis, EllipsisVertical, SquarePlus } from "lucide-react";
+import { Check, Compass, Copy, Ellipsis, EllipsisVertical, Menu as MenuIcon, SquarePlus } from "lucide-react";
 import { AppHeader } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { installGateMode, readDismissCount, readSessionDismissed, recordDismiss, type InstallGateMode } from "@/lib/install-gate";
@@ -163,6 +163,8 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
   const ios = view.mode === "ios" || view.mode === "ios-inapp";
   const inApp = view.mode === "ios-inapp" || view.mode === "android-inapp";
   const first = inApp ? 2 : 1;
+  // The gate only opens after mount, so navigator is there. Samsung's user agent also says Chrome.
+  const samsung = view.mode === "android-manual" && /SamsungBrowser/.test(navigator.userAgent);
 
   return (
     <div
@@ -201,12 +203,26 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
                   it from inside this app.
                 </Step>
               ) : null}
-              <Step n={first} icon={<EllipsisVertical aria-hidden size={24} />}>
-                Tap the menu (<b>three dots</b>) at the top of your browser.
-              </Step>
-              <Step n={first + 1} icon={<SquarePlus aria-hidden size={24} />}>
-                Choose <b>Add to Home screen</b> or <b>Install app</b>.
-              </Step>
+              {samsung ? (
+                <>
+                  {/* Samsung Internet (the "Internet" app on Samsung phones) keeps its menu at the bottom. */}
+                  <Step n={first} icon={<MenuIcon aria-hidden size={24} />}>
+                    Tap the menu (<b>three lines</b>) at the bottom right of the screen.
+                  </Step>
+                  <Step n={first + 1} icon={<SquarePlus aria-hidden size={24} />}>
+                    Choose <b>Add page to</b>, then <b>Home screen</b>. Deen Squad then appears on your home screen like any other app.
+                  </Step>
+                </>
+              ) : (
+                <>
+                  <Step n={first} icon={<EllipsisVertical aria-hidden size={24} />}>
+                    Tap the menu (<b>three dots</b>) at the top of your browser.
+                  </Step>
+                  <Step n={first + 1} icon={<SquarePlus aria-hidden size={24} />}>
+                    Choose <b>Add to Home screen</b> or <b>Install app</b>. Deen Squad then appears on your home screen like any other app.
+                  </Step>
+                </>
+              )}
             </Steps>
           ) : (
             <Steps>

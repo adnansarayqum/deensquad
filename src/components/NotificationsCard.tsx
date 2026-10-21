@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BellRing } from "lucide-react";
 import { savePushSubscription } from "@/lib/chase/actions";
+import { blockedNotificationHelp } from "@/lib/notification-help";
 
 type State = "hidden" | "offer" | "ios-install" | "working" | "blocked" | "done";
 
@@ -37,7 +38,8 @@ export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
         await savePushSubscription(sub.toJSON() as never);
         if (!cancelled) setState("hidden");
       } else if (!cancelled) {
-        setState(Notification.permission === "denied" ? "hidden" : "offer");
+        // Blocked on this phone: say where to switch them back on, or the parent never hears from the club.
+        setState(Notification.permission === "denied" ? "blocked" : "offer");
       }
     })().catch(() => {});
     return () => {
@@ -75,7 +77,7 @@ export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
         ) : state === "done" ? (
           <p className="text-[15px] font-bold text-grass-text">Notifications are on. You&apos;ll hear from the club straight away.</p>
         ) : state === "blocked" ? (
-          <p className="text-[15px] leading-[22px]">Notifications are blocked for this app. You can turn them on in your phone&apos;s settings.</p>
+          <BlockedSteps />
         ) : (
           <>
             <p className="text-[15px] leading-[22px]">
@@ -88,5 +90,16 @@ export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
         )}
       </div>
     </div>
+  );
+}
+
+function BlockedSteps() {
+  // Only rendered after the effect has run in the browser, so navigator is there.
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
+  const help = blockedNotificationHelp(navigator.userAgent, standalone);
+  return (
+    <p className="text-[15px] leading-[22px]">
+      <b>Notifications are blocked on this phone</b>, so club news only shows when you open the app. {help.steps}
+    </p>
   );
 }
