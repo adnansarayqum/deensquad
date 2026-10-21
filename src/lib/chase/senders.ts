@@ -27,7 +27,10 @@ export type PushPayload = { title: string; body: string; url: string };
 /** One push to one device; rejects with the push service's `statusCode` when it refuses. */
 export type PushSend = (sub: { endpoint: string; keys: { p256dh: string; auth: string } }, body: string) => Promise<unknown>;
 
-const sendWebPush: PushSend = (sub, body) => webpush.sendNotification(sub, body, { TTL: 12 * 3600, timeout: SEND_TIMEOUT_MS });
+const sendWebPush: PushSend = (sub, body) =>
+  // "high": Android (FCM) holds normal pushes while the phone dozes and shows them only when Chrome or the app next
+  // opens, which parents took for notifications not working.
+  webpush.sendNotification(sub, body, { TTL: 12 * 3600, urgency: "high", timeout: SEND_TIMEOUT_MS });
 
 /** How many devices (or phones, for SMS) are sent to at once. */
 export const PUSH_WORKERS = 10;
