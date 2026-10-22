@@ -198,7 +198,7 @@ describe("planning an import", () => {
     expect(plan.rows[0].parents[0].phone).toBe("07700 900000");
     expect(plan.checks).toEqual([
       { line: 4, message: "Repeats row 2 (Zakariya Khan), so the two are merged into one child." },
-      { line: 5, message: "Repeats row 3 (MARYAM PATEL), so the two are merged into one child." },
+      { line: 5, message: "Repeats row 3 (Maryam Patel), so the two are merged into one child." },
       { line: 7, message: "Possible duplicate: Aisha Iqbal is also on row 6 with the same date of birth, under a different parent email." },
       { line: 8, message: "Possible duplicate: Zakariya Ahmed and Zakariya Khan (row 2) are in the same family." },
     ]);

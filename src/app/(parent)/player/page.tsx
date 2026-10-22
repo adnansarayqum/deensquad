@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Clock, Flame, LayoutDashboard, Lock, LogOut, ScanLine, Star, Target, Trophy } from "lucide-react";
+import { ChevronRight, Clock, Flame, Lock, LogOut, Star, Target, Trophy } from "lucide-react";
 import { Card } from "@/components/ui";
 import { loadMyDeletionRequest } from "@/lib/data-requests";
 import { asUser } from "@/lib/db";
-import { groupPlural, type Badge } from "@/lib/domain";
+import { BADGE_RULES, groupPlural, type Badge } from "@/lib/domain";
+import { loadFamilyParents } from "@/lib/parent/profile";
 import { getFamily, getPlayerPage } from "@/lib/parent/load";
 import { DownloadMyData } from "@/components/DownloadMyData";
 import { SignOutForm } from "@/components/SignOutForm";
@@ -19,7 +20,7 @@ const badgeIcons: Record<Badge["icon"], typeof Star> = { star: Star, clock: Cloc
 export default async function PlayerPage({ searchParams }: PageProps<"/player">) {
   const flags = await searchParams;
   const [{ family, child, stats, badges, note, awards, progress }, { user }] = await Promise.all([getPlayerPage(flags.child), getFamily()]);
-  const deletionAsked = await asUser(user.id, loadMyDeletionRequest);
+  const [deletionAsked, parents] = await asUser(user.id, (tx) => Promise.all([loadMyDeletionRequest(tx), loadFamilyParents(tx)]));
   // Back from Add a child: the child it opened on was just added (only said for the child that's showing).
   const justAdded = child && flags.added === "1" && flags.child === child.id;
 
@@ -46,9 +47,15 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
             </nav>
           ) : null}
           <div className="relative flex items-end gap-4 pt-6">
-            <span aria-hidden className="font-display text-[150px] leading-[0.78] text-floodlight">
-              {child.shirtNumber ?? child.firstName[0]}
-            </span>
+            {child.shirtNumber !== null ? (
+              <span aria-hidden className="font-display text-[150px] leading-[0.78] text-floodlight">
+                {child.shirtNumber}
+              </span>
+            ) : child.photoFileId ? (
+              // The photo the parent added for the coaches; their own child, so it's theirs to see.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`/api/files/${child.photoFileId}`} alt="" width={64} height={64} className="mb-1.5 h-16 w-16 shrink-0 rounded-pill object-cover" />
+            ) : null}
             <div className="flex flex-col gap-1.5 pb-1.5">
               <h1 className="font-display text-[44px] leading-[0.9] tracking-[0.02em]">
                 {child.firstName} {child.lastName[0]}.
@@ -59,7 +66,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                   .filter(Boolean)
                   .join(" · ")}
               </p>
-              {stats.streakWeeks > 0 ? (
+              {stats.streakWeeks >= 2 ? (
                 <span className="inline-flex items-center gap-1.5 self-start rounded-pill bg-floodlight px-3 py-1 text-[13px] font-extrabold text-on-gold">
                   <Flame aria-hidden size={14} fill="currentColor" strokeWidth={0} />
                   {stats.streakWeeks}-week streak
@@ -97,21 +104,15 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           ) : (
             <dl className="grid grid-cols-2 gap-2.5">
               <Card className="flex flex-col-reverse items-center p-2.5">
-                <dt className="text-xs font-bold text-ink-muted">sessions</dt>
+                <dt className="text-xs font-bold text-ink-muted">{stats.sessions === 1 ? "session" : "sessions"}</dt>
                 <dd className="font-display text-[40px] leading-none text-ink tabular-nums">{stats.sessions}</dd>
               </Card>
               <Card className="flex flex-col-reverse items-center p-2.5">
                 <dt className="text-xs font-bold text-ink-muted">attendance</dt>
                 <dd className="font-display text-[40px] leading-none text-ink tabular-nums">{stats.attendancePct}%</dd>
               </Card>
-              <Card tone="gold" className="flex flex-col-reverse items-center p-2.5">
-                <dt className="text-xs font-bold text-gold-text">points</dt>
-                <dd className="font-display text-[40px] leading-none text-gold-text tabular-nums">{awards?.totals.points ?? 0}</dd>
-              </Card>
-              <Card tone="gold" className="flex flex-col-reverse items-center p-2.5">
-                <dt className="text-xs font-bold text-gold-text">{awards?.totals.stars === 1 ? "star" : "stars"}</dt>
-                <dd className="font-display text-[40px] leading-none text-gold-text tabular-nums">{awards?.totals.stars ?? 0}</dd>
-              </Card>
+              <ScoreTile label={(awards?.totals.points ?? 0) === 1 ? "point" : "points"} value={awards?.totals.points ?? 0} />
+              <ScoreTile label={(awards?.totals.stars ?? 0) === 1 ? "star" : "stars"} value={awards?.totals.stars ?? 0} />
             </dl>
           )
         ) : null}
@@ -156,9 +157,9 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                     >
                       <Icon aria-hidden size={26} />
                     </span>
-                    <span className={`text-xs font-bold ${b.earnedOn ? "" : "text-ink-muted"}`}>
-                      {b.name}
-                      {b.earnedOn ? "" : <span className="sr-only"> (not earned yet)</span>}
+                    <span className={`text-xs font-bold ${b.earnedOn ? "" : "text-ink-muted"}`}>{b.name}</span>
+                    <span className="text-[11px] leading-[14px] text-ink-muted">
+                      {b.earnedOn ? "Earned" : (BADGE_RULES[b.id] ?? "Given by the coaches.")}
                     </span>
                   </li>
                 );
@@ -205,26 +206,44 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           <h2 id="your-family" className="px-3 pt-3 pb-1 text-base font-extrabold">
             Your family
           </h2>
-          {child ? (
-            <Link href={`/player/child/${child.id}`} className="flex min-h-12 items-center justify-between gap-3 px-3 text-[15px] font-bold">
-              {child.firstName}&apos;s details
+          {family.children.map((c) => (
+            <Link
+              key={c.id}
+              href={`/player/child/${c.id}`}
+              className="flex min-h-12 items-center justify-between gap-3 border-b-2 border-line px-3 text-[15px] font-bold"
+            >
+              <span>
+                {c.firstName}&apos;s details
+                <span className="font-normal text-ink-muted"> · {groupPlural(c.ageGroup)}</span>
+              </span>
               <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
             </Link>
-          ) : null}
-          <Link href="/player/me" className="flex min-h-12 items-center justify-between gap-3 border-t-2 border-line px-3 text-[15px] font-bold">
-            Your details
+          ))}
+          <Link href="/player/me" className="flex min-h-12 items-center justify-between gap-3 border-b-2 border-line px-3 text-[15px] font-bold">
+            <span>
+              Your details
+              <span className="font-normal text-ink-muted"> · {parents.find((p) => p.you)?.firstName ?? "you"}</span>
+            </span>
             <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
           </Link>
-          <Link href="/player/add-child" className="flex min-h-12 items-center justify-between gap-3 border-t-2 border-line px-3 text-[15px] font-bold">
-            Add a child
-            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
-          </Link>
-          {family.children.length > 0 ? (
-            <Link href="/player/add-parent" className="flex min-h-12 items-center justify-between gap-3 border-t-2 border-line px-3 text-[15px] font-bold">
-              Add the other parent
-              <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+          {parents
+            .filter((p) => !p.you)
+            .map((p) => (
+              <p key={p.id} className="flex min-h-12 items-center gap-1 border-b-2 border-line px-3 text-[15px] font-bold">
+                {p.firstName} {p.lastName}
+                <span className="font-normal text-ink-muted">· {p.signedIn ? "using the app" : p.invited ? "invited" : "not invited yet"}</span>
+              </p>
+            ))}
+          <div className="flex flex-wrap gap-x-5 px-3 py-1">
+            <Link href="/player/add-child" className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
+              Add a child
             </Link>
-          ) : null}
+            {family.children.length > 0 ? (
+              <Link href="/player/add-parent" className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
+                {parents.some((p) => !p.you) ? "Add another parent" : "Add the other parent"}
+              </Link>
+            ) : null}
+          </div>
         </section>
 
         <section aria-labelledby="messages" className="mt-2 flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
@@ -257,20 +276,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         </section>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-sm">
-          {user.staff ? (
-            <div className="flex gap-4">
-              <Link href="/coach" className="inline-flex min-h-12 items-center gap-1.5 font-bold text-grass-text">
-                <ScanLine aria-hidden size={18} />
-                Register
-              </Link>
-              <Link href="/admin" className="inline-flex min-h-12 items-center gap-1.5 font-bold text-grass-text">
-                <LayoutDashboard aria-hidden size={18} />
-                Club admin
-              </Link>
-            </div>
-          ) : (
-            <span className="min-w-0 text-ink-muted [overflow-wrap:anywhere]">Signed in as {user.email}</span>
-          )}
+          <span className="min-w-0 text-ink-muted [overflow-wrap:anywhere]">Signed in as {user.email}</span>
           <a
             // Back from the notice returns to the child that was showing.
             href={child ? `/privacy?from=${encodeURIComponent(`/player?child=${child.id}`)}` : "/privacy"}
@@ -287,5 +293,15 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         </div>
       </main>
     </>
+  );
+}
+
+/** Points or stars: neutral at 0, so an empty tile doesn't read as a warning; gold once there's something. */
+function ScoreTile({ label, value }: { label: string; value: number }) {
+  return (
+    <Card tone={value > 0 ? "gold" : undefined} className="flex flex-col-reverse items-center p-2.5">
+      <dt className={`text-xs font-bold ${value > 0 ? "text-gold-text" : "text-ink-muted"}`}>{label}</dt>
+      <dd className={`font-display text-[40px] leading-none tabular-nums ${value > 0 ? "text-gold-text" : "text-ink"}`}>{value}</dd>
+    </Card>
   );
 }

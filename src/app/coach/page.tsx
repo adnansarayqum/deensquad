@@ -87,7 +87,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
     <>
       {open ? <RegisterAutoRefresh /> : null}
       {/* Scan sits beside the title and the clock on the session line, so the lists start higher on a phone at the gate. */}
-      <PageHeader title="Register" actions={<PassScanner disabled={!open} className="" />}>
+      <PageHeader title="Register" actions={<PassScanner disabled={!open} disabledReason={open ? undefined : registerClosedMessage(session.startsAt, now)} className="" />}>
         <div className="-mt-1 flex items-center justify-between gap-3">
           <p className="min-w-0 text-[15px] leading-[22px] text-ink-muted">
             {session.title} · {shortDay(session.startsAt)}
@@ -96,9 +96,8 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
           </p>
           {/* When the list was last loaded (it refreshes itself every 20 s), not a live clock. Never wraps: a
               two-line "10:25 PM" pushed the lists down on a phone in the evening. */}
-          <span className="flex shrink-0 items-baseline gap-1.5 whitespace-nowrap text-gold-text">
-            <span className="text-[13px] font-bold">Updated</span>
-            <span className="font-display text-[26px] leading-none tabular-nums">{time}</span>
+          <span className="shrink-0 whitespace-nowrap text-[13px] text-ink-muted">
+            Updated <span className="tabular-nums">{time}</span>
           </span>
         </div>
         {todays.length > 1 ? (
@@ -226,6 +225,9 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
         ) : null}
         <Link href={`/coach/incidents/new?session=${session.id}`} className="btn-chunky btn-paper">
           Log an accident or incident
+        </Link>
+        <Link href="/coach/incidents" className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
+          All incidents
         </Link>
       </div>
     </>

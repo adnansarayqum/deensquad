@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, Flame, ListChecks, MessageCircle, QrCode, Reply } from "lucide-react";
+import { Check, ChevronRight, ListChecks, MessageCircle, QrCode, Reply } from "lucide-react";
 import { AcknowledgeButton } from "@/components/AcknowledgeButton";
 import { QuickAnswers } from "@/components/messages/QuickAnswers";
 import { NotificationsCard } from "@/components/NotificationsCard";
@@ -17,7 +17,7 @@ import { groupsPlural } from "@/lib/domain";
 export const metadata: Metadata = { title: "Club news" };
 
 export default async function NewsPage() {
-  const { family, news, week, streakWeeks, stepsLeft, unreadMessages } = await getNewsPage();
+  const { family, news, week, stepsLeft, unreadMessages } = await getNewsPage();
   const now = new Date();
   const unread = news.filter((a) => !a.read);
   const earlier = news.filter((a) => a.read);
@@ -39,12 +39,6 @@ export default async function NewsPage() {
               <h1 className="font-display text-[34px] leading-none tracking-[0.02em]">Club news</h1>
             </div>
           </div>
-          {streakWeeks ? (
-            <span className="inline-flex items-center gap-1.5 rounded-pill bg-pitch-deep px-3 py-2 text-[13px] font-bold text-floodlight">
-              <Flame aria-hidden size={16} fill="currentColor" strokeWidth={0} />
-              {streakWeeks} wk<span className="sr-only"> attendance streak</span>
-            </span>
-          ) : null}
         </div>
         {soonest ? (
           <Link href="/friday" className="flex items-center gap-3 rounded-app bg-pitch-deep px-3.5 py-3">
@@ -53,8 +47,9 @@ export default async function NewsPage() {
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="text-[15px] font-bold">
-                {soonest.cancelled ? `${soonest.title} cancelled` : `${soonest.title} ${clock(soonest.startsAt)} · ${weekSummary(week)}`}
+                {soonest.cancelled ? `${soonest.title} cancelled` : `${soonest.title} · ${clock(soonest.startsAt)}`}
               </span>
+              {soonest.cancelled ? null : <span className="text-[14px] font-bold text-floodlight">{weekSummary(week)}</span>}
               <span className="text-[13px] text-on-pitch-muted">
                 {soonest.venue}
                 {soonest.arriveBy && !soonest.cancelled ? ` · arrive ${soonest.arriveBy}` : ""}
@@ -68,7 +63,7 @@ export default async function NewsPage() {
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
         {today ? (
           <Link
-            href="/pass"
+            href="/pass?from=/news"
             className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
           >
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold">
@@ -85,7 +80,7 @@ export default async function NewsPage() {
         ) : null}
         {unreadMessages > 0 ? (
           <Link
-            href="/messages"
+            href="/messages?from=/news"
             className="flex items-center gap-3 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 py-3 text-ink transition-transform active:translate-y-1"
           >
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-kit-orange text-on-orange">
@@ -150,11 +145,16 @@ export default async function NewsPage() {
             ))}
           </section>
         ) : (
-          <Card tone="grass" className="flex items-center gap-3 p-4">
-            <span className="text-[15px] font-bold text-grass-text">
-              {news.length ? "You're all caught up. Nothing needs your tap." : "No club news yet. Messages from the club will appear here."}
-            </span>
-          </Card>
+          <p className="flex items-center gap-2 px-1 text-[15px] font-bold text-grass-text">
+            {news.length ? (
+              <>
+                <Check aria-hidden size={18} strokeWidth={3} />
+                You&apos;re all caught up.
+              </>
+            ) : (
+              "No club news yet. Messages from the club will appear here."
+            )}
+          </p>
         )}
 
         {earlier.length > 0 ? (
@@ -169,9 +169,11 @@ export default async function NewsPage() {
                     {a.topic} · {a.audience === "all" ? "All groups" : a.audience.join(", ")} · {postedLabel(a.postedAt, now)}
                   </span>
                   {a.requiresAck ? (
-                    <Pill tone="done" icon>
+                    // Quiet once done: the unread messages above are the ones that stand out.
+                    <span className="inline-flex shrink-0 items-center gap-1 text-[13px] font-bold text-ink-muted">
+                      <Check aria-hidden size={14} strokeWidth={3} />
                       Read
-                    </Pill>
+                    </span>
                   ) : null}
                 </div>
                 <h2 className="text-base leading-[22px] font-bold">{a.title}</h2>
@@ -202,6 +204,20 @@ function Answers({ a, family }: { a: AnnouncementView; family: Family }) {
 /** "Reply to Coach Monju": starts (or opens) a conversation with whoever posted it, about the child it's for. */
 function ReplyLink({ a }: { a: AnnouncementView }) {
   if (!a.allowReplies || a.reaches.length === 0) return null;
+  if (a.replied) {
+    // Already answered: say so, and open that conversation.
+    return (
+      <Link
+        href={`/messages/${a.replied.conversation}`}
+        aria-label={`You replied, ${postedLabel(a.replied.at, new Date())}. Open the conversation: ${a.title}`}
+        className="inline-flex min-h-12 items-center gap-2 self-start text-[15px] text-ink-muted"
+      >
+        <Check aria-hidden size={16} strokeWidth={3} />
+        You replied · {postedLabel(a.replied.at, new Date())}
+        <span className="font-bold text-grass-text underline">Open</span>
+      </Link>
+    );
+  }
   const href = `/messages/new?about=${a.id}${a.reaches.length === 1 ? `&child=${a.reaches[0]}` : ""}`;
   return (
     <Link

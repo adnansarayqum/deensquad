@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { devices, expect, test } from "@playwright/test";
-import { ADMIN_STATE, newContext, shot, signIn } from "./helpers";
+import { ADMIN_STATE, newContext, shot, signIn, previewAndPost, unfold } from "./helpers";
 
 // Quick answers, replies and messages between parents and the club (migration 0025). Runs after parent-app.spec.ts
 // (files run in name order) and uses its saved admin sign-in. Yunus (U7, parent19) is chosen for a message that asks
@@ -17,8 +17,9 @@ test("the admin asks one family for a quick answer and lets them reply", async (
   const admin = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
   const page = await admin.newPage();
   await page.goto("/admin/news");
+  await unfold(page, "post-message");
   await page.getByLabel("Headline").fill(HEADLINE);
-  await page.getByLabel("Message").fill("Kick-off 10am. Tell us by Thursday.");
+  await page.getByLabel("Message", { exact: true }).fill("Kick-off 10am. Tell us by Thursday.");
   await page.getByLabel("Chosen children").check();
   await page.getByLabel("Find a child").fill("yunus");
   await page.getByRole("checkbox", { name: "Choose Yunus V. (U7)" }).check();
@@ -30,7 +31,7 @@ test("the admin asks one family for a quick answer and lets them reply", async (
   await expect(page.getByLabel("Answer 2")).toHaveValue("No");
   await page.getByLabel("Answer 3").fill("Not sure yet");
   await page.screenshot({ path: shot("admin-news-quick-answers"), fullPage: true });
-  await page.getByRole("button", { name: "Post to parents" }).click();
+  await previewAndPost(page);
   await expect(page).toHaveURL(/\/admin\/news\/[0-9a-f-]{36}\?posted=1$/);
   await expect(page.getByText("No answer yet (1)")).toBeVisible();
   await expect(page.getByText("No replies yet.", { exact: false })).toBeVisible();
@@ -56,14 +57,14 @@ test("the parent taps Yes, then replies to the admin", async ({ browser }) => {
   await expect(parent.getByRole("button", { name: "Yes", exact: true })).toHaveAttribute("aria-pressed", "true");
   await parent.screenshot({ path: shot("parent-news-quick-answer"), fullPage: true });
 
-  await parent.getByRole("link", { name: `Reply to Ibrahim Khan: ${HEADLINE}` }).click();
+  await parent.getByRole("link", { name: `Reply to Ibrahim: ${HEADLINE}` }).click();
   await expect(parent).toHaveURL(/\/messages\/new\?about=/);
-  await expect(parent.getByRole("heading", { name: "Reply to Ibrahim Khan" })).toBeVisible();
+  await expect(parent.getByRole("heading", { name: "Reply to Ibrahim" })).toBeVisible();
   // Nothing typed: refused, nothing sent.
-  await parent.getByRole("button", { name: "Send to Ibrahim Khan" }).click();
+  await parent.getByRole("button", { name: "Send to Ibrahim" }).click();
   await expect(parent.getByRole("alert").filter({ hasText: "Write your message." })).toBeVisible();
   await parent.getByLabel("Your message").fill("Yes, he can play. Can he bring his brother to watch?");
-  await parent.getByRole("button", { name: "Send to Ibrahim Khan" }).click();
+  await parent.getByRole("button", { name: "Send to Ibrahim" }).click();
   await expect(parent).toHaveURL(/\/messages\/[0-9a-f-]{36}\?sent=1$/);
   threadUrl = new URL(parent.url()).pathname;
   await expect(parent.getByText("Can he bring his brother to watch?")).toBeVisible();
@@ -77,6 +78,7 @@ test("the admin sees the answer and the unread reply, and replies back", async (
   const admin = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
   const page = await admin.newPage();
   await page.goto("/admin/news");
+  await unfold(page, "post-message");
   await page.getByRole("link", { name: new RegExp(HEADLINE) }).click();
   const answers = page.getByRole("listitem");
   await expect(answers.filter({ hasText: "Yes (1)" })).toContainText("Yunus V.");
@@ -116,7 +118,7 @@ test("the parent sees the reply on News and in Messages; another parent can't op
   const row = parent.getByRole("link", { name: /1 new message from the club/ });
   await expect(row).toBeVisible();
   await row.click();
-  await expect(parent).toHaveURL(/\/messages$/);
+  await expect(parent).toHaveURL(/\/messages(\?|$)/);
   await parent.getByRole("link", { name: new RegExp(`Re: ${HEADLINE}`) }).click();
   await expect(parent).toHaveURL(/\/messages\/[0-9a-f-]{36}$/);
   await expect(parent.getByText("Of course, see you Sunday.")).toBeVisible();
@@ -124,10 +126,10 @@ test("the parent sees the reply on News and in Messages; another parent can't op
   await parent.goto("/news");
   await expect(parent.getByRole("link", { name: /new message from the club/ })).toHaveCount(0);
 
-  // Not this week, with an optional reason for the coaches (sent as a message; changeable).
+  // Not coming, with an optional reason for the coaches (sent as a message; changeable).
   await parent.goto("/friday");
-  await parent.getByRole("button", { name: "Not this week: Yunus isn't coming" }).click();
-  await expect(parent.getByText("Saved. Coach knows Yunus is away this week.")).toBeVisible();
+  await parent.getByRole("button", { name: "Not coming: Yunus isn't coming" }).click();
+  await expect(parent.getByText("Saved. Coach knows Yunus isn't coming.")).toBeVisible();
   await parent.getByLabel(/Tell the coaches why\?/).fill("Poorly");
   await parent.getByRole("button", { name: "Send the reason for Yunus to the coaches" }).click();
   await expect(parent.getByRole("status").filter({ hasText: "Sent to the coaches: Poorly" })).toBeVisible();

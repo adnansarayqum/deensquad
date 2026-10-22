@@ -16,8 +16,8 @@ export default async function ContactsPage({ searchParams }: PageProps<"/checkli
 
   return (
     <>
-      <BackHeader back="/checklist" backLabel="Checklist" title="Emergency contacts">
-        People the club can call about {child.firstName} if they can&apos;t reach you.
+      <BackHeader back="/checklist" backLabel="To-do" title="Emergency contacts">
+        Someone other than you and the other parent, who the club can call about {child.firstName} if they can&apos;t reach you. Two is best.
       </BackHeader>
 
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">
@@ -37,6 +37,9 @@ export default async function ContactsPage({ searchParams }: PageProps<"/checkli
                     {c.phone}
                     {c.relationship ? ` · ${c.relationship}` : ""}
                   </span>
+                  {c.isParent ? (
+                    <span className="text-[13px] font-bold text-kit-orange">A parent&apos;s number, so it doesn&apos;t count. Add someone else.</span>
+                  ) : null}
                 </span>
                 <form action={removeEmergencyContact}>
                   <input type="hidden" name="id" value={c.id} />

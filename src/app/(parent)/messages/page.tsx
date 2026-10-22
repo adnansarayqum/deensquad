@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { staffNameForParents } from "@/lib/greeting";
+import { backTarget } from "@/lib/parent/tabs";
 import Link from "next/link";
 import { ChevronRight, PenLine } from "lucide-react";
 import { BackHeader } from "@/components/BackHeader";
@@ -9,14 +11,15 @@ import { getMessagesPage } from "@/lib/parent/load";
 export const metadata: Metadata = { title: "Messages" };
 
 /** Messages: the family's conversations with the club, newest first, with a dot on those with something new. */
-export default async function MessagesPage() {
+export default async function MessagesPage({ searchParams }: PageProps<"/messages">) {
+  const back = backTarget((await searchParams).from, { href: "/player", label: "Family" });
   const { family, conversations } = await getMessagesPage();
   const now = new Date();
   const several = family.children.length > 1;
 
   return (
     <>
-      <BackHeader back="/news" backLabel="Club news" title="Messages">
+      <BackHeader back={back.href} backLabel={back.label} title="Messages">
         Between you and the club. Both of a child&apos;s parents see the same messages, and the club&apos;s admins can read every conversation.
       </BackHeader>
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
@@ -48,11 +51,11 @@ export default async function MessagesPage() {
                     </span>
                     <span className="text-[13px] text-ink-muted">
                       {several ? `${c.childFirstName} · ` : ""}
-                      {c.withName ? `With ${c.withName}` : "With the coaches"} · {postedLabel(c.lastAt, now)}
+                      {c.withName ? `With ${staffNameForParents(c.withName)}` : "With the coaches"} · {postedLabel(c.lastAt, now)}
                     </span>
                     {c.last ? (
                       <span className="truncate text-[14px] text-ink-muted">
-                        {c.last.mine ? "You" : c.last.authorName}: {c.last.preview}
+                        {c.last.mine ? "You" : c.last.authorKind === "staff" ? staffNameForParents(c.last.authorName) : c.last.authorName}: {c.last.preview}
                       </span>
                     ) : null}
                   </span>

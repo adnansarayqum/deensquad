@@ -1,16 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { groupPlural } from "@/lib/domain";
 import { QR_IMG_CLASS } from "@/lib/qr-picture";
 
 export type PassCard = { id: string; firstName: string; ageGroup: string; src: string };
 
 /**
- * One QR pass per child. With two or more: swipe sideways, tap a child's name, or use Previous child / Next child
- * (buttons, so a keyboard or switch control reaches every child too). The scroller itself can take focus and
- * moves with the arrow keys. Which child is on screen is announced: "Musa's QR code, 2 of 2".
+ * One QR pass per child. With two or more: tap a child's name (buttons, so a keyboard or switch control reaches every
+ * child too); swiping still works, and the scroller itself can take focus and moves with the arrow keys. Which child is on screen is announced: "Musa's QR code, 2 of 2".
  */
 export function PassCarousel({ cards }: { cards: PassCard[] }) {
   const track = useRef<HTMLDivElement>(null);
@@ -59,7 +57,7 @@ export function PassCarousel({ cards }: { cards: PassCard[] }) {
         }}
         tabIndex={several ? 0 : undefined}
         className="flex w-full snap-x snap-mandatory overflow-x-auto rounded-app [scrollbar-width:none] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-grass [&::-webkit-scrollbar]:hidden"
-        aria-label={several ? "Attendance QR codes. Swipe, or use the arrow keys, to see each child." : "Attendance QR code"}
+        aria-label={several ? "Attendance QR codes. Choose a child above, or use the arrow keys." : "Attendance QR code"}
         role="region"
       >
         {cards.map((c, i) => (
@@ -76,16 +74,6 @@ export function PassCarousel({ cards }: { cards: PassCard[] }) {
       </div>
       {several ? (
         <>
-          <div className="flex w-full flex-wrap justify-center gap-2">
-            <button type="button" onClick={() => goTo(index - 1)} className="btn-chunky btn-paper min-h-12 px-4">
-              <ChevronLeft aria-hidden size={18} />
-              Previous child
-            </button>
-            <button type="button" onClick={() => goTo(index + 1)} className="btn-chunky btn-paper min-h-12 px-4">
-              Next child
-              <ChevronRight aria-hidden size={18} />
-            </button>
-          </div>
           <p aria-live="polite" className="sr-only">
             {label(index)}
           </p>

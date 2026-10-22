@@ -16,7 +16,7 @@ export type QuickAnswerRow = {
 
 /**
  * The quick-answer buttons on a club message: one row per child it reaches ("Yes for Yusuf" to a screen reader), the
- * chosen answer shown as a finished answer (ink border on cream, like "Not this week"). Tapping another changes it.
+ * chosen answer shown as a finished answer (ink border on cream, like "Not coming"). Tapping another changes it.
  */
 export function QuickAnswers({ announcementId, title, options, rows }: { announcementId: string; title: string; options: string[]; rows: QuickAnswerRow[] }) {
   return (

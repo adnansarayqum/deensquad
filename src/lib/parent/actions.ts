@@ -56,7 +56,7 @@ export async function setAvailability(sessionId: string, playerId: string, answe
 export type AwayReasonState = { error?: string; sent?: string; conversation?: string };
 
 /**
- * The optional reason under Not this week ("poorly"): saved on the answer and sent to the coaches as a message in the
+ * The optional reason under Not coming ("poorly"): saved on the answer and sent to the coaches as a message in the
  * thread for that session and child, which notifies them as any parent's message does.
  */
 export async function sendAwayReason(_prev: AwayReasonState, formData: FormData): Promise<AwayReasonState> {
@@ -72,7 +72,7 @@ export async function sendAwayReason(_prev: AwayReasonState, formData: FormData)
   if (!reason) return { error: "Write a few words first, or leave it: it's optional." };
   const conversation = await asUser(user.id, (tx) => saveAwayReason(tx, sessionId, playerId, reason));
   refresh();
-  if (!conversation) return { error: "That didn't send. This session has finished or changed, or the answer isn't Not this week any more." };
+  if (!conversation) return { error: "That didn't send. This session has finished or changed, or the answer has changed to Coming." };
   after(() => enqueue("message notify", () => runMessageNotices({ conversationId: conversation })));
   return { sent: reason, conversation };
 }
@@ -92,6 +92,21 @@ export async function addEmergencyContact(_prev: ContactFormState, formData: For
       error: String(formData.get("phone") ?? "").trim()
         ? "That phone number doesn't look right. Type it like 07700 900123."
         : "Add a phone number we can call, like 07700 900123.",
+    };
+  }
+  const parentsNumber = await asUser(user.id, async (tx) => {
+    const [row] = await tx.query<{ yes: boolean }>(
+      `select exists (
+         select 1 from player_guardians pg join guardians g on g.id = pg.guardian_id
+         where pg.player_id = any($1::uuid[]) and pg.player_id in (select my_player_ids()) and g.phone is not null
+           and regexp_replace(g.phone, '[^0-9]', '', 'g') = regexp_replace($2, '[^0-9]', '', 'g')) as yes`,
+      [childIds, phone],
+    );
+    return row.yes;
+  });
+  if (parentsNumber) {
+    return {
+      error: "That's a parent's number, which the club already has. Add someone else the club can call if they can't reach you, like a grandparent or a family friend.",
     };
   }
   await asUser(user.id, async (tx) => {

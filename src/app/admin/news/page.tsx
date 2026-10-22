@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageHeader, ReadBar, Section } from "@/components/admin/bits";
-import { StatefulForm } from "@/components/admin/StatefulForm";
+import { FoldCard, PageHeader, ReadBar } from "@/components/admin/bits";
+import { NewsComposeForm } from "@/components/admin/NewsComposeForm";
 import { postNews } from "@/lib/admin/actions";
 import { audienceLabel, loadNewsList } from "@/lib/admin/data";
 import { loadNewsChildren } from "@/lib/admin/news";
@@ -29,8 +29,8 @@ export default async function AdminNewsPage() {
       <PageHeader title="News" subtitle="Post a message and see who has read it." />
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        <Section title="Post a message">
-          <StatefulForm action={postNews} submitLabel="Post to parents" pendingLabel="Posting…">
+        <FoldCard id="post-message" title="Post a message" open={news.length === 0}>
+          <NewsComposeForm action={postNews}>
             <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
               <div>
                 <label htmlFor="topic" className="field-label">
@@ -66,8 +66,8 @@ export default async function AdminNewsPage() {
                 <b>Ask parents to tap &ldquo;I&apos;ve read this&rdquo;</b> so you can see who has read it
               </span>
             </label>
-          </StatefulForm>
-        </Section>
+          </NewsComposeForm>
+        </FoldCard>
 
         <section aria-labelledby="posted" className="flex flex-col gap-2">
           <h2 id="posted" className="text-label text-ink-muted uppercase">

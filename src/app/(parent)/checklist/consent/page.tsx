@@ -19,7 +19,7 @@ export default async function ConsentPage({ searchParams }: PageProps<"/checklis
 
   return (
     <>
-      <BackHeader back="/checklist" backLabel="Checklist" title="Photo consent">
+      <BackHeader back="/checklist" backLabel="To-do" title="Photo consent">
         We share match and training photos with parents and on the club&apos;s social media. You can change this at any time.
       </BackHeader>
 

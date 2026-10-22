@@ -1,4 +1,5 @@
 import "server-only";
+import { iso } from "../db/types";
 
 import { cache } from "react";
 import { requireParent } from "../auth/session";
@@ -46,8 +47,10 @@ export const getFamily = cache(async () => {
 /** For the tab bar: unread count and how to label the player tab. */
 export const getShell = cache(async () => {
   const { user, family } = await getFamily();
-  const unread = family.children.length ? await asUser(user.id, (tx) => loadUnreadCount(tx, family)) : 0;
-  return { unread, childNames: family.children.map((c) => c.firstName), isStaff: Boolean(user.staff) };
+  const [unread, messages] = family.children.length
+    ? await asUser(user.id, (tx) => Promise.all([loadUnreadCount(tx, family), loadParentUnreadMessages(tx, family.children.map((c) => c.id))]))
+    : [0, 0];
+  return { unread, messages, childNames: family.children.map((c) => c.firstName), isStaff: Boolean(user.staff) };
 });
 
 async function loadWeek(userId: string, family: Family, now: Date) {
@@ -90,8 +93,21 @@ export async function getNewsPage() {
 async function loadNewsWithAnswers(tx: Queryable, family: Family) {
   const news = await loadNews(tx, family);
   const asking = news.filter((n) => n.quickAnswers && n.reaches.length).map((n) => n.id);
-  const answers = await loadQuickAnswers(tx, asking, family.children.map((c) => c.id), family.guardian.id);
-  return news.map((n) => ({ ...n, answers: answers.get(n.id) ?? {} }));
+  const childIds = family.children.map((c) => c.id);
+  const answers = await loadQuickAnswers(tx, asking, childIds, family.guardian.id);
+  // "You replied · Sun 8:16pm" under a message the family has already answered in Messages.
+  const replyable = news.filter((n) => n.allowReplies).map((n) => n.id);
+  const replies = replyable.length
+    ? await tx.query<{ announcement_id: string; at: Date; conversation: string }>(
+        `select c.announcement_id, max(m.created_at) as at, (array_agg(c.id order by m.created_at desc))[1] as conversation
+         from conversations c join conversation_messages m on m.conversation_id = c.id and m.author_kind = 'parent'
+         where c.announcement_id = any($1::uuid[]) and c.player_id = any($2::uuid[])
+         group by c.announcement_id`,
+        [replyable, childIds],
+      )
+    : [];
+  const replied = new Map(replies.map((r) => [r.announcement_id, { at: iso(r.at), conversation: r.conversation }]));
+  return news.map((n) => ({ ...n, answers: answers.get(n.id) ?? {}, replied: replied.get(n.id) ?? null }));
 }
 
 /** Messages: the family's conversations with the club, newest first. */

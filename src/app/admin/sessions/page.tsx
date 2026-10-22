@@ -19,6 +19,8 @@ import { lastReminderSent } from "@/lib/reminders/attendance";
 import { attendanceReminderSetting, sessionFeePence } from "@/lib/settings";
 import type { AgeGroup } from "@/lib/domain";
 
+const daysAhead = (iso: string) => (new Date(iso).getTime() - Date.now()) / 86400000;
+
 export const metadata: Metadata = { title: "Sessions" };
 
 /** Coming up shows this many by default; "Show all" (`?all=1`) lists the rest. */
@@ -121,7 +123,13 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
   // A group coach changes only sessions for their own groups; joint sessions are left to admins.
   const canChange = (s: AdminSession) => editable && (!mine || within(s.ageGroups, mine));
   const select = (s: AdminSession) => (canChange(s) ? <SelectRow id={s.id} name={`Select ${s.title}, ${shortDay(s.startsAt)}`} /> : null);
-  const answers = (s: AdminSession) => (editable ? `${s.coming} ${s.picked ? "confirmed" : "coming"} · ${s.away} ${s.picked ? "can't play" : "away"}` : `${s.attended} checked in`);
+  // Parents are asked about each child's next session, so one further ahead has no answers yet: say so, not "0 coming".
+  const answers = (s: AdminSession) =>
+    !editable
+      ? `${s.attended} checked in`
+      : s.coming + s.away === 0 && !s.picked && daysAhead(s.startsAt) > 7
+        ? "Not asked yet"
+        : `${s.coming} ${s.picked ? "confirmed" : "coming"} · ${s.away} ${s.picked ? "can't play" : "away"}`;
   const status = (s: AdminSession) => (
     <span className="flex flex-wrap items-center gap-1.5">
       {s.cancelled ? <Pill tone="action">Cancelled</Pill> : null}
@@ -144,12 +152,6 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
         <Link href={`/admin/sessions/${s.id}/cancel`} className={action} aria-label={`${s.cancelled ? "Restore" : "Cancel"} ${s.title} ${shortDay(s.startsAt)}`}>
           {s.cancelled ? "Restore" : "Cancel"}
         </Link>
-        {/* Never once anyone has been checked in, so attendance history is kept. */}
-        {s.attended === 0 ? (
-          <Link href={`/admin/sessions/${s.id}/delete`} className={`${action} text-ink-muted`} aria-label={`Delete ${s.title} ${shortDay(s.startsAt)}`}>
-            Delete
-          </Link>
-        ) : null}
       </span>
     ) : null;
 

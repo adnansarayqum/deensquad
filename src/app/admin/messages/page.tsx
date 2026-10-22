@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, PenLine } from "lucide-react";
 import { Notice, PageHeader } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
 import { UUID } from "@/lib/auth/tokens";
 import { requireStaff } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { postedLabel } from "@/lib/dates";
+import { markAllRead } from "@/lib/messages/actions";
 import { loadInbox, type InboxRow } from "@/lib/messages/data";
 
 export const metadata: Metadata = { title: "Messages" };
@@ -20,9 +21,10 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
   const user = await requireStaff();
   const params = await searchParams;
   const about = typeof params.about === "string" && UUID.test(params.about) ? params.about : null;
-  const all = params.show === "all" || Boolean(about);
+  const absences = params.show === "absences" && !about;
+  const all = params.show === "all" || absences || Boolean(about);
   const [rows, newsTitle] = await asUser(user.id, async (tx) => {
-    const list = await loadInbox(tx, { unreadOnly: !all, about });
+    const list = await loadInbox(tx, { unreadOnly: !all, about, absences });
     const [news] = about ? await tx.query<{ title: string }>(`select title from announcements where id = $1`, [about]) : [];
     return [list, news?.title ?? null] as const;
   });
@@ -45,12 +47,26 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
           <Link href="/admin/messages" aria-current={!all ? "page" : undefined} className={tab(!all)}>
             Unread
           </Link>
-          <Link href="/admin/messages?show=all" aria-current={all && !about ? "page" : undefined} className={tab(all && !about)}>
+          <Link href="/admin/messages?show=all" aria-current={all && !about && !absences ? "page" : undefined} className={tab(all && !about && !absences)}>
             All
           </Link>
+          <Link href="/admin/messages?show=absences" aria-current={absences ? "page" : undefined} className={tab(absences)}>
+            Not coming
+          </Link>
+          <Link href="/admin/messages/new" className="btn-chunky btn-small btn-paper ml-auto">
+            <PenLine aria-hidden size={16} />
+            New message
+          </Link>
         </nav>
+        {!all && rows.length > 1 ? (
+          <form action={markAllRead}>
+            <button type="submit" className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
+              Mark all {rows.length} as read
+            </button>
+          </form>
+        ) : null}
         {about ? <Notice>Replies to “{newsTitle ?? "a message that has been deleted"}”.</Notice> : null}
-        <p className="text-[15px] text-ink-muted">To start a conversation, open a child on Families and choose Message this family.</p>
+        {absences ? <p className="text-[15px] text-ink-muted">Reasons parents gave for a child not coming. They also show on the register for that session.</p> : null}
       </PageHeader>
 
       {rows.length === 0 ? (
@@ -85,7 +101,8 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
                   </span>
                   {r.last ? (
                     <span className="truncate text-[14px] text-ink-muted">
-                      {r.last.authorName}: {r.last.preview}
+                      {r.last.authorKind === "staff" ? `${r.last.authorName}: ` : ""}
+                      {r.last.preview}
                     </span>
                   ) : null}
                 </span>
@@ -136,7 +153,7 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
                     </Link>
                   </td>
                   <td className="max-w-80 px-2 py-2 text-ink-muted">
-                    <span className="line-clamp-2">{r.last ? `${r.last.authorName}: ${r.last.preview}` : "–"}</span>
+                    <span className="line-clamp-2">{r.last ? `${r.last.authorKind === "staff" ? `${r.last.authorName}: ` : ""}${r.last.preview}` : "–"}</span>
                   </td>
                   <td className="px-2 py-2 whitespace-nowrap text-ink-muted">{postedLabel(r.lastAt, now)}</td>
                   <td className="py-2 pr-2.5 pl-2">{r.unread ? <Pill tone="action">Unread</Pill> : <Pill tone="neutral">Read</Pill>}</td>

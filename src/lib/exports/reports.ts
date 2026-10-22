@@ -1,3 +1,4 @@
+import { CONTACT_IS_PARENT } from "../contacts-sql";
 import { CONTRACT } from "../documents/contract";
 import type { Queryable } from "../db/types";
 
@@ -49,7 +50,7 @@ export async function buildExport(tx: Queryable, kind: ExportKind, now: Date): P
       }>(
         `select p.first_name, p.last_name, p.age_group::text as age_group, p.date_of_birth::text as date_of_birth, p.shirt_number,
            coalesce(ps.state::text, 'missing') as payment, p.photo_consent,
-           (select count(*)::int from emergency_contacts ec where ec.player_id = p.id) as contacts,
+           (select count(*)::int from emergency_contacts ec where ec.player_id = p.id and not ${CONTACT_IS_PARENT}) as contacts,
            ag.parent_name as signed_by, ag.signed_at,
            string_agg(g.first_name || ' ' || g.last_name, '; ' order by g.first_name) as parents,
            string_agg(g.email, '; ' order by g.first_name) as emails,

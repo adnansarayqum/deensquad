@@ -9,7 +9,7 @@ import { enqueue } from "../background";
 import { asUser } from "../db";
 import { loadFamily, saveQuickAnswer } from "../parent/data";
 import { cleanBody, cleanText } from "../validate";
-import { BODY_MAX, SUBJECT_MAX, addMessage, loadMessageChild, loadReplyTarget, loadThread, startParentConversation, startStaffConversation } from "./data";
+import { BODY_MAX, SUBJECT_MAX, addMessage, loadInbox, loadMessageChild, loadReplyTarget, loadThread, markRead, startParentConversation, startStaffConversation } from "./data";
 import { runMessageNotices } from "./run";
 
 // Messages between parents and the club, and quick answers on club news (migration 0025). Each action checks the
@@ -120,4 +120,13 @@ export async function sendStaffMessage(_prev: MessageFormState, formData: FormDa
   if (!id) return { error: mine ? `You can message families in your own groups only (${mine.join(", ")}).` : RELOAD };
   notifyAfter(id);
   redirect(`/admin/messages/${id}?sent=1`);
+}
+
+/** The staff inbox's "Mark all read": every conversation this person sees with a parent's message they haven't opened. */
+export async function markAllRead(): Promise<void> {
+  const user = await requireStaff();
+  await asUser(user.id, async (tx) => {
+    for (const row of await loadInbox(tx, { unreadOnly: true, limit: 500 })) await markRead(tx, row.id);
+  });
+  refresh();
 }

@@ -40,3 +40,13 @@ export function dialable(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   return digits.startsWith("0") ? `44${digits.slice(1)}` : digits;
 }
+
+/**
+ * A name typed all in capitals or all in small letters, written as a name: "FERDOUS BEGUM" → "Ferdous Begum",
+ * "imdadul haque" → "Imdadul Haque". Mixed case is left alone ("McDonald", "al-Hassan" as typed).
+ */
+export function tidyName(name: string): string {
+  const letters = name.replace(/[^\p{L}]/gu, "");
+  if (!letters || (letters !== letters.toUpperCase() && letters !== letters.toLowerCase())) return name;
+  return name.toLowerCase().replace(/(^|[\s'’-])(\p{L})/gu, (_m, sep: string, ch: string) => sep + ch.toUpperCase());
+}

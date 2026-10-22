@@ -63,7 +63,7 @@ test("no signal at the gate: the codes saved on the phone show for /pass and /fr
     const qrCard = page.getByRole("main").getByRole("link", { name: /today: show the QR code/ });
     await expect(qrCard).toBeVisible();
     await qrCard.click();
-    await expect(page).toHaveURL(/\/pass$/);
+    await expect(page).toHaveURL(/\/pass(\?|$)/);
 
     // On a session day, Friday has the codes one tap away, in the page itself.
     await page.goto("/friday");
@@ -143,7 +143,8 @@ test("no signal at the gate: the codes saved on the phone show for /pass and /fr
   } finally {
     await context.close();
     await admin.goto("/admin/sessions");
-    await admin.getByRole("link", { name: `Delete Offline test ${day()}` }).click();
+    await admin.getByRole("link", { name: `Edit Offline test ${day()}` }).click();
+    await admin.getByRole("link", { name: "Delete this session" }).click();
     await admin.getByRole("button", { name: "Delete session" }).click();
     await expect(admin.getByText("Deleted.")).toBeVisible();
     await adminContext.close();

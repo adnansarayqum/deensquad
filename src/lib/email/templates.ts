@@ -481,3 +481,19 @@ ${button(joinUrl, "Join the club")}`,
   );
   return { to, subject, text: lines.join("\n"), html };
 }
+
+/** A test of a news post, to the member of staff writing it: how it reads before any parent gets it. */
+export function newsTestEmail(opts: { to: string; title: string; body: string; appUrl: string | null }): Email {
+  const { to, title, body, appUrl } = opts;
+  const subject = `Test: ${title}`;
+  const text = ["This is a test, sent only to you. No parent has been sent this.", "", title, body].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0;font-weight:800">This is a test, sent only to you. No parent has been sent this.</p>
+<div style="border-left:4px solid #c9952f;padding:4px 0 4px 14px;margin:16px 0">
+<p style="font-weight:800;margin:0 0 6px">${escape(title)}</p>
+<p style="margin:0;white-space:pre-line">${escape(body)}</p></div>
+<p style="color:#56625a;margin-bottom:0">Post it from News when it's ready.</p>`,
+  );
+  return { to, subject, text, html };
+}

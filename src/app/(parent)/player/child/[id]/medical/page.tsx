@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { backTarget } from "@/lib/parent/tabs";
 import { notFound } from "next/navigation";
 import { BackHeader } from "@/components/BackHeader";
 import { MedicalForm, RemoveMedicalForm } from "@/components/MedicalForm";
@@ -20,17 +21,18 @@ const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", y
  */
 export default async function ChildMedicalPage({ params, searchParams }: PageProps<"/player/child/[id]/medical">) {
   const { id } = await params;
-  const { removed } = await searchParams;
+  const { removed, from } = await searchParams;
   if (!UUID.test(id)) notFound();
   const { user } = await getFamily();
   // Only the parent's own children: anyone else's id is a 404, never a page.
   const [child, medical] = await asUser(user.id, (tx) => Promise.all([loadMyChild(tx, id), loadMyChildMedical(tx, id)]));
   if (!child) notFound();
   const name = child.firstName;
+  const back = backTarget(from, { href: `/player/child/${child.id}`, label: `${name}'s details` });
 
   return (
     <>
-      <BackHeader back={`/player/child/${child.id}`} backLabel="Back" title="Medical and additional needs">
+      <BackHeader back={back.href} backLabel={back.label} title="Medical and additional needs">
         Anything {name}&apos;s coaches should know to look after {name}. Optional: fill in only what helps.
       </BackHeader>
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">

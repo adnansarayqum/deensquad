@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import Form from "next/form";
 import Link from "next/link";
 import { ChevronRight, Upload } from "lucide-react";
 import { Notice, PageHeader } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
-import { countBehindOnNews, countUninvited, loadFamilies, type FamilyRow } from "@/lib/admin/data";
+import { countBehindOnNews, countNeeds, countUninvited, loadFamilies, type FamilyRow } from "@/lib/admin/data";
+import { SearchAsYouType } from "@/components/admin/SearchAsYouType";
+import { tidyName } from "@/lib/validate";
 import { familiesFilter, familiesHref, familiesInviteHref, familiesScope, familyChildHref } from "@/lib/admin/families-link";
 import { NEEDS, type Need } from "@/lib/admin/needs";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
@@ -11,6 +14,9 @@ import { asUser } from "@/lib/db";
 import { groupPlural } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Families" };
+
+/** The To-do steps families most often still need, as chips with how many children each. */
+const STEP_CHIPS: Need[] = ["contacts", "consent", "contract", "payment"];
 
 function appStatus(f: FamilyRow): "in" | "invited" | "not" {
   return f.inApp ? "in" : f.guardians.some((g) => g.invited) ? "invited" : "not";
@@ -24,12 +30,13 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
   const { group, need, q } = filter;
   const isAdmin = user.staff.role === "admin";
   // Invites go to the parents of the children in this list, so the banner counts just those.
-  const [families, notInvited, behind] = await asUser(user.id, (tx) =>
+  const [families, notInvited, behind, stepCounts] = await asUser(user.id, (tx) =>
     Promise.all([
       loadFamilies(tx, group, mine, { need, search: q || null }),
       isAdmin ? countUninvited(tx, { group, need, search: q || null }, mine) : Promise.resolve(0),
       // "Unread" is about parents: the overview counts them, so the list says how many as well as their children.
       need === "unread" ? countBehindOnNews(tx, { group, need, search: q || null }, mine) : Promise.resolve(null),
+      countNeeds(tx, group, mine, STEP_CHIPS),
     ]),
   );
   const filtered = need !== null || q !== "";
@@ -91,7 +98,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
         </nav>
 
         {/* A plain GET form: the filters live in the address, so the overview can link straight to them. */}
-        <form action="/admin/families" role="search" aria-label="Find families" className="flex flex-wrap items-end gap-2">
+        <Form action="/admin/families" replace scroll={false} role="search" aria-label="Find families" className="flex flex-wrap items-end gap-2">
           {group ? <input type="hidden" name="group" value={group} /> : null}
           <div className="min-w-0 flex-1 lg:w-56 lg:flex-none">
             <label htmlFor="q" className="field-label">
@@ -115,8 +122,25 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
           <button type="submit" className="btn-chunky btn-paper btn-small">
             Find
           </button>
-        </form>
+        </Form>
+        <SearchAsYouType inputId="q" />
       </div>
+
+      <nav aria-label="Still to do" className="flex flex-wrap gap-2">
+        {STEP_CHIPS.map((n) => (
+          <Link
+            key={n}
+            href={familiesHref({ group, need: need === n ? null : n, q })}
+            aria-current={need === n ? "page" : undefined}
+            className={`inline-flex min-h-12 items-center gap-1.5 rounded-pill border-2 px-3.5 text-sm font-bold ${
+              need === n ? "border-grass bg-grass text-on-grass" : "border-line bg-paper text-ink"
+            }`}
+          >
+            {NEEDS[n].label}
+            <span className="tabular-nums">({stepCounts[n] ?? 0})</span>
+          </Link>
+        ))}
+      </nav>
 
       {filtered ? (
         <p role="status" className="flex flex-wrap items-center gap-x-3 text-[15px]">
@@ -152,7 +176,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
           {/* Phones: one card per child. */}
           <ul className="flex flex-col gap-2 lg:hidden">
             {families.map((f) => {
-              const parents = f.guardians.map((g) => g.name).join(", ");
+              const parents = f.guardians.map((g) => tidyName(g.name)).join(", ");
               const status = appStatus(f);
               return (
                 <li key={f.id}>
@@ -162,11 +186,11 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col gap-1">
                       <span className="text-[15px] font-bold">
-                        {f.firstName} {f.lastName} <span className="font-normal text-ink-muted">· {f.ageGroup}</span>
+                        {tidyName(`${f.firstName} ${f.lastName}`)} <span className="font-normal text-ink-muted">· {f.ageGroup}</span>
                       </span>
                       <span className="truncate text-[13px] text-ink-muted">{parents || "No parent linked"}</span>
                       <span className="flex flex-wrap gap-1.5">
-                        {status === "in" ? <Pill tone="done">Signed in</Pill> : status === "invited" ? <Pill tone="gold">Invited</Pill> : <Pill tone="neutral">Not invited</Pill>}
+                        {status === "in" ? null : status === "invited" ? <Pill tone="gold">Invited, not signed in</Pill> : <Pill tone="neutral">Not invited</Pill>}
                         {f.payment === "missing" || f.payment === "overdue" ? (
                           <Pill tone="action">{f.payment === "overdue" ? "Payment overdue" : "No payment plan"}</Pill>
                         ) : f.payment === "self_reported" ? (
@@ -225,13 +249,13 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
                     <tr key={f.id} className="border-t border-line align-middle hover:bg-cream">
                       <th scope="row" className="px-3 text-left">
                         <Link href={familyChildHref(f.id, filter)} className="flex min-h-12 items-center font-bold underline decoration-line underline-offset-4">
-                          {f.firstName} {f.lastName}
+                          {tidyName(`${f.firstName} ${f.lastName}`)}
                         </Link>
                       </th>
                       <td className="px-3 tabular-nums">{f.ageGroup}</td>
-                      <td className="max-w-56 px-3 text-ink-muted">{f.guardians.map((g) => g.name).join(", ") || "No parent linked"}</td>
+                      <td className="max-w-56 px-3 text-ink-muted">{f.guardians.map((g) => tidyName(g.name)).join(", ") || "No parent linked"}</td>
                       <td className="px-3">
-                        {status === "in" ? <Pill tone="done">Signed in</Pill> : status === "invited" ? <Pill tone="gold">Invited</Pill> : <Pill tone="neutral">Not invited</Pill>}
+                        {status === "in" ? <span className="text-ink-muted">Signed in</span> : status === "invited" ? <Pill tone="gold">Invited</Pill> : <Pill tone="neutral">Not invited</Pill>}
                       </td>
                       <td className="px-3">
                         {f.payment === "active" ? (

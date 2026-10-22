@@ -1,7 +1,7 @@
 import { normaliseEmail } from "../auth/tokens";
 import type { Queryable } from "../db/types";
 import { AGE_GROUPS, GIRLS, NUMBERED_GROUPS, type AgeGroup } from "../domain";
-import { cleanPhone, cleanText } from "../validate";
+import { cleanPhone, cleanText, tidyName } from "../validate";
 import { parseCsv } from "./csv";
 
 // Families import: one row per child. Rows that share a parent email become one family, and a
@@ -195,7 +195,7 @@ export function planImport(csvText: string, now = new Date()): ImportPlan {
         return;
       }
       if (phoneText && !phone) warnings.push({ line, message: `${label}'s phone "${phoneText}" was left out (use a UK mobile like 07700 900123).` });
-      parents.push({ firstName: pFirst, lastName: pLast ?? "", email, phone });
+      parents.push({ firstName: tidyName(pFirst), lastName: tidyName(pLast ?? ""), email, phone });
     };
     parent(at.p1First, at.p1Last, at.p1Name, at.p1Email, at.p1Phone, "The parent", true);
     parent(at.p2First, at.p2Last, at.p2Name, at.p2Email, at.p2Phone, "The second parent", false);
@@ -208,7 +208,7 @@ export function planImport(csvText: string, now = new Date()): ImportPlan {
     checks.push(...rowChecks);
     rows.push({
       line,
-      child: { firstName: firstName!, lastName: lastName!, dateOfBirth, ageGroup: ageGroup!, shirtNumber, position: cell(at.position, 40) },
+      child: { firstName: tidyName(firstName!), lastName: tidyName(lastName!), dateOfBirth, ageGroup: ageGroup!, shirtNumber, position: cell(at.position, 40) },
       parents,
     });
   }

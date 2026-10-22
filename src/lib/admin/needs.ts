@@ -1,3 +1,4 @@
+import { CONTACT_IS_PARENT } from "../contacts-sql";
 import { CONTRACT } from "../documents/contract";
 import { newsReaches } from "../squads/sql";
 
@@ -83,7 +84,7 @@ export const MISSED_LAST_3_IDS = `(
 export const MISSED_LAST_3 = `(p.id in ${MISSED_LAST_3_IDS})`;
 
 export const NEEDS = {
-  contacts: { label: "No emergency contact", where: `not exists (select 1 from emergency_contacts ec where ec.player_id = p.id)` },
+  contacts: { label: "No emergency contact", where: `not exists (select 1 from emergency_contacts ec where ec.player_id = p.id and not ${CONTACT_IS_PARENT})` },
   consent: { label: "No photo answer", where: `p.photo_consent is null` },
   payment: { label: "No payment plan", where: `${paymentState} in ('missing', 'overdue')` },
   contract: { label: "Contract not signed", where: `not exists (select 1 from agreements ag where ag.player_id = p.id and ag.document = ${contract})` },

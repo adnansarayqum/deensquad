@@ -15,7 +15,7 @@ export default async function ProgressReportsPage({ searchParams }: PageProps<"/
 
   return (
     <>
-      <BackHeader back={`/player?child=${child.id}`} backLabel="Back" title="Progress reports">
+      <BackHeader back={`/player?child=${child.id}`} backLabel="Family" title="Progress reports">
         {child.firstName}&apos;s reports from the coaches, newest first.
       </BackHeader>
       <main className="flex flex-col gap-3.5 px-4 pt-4 pb-4">

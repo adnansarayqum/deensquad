@@ -11,7 +11,7 @@ export async function StaffSwitch({ on = "pitch", className = "" }: { on?: "pitc
   if (!user.staff) return null;
   const admin = user.staff.role === "admin";
   return (
-    <div className={`relative flex justify-end ${className}`}>
+    <div className={`relative flex justify-start pr-14 ${className}`}>
       <Link
         href={admin ? "/admin" : "/coach"}
         className={`inline-flex min-h-12 items-center gap-1 rounded-pill px-4 text-sm font-extrabold ${on === "pitch" ? "bg-pitch-deep text-floodlight" : "bg-pitch text-on-pitch"}`}

@@ -31,3 +31,27 @@ export function Thread({ messages, now }: { messages: MessageView[]; now: Date }
     </ol>
   );
 }
+
+/** The club message a reply thread is about, at the top so the replies have their context. Long ones fold. */
+export function QuotedNews({ news, now }: { news: { title: string; body: string; postedBy: string | null; postedAt: string }; now: Date }) {
+  const long = news.body.length > 240;
+  const meta = [news.postedBy, postedLabel(news.postedAt, now)].filter(Boolean).join(" · ");
+  return (
+    <section aria-label="The message this is about" className="flex flex-col gap-1.5 rounded-app border-2 border-line border-l-[6px] border-l-grass bg-paper px-3.5 py-3">
+      <p className="text-label text-ink-muted uppercase">Replying to</p>
+      <h2 className="text-[16px] leading-[22px] font-extrabold">{news.title}</h2>
+      {long ? (
+        <details className="group">
+          <summary className="cursor-pointer list-none text-[15px] leading-[22px]">
+            <span className="group-open:hidden">{news.body.slice(0, 220).trimEnd()}… </span>
+            <span className="inline-flex min-h-12 items-center font-bold text-grass-text underline group-open:hidden">Show all</span>
+          </summary>
+          <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
+        </details>
+      ) : (
+        <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
+      )}
+      {meta ? <p className="text-[13px] text-ink-muted">{meta}</p> : null}
+    </section>
+  );
+}

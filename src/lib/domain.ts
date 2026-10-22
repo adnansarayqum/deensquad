@@ -45,6 +45,8 @@ export type Child = {
   position: string | null;
   joinedOn: string; // ISO date
   photoConsent: boolean | null;
+  /** The photo the parent added for the coaches (only while photo consent is yes). */
+  photoFileId?: string | null;
 };
 
 export type SessionKind = "training" | "match" | "tournament";
@@ -88,6 +90,14 @@ export type Announcement = {
 export type PaymentState = "active" | "missing" | "overdue" | "self_reported" | "pay_as_you_go";
 
 export type ChecklistItemId = "registered" | "emergency-contacts" | "payment-plan" | "agreement" | "photo-consent" | "medical" | "hub-code";
+
+/** One line under each badge on the player screen, so families know how it's earned. */
+export const BADGE_RULES: Record<string, string> = {
+  "first-goal": "Score your first goal in a match.",
+  "on-time-5": "Arrive on time for 5 sessions.",
+  "good-adab": "Given by a coach for good manners.",
+  "ten-sessions": "Come to 10 sessions.",
+};
 
 export type Badge = {
   id: string;

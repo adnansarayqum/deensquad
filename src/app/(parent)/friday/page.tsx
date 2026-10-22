@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { staffNameForParents } from "@/lib/greeting";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { BookOpen, CalendarX, ChevronDown, ChevronRight, ClipboardList, Clock, ExternalLink, Info, MapPin, MoonStar, QrCode, Shirt } from "lucide-react";
-import { AvailabilityPicker, type CalendarLinks } from "@/components/AvailabilityPicker";
+import { AddToCalendar, AvailabilityPicker, type CalendarLinks } from "@/components/AvailabilityPicker";
 import { CheckedIn } from "@/components/CheckedIn";
 import { PassCacheWriter } from "@/components/PassCacheWriter";
 import { PassCarousel } from "@/components/PassCarousel";
@@ -22,7 +23,7 @@ import { cachedPasses, passCards, type PassCard } from "@/lib/pass/cards";
 import type { SessionPlan } from "@/lib/plans/data";
 import type { VenuePassView } from "@/lib/venue-pass/card";
 
-export const metadata: Metadata = { title: "Friday" };
+export const metadata: Metadata = { title: "Sessions" };
 
 export default async function FridayPage() {
   const [{ family, week, cancelled, invites, upcoming, plans, latestSheet, venuePass }, { user }] = await Promise.all([getFridayPage(), getFamily()]);
@@ -85,7 +86,7 @@ export default async function FridayPage() {
       ) : (
         <AppHeader stripes>
           <p className="text-label text-floodlight uppercase">Next sessions</p>
-          <h1 className="font-display text-[48px] leading-[0.92] tracking-[0.02em]">{single ? "Friday" : "Who's coming?"}</h1>
+          <h1 className="font-display text-[48px] leading-[0.92] tracking-[0.02em]">{single ? "Sessions" : "Who's coming?"}</h1>
           {week.length > 1 ? <p className="text-sm text-on-pitch-muted">Tap once for each child. Their coach sees it straight away.</p> : null}
         </AppHeader>
       )}
@@ -136,16 +137,24 @@ export default async function FridayPage() {
             <NoSession name={single.child.firstName} />
           )
         ) : (
-          week.map((w) => <ChildCard key={w.child.id} week={w} answered={answered(w)} calendar={w.session ? calendar(w.session) : undefined} />)
+          // Several children: one block per session (date, time and venue said once), a row per child, one calendar.
+          <>
+            {sessions.map((s) => (
+              <SessionBlock key={s.id} session={s} rows={week.filter((w) => w.session?.id === s.id)} answered={answered} calendar={calendar(s)} />
+            ))}
+            {week
+              .filter((w) => !w.session)
+              .map((w) => (
+                <NoSession key={w.child.id} name={w.child.firstName} />
+              ))}
+          </>
         )}
 
         {invites.map((i) => (
           <InviteCard key={`${i.session.id}:${i.child.id}`} invite={i} answered={answered(i)} calendar={calendar(i.session)} />
         ))}
 
-        {sessions.map((s) => (
-          <Briefing key={s.id} session={s} labelled={sessions.length > 1} />
-        ))}
+        {single?.session ? <Briefing session={single.session} /> : null}
 
         {plans.map((p) => (
           <PlanCard key={p.id} plan={p} sessionLabel={sessions.length > 1 ? sessions.find((s) => s.id === p.sessionId) : undefined} />
@@ -177,27 +186,31 @@ export default async function FridayPage() {
             <Eyebrow>
               <span id="coming-up">Coming up</span>
             </Eyebrow>
-            {upcoming.map((s) => (
-              <Card key={s.id} className="flex items-center justify-between gap-3 px-3.5 py-3">
-                <div className="flex min-w-0 flex-col">
-                  <span className="text-[15px] font-bold">
-                    {shortDay(s.startsAt)} · {s.title}
-                  </span>
-                  <span className="text-[13px] text-ink-muted">
-                    {clock(s.startsAt)} · {s.venue}
-                  </span>
-                  {s.cancelled && s.cancelReason ? <span className="text-[13px]">{s.cancelReason}</span> : null}
-                  {!s.cancelled && s.notes ? <span className="line-clamp-2 text-[13px] whitespace-pre-line">{s.notes}</span> : null}
-                </div>
-                {s.cancelled ? <Pill tone="action">Cancelled</Pill> : <Pill tone="neutral">{s.ageGroups.join(", ")}</Pill>}
-              </Card>
-            ))}
+            <ul className="flex flex-col divide-y-2 divide-line rounded-app border-2 border-line bg-paper px-3.5">
+              {upcoming.map((s) => (
+                <li key={s.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="flex min-w-0 flex-col">
+                    <span className="text-[15px] font-bold">
+                      {shortDay(s.startsAt)} · {s.title}
+                    </span>
+                    <span className="text-[13px] text-ink-muted">
+                      {clock(s.startsAt)} · {s.venue}
+                    </span>
+                    {s.cancelled && s.cancelReason ? <span className="text-[13px]">{s.cancelReason}</span> : null}
+                    {!s.cancelled && s.notes ? <span className="line-clamp-2 text-[13px] whitespace-pre-line">{s.notes}</span> : null}
+                  </div>
+                  {s.cancelled ? <Pill tone="action">Cancelled</Pill> : <span className="shrink-0 text-[13px] font-bold text-ink-muted">{s.ageGroups.join(", ")}</span>}
+                </li>
+              ))}
+            </ul>
           </section>
         ) : null}
 
-        <Link href="/player/calendar" className="inline-flex min-h-12 items-center self-start text-sm font-bold text-grass-text underline">
-          Add sessions to your calendar
-        </Link>
+        {week.some((w) => w.answer === "coming") ? null : (
+          <Link href="/player/calendar?from=/friday" className="inline-flex min-h-12 items-center self-start text-sm font-bold text-grass-text underline">
+            Add sessions to your calendar
+          </Link>
+        )}
       </main>
     </>
   );
@@ -249,46 +262,67 @@ function uniqueSessions(week: ChildWeek[]): Session[] {
   return [...seen.values()];
 }
 
-function ChildCard({ week: w, answered, calendar }: { week: ChildWeek; answered?: string; calendar?: CalendarLinks }) {
-  const name = w.child.firstName;
+/**
+ * One session for a family with several children: what, when and where once, then a row per child with their
+ * group's headcount and Coming / Not coming, then one Add to my calendar (once anyone is coming) and the briefing.
+ */
+function SessionBlock({
+  session,
+  rows,
+  answered,
+  calendar,
+}: {
+  session: Session;
+  rows: ChildWeek[];
+  answered: (w: ChildWeek) => string | undefined;
+  calendar?: CalendarLinks;
+}) {
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <div className="flex items-baseline justify-between gap-2">
+      <div className="flex flex-col gap-0.5">
         <h2 className="text-[19px] font-extrabold">
-          {name} <span className="text-[15px] font-bold text-ink-muted">· {groupPlural(w.child.ageGroup)}</span>
+          {session.title} · {shortDay(session.startsAt)}
         </h2>
-        {w.counts && w.session ? (
-          <span className="text-[13px] text-ink-muted tabular-nums">
-            {w.counts.coming} of {w.counts.squad} coming
-          </span>
-        ) : null}
-      </div>
-      {w.session ? (
-        <>
-          <p className="-mt-1.5 text-sm text-ink-muted">
-            {w.session.squad ? `${w.session.title} · ` : ""}
-            {shortDay(w.session.startsAt)} · {clock(w.session.startsAt)}–{clock(w.session.endsAt)} · {w.session.venue}
+        <div className="flex flex-wrap items-center justify-between gap-x-3">
+          <p className="text-sm text-ink-muted">
+            {clock(session.startsAt)}–{clock(session.endsAt)} · {session.venue}
           </p>
-          {w.checkedInAt ? (
-            <CheckedIn name={name} at={w.checkedInAt} />
-          ) : (
-            <AvailabilityPicker
-              sessionId={w.session.id}
-              playerId={w.child.id}
-              answer={w.answer}
-              childName={name}
-              question={availabilityQuestion(name, w.session, shortDay(w.session.startsAt))}
-              squad={Boolean(w.session.squad)}
-              answered={answered}
-              reason={w.answered?.reason ?? null}
-              calendar={calendar}
-              compact
-            />
-          )}
-        </>
-      ) : (
-        <p className="text-[15px] text-ink-muted">No session scheduled for {name}&apos;s group yet.</p>
-      )}
+          <Directions venue={session.venue} />
+        </div>
+      </div>
+      <ul className="flex flex-col divide-y-2 divide-line">
+        {rows.map((w) => (
+          <li key={w.child.id} className="flex flex-col gap-2 py-3 first:pt-0">
+            <div className="flex items-baseline justify-between gap-2">
+              <h3 className="text-[17px] font-extrabold">
+                {w.child.firstName} <span className="text-[15px] font-bold text-ink-muted">· {groupPlural(w.child.ageGroup)}</span>
+              </h3>
+              {w.counts ? (
+                <span className="text-[13px] text-ink-muted tabular-nums">
+                  {w.counts.coming} of {w.counts.squad} coming
+                </span>
+              ) : null}
+            </div>
+            {w.checkedInAt ? (
+              <CheckedIn name={w.child.firstName} at={w.checkedInAt} />
+            ) : (
+              <AvailabilityPicker
+                sessionId={session.id}
+                playerId={w.child.id}
+                answer={w.answer}
+                childName={w.child.firstName}
+                question={availabilityQuestion(w.child.firstName, session, shortDay(session.startsAt))}
+                squad={Boolean(session.squad)}
+                answered={answered(w)}
+                reason={w.answered?.reason ?? null}
+                compact
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+      {calendar && rows.some((w) => w.answer === "coming") ? <AddToCalendar links={calendar} /> : null}
+      <BriefingDetails session={session} />
     </Card>
   );
 }
@@ -336,34 +370,61 @@ function Directions({ venue }: { venue: string }) {
 
 type BriefingRow = { icon: typeof Clock; text: string; extra?: ReactNode };
 
-function Briefing({ session, labelled }: { session: Session; labelled: boolean }) {
+function briefingRows(session: Session): BriefingRow[] {
   const rows: (BriefingRow | null)[] = [
     session.venue ? { icon: MapPin, text: session.venue, extra: <Directions venue={session.venue} /> } : null,
     session.arriveBy || session.prayerNote
       ? { icon: Clock, text: [session.arriveBy ? `Arrive ${session.arriveBy}` : null, session.prayerNote].filter(Boolean).join(" · ") }
       : null,
     session.kit ? { icon: Shirt, text: session.kit } : null,
-    session.notes ? { icon: Info, text: session.notes } : null,
   ];
-  const shown = rows.filter((r): r is BriefingRow => r !== null);
-  if (shown.length === 0) return null;
+  return rows.filter((r): r is BriefingRow => r !== null);
+}
+
+/** The session's notes, always shown (they change week to week), then the usual venue, times and kit, folded away. */
+function BriefingDetails({ session }: { session: Session }) {
+  const rows = briefingRows(session);
   return (
-    <Card className="flex flex-col gap-3 p-4">
-      <h2 className="text-base font-extrabold">
-        {labelled ? `${shortDay(session.startsAt)} briefing · ${session.ageGroups.join(", ")}` : `${session.title} briefing`}
-      </h2>
-      <ul className="flex flex-col gap-3 text-[15px]">
-        {shown.map(({ icon: Icon, text, extra }) => (
-          <li key={text} className="flex flex-wrap items-center gap-3 whitespace-pre-line">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-gold-tint text-gold-text">
-              <Icon aria-hidden size={20} />
-            </span>
-            <span className="min-w-0 flex-1 break-words">{text}</span>
-            {/* Under the text when the screen is very narrow (200% zoom), so it never sits on top of it. */}
-            {extra ? <span className="max-[239px]:basis-full max-[239px]:pl-12">{extra}</span> : null}
-          </li>
-        ))}
-      </ul>
+    <>
+      {session.notes ? (
+        <p className="flex items-start gap-3 text-[15px] leading-[22px] whitespace-pre-line">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-gold-tint text-gold-text">
+            <Info aria-hidden size={20} />
+          </span>
+          <span className="min-w-0 flex-1 break-words">{session.notes}</span>
+        </p>
+      ) : null}
+      {rows.length > 0 ? (
+        <details className="group">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-1.5 text-[15px] font-bold text-grass-text [&::-webkit-details-marker]:hidden">
+            Venue, times and kit
+            <ChevronDown aria-hidden size={18} className="transition-transform group-open:rotate-180" />
+          </summary>
+          <ul className="flex flex-col gap-3 pt-1 text-[15px]">
+            {rows.map(({ icon: Icon, text, extra }) => (
+              <li key={text} className="flex flex-wrap items-center gap-3 whitespace-pre-line">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-gold-tint text-gold-text">
+                  <Icon aria-hidden size={20} />
+                </span>
+                <span className="min-w-0 flex-1 break-words">{text}</span>
+                {/* Under the text when the screen is very narrow (200% zoom), so it never sits on top of it. */}
+                {extra ? <span className="max-[239px]:basis-full max-[239px]:pl-12">{extra}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </>
+  );
+}
+
+/** The briefing under a single child's answer. */
+function Briefing({ session }: { session: Session }) {
+  if (!session.notes && briefingRows(session).length === 0) return null;
+  return (
+    <Card className="flex flex-col gap-2 p-4">
+      <h2 className="text-base font-extrabold">{session.title} briefing</h2>
+      <BriefingDetails session={session} />
     </Card>
   );
 }
@@ -431,7 +492,7 @@ function PlanCard({ plan, sessionLabel }: { plan: SessionPlan; sessionLabel?: Se
       {plan.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{plan.body}</p> : null}
       {plan.file ? <Attachment file={plan.file} label={attachmentTitle("plan", plan.file)} from="/friday" /> : null}
       {plan.video ? <VideoCard video={plan.video} name={`${plan.ageGroup} session plan`} title="Session plan video" /> : null}
-      {plan.from ? <p className="text-[13px] text-ink-muted">From {plan.from}</p> : null}
+      {plan.from ? <p className="text-[13px] text-ink-muted">From {staffNameForParents(plan.from)}</p> : null}
     </Card>
   );
 }

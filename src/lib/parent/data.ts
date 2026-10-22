@@ -1,4 +1,5 @@
 import { CONTRACT } from "../documents/contract";
+import { staffNameForParents } from "../greeting";
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { londonDate, londonTime, shortDay } from "../dates";
@@ -6,6 +7,7 @@ import { addMessage } from "../messages/data";
 import { SUBJECT_MAX } from "../messages/limits";
 import { myChildrenWithMedical } from "../medical/data";
 import { newsReaches } from "../squads/sql";
+import { CONTACT_IS_PARENT } from "../contacts-sql";
 import type { AgeGroup, Announcement, Availability, Badge, Child, CoachNote, PaymentState, Session } from "../domain";
 
 // Queries for the parent screens. They run inside asUser(), so row level security applies,
@@ -15,7 +17,7 @@ import type { AgeGroup, Announcement, Availability, Badge, Child, CoachNote, Pay
 export type Family = { guardian: { id: string; firstName: string }; children: Child[] };
 
 const CHILD_COLUMNS = `p.id, p.first_name, p.last_name, p.shirt_number, p.age_group::text as age_group, p.position,
-  p.joined_on::text as joined_on, p.photo_consent`;
+  p.joined_on::text as joined_on, p.photo_consent, p.photo_file_id`;
 
 type ChildRow = {
   id: string;
@@ -26,6 +28,7 @@ type ChildRow = {
   position: string | null;
   joined_on: string;
   photo_consent: boolean | null;
+  photo_file_id: string | null;
 };
 
 const toChild = (r: ChildRow): Child => ({
@@ -37,6 +40,7 @@ const toChild = (r: ChildRow): Child => ({
   position: r.position,
   joinedOn: r.joined_on,
   photoConsent: r.photo_consent,
+  photoFileId: r.photo_file_id,
 });
 
 export const SESSION_COLUMNS = `s.id, s.kind::text as kind, s.title, s.starts_at, s.ends_at, s.venue, s.age_groups::text[] as age_groups,
@@ -99,6 +103,8 @@ export type AnnouncementView = Announcement & {
   reaches: string[];
   /** Answers given so far, by child id. */
   answers: Record<string, QuickAnswer>;
+  /** The family's latest reply to it in Messages, and that conversation (null: no reply yet). */
+  replied?: { at: string; conversation: string } | null;
 };
 
 /**
@@ -148,7 +154,7 @@ export async function loadNews(tx: Queryable, family: Family, limit = 50): Promi
     audience: r.audience ?? "all",
     requiresAck: r.requires_ack,
     postedAt: iso(r.posted_at),
-    postedBy: r.posted_by,
+    postedBy: staffNameForParents(r.posted_by),
     read: !r.requires_ack || r.read,
     allowReplies: r.allow_replies,
     quickAnswers: r.quick_answers,
@@ -276,7 +282,7 @@ export async function saveAnswer(tx: Queryable, sessionId: string, playerId: str
 export const AWAY_REASON_MAX = 200;
 
 /**
- * A parent's optional reason for a child not coming (their answer must already be Not this week, for a session still
+ * A parent's optional reason for a child not coming (their answer must already be Not coming, for a session still
  * to come): kept on the answer for the register, and sent to the coaches as a message in the thread for that session
  * and child (started the first time, by whichever parent). Returns the thread, or null when it can't be saved now.
  */
@@ -346,7 +352,8 @@ export async function loadChecklistFacts(tx: Queryable, childIds: string[]): Pro
   if (childIds.length === 0) return { contacts: new Map(), payment: new Map(), agreed: new Set(), medical: new Set(), hubCode: false };
   const [contacts, payment, agreed, medical, hub] = await Promise.all([
     tx.query<{ player_id: string; n: number }>(
-      `select player_id, count(*)::int as n from emergency_contacts where player_id = any($1::uuid[]) group by player_id`,
+      `select ec.player_id, count(*)::int as n from emergency_contacts ec
+       where ec.player_id = any($1::uuid[]) and not ${CONTACT_IS_PARENT} group by ec.player_id`,
       [childIds],
     ),
     tx.query<{ player_id: string; state: PaymentState }>(
@@ -400,13 +407,17 @@ export async function reportFamilyPayAsYouGo(tx: Queryable, childIds: string[]):
   return rows.map((r) => r.id);
 }
 
-export type EmergencyContact = { id: string; name: string; phone: string; relationship: string | null };
+export type EmergencyContact = { id: string; name: string; phone: string; relationship: string | null; isParent: boolean };
+
+export { CONTACT_IS_PARENT } from "../contacts-sql";
 
 export async function loadContacts(tx: Queryable, childId: string): Promise<EmergencyContact[]> {
-  return tx.query<EmergencyContact>(
-    `select id, name, phone, relationship from emergency_contacts where player_id = $1 and player_id in (select my_player_ids()) order by created_at`,
+  const rows = await tx.query<{ id: string; name: string; phone: string; relationship: string | null; is_parent: boolean }>(
+    `select ec.id, ec.name, ec.phone, ec.relationship, ${CONTACT_IS_PARENT} as is_parent
+     from emergency_contacts ec where ec.player_id = $1 and ec.player_id in (select my_player_ids()) order by ec.created_at`,
     [childId],
   );
+  return rows.map((r) => ({ id: r.id, name: r.name, phone: r.phone, relationship: r.relationship, isParent: r.is_parent }));
 }
 
 export type PlayerFacts = {

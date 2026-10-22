@@ -82,3 +82,16 @@ export async function unfold(page: Page, id: string) {
   const toggle = page.locator(`label[for="${id}"]`);
   if ((await toggle.isVisible()) && !(await page.locator(`#${id}`).isChecked())) await toggle.click();
 }
+
+/** News: open the post form if it's folded, Preview, then Post to parents (the form asks for a preview first). */
+export async function previewAndPost(page: Page) {
+  await page.getByRole("button", { name: "Preview" }).click();
+  await page.getByRole("button", { name: "Post to parents" }).click();
+}
+
+/** Admin → Staff on a phone: open a person's folded controls (on a computer they're always in the table). */
+export async function editStaff(page: Page, name: string) {
+  const summary = page.locator("summary", { hasText: `Edit ${name}` });
+  // The open attribute is "" when open (falsy), so test for it being there at all.
+  if ((await summary.isVisible()) && (await summary.locator("xpath=..").getAttribute("open")) === null) await summary.click();
+}

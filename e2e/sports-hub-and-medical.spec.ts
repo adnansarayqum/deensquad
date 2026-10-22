@@ -3,7 +3,7 @@ import { devices, expect, test, type BrowserContext, type Page } from "@playwrig
 import jsQR from "jsqr";
 import QRCode from "qrcode";
 import sharp from "sharp";
-import { ADMIN_STATE, COACH_STATE, YOUR_DATA_PARENT_STATE, newContext, shot, unfold } from "./helpers";
+import { ADMIN_STATE, COACH_STATE, YOUR_DATA_PARENT_STATE, newContext, shot, unfold, editStaff } from "./helpers";
 
 // A parent keeps their own sports hub entry QR code on /pass (read from a screenshot on the phone, drawn again, kept for
 // no signal), and adds a child's medical and additional needs, which the child's group's coach sees behind a "Medical
@@ -136,6 +136,7 @@ test("medical and additional needs: saved by the parent with consent; the U7 coa
   const adminContext = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
   const admin = await adminContext.newPage();
   await admin.goto("/admin/staff");
+  await editStaff(admin, "Coach Hamza");
   const groups = admin.getByRole("form", { name: "Coach Hamza's groups" });
   await groups.getByLabel("U7").check();
   await groups.getByRole("button", { name: "Save groups" }).click();
@@ -248,10 +249,12 @@ test("medical and additional needs: saved by the parent with consent; the U7 coa
   } finally {
     await context.close();
     await admin.goto("/admin/sessions");
-    await admin.getByRole("link", { name: `Delete Medical gate ${londonDay()}` }).click();
+    await admin.getByRole("link", { name: `Edit Medical gate ${londonDay()}` }).click();
+    await admin.getByRole("link", { name: "Delete this session" }).click();
     await admin.getByRole("button", { name: "Delete session" }).click();
     await expect(admin.getByText("Deleted.")).toBeVisible();
     await admin.goto("/admin/staff");
+    await editStaff(admin, "Coach Hamza");
     const after = admin.getByRole("form", { name: "Coach Hamza's groups" });
     await after.getByLabel("U7").uncheck();
     await after.getByRole("button", { name: "Save groups" }).click();

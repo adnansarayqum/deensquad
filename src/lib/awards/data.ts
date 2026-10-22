@@ -24,18 +24,26 @@ export async function loadAwards(tx: Queryable, playerId: string, limit = 5): Pr
   return { totals, recent: recent.map(toAward) };
 }
 
-export type SquadMember = { id: string; firstName: string; lastName: string; shirtNumber: number | null; stars: number; points: number };
+export type SquadMember = { id: string; firstName: string; lastName: string; shirtNumber: number | null; stars: number; points: number; lastAt: string | null };
 
 /** One age group with each child's totals, highest points first. */
 export async function loadSquadAwards(tx: Queryable, group: AgeGroup): Promise<SquadMember[]> {
-  const rows = await tx.query<{ id: string; first_name: string; last_name: string; shirt_number: number | null; stars: number; points: number }>(
+  const rows = await tx.query<{ id: string; first_name: string; last_name: string; shirt_number: number | null; stars: number; points: number; last_at: Date | null }>(
     `select p.id, p.first_name, p.last_name, p.shirt_number,
-       coalesce(sum(a.stars), 0)::int as stars, coalesce(sum(a.points), 0)::int as points
+       coalesce(sum(a.stars), 0)::int as stars, coalesce(sum(a.points), 0)::int as points, max(a.created_at) as last_at
      from players p left join player_awards a on a.player_id = p.id
      where p.age_group = $1::age_group
      group by p.id
      order by p.first_name, p.last_name`,
     [group],
   );
-  return rows.map((r) => ({ id: r.id, firstName: r.first_name, lastName: r.last_name, shirtNumber: r.shirt_number, stars: r.stars, points: r.points }));
+  return rows.map((r) => ({
+    id: r.id,
+    firstName: r.first_name,
+    lastName: r.last_name,
+    shirtNumber: r.shirt_number,
+    stars: r.stars,
+    points: r.points,
+    lastAt: r.last_at ? iso(r.last_at) : null,
+  }));
 }

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { staffNameForParents } from "@/lib/greeting";
+import { backTarget } from "@/lib/parent/tabs";
 import { BackHeader } from "@/components/BackHeader";
 import { Attachment } from "@/components/plans/Attachment";
 import { VideoCard } from "@/components/plans/VideoCard";
@@ -10,13 +12,14 @@ export const metadata: Metadata = { title: "Practise at home" };
 
 const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
 
-export default async function PracticePage() {
+export default async function PracticePage({ searchParams }: PageProps<"/practice">) {
+  const back = backTarget((await searchParams).from, { href: "/friday", label: "Sessions" });
   const { family, sheets } = await getPracticePage();
   const names = family.children.map((c) => c.firstName);
   const who = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : (names[0] ?? "your child");
   return (
     <>
-      <BackHeader back="/friday" backLabel="Friday" title="Practise at home">
+      <BackHeader back={back.href} backLabel={back.label} title="Practise at home">
         Drills from the coaches for {who} to try between sessions.
       </BackHeader>
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
@@ -25,12 +28,12 @@ export default async function PracticePage() {
           <Card key={s.id} className="flex flex-col gap-2.5 p-4">
             <div className="flex items-start justify-between gap-2">
               <h2 className="text-[17px] font-extrabold">{s.title}</h2>
-              {s.ageGroups.length ? <Pill tone="neutral">{s.ageGroups.join(", ")}</Pill> : null}
+              <Pill tone="neutral">{s.ageGroups.length ? s.ageGroups.join(", ") : "All groups"}</Pill>
             </div>
             {s.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{s.body}</p> : null}
             {s.file ? <Attachment file={s.file} label={attachmentTitle("sheet", s.file)} from="/practice" /> : null}
             {s.video ? <VideoCard video={s.video} name={s.title} /> : null}
-            <p className="text-[13px] text-ink-muted">{[s.from, day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</p>
+            <p className="text-[13px] text-ink-muted">{[staffNameForParents(s.from), day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</p>
           </Card>
         ))}
       </main>

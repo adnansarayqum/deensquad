@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanPhone } from "./validate";
+import { cleanPhone, tidyName } from "./validate";
 
 describe("cleanPhone", () => {
   it("writes every UK number the same way, however it was typed", () => {
@@ -28,5 +28,15 @@ describe("cleanPhone", () => {
     expect(cleanPhone("8700900123")).toBeNull(); // 10 digits, not a mobile
     expect(cleanPhone("")).toBeNull();
     expect(cleanPhone(undefined)).toBeNull();
+  });
+});
+
+describe("tidyName", () => {
+  it("writes all-capitals and all-small names as names, and leaves mixed case alone", () => {
+    expect(tidyName("FERDOUS BEGUM")).toBe("Ferdous Begum");
+    expect(tidyName("imdadul haque")).toBe("Imdadul Haque");
+    expect(tidyName("o'NEIL")).toBe("o'NEIL");
+    expect(tidyName("SARA O'NEIL-SMITH")).toBe("Sara O'Neil-Smith");
+    expect(tidyName("McDonald")).toBe("McDonald");
   });
 });

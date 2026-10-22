@@ -80,7 +80,9 @@ export async function addPracticeSheet(_prev: PlanState, formData: FormData): Pr
   const title = cleanText(formData.get("title"), 120);
   const body = cleanBody(formData.get("body"), 4000);
   const mine = staffGroups(user.staff);
-  const groups = formData.getAll("groups").filter(isAgeGroup);
+  // "Every group" (admins) leaves the groups empty, whatever was ticked under "Only these groups".
+  const groups = formData.get("for") === "all" ? [] : formData.getAll("groups").filter(isAgeGroup);
+  if (formData.get("for") === "groups" && groups.length === 0) return { error: "Tick at least one group, or choose Every group." };
   const file = await readUpload(formData.get("file"));
   const video = readVideoField(formData.get("video"));
   if (!title) return { error: "Give it a title, like Keepy-uppy challenge." };

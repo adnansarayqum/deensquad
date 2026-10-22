@@ -55,7 +55,7 @@ async function lineProblem(tx: Queryable, line: BasketLine): Promise<string | nu
   return null;
 }
 
-export type AddState = { error?: string; added?: boolean };
+export type AddState = { error?: string; field?: "size" | "player"; added?: boolean; basketCount?: number };
 
 export async function addToBasket(_prev: AddState, formData: FormData): Promise<AddState> {
   const user = await requireParent();
@@ -73,12 +73,13 @@ export async function addToBasket(_prev: AddState, formData: FormData): Promise<
     initials,
     quantity,
   };
-  if (typeof player === "string" && player && !line.player) return { error: "Choose who it's for." };
+  if (typeof player === "string" && player && !line.player) return { error: "Choose who it's for.", field: "player" };
   const check = await asUser(user.id, (tx) => lineProblem(tx, line));
-  if (check) return { error: check };
+  if (check) return { error: check, field: check === "Choose a size." ? "size" : undefined };
 
-  await writeBasket(addLine((await readBasket()).lines, line));
-  return { added: true };
+  const lines = addLine((await readBasket()).lines, line);
+  await writeBasket(lines);
+  return { added: true, basketCount: lines.reduce((n, l) => n + l.quantity, 0) };
 }
 
 export async function removeFromBasket(formData: FormData): Promise<void> {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { backTarget } from "@/lib/parent/tabs";
 import { Sun } from "lucide-react";
 import { BackHeader } from "@/components/BackHeader";
 import { CheckedIn } from "@/components/CheckedIn";
@@ -10,16 +11,17 @@ import { cachedPasses, passCards } from "@/lib/pass/cards";
 
 export const metadata: Metadata = { title: "Attendance QR code" };
 
-export default async function PassPage() {
+export default async function PassPage({ searchParams }: PageProps<"/pass">) {
+  const back = backTarget((await searchParams).from, { href: "/friday", label: "Sessions" });
   const { user, family, checkedIn, venuePass } = await getPassPage();
   const cards = await passCards(family.children);
   const several = cards.length > 1;
 
   return (
     <>
-      <BackHeader back="/friday" backLabel="Friday" title={several ? "Attendance QR codes" : "Attendance QR code"}>
+      <BackHeader back={back.href} backLabel={back.label} title={several ? "Attendance QR codes" : "Attendance QR code"}>
         {several
-          ? "Show the QR code for each child who's here. Swipe to the next child."
+          ? "Show the QR code for each child who's here. Tap a name to switch."
           : `Show this to the coach when you arrive to check ${cards[0]?.firstName ?? "your child"} in.`}
       </BackHeader>
       <PassCacheWriter user={user.id} passes={cachedPasses(cards)} hub={venuePass?.cache ?? null} />
@@ -36,12 +38,9 @@ export default async function PassPage() {
               </div>
             ) : null}
             <PassCarousel cards={cards} />
-            <p className="flex items-center gap-2 text-sm text-ink-muted">
-              <Sun aria-hidden size={18} />
-              Turn your screen brightness up so it scans first time.
-            </p>
-            <p className="text-center text-sm leading-5 text-ink-muted">
-              Each QR code stays the same every week. This phone keeps a copy for when there&apos;s no signal, or you can take a screenshot.
+            <p className="flex items-start gap-2 text-sm leading-5 text-ink-muted">
+              <Sun aria-hidden size={18} className="mt-0.5 shrink-0" />
+              At the gate, turn your screen brightness up. Each code stays the same every week, and this phone keeps a copy for when there&apos;s no signal.
             </p>
           </>
         )}

@@ -105,7 +105,7 @@ export function buildWeek(
 
 /**
  * The line under an answer already given, so parents who share a child can see who said what:
- * "Coming · answered by Sara, Tue 2:02pm", "Not this week · answered by you, today 9:12am". An answer saved
+ * "Coming · answered by Sara, Tue 2:02pm", "Not coming · answered by you, today 9:12am". An answer saved
  * without a guardian (or by one no longer linked to the child) shows no name: "Coming · answered Tue 2:02pm".
  */
 /** "today 9:12am", "yesterday 5:40pm", "Tue 2:02pm", or "28 Sept 2:02pm" for older answers. */
@@ -123,7 +123,7 @@ function answeredWhen(iso: string, now: Date): string {
 }
 
 export function answeredLine(record: AnswerRecord, viewerGuardianId: string, now: Date, squad = false): string {
-  const label = squad ? (record.answer === "coming" ? "Can play" : "Can't play") : record.answer === "coming" ? "Coming" : "Not this week";
+  const label = squad ? (record.answer === "coming" ? "Can play" : "Can't play") : record.answer === "coming" ? "Coming" : "Not coming";
   const when = answeredWhen(record.at, now);
   const who = record.by ? (record.by.id === viewerGuardianId ? "you" : record.by.name) : null;
   return who ? `${label} · answered by ${who}, ${when}` : `${label} · answered ${when}`;
@@ -204,7 +204,7 @@ export function buildChecklist(child: Child, facts: ChecklistFacts): ChecklistIt
       actionLabel: facts.medical?.has(child.id) ? "Change" : "Add",
       icon: "medical",
       done: Boolean(facts.medical?.has(child.id)),
-      href: `/player/child/${child.id}/medical`,
+      href: `/player/child/${child.id}/medical?from=/checklist`,
       optional: true,
       steps: { done: 0, total: 0 },
     },

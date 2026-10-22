@@ -16,7 +16,7 @@ export default async function OrdersPage() {
     <>
       <BackHeader back="/shop" backLabel="Club shop" title="Your orders" />
       <main className="flex flex-col gap-2 px-4 pt-4 pb-4">
-        {orders.length === 0 ? <Card className="p-4 text-[15px]">You haven&apos;t ordered anything yet.</Card> : null}
+        {orders.length === 0 ? <Card className="p-4 text-[15px] leading-[22px]">You haven&apos;t ordered anything yet. Order kit in the shop and collect it at Friday training.</Card> : null}
         {orders.map((o) => (
           <Link
             key={o.id}

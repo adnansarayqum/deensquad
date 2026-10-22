@@ -501,3 +501,14 @@ export async function loadStaff(tx: Queryable): Promise<StaffRow[]> {
     ageGroups: AGE_GROUPS.filter((g) => (r.age_groups ?? []).includes(g)),
   }));
 }
+
+/** How many children in the list (its group, the staff member's groups) still need each of these steps. */
+export async function countNeeds(tx: Queryable, group: AgeGroup | null, within: readonly AgeGroup[], needs: readonly Need[]): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  for (const need of needs) {
+    const where = familyWhere({ group, need, search: null }, within, 1);
+    const [row] = await tx.query<{ n: number }>(`select count(*)::int as n from players p where ${where.sql}`, where.params);
+    counts[need] = row.n;
+  }
+  return counts;
+}

@@ -50,15 +50,14 @@ test("QR codes: every child can be reached by keyboard, and the screen says whos
   const announced = page.getByText("Layla's QR code, 1 of 2", { exact: true });
   await expect(announced).toHaveAttribute("aria-live", "polite");
 
-  const next = page.getByRole("button", { name: "Next child" });
-  const previous = page.getByRole("button", { name: "Previous child" });
-  for (const b of [next, previous, choose.getByRole("button", { name: "Zaid" })]) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  const zaid = choose.getByRole("button", { name: "Zaid" });
+  expect((await zaid.boundingBox())!.height).toBeGreaterThanOrEqual(48);
 
-  // Keyboard only: Tab to Next child and press Enter.
-  await next.focus();
+  // Keyboard only: Tab to Zaid's name and press Enter.
+  await zaid.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByText("Zaid's QR code, 2 of 2", { exact: true })).toBeAttached();
-  await expect(choose.getByRole("button", { name: "Zaid" })).toHaveAttribute("aria-pressed", "true");
+  await expect(zaid).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("img", { name: "QR code that checks Zaid in" })).toBeInViewport({ ratio: 0.9 });
   await page.screenshot({ path: shot("pass-keyboard") });
 
@@ -69,8 +68,7 @@ test("QR codes: every child can be reached by keyboard, and the screen says whos
   await page.keyboard.press("ArrowLeft");
   await expect(page.getByText("Layla's QR code, 1 of 2", { exact: true })).toBeAttached();
   await expect(page.getByRole("img", { name: "QR code that checks Layla in" })).toBeInViewport({ ratio: 0.9 });
-  // A switch user's Previous child from the first goes round to the last.
-  await previous.click();
+  await page.keyboard.press("ArrowRight");
   await expect(page.getByText("Zaid's QR code, 2 of 2", { exact: true })).toBeAttached();
   await context.close();
 });
@@ -102,7 +100,7 @@ test("Friday at 200% zoom (195px wide) doesn't scroll sideways, and the tab bar 
   expect(brokenWords).toEqual([]);
   await page.screenshot({ path: shot("friday-195px"), fullPage: true });
   const tabs = page.getByRole("navigation", { name: "Main" });
-  for (const name of ["News", "Friday", "To-do", "Shop", "Players"]) await expect(tabs.getByRole("link", { name })).toBeVisible();
+  for (const name of ["News", "Sessions", "To-do", "Shop", "Family"]) await expect(tabs.getByRole("link", { name })).toBeVisible();
   // No label is cut off: at this width they're icons, each still named.
   const clipped = await tabs.locator("a span").evaluateAll((spans) =>
     spans.filter((s) => getComputedStyle(s).position !== "absolute" && s.scrollWidth > s.clientWidth + 1).map((s) => s.textContent),
@@ -211,7 +209,7 @@ test("calendar: a parent gets a private link, the feed has their children's sess
   const page = await context.newPage();
   await page.goto("/friday");
   await page.getByRole("link", { name: "Add sessions to your calendar" }).click();
-  await expect(page).toHaveURL(/\/player\/calendar$/);
+  await expect(page).toHaveURL(/\/player\/calendar(\?|$)/);
   await page.getByRole("button", { name: "Get my calendar link" }).click();
 
   const subscribe = page.getByRole("link", { name: "Subscribe (iPhone, iPad, Mac)" });

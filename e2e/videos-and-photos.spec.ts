@@ -30,6 +30,7 @@ test("a coach adds a practice sheet with a youtu.be link; the parent taps Watch 
   const staff = await staffContext.newPage();
   await staff.goto("/coach/practice");
   await staff.getByLabel("Title").fill("Toe taps");
+  await staff.getByText("Only these groups", { exact: true }).click();
   await staff.getByLabel("U7", { exact: true }).check();
   // Only YouTube links.
   await staff.getByLabel("YouTube video link").fill("https://youtube.com.evil.com/watch?v=" + VIDEO);
@@ -154,7 +155,8 @@ test("a parent with photo consent adds a photo; the coach's register shows it; c
   await expect(staff.locator(`img[src="${src}"]`)).toBeVisible();
   await expect(staff.getByText(/^Added by the parent on \d{1,2} \w{3}$/)).toBeVisible();
   await staff.goto("/admin/sessions");
-  await staff.getByRole("link", { name: `Delete Photo gate ${londonDay()}` }).click();
+  await staff.getByRole("link", { name: `Edit Photo gate ${londonDay()}` }).click();
+  await staff.getByRole("link", { name: "Delete this session" }).click();
   await staff.getByRole("button", { name: "Delete session" }).click();
   await expect(staff.getByText("Deleted.")).toBeVisible();
   await staffContext.close();

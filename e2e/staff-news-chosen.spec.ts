@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { devices, expect, test } from "@playwright/test";
-import { ADMIN_STATE, CHOSEN_PARENT_STATE, newContext, shot, signIn } from "./helpers";
+import { ADMIN_STATE, CHOSEN_PARENT_STATE, newContext, shot, signIn, previewAndPost, unfold } from "./helpers";
 
 // News to chosen children, and "Add to calendar" under a Coming answer. Runs after parent-app.spec.ts (files run in
 // name order) and uses its saved admin sign-in. Isa (parent17) and Dawud (parent18) are both in the sample club's U7s:
@@ -17,12 +17,13 @@ test("the admin posts to one chosen child: that child's parent sees it, another 
   const admin = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
   const page = await admin.newPage();
   await page.goto("/admin/news");
+  await unfold(page, "post-message");
   await page.getByLabel("Headline").fill(HEADLINE);
-  await page.getByLabel("Message").fill("Well done Isa. Details to follow.");
+  await page.getByLabel("Message", { exact: true }).fill("Well done Isa. Details to follow.");
   await page.getByLabel("Chosen children").check();
   // Nobody chosen yet: the line says so, and posting is refused with the text kept.
   await expect(page.getByText("Choose at least one child.", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Post to parents" }).click();
+  await previewAndPost(page);
   await expect(page.getByRole("alert").filter({ hasText: "Choose at least one child." })).toBeVisible();
   await expect(page.getByLabel("Headline")).toHaveValue(HEADLINE);
 
@@ -36,12 +37,13 @@ test("the admin posts to one chosen child: that child's parent sees it, another 
   await expect(page.getByText("1 chosen")).toBeVisible();
   await expect(page.getByText("This goes to 1 parent of Isa G.")).toBeVisible();
   await page.screenshot({ path: shot("admin-news-chosen"), fullPage: true });
-  await page.getByRole("button", { name: "Post to parents" }).click();
+  await previewAndPost(page);
   await expect(page).toHaveURL(/\/admin\/news\/[0-9a-f-]{36}\?posted=1$/);
   await expect(page.getByText("Posted. Sent to 1 parent: they see it at the top of Club news.")).toBeVisible();
   await expect(page.getByText(/1 child: Isa G\./)).toBeVisible();
   await expect(page.getByText("0 of 1 read")).toBeVisible();
   await page.goto("/admin/news");
+  await unfold(page, "post-message");
   await expect(page.getByRole("link", { name: new RegExp(HEADLINE) })).toContainText("1 child: Isa G.");
   await admin.close();
 
@@ -72,10 +74,10 @@ test("after Coming, one tap adds that session to the calendar already on the pho
   const context = await newContext(browser, { ...PHONE, userAgent: DESKTOP_UA, storageState: CHOSEN_PARENT_STATE, acceptDownloads: true });
   const page = await context.newPage();
   await page.goto("/friday");
-  const away = page.getByRole("button", { name: "Not this week: Isa isn't coming" });
+  const away = page.getByRole("button", { name: "Not coming: Isa isn't coming" });
   await away.click();
   await expect(away).toHaveAttribute("aria-pressed", "true");
-  // Not this week: nothing to add.
+  // Not coming: nothing to add.
   await expect(page.getByText("Add to calendar")).toHaveCount(0);
   const coming = page.getByRole("button", { name: "Isa is coming" });
   await coming.click();
@@ -85,7 +87,7 @@ test("after Coming, one tap adds that session to the calendar already on the pho
   await expect(add).toBeVisible();
   await expect(add).toHaveAttribute("href", /^\/api\/sessions\/[0-9a-f-]{36}\/ics$/);
   expect((await add.boundingBox())!.height).toBeGreaterThanOrEqual(48);
-  await expect(page.getByRole("link", { name: "Add every session automatically" })).toHaveAttribute("href", "/player/calendar");
+  await expect(page.getByRole("link", { name: "Add every session automatically" })).toHaveAttribute("href", "/player/calendar?from=/friday");
   const google = page.getByRole("link", { name: /^Or use Google Calendar on the web: / });
   await expect(google).toHaveAttribute("href", /^https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE&text=[^&]*\(Isa\)&dates=\d{8}T\d{6}Z%2F\d{8}T\d{6}Z/);
   await expect(google).toHaveAttribute("target", "_blank");

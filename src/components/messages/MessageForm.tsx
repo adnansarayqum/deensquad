@@ -17,6 +17,7 @@ export function MessageForm({
   submitLabel = "Send",
   placeholder,
   children,
+  compact = false,
 }: {
   action: (prev: MessageFormState, formData: FormData) => Promise<MessageFormState>;
   hidden: Record<string, string>;
@@ -24,11 +25,16 @@ export function MessageForm({
   submitLabel?: string;
   placeholder?: string;
   children?: ReactNode;
+  /** A reply under a thread: two lines that grow as you type, with Send beside the box so it's always in reach. */
+  compact?: boolean;
 }) {
   const [state, run, pending] = useActionState<MessageFormState, FormData>(action, {});
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
-    if (state.saved) form.current?.reset();
+    if (!state.saved) return;
+    form.current?.reset();
+    const box = form.current?.querySelector("textarea");
+    if (box) box.style.height = "";
   }, [state]);
   return (
     <form ref={form} action={run} onSubmit={submitKeepingInput(run)} className="flex flex-col gap-3" noValidate>
@@ -36,12 +42,39 @@ export function MessageForm({
         <input key={name} type="hidden" name={name} value={value} />
       ))}
       {children}
-      <div>
-        <label htmlFor="message-body" className="field-label">
-          {label}
-        </label>
-        <textarea id="message-body" name="body" rows={4} maxLength={BODY_MAX} className="field" placeholder={placeholder} />
-      </div>
+      {compact ? (
+        <div>
+          <label htmlFor="message-body" className="field-label">
+            {label}
+          </label>
+          <div className="flex items-end gap-2">
+            <textarea
+              id="message-body"
+              name="body"
+              rows={2}
+              maxLength={BODY_MAX}
+              className="field max-h-48 min-h-12 flex-1 resize-none"
+              placeholder={placeholder}
+              onInput={(e) => {
+                // Grow with the text, up to about eight lines; then it scrolls.
+                const box = e.currentTarget;
+                box.style.height = "auto";
+                box.style.height = `${box.scrollHeight + 4}px`;
+              }}
+            />
+            <button type="submit" className="btn-chunky btn-grass shrink-0" disabled={pending}>
+              {pending ? "Sending…" : submitLabel}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <label htmlFor="message-body" className="field-label">
+            {label}
+          </label>
+          <textarea id="message-body" name="body" rows={4} maxLength={BODY_MAX} className="field" placeholder={placeholder} />
+        </div>
+      )}
       {state.error ? (
         <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] leading-[22px] text-ink">
           {state.error}
@@ -52,9 +85,11 @@ export function MessageForm({
           Sent.
         </p>
       ) : null}
-      <button type="submit" className="btn-chunky btn-grass self-start" disabled={pending}>
-        {pending ? "Sending…" : submitLabel}
-      </button>
+      {compact ? null : (
+        <button type="submit" className="btn-chunky btn-grass self-start" disabled={pending}>
+          {pending ? "Sending…" : submitLabel}
+        </button>
+      )}
     </form>
   );
 }

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Notice, PageHeader, Section } from "@/components/admin/bits";
 import { MessageForm } from "@/components/messages/MessageForm";
-import { Thread } from "@/components/messages/Thread";
+import { QuotedNews, Thread } from "@/components/messages/Thread";
 import { Pill } from "@/components/ui";
 import { UUID } from "@/lib/auth/tokens";
 import { requireStaff } from "@/lib/auth/session";
@@ -63,10 +63,11 @@ export default async function AdminConversationPage({ params, searchParams }: Pa
       </PageHeader>
       {sent ? <Notice>Sent. {thread.child.firstName}&apos;s parents are notified in the app, or by email if they haven&apos;t turned notifications on.</Notice> : null}
 
+      {thread.news ? <QuotedNews news={thread.news} now={new Date()} /> : null}
       <Thread messages={thread.messages} now={new Date()} />
 
       <Section title="Reply">
-        <MessageForm action={sendStaffMessage} hidden={{ conversation: thread.id }} label={`Reply to ${thread.child.firstName}'s parents`} submitLabel="Send reply" />
+        <MessageForm action={sendStaffMessage} hidden={{ conversation: thread.id }} label={`Reply to ${thread.child.firstName}'s parents`} submitLabel="Send reply" compact />
         <p className="text-[13px] text-ink-muted">Both of {thread.child.firstName}&apos;s parents see it. The club&apos;s admins can read every conversation. Messages can&apos;t be edited or deleted.</p>
       </Section>
     </div>

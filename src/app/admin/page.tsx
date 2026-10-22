@@ -263,6 +263,14 @@ function AttendanceSection({ d }: { d: Dashboard }) {
     >
       {d.attendance.sessions.length === 0 ? (
         <p className="text-[15px] text-ink-muted">No registers taken yet this season. It fills in as coaches take the register.</p>
+      ) : d.attendance.sessions.length < 4 ? (
+        // Two or three points make a misleading line: the figure on its own until there are four sessions.
+        <p className="text-[15px]">
+          <span className="font-display text-[40px] leading-none tabular-nums">{d.attendance.seasonPct ?? 0}%</span>{" "}
+          <span className="text-ink-muted">
+            over {d.attendance.sessions.length} {d.attendance.sessions.length === 1 ? "session" : "sessions"} so far. The chart starts after 4.
+          </span>
+        </p>
       ) : (
         <AttendanceChart data={attendanceChart(d)} title={title} />
       )}

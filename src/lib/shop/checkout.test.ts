@@ -182,7 +182,7 @@ describe("checkout", () => {
       if (size) f.set("size", size);
       return f;
     };
-    expect(await addToBasket({}, add(shirt, "M"))).toEqual({ added: true });
+    expect(await addToBasket({}, add(shirt, "M"))).toEqual({ added: true, basketCount: 1 });
     const { attempt } = parseBasketCookie(jar.get(BASKET_COOKIE));
     expect(attempt).toMatch(/^[0-9a-f-]{36}$/);
     await addToBasket({}, add(socks, null));

@@ -122,6 +122,8 @@ export type Thread = {
   child: { id: string; firstName: string; lastName: string; ageGroup: AgeGroup };
   title: string;
   newsId: string | null;
+  /** The club message this conversation replies to, shown at the top so the reply has its context. */
+  news: { title: string; body: string; postedBy: string | null; postedAt: string } | null;
   /** The member of staff it's addressed to (null: the child's coaches). */
   withName: string | null;
   parents: { id: string; name: string }[];
@@ -141,10 +143,14 @@ export async function loadThread(tx: Queryable, id: string, side: { parent: read
     age_group: AgeGroup;
     subject: string | null;
     news_title: string | null;
+    news_body: string | null;
+    news_by: string | null;
+    news_at: Date | null;
     announcement_id: string | null;
     with_name: string | null;
   }>(
     `select c.id, c.player_id, p.first_name, p.last_name, p.age_group::text as age_group, c.subject, a.title as news_title,
+       a.body as news_body, (select display_name from staff_names where id = a.posted_by) as news_by, a.posted_at as news_at,
        c.announcement_id, sn.display_name as with_name
      from conversations c join players p on p.id = c.player_id
      left join announcements a on a.id = c.announcement_id
@@ -167,6 +173,10 @@ export async function loadThread(tx: Queryable, id: string, side: { parent: read
     child: { id: c.player_id, firstName: c.first_name, lastName: c.last_name, ageGroup: c.age_group },
     title: conversationTitle({ subject: c.subject, newsTitle: c.news_title, childFirstName: c.first_name }),
     newsId: c.announcement_id,
+    news:
+      c.news_title !== null && c.news_at !== null
+        ? { title: c.news_title, body: c.news_body ?? "", postedBy: c.news_by, postedAt: iso(c.news_at) }
+        : null,
     withName: c.with_name,
     parents: parents.map((g) => ({ id: g.id, name: `${g.first_name} ${g.last_name}` })),
     messages: messages.map((m) => ({
@@ -267,7 +277,10 @@ export type InboxRow = {
  * The staff inbox: conversations this member of staff covers or that are addressed to them, newest first.
  * `unreadOnly`: only those with a parent's message they haven't read. `about`: replies to one club message.
  */
-export async function loadInbox(tx: Queryable, opts: { unreadOnly?: boolean; about?: string | null; limit?: number } = {}): Promise<InboxRow[]> {
+export async function loadInbox(
+  tx: Queryable,
+  opts: { unreadOnly?: boolean; about?: string | null; limit?: number; absences?: boolean } = {},
+): Promise<InboxRow[]> {
   const rows = await tx.query<{
     id: string;
     player_id: string;
@@ -299,12 +312,12 @@ export async function loadInbox(tx: Queryable, opts: { unreadOnly?: boolean; abo
        left join lateral (
          select author_kind, author_name, body from conversation_messages where conversation_id = c.id order by created_at desc, id desc limit 1
        ) m on true
-       where ${STAFF_SEES} and ($1::uuid is null or c.announcement_id = $1)
+       where ${STAFF_SEES} and ($1::uuid is null or c.announcement_id = $1) and (not $4 or c.session_id is not null)
      ) x
      where not $2 or x.unread
      order by x.last_message_at desc
      limit $3`,
-    [opts.about ?? null, Boolean(opts.unreadOnly), opts.limit ?? 200],
+    [opts.about ?? null, Boolean(opts.unreadOnly), opts.limit ?? 200, Boolean(opts.absences)],
   );
   return rows.map((r) => ({
     id: r.id,

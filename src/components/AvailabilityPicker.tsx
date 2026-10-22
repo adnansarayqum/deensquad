@@ -35,7 +35,7 @@ export function AvailabilityPicker({
   squad?: boolean;
   /** Who gave the saved answer and when ("Coming · answered by Sara, Tue 2:02pm"), shown until this person taps. */
   answered?: string;
-  /** The reason already sent for Not this week ("poorly"), shown under that answer with Change. */
+  /** The reason already sent for Not coming ("poorly"), shown under that answer with Change. */
   reason?: string | null;
   /** "Add to calendar" links for this session, shown under a Coming (or "Yes, can play") answer. */
   calendar?: CalendarLinks;
@@ -65,7 +65,9 @@ export function AvailabilityPicker({
   // Each button is named for the child, so a family with several children doesn't hear "Coming" again and again. The
   // visible word stays in the name (voice control users say what they see).
   const comingName = squad ? `Yes, ${childName} can play` : `${childName} is coming`;
-  const awayName = squad ? `No, ${childName} can't play` : `Not this week: ${childName} isn't coming`;
+  const awayName = squad ? `No, ${childName} can't play` : `Not coming: ${childName} isn't coming`;
+  // Once answered, the other button steps back, so the answer reads at a glance; it can still be tapped to change.
+  const dim = "opacity-60";
 
   return (
     <div className="flex flex-col gap-3">
@@ -76,7 +78,7 @@ export function AvailabilityPicker({
           aria-pressed={coming}
           aria-label={comingName}
           onClick={() => choose("coming")}
-          className={`${base} ${coming ? "border-grass bg-grass text-on-grass shadow-lip-grass" : "border-line bg-paper text-ink shadow-lip-neutral"}`}
+          className={`${base} ${coming ? "border-grass bg-grass text-on-grass shadow-lip-grass" : `border-line bg-paper text-ink shadow-lip-neutral ${away ? dim : ""}`}`}
         >
           <Check aria-hidden size={icon} strokeWidth={3} />
           {squad ? "Yes" : "Coming"}
@@ -86,10 +88,10 @@ export function AvailabilityPicker({
           aria-pressed={away}
           aria-label={awayName}
           onClick={() => choose("away")}
-          className={`${base} ${away ? "border-ink bg-cream text-ink shadow-lip-neutral" : "border-line bg-paper text-ink shadow-lip-neutral"}`}
+          className={`${base} ${away ? "border-ink bg-cream text-ink shadow-lip-neutral" : `border-line bg-paper text-ink shadow-lip-neutral ${coming ? dim : ""}`}`}
         >
           <X aria-hidden size={icon} strokeWidth={3} />
-          {squad ? "No" : "Not this week"}
+          {squad ? "No" : "Not coming"}
         </button>
       </div>
       {failed && !pending ? (
@@ -107,7 +109,7 @@ export function AvailabilityPicker({
             : away
               ? squad
                 ? `Saved. The coach knows ${childName} can't play, so they can ask a reserve.`
-                : `Saved. Coach knows ${childName} is away this week.`
+                : `Saved. Coach knows ${childName} isn't coming.`
               : `Tap once. ${childName}'s coach sees it straight away.`}
       </p>
       )}
@@ -118,7 +120,7 @@ export function AvailabilityPicker({
 }
 
 /**
- * Under Not this week: an optional reason for the coaches ("poorly", "family wedding"). Sent as a message in the
+ * Under Not coming: an optional reason for the coaches ("poorly", "family wedding"). Sent as a message in the
  * thread for this session and child, so the coaches are told (and can reply), and shown on the register beside the
  * child. Once sent it shows what was sent, with Change. A plain form: it works before the page's script has loaded.
  */
@@ -209,7 +211,7 @@ function detectPlatform(): Platform {
  * the event file, which Safari offers to add at once, and computers get the file (with Google Calendar on the web as
  * a second choice). Before the page knows the phone it links the file, which works everywhere.
  */
-function AddToCalendar({ links }: { links: CalendarLinks }) {
+export function AddToCalendar({ links }: { links: CalendarLinks }) {
   // null while rendering on the server (and in the first paint), the phone's platform after that.
   const platform = useSyncExternalStore(noSubscribe, detectPlatform, () => null);
   const href = platform === "android" ? links.android : platform === "apple" ? links.icsOpen : links.ics;
@@ -236,7 +238,7 @@ function AddToCalendar({ links }: { links: CalendarLinks }) {
           Or use Google Calendar on the web
         </a>
       ) : null}
-      <Link href="/player/calendar" className="inline-flex min-h-12 items-center text-sm text-ink-muted underline">
+      <Link href="/player/calendar?from=/friday" className="inline-flex min-h-12 items-center text-sm text-ink-muted underline">
         Add every session automatically
       </Link>
     </div>

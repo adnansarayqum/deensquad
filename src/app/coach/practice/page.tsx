@@ -1,3 +1,4 @@
+import { ConfirmDelete } from "@/components/admin/ConfirmDelete";
 import type { Metadata } from "next";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Attachment } from "@/components/plans/Attachment";
@@ -42,7 +43,6 @@ export default async function StaffPracticePage() {
       <PageHeader back={{ href: "/coach/plans", label: "Session plans" }} title="Home practice sheets" subtitle="Drills and crib sheets for families to try at home. Parents find them on the Friday screen." />
       <div className="rounded-app border-2 border-line bg-paper p-4">
         <StatefulForm action={addPracticeSheet} keepOnFailure="That didn't save. Your sheet is still here." submitLabel="Share with parents" savedMessage="Shared. Parents in those groups can see it now.">
-          {ai ? <PracticeFromPlan plans={recentPlans} titleId="title" bodyId="body" /> : null}
           <div>
             <label htmlFor="title" className="field-label">
               Title
@@ -58,6 +58,7 @@ export default async function StaffPracticePage() {
               <WritingHelp bodyId="body" titleId="title" kind="practice" ai={ai} />
             </div>
           </div>
+          {ai ? <PracticeFromPlan plans={recentPlans} titleId="title" bodyId="body" /> : null}
           <div>
             <label htmlFor="file" className="field-label">
               Attach a PDF or photo <span className="font-normal text-ink-muted">(optional, up to 8 MB)</span>
@@ -65,11 +66,22 @@ export default async function StaffPracticePage() {
             <input id="file" name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="field py-3 text-[15px]" />
           </div>
           <VideoField />
-          <fieldset className="flex flex-col gap-2">
-            <legend className="field-label">
-              Who is it for? {limited ? null : <span className="font-normal text-ink-muted">(none ticked means every group)</span>}
-            </legend>
-            <div className="flex flex-wrap gap-2">
+          <fieldset className="group/for flex flex-col gap-2">
+            <legend className="field-label">Who is it for?</legend>
+            {limited ? null : (
+              <div className="flex flex-wrap gap-2">
+                <label className="choice-chip">
+                  <input type="radio" name="for" value="all" defaultChecked className="sr-only" />
+                  Every group
+                </label>
+                <label className="choice-chip">
+                  <input type="radio" name="for" value="groups" className="sr-only" />
+                  Only these groups
+                </label>
+              </div>
+            )}
+            {/* Shown under "Only these groups" (always, for a coach of some groups), without JavaScript too. */}
+            <div className={`flex flex-wrap gap-2 ${limited ? "" : "hidden group-has-[[value=groups]:checked]/for:flex"}`}>
               {groups.map((g) => (
                 <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
                   <input type="checkbox" name="groups" value={g} defaultChecked={limited && groups.length === 1} className="h-4 w-4 accent-[var(--grass)]" />
@@ -98,12 +110,9 @@ export default async function StaffPracticePage() {
           <div className="flex items-center justify-between gap-2 text-[13px] text-ink-muted">
             <span>{[s.from, day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</span>
             {user.staff.role === "admin" || s.postedById === user.staff.id ? (
-              <form action={deletePracticeSheet}>
+              <ConfirmDelete action={deletePracticeSheet} label="Remove" confirmLabel="Yes, remove it" name={s.title}>
                 <input type="hidden" name="sheet" value={s.id} />
-                <button type="submit" className="min-h-12 px-1 font-bold underline" aria-label={`Remove ${s.title}`}>
-                  Remove
-                </button>
-              </form>
+              </ConfirmDelete>
             ) : null}
           </div>
         </Card>

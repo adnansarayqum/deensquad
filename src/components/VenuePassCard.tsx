@@ -71,7 +71,7 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
             Show this at the Bobby Moore Sports Hub entrance. Only you can see it: not the club or the coaches.{" "}
             {view.kind === "code" || view.offline
               ? "This phone keeps a copy for when there's no signal."
-              : "This screenshot is too big to keep on the phone for no signal, so keep your own copy too."}
+              : "Keep a copy in your photos as well, for when there's no signal."}
           </p>
         </>
       ) : (

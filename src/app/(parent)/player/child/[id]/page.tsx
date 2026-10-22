@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { backTarget } from "@/lib/parent/tabs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
@@ -18,19 +19,20 @@ import { myChildrenWithMedical } from "@/lib/medical/data";
 export const metadata: Metadata = { title: "Child's details" };
 
 /** Player → a child's details: name and date of birth, which the parent keeps; the group, which the club sets. */
-export default async function ChildDetailsPage({ params }: PageProps<"/player/child/[id]">) {
+export default async function ChildDetailsPage({ params, searchParams }: PageProps<"/player/child/[id]">) {
   const { id } = await params;
+  const { from } = await searchParams;
   if (!UUID.test(id)) notFound();
   const { user } = await getFamily();
   // Only the parent's own children: anyone else's id (guessed or mistyped) is a 404, never a page.
   const [child, medical] = await asUser(user.id, (tx) => Promise.all([loadMyChild(tx, id), myChildrenWithMedical(tx, [id])]));
   if (!child) notFound();
   const hasMedical = medical.has(child.id);
-  const back = `/player?child=${child.id}`;
+  const back = backTarget(from, { href: `/player?child=${child.id}`, label: "Family" });
 
   return (
     <>
-      <BackHeader back={back} backLabel="Back" title={`${child.firstName}'s details`}>
+      <BackHeader back={back.href} backLabel={back.label} title={`${child.firstName}'s details`}>
         Keep {child.firstName}&apos;s name and date of birth right. The club takes care of the rest.
       </BackHeader>
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">

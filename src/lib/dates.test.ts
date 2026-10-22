@@ -32,9 +32,9 @@ describe("labels", () => {
 
   it("describes when a post went up", () => {
     const now = new Date("2026-10-04T15:00:00Z");
-    expect(postedLabel("2026-10-04T08:12:00Z", now)).toBe("Today 09:12");
-    expect(postedLabel("2026-10-03T16:40:00Z", now)).toBe("Yesterday 17:40");
-    expect(postedLabel("2026-10-01T16:40:00Z", now)).toBe("Thu 17:40");
+    expect(postedLabel("2026-10-04T08:12:00Z", now)).toBe("Today 9:12am");
+    expect(postedLabel("2026-10-03T16:40:00Z", now)).toBe("Yesterday 5:40pm");
+    expect(postedLabel("2026-10-01T16:40:00Z", now)).toBe("Thu 5:40pm");
     expect(postedLabel("2026-09-20T16:40:00Z", now)).toBe("20 Sept");
   });
 

@@ -13,7 +13,7 @@ export default async function ProductPage({ params }: PageProps<"/shop/[id]">) {
   const { id } = await params;
   const page = await getProductPage(id);
   if (!page) notFound();
-  const { product, family } = page;
+  const { product, family, basketCount } = page;
   return (
     <>
       <BackHeader back="/shop" backLabel="Club shop" title={product.name}>
@@ -30,9 +30,11 @@ export default async function ProductPage({ params }: PageProps<"/shop/[id]">) {
             id: product.id,
             name: product.name,
             sizes: product.sizes,
-            initialsPrice: product.initialsPence !== null ? formatPence(product.initialsPence) : null,
+            pricePence: product.pricePence,
+            initialsPence: product.initialsPence,
           }}
           kids={family.children.map((c) => ({ id: c.id, firstName: c.firstName }))}
+          basketCount={basketCount}
         />
       </main>
     </>

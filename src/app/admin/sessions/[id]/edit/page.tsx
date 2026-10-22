@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Section } from "@/components/admin/bits";
 import { SessionFields, londonDateInput, londonTimeInput } from "@/components/admin/SessionFields";
@@ -51,6 +52,12 @@ export default async function EditSessionPage({ params }: PageProps<"/admin/sess
           </label>
         </StatefulForm>
       </Section>
+      {/* Deleting sits here, away from the everyday Edit and Cancel on the list. Never once anyone is checked in. */}
+      {session.attended === 0 ? (
+        <Link href={`/admin/sessions/${session.id}/delete`} className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-ink-muted underline">
+          Delete this session
+        </Link>
+      ) : null}
     </div>
   );
 }

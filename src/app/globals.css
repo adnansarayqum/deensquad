@@ -4,6 +4,8 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    /* Keep room for the scrollbar on every page, so the column and tab bar don't jump between long and short pages. */
+    scrollbar-gutter: stable;
   }
   body {
     background: var(--cream);

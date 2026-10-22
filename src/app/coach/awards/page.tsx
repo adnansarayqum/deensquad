@@ -9,6 +9,8 @@ import { groupPlural, isAgeGroup } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Points and stars" };
 
+const lastGiven = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
+
 export default async function AwardsPage({ searchParams }: PageProps<"/coach/awards">) {
   const user = await requireStaff();
   const groups = staffGroups(user.staff);
@@ -43,7 +45,14 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
         ) : null}
       </PageHeader>
       <section aria-label={groupPlural(group)} className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4">
-        <h2 className="text-[17px] font-extrabold">{groupPlural(group)}</h2>
+        <h2 className="flex flex-wrap items-baseline justify-between gap-2 text-[17px] font-extrabold">
+          {groupPlural(group)}
+          {squad.length ? (
+            <span className="text-[13px] font-bold text-ink-muted tabular-nums">
+              {squad.reduce((n, p) => n + p.points, 0)} points · {squad.reduce((n, p) => n + p.stars, 0)} stars in all
+            </span>
+          ) : null}
+        </h2>
         {squad.length === 0 ? <p className="text-[15px] text-ink-muted">No players in the {groupPlural(group)} yet.</p> : null}
         {squad.length ? (
           <ul className="grid gap-2 lg:grid-cols-2">
@@ -59,6 +68,7 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
                     </span>
                     <span className="text-[13px] text-ink-muted">
                       {p.points} {p.points === 1 ? "point" : "points"}
+                      {p.lastAt ? ` · last given ${lastGiven.format(new Date(p.lastAt))}` : ""}
                     </span>
                   </span>
                   {p.stars > 0 ? (

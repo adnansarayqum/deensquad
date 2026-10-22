@@ -94,7 +94,8 @@ export function clock(iso: string): string {
 /** "Today 09:12", "Yesterday 17:40", "Mon 17:40" or "28 Sept" for older posts. */
 export function postedLabel(iso: string, now: Date): string {
   const at = new Date(iso);
-  const time = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }).format(at);
+  // One clock everywhere parents see a time: 7:18pm, as on the session cards.
+  const time = clock(iso);
   const a = londonDate(at);
   const b = londonDate(now);
   const dayDiff = Math.round(

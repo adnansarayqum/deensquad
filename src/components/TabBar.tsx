@@ -2,11 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { useSelectedLayoutSegment } from "next/navigation";
-import { CalendarDays, ListChecks, Megaphone, ShoppingBag, User } from "lucide-react";
+import { useSearchParams, useSelectedLayoutSegment } from "next/navigation";
+import { CalendarDays, ListChecks, Megaphone, ShoppingBag, Users } from "lucide-react";
+import { tabFor } from "@/lib/parent/tabs";
 
-export function TabBar({ unread, playerLabel }: { unread: number; playerLabel: string }) {
-  const active = useSelectedLayoutSegment();
+export function TabBar({ unread }: { unread: number }) {
+  // Pages under a tab keep it lit (the QR code under Sessions, Messages under Family), and a page opened from
+  // another tab says so with ?from= (medical needs from To-do), so the bar doesn't jump mid-task.
+  const active = tabFor(useSelectedLayoutSegment(), useSearchParams().get("from"));
   // The bar grows with large text and zoom: tell the page its real height (--tab-bar-height, used by the parent
   // layout's bottom padding) so nothing at the bottom of a screen, like the QR code's tips, sits behind it.
   const bar = useRef<HTMLElement>(null);
@@ -23,10 +26,10 @@ export function TabBar({ unread, playerLabel }: { unread: number; playerLabel: s
   }, []);
   const tabs = [
     { segment: "news", label: "News", icon: Megaphone },
-    { segment: "friday", label: "Friday", icon: CalendarDays },
+    { segment: "friday", label: "Sessions", icon: CalendarDays },
     { segment: "checklist", label: "To-do", icon: ListChecks },
     { segment: "shop", label: "Shop", icon: ShoppingBag },
-    { segment: "player", label: playerLabel, icon: User },
+    { segment: "player", label: "Family", icon: Users },
   ] as const;
   return (
     <nav

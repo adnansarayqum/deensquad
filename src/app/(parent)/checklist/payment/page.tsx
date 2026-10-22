@@ -28,7 +28,7 @@ export default async function PaymentPage() {
 
   return (
     <>
-      <BackHeader back="/checklist" backLabel="Checklist" title="Set up payments">
+      <BackHeader back="/checklist" backLabel="To-do" title="Set up payments">
         {url ? "The club takes the monthly fee through TeamFeePay. It takes about two minutes." : "How the club takes the monthly fee."}
       </BackHeader>
 

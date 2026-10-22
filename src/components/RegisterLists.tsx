@@ -58,7 +58,7 @@ export function MedicalLink({ id, name, from }: { id: string; name: string; from
       href={`/coach/child/${id}/medical?from=${encodeURIComponent(from)}`}
       aria-label={`Medical info for ${name}`}
       // The pill stays small so the row keeps its height; the tap area reaches 48px tall around it.
-      className="relative inline-flex items-center gap-1 rounded-pill border border-line bg-cream px-2.5 py-0.5 text-label text-ink uppercase underline-offset-2 after:absolute after:-inset-x-1 after:-inset-y-3 after:content-[''] hover:underline"
+      className="relative inline-flex items-center gap-1 rounded-pill bg-pitch px-2.5 py-0.5 text-label text-on-pitch uppercase underline-offset-2 after:absolute after:-inset-x-1 after:-inset-y-3 after:content-[''] hover:underline"
     >
       <HeartPulse aria-hidden size={13} />
       Medical info
@@ -114,8 +114,9 @@ export function RegisterLists({
   const title = (r: GateRow) => (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span className="text-[15px] font-bold">{name(r)}</span>
-      <PayingPill paying={r.paying} />
+      {/* Medical first: on register night it matters more than how the family pays. */}
       {r.medical ? <MedicalLink id={r.id} name={name(r)} from={from} /> : null}
+      <PayingPill paying={r.paying} />
     </span>
   );
   const group = (r: GateRow) => (showGroup ? <Pill tone="neutral">{r.ageGroup}</Pill> : null);

@@ -108,7 +108,7 @@ export function ChildDetailsForm({ child, today }: { child: { id: string; firstN
         <Field id="firstName" name="firstName" label="First name" defaultValue={child.firstName} />
         <Field id="lastName" name="lastName" label="Last name" defaultValue={child.lastName} />
       </div>
-      <Field id="dateOfBirth" name="dateOfBirth" label="Date of birth" type="date" defaultValue={child.dateOfBirth ?? ""} max={today} />
+      <Field id="dateOfBirth" name="dateOfBirth" label="Date of birth" type="date" defaultValue={child.dateOfBirth ?? ""} max={today} hint="Day, month and year. The club uses it to check the age group." />
       <Outcome state={state} pending={pending} saved={`${child.firstName}'s details are saved.`} />
       <button type="submit" className="btn-chunky btn-grass" disabled={pending}>
         {pending ? "Saving…" : "Save details"}
@@ -125,7 +125,7 @@ export function AddChildForm({ groups, lastName, today }: { groups: Group[]; las
         <Field id="firstName" name="firstName" label="First name" />
         <Field id="lastName" name="lastName" label="Last name" defaultValue={lastName} />
       </div>
-      <Field id="dateOfBirth" name="dateOfBirth" label="Date of birth" type="date" max={today} />
+      <Field id="dateOfBirth" name="dateOfBirth" label="Date of birth" type="date" max={today} hint="Day, month and year. The club uses it to check the age group." />
       <div>
         <label htmlFor="ageGroup" className="field-label">
           Group

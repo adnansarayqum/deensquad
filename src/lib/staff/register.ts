@@ -24,7 +24,7 @@ export type RegisterRow = {
   /** The photo a parent added for the coaches (a club_files id). */
   photoId: string | null;
   answer: Availability | null;
-  /** The parent's reason for Not this week ("poorly"), if they gave one. */
+  /** The parent's reason for Not coming ("poorly"), if they gave one. */
   awayReason: string | null;
   checkedInAt: string | null;
   /** How they were checked in: their gate pass or a coach's Mark here. */

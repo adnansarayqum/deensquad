@@ -10,7 +10,8 @@ import { appUrl } from "../config";
 import { londonTime } from "../dates";
 import { asSystem, asUser } from "../db";
 import { AGE_GROUPS, isAgeGroup, type AgeGroup, type SessionKind } from "../domain";
-import { canSendEmail } from "../email/send";
+import { canSendEmail, sendEmails } from "../email/send";
+import { newsTestEmail } from "../email/templates";
 import { cleanBody, cleanPhone, cleanText, dialable } from "../validate";
 import { applyImport, planImport, type ImportProblem, type ImportSummary } from "./import";
 import { overlaps, within } from "./scope";
@@ -294,6 +295,13 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
   if (!TOPICS.includes(topic as (typeof TOPICS)[number])) return { error: "Choose a topic." };
   if (!title) return { error: "Add a headline." };
   if (!body) return { error: "Write the message." };
+  if (formData.get("intent") === "test") {
+    // A look at the post before it goes anywhere: emailed to whoever is writing it, nobody else.
+    const report = await sendEmails([newsTestEmail({ to: user.email, title, body, appUrl: appUrl() })]);
+    return report.sent.length
+      ? { saved: true, message: `Test sent to ${user.email}. Nothing has gone to parents.` }
+      : { error: "The test email didn't send. Try again in a minute." };
+  }
   const requiresAck = formData.get("requiresAck") === "on";
   const allowReplies = formData.get("allowReplies") === "on";
   const quick = parseQuickAnswers(formData.get("quickAnswer") === "on", formData.getAll("option"));

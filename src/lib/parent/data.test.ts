@@ -55,8 +55,8 @@ describe("who answered for a shared child", () => {
 });
 
 describe("a reason for not coming", () => {
-  it("is kept on a Not this week answer, sent to the coaches in one thread per session and child, and cleared by Coming", async () => {
-    // Not until the answer is Not this week.
+  it("is kept on a Not coming answer, sent to the coaches in one thread per session and child, and cleared by Coming", async () => {
+    // Not until the answer is Not coming.
     expect(await t.asUser(adnan, (tx) => saveAwayReason(tx, friday, DEV_IDS.yusuf, "Poorly"))).toBeNull();
     await t.asUser(adnan, (tx) => saveAnswer(tx, friday, DEV_IDS.yusuf, "away"));
     const thread = await t.asUser(adnan, (tx) => saveAwayReason(tx, friday, DEV_IDS.yusuf, "Poorly"));

@@ -152,7 +152,7 @@ export function NewsAudience({ limited, myGroups, list }: { limited: boolean; my
       </div>
 
       {live ? (
-        <p id={reachId} className="rounded-app bg-cream px-3.5 py-2.5 text-[15px] font-bold" aria-live="polite">
+        <p id={reachId} data-news-reach className="rounded-app bg-cream px-3.5 py-2.5 text-[15px] font-bold" aria-live="polite">
           {reachSentence(choice, list)}
         </p>
       ) : null}

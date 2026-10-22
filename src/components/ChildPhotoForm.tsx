@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useState, type FormEvent } from "react";
+import { startTransition, useActionState, useState, useSyncExternalStore, type FormEvent } from "react";
 import { removeChildPhoto, saveChildPhoto, type PhotoFormState } from "@/lib/parent/actions";
 import { MAX_FILE_BYTES, photoTooBig } from "@/lib/files";
 import { shrinkPhoto } from "@/lib/photo-resize";
@@ -9,6 +9,8 @@ import { ChildAvatar } from "./ChildAvatar";
 // Player → a child's details → "Photo for the coaches". Plain forms posting server actions, so they work before the
 // page has loaded (the photo as taken, up to 8 MB). With JavaScript, choosing a photo sends it straight away, shrunk
 // to a 512px JPEG first (`resized=1`).
+
+const noSubscribe = () => () => {};
 
 export function ChildPhotoForm({ child }: { child: { id: string; firstName: string; lastName: string; photoId: string | null } }) {
   const [saved, save, saving] = useActionState<PhotoFormState, FormData>(saveChildPhoto, {});
@@ -20,6 +22,8 @@ export function ChildPhotoForm({ child }: { child: { id: string; firstName: stri
   const last = which === "save" ? saved : removed;
   const busy = saving || removing || preparing;
   const has = Boolean(child.photoId);
+  // With JavaScript, choosing a photo saves it, so there's no Save button to press after it already saved.
+  const live = useSyncExternalStore(noSubscribe, () => true, () => false);
 
   const send = async (form: HTMLFormElement) => {
     const data = new FormData(form);
@@ -53,23 +57,32 @@ export function ChildPhotoForm({ child }: { child: { id: string; firstName: stri
       {/* A new key after each change clears the chosen file. */}
       <form key={child.photoId ?? "none"} action={save} onSubmit={onSubmit} className="flex flex-col gap-2" noValidate>
         <input type="hidden" name="child" value={child.id} />
-        <label htmlFor="photo" className="field-label">
-          {has ? "Change photo" : "Add photo"}
-        </label>
-        <input
-          id="photo"
-          name="photo"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/*"
-          disabled={busy}
-          onChange={(e) => {
-            if (e.currentTarget.files?.length) e.currentTarget.form?.requestSubmit();
-          }}
-          className="field py-3 text-[15px]"
-        />
-        <button type="submit" className="btn-chunky btn-grass" disabled={busy}>
-          {preparing || saving ? "Saving photo…" : "Save photo"}
-        </button>
+        {live ? (
+          <label className={`btn-chunky btn-paper w-full cursor-pointer ${busy ? "pointer-events-none opacity-60" : ""}`}>
+            {preparing || saving ? "Saving photo…" : has ? "Change photo" : "Add photo"}
+            <input
+              id="photo"
+              name="photo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/*"
+              disabled={busy}
+              onChange={(e) => {
+                if (e.currentTarget.files?.length) e.currentTarget.form?.requestSubmit();
+              }}
+              className="sr-only"
+            />
+          </label>
+        ) : (
+          <>
+            <label htmlFor="photo" className="field-label">
+              {has ? "Change photo" : "Add photo"}
+            </label>
+            <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/*" className="field py-3 text-[15px]" />
+            <button type="submit" className="btn-chunky btn-grass">
+              Save photo
+            </button>
+          </>
+        )}
       </form>
       {has ? (
         <form

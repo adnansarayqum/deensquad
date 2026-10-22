@@ -43,7 +43,17 @@ async function checkIn(token: string): Promise<ScanResult | { ok: false; reason:
  * Full-screen camera scanner for family gate passes. Each pass checks the family in straight away.
  * `disabled` on a day with no session (the register is showing the next one): the server would refuse anyway.
  */
-export function PassScanner({ disabled = false, className = "w-full" }: { disabled?: boolean; /** Layout classes for the "Scan QR codes" button (full width by default). */ className?: string }) {
+export function PassScanner({
+  disabled = false,
+  disabledReason,
+  className = "w-full",
+}: {
+  disabled?: boolean;
+  /** Why it can't be used yet ("Opens on Fri 23 Oct…"), as the button's title and description. */
+  disabledReason?: string;
+  /** Layout classes for the "Scan QR codes" button (full width by default). */
+  className?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -209,6 +219,7 @@ export function PassScanner({ disabled = false, className = "w-full" }: { disabl
         type="button"
         onClick={openScanner}
         disabled={disabled}
+        title={disabled ? disabledReason : undefined}
         className={`btn-chunky btn-grass disabled:opacity-60 disabled:shadow-none ${className}`}
       >
         <QrCode aria-hidden size={22} />

@@ -40,7 +40,7 @@ export default async function AgreementPage({ searchParams }: PageProps<"/checkl
 
   return (
     <>
-      <BackHeader back="/checklist" backLabel="Checklist" title="Club contract">
+      <BackHeader back="/checklist" backLabel="To-do" title="Club contract">
         {CONTRACT.title} for {child.firstName}, season {CONTRACT.season}.
       </BackHeader>
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">

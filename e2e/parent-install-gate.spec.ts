@@ -113,7 +113,7 @@ test("an iPhone parent in Safari gets the steps; Not now twice, then only Contin
   await expect(page.locator("[inert]")).toHaveCount(0);
   // Focus lands at the top of the screen behind, not lost on the page.
   await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Friday" }).click();
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Sessions" }).click();
   await expect(page).toHaveURL(/\/friday$/);
   await settled(page);
   await expect(page.getByRole("dialog", GATE)).toHaveCount(0);

@@ -130,13 +130,25 @@ export default async function StaffPage() {
                 {s.signedIn ? <Pill tone="done">Signed in</Pill> : <Pill tone="neutral">Not yet</Pill>}
               </span>
             </div>
-            {groupsForm(s)}
-            {changeable(s) ? (
-              <div className="flex flex-wrap items-start justify-between gap-3 border-t border-line pt-3">
-                {roleForm(s)}
-                {removeForm(s)}
+            <p className="text-[13px] text-ink-muted">
+              {s.role === "admin" ? "Every group" : s.ageGroups.length ? `Groups: ${s.ageGroups.join(", ")}` : "Every group"}
+              {s.signedIn ? "" : ` · Not signed in yet: ask them to sign in with ${s.email}`}
+            </p>
+            {/* The controls fold away, so the list of people stays short. */}
+            <details className="group border-t border-line pt-1">
+              <summary className="inline-flex min-h-12 cursor-pointer list-none items-center gap-1 text-[15px] font-bold text-grass-text [&::-webkit-details-marker]:hidden">
+                Edit {name(s)}
+              </summary>
+              <div className="flex flex-col gap-3 pt-2">
+                {groupsForm(s)}
+                {changeable(s) ? (
+                  <div className="flex flex-wrap items-start justify-between gap-3 border-t border-line pt-3">
+                    {roleForm(s)}
+                    {removeForm(s)}
+                  </div>
+                ) : null}
               </div>
-            ) : null}
+            </details>
           </li>
         ))}
       </ul>

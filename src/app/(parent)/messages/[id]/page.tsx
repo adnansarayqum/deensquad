@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { staffNameForParents } from "@/lib/greeting";
 import { notFound } from "next/navigation";
 import { BackHeader } from "@/components/BackHeader";
 import { MessageForm } from "@/components/messages/MessageForm";
-import { Thread } from "@/components/messages/Thread";
+import { QuotedNews, Thread } from "@/components/messages/Thread";
 import { Card } from "@/components/ui";
 import { UUID } from "@/lib/auth/tokens";
 import { asUser } from "@/lib/db";
@@ -24,7 +25,7 @@ export default async function ConversationPage({ params, searchParams }: PagePro
     return found;
   });
   if (!thread) notFound();
-  const withName = thread.withName ?? "the coaches";
+  const withName = staffNameForParents(thread.withName) ?? "the coaches";
 
   return (
     <>
@@ -37,9 +38,10 @@ export default async function ConversationPage({ params, searchParams }: PagePro
             Sent. You&apos;ll get a notification when the club replies.
           </p>
         ) : null}
-        <Thread messages={thread.messages} now={new Date()} />
+        {thread.news ? <QuotedNews news={{ ...thread.news, postedBy: staffNameForParents(thread.news.postedBy) }} now={new Date()} /> : null}
+        <Thread messages={thread.messages.map((m) => (m.authorKind === "staff" ? { ...m, authorName: staffNameForParents(m.authorName) ?? m.authorName } : m))} now={new Date()} />
         <Card className="p-4">
-          <MessageForm action={sendParentMessage} hidden={{ conversation: thread.id }} label="Reply" submitLabel="Send reply" />
+          <MessageForm action={sendParentMessage} hidden={{ conversation: thread.id }} label="Reply" submitLabel="Send reply" compact />
         </Card>
         <p className="text-[13px] leading-5 text-ink-muted">
           {thread.child.firstName}&apos;s parents, {thread.child.firstName}&apos;s coaches and the club&apos;s admins can read this conversation. Messages are kept as club records.

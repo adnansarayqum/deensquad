@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { greetingName } from "./greeting";
+import { greetingName, staffNameForParents } from "./greeting";
 
 describe("greeting staff by name", () => {
   it("skips the honorific the children use", () => {
@@ -16,5 +16,14 @@ describe("greeting staff by name", () => {
     expect(greetingName("  Hamza  ")).toBe("Hamza");
     expect(greetingName("Coach")).toBe("Coach");
     expect(greetingName("")).toBe("");
+  });
+});
+
+describe("staffNameForParents", () => {
+  it("keeps a title and first name, and shortens a full name to the first name", () => {
+    expect(staffNameForParents("Coach Monju")).toBe("Coach Monju");
+    expect(staffNameForParents("Uncle Tariq Ahmed")).toBe("Uncle Tariq");
+    expect(staffNameForParents("Adnan Sarayqum")).toBe("Adnan");
+    expect(staffNameForParents(null)).toBeNull();
   });
 });

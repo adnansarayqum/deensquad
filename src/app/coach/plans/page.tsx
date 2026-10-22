@@ -12,7 +12,7 @@ import { loadPlans } from "@/lib/plans/data";
 export const metadata: Metadata = { title: "Session plans" };
 
 /** Sessions listed by default; "Show more" (`?all=1`) lists the rest. */
-const SESSIONS_SHOWN = 6;
+const SESSIONS_SHOWN = 2;
 const SESSIONS_LOADED = 40;
 
 export default async function PlansPage({ searchParams }: PageProps<"/coach/plans">) {
@@ -162,7 +162,7 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
 
       {showAll || sessions.length <= SESSIONS_SHOWN ? null : (
         <Link href="/coach/plans?all=1" className="inline-flex min-h-12 items-center self-start text-sm font-bold text-grass-text underline">
-          Show more ({sessions.length - SESSIONS_SHOWN} more {sessions.length - SESSIONS_SHOWN === 1 ? "session" : "sessions"})
+          Later sessions ({sessions.length - SESSIONS_SHOWN})
         </Link>
       )}
     </>

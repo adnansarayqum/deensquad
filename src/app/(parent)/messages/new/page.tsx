@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { staffNameForParents } from "@/lib/greeting";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
@@ -75,7 +76,7 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
     }
     const existing = await asUser(user.id, (tx) => findReplyThread(tx, about, chosen.child.id));
     if (existing) redirect(`/messages/${existing}`);
-    const to = chosen.target.postedBy ?? "the club";
+    const to = staffNameForParents(chosen.target.postedBy) ?? "the club";
     return (
       <>
         <BackHeader back="/news" backLabel="Club news" title={`Reply to ${to}`}>
