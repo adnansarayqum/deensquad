@@ -139,6 +139,12 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
   await expect(directions).toHaveAttribute("href", "https://www.google.com/maps/search/?api=1&query=Bobby%20Moore%20Sports%20Hub");
   await expect(directions).toHaveAttribute("target", "_blank");
   expect((await directions.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  // The QR codes are one tap away from every screen, beside Messages, and the two fit side by side.
+  const qrShortcut = page.getByRole("link", { name: /^Attendance QR codes/ });
+  const messagesShortcut = page.getByRole("link", { name: /^Messages/ });
+  const [qrBox, messagesBox] = [await qrShortcut.boundingBox(), await messagesShortcut.boundingBox()];
+  expect(qrBox!.height).toBeGreaterThanOrEqual(48);
+  expect(qrBox!.x + qrBox!.width).toBeLessThanOrEqual(messagesBox!.x);
   // No signal: Musa's answer doesn't save; the screen and its QR link stay, and Try again sends it once back online.
   const fridayOffline = noSignal("/friday");
   await page.route(fridayOffline, abortPosts);

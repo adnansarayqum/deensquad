@@ -6,7 +6,7 @@ import { londonDate, londonTime, shortDay } from "../dates";
 import { addMessage } from "../messages/data";
 import { SUBJECT_MAX } from "../messages/limits";
 import { myChildrenWithMedical } from "../medical/data";
-import { newsReaches } from "../squads/sql";
+import { newsReaches, sessionIsFor } from "../squads/sql";
 import { CONTACT_IS_PARENT } from "../contacts-sql";
 import type { AgeGroup, Announcement, Availability, Badge, Child, CoachNote, PaymentState, Session } from "../domain";
 
@@ -471,4 +471,22 @@ export async function loadPlayerFacts(tx: Queryable, child: Child, now: Date): P
         }
       : null,
   };
+}
+
+/**
+ * True when one of these children has a session today (London) that's going ahead and still to finish: the
+ * attendance QR shortcut at the top of every parent screen is ringed in gold on those days.
+ */
+export async function hasSessionToday(tx: Queryable, childIds: readonly string[], now: Date): Promise<boolean> {
+  if (childIds.length === 0) return false;
+  const [row] = await tx.query<{ yes: boolean }>(
+    `select exists (
+       select 1 from sessions s join players p on p.id = any ($1::uuid[])
+       where s.cancelled_at is null and s.ends_at > $2
+         and (s.starts_at at time zone 'Europe/London')::date = ($2::timestamptz at time zone 'Europe/London')::date
+         and ${sessionIsFor("s", "p")}
+     ) as yes`,
+    [childIds, now],
+  );
+  return Boolean(row?.yes);
 }

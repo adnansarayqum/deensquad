@@ -62,6 +62,14 @@ test("no signal at the gate: the codes saved on the phone show for /pass and /fr
     await expect(page.getByRole("heading", { name: "Club news" })).toBeVisible();
     const qrCard = page.getByRole("main").getByRole("link", { name: /today: show the QR code/ });
     await expect(qrCard).toBeVisible();
+    // The shortcut beside Messages, ringed in gold today, opens the same codes from any screen.
+    const shortcut = page.getByRole("link", { name: "Attendance QR codes: session today" });
+    await expect(shortcut).toBeVisible();
+    await page.screenshot({ path: shot("news-qr-shortcut-session-day") });
+    await shortcut.click();
+    await expect(page).toHaveURL(/\/pass\?from=%2Fnews/);
+    await expect(page.getByRole("link", { name: /Attendance QR codes/ })).toHaveCount(0);
+    await page.goto("/news");
     await qrCard.click();
     await expect(page).toHaveURL(/\/pass(\?|$)/);
 

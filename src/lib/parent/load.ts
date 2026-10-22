@@ -17,6 +17,7 @@ import type { Child, Session } from "../domain";
 import {
   answerKey,
   familyGroups,
+  hasSessionToday,
   loadAnswers,
   loadCheckInsToday,
   loadChecklistFacts,
@@ -44,13 +45,14 @@ export const getFamily = cache(async () => {
   return { user, family };
 });
 
-/** For the tab bar: unread count and how to label the player tab. */
+/** For the tab bar and the top-right shortcuts: unread counts, whether a session is on today, how to label the player tab. */
 export const getShell = cache(async () => {
   const { user, family } = await getFamily();
-  const [unread, messages] = family.children.length
-    ? await asUser(user.id, (tx) => Promise.all([loadUnreadCount(tx, family), loadParentUnreadMessages(tx, family.children.map((c) => c.id))]))
-    : [0, 0];
-  return { unread, messages, childNames: family.children.map((c) => c.firstName), isStaff: Boolean(user.staff) };
+  const ids = family.children.map((c) => c.id);
+  const [unread, messages, sessionToday] = family.children.length
+    ? await asUser(user.id, (tx) => Promise.all([loadUnreadCount(tx, family), loadParentUnreadMessages(tx, ids), hasSessionToday(tx, ids, new Date())]))
+    : [0, 0, false];
+  return { unread, messages, sessionToday, hasChildren: ids.length > 0, childNames: family.children.map((c) => c.firstName), isStaff: Boolean(user.staff) };
 });
 
 async function loadWeek(userId: string, family: Family, now: Date) {
