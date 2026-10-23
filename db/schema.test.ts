@@ -107,7 +107,7 @@ describe("parent writes", () => {
 describe("squad headcount", () => {
   it("gives parents numbers for their child's group only", async () => {
     const [session] = await t.asSystem((tx) =>
-      tx.query<{ id: string }>("select id from sessions where kind = 'training' and starts_at > now() order by starts_at limit 1"),
+      tx.query<{ id: string }>("select id from sessions where kind = 'training' and ends_at > now() order by starts_at limit 1"),
     );
     const [u9] = await t.asUser(adnan, (tx) => tx.query<{ coming: number; away: number; squad: number }>("select * from squad_counts($1, 'U10')", [session.id]));
     expect(u9).toEqual({ coming: 11, away: 2, squad: 16 });

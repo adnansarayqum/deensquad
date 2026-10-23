@@ -431,7 +431,10 @@ export async function loadPlayerFacts(tx: Queryable, child: Child, now: Date): P
   const [past, attended, badges, notes] = await Promise.all([
     tx.query<{ id: string; starts_at: Date }>(
       `select s.id, s.starts_at from sessions s
+       -- a session counts once it has finished (or the child is already checked in), so one still under way
+       -- never breaks the streak or lowers attendance before the register is done
        where s.starts_at < $1 and s.cancelled_at is null and s.starts_at >= $3::date
+         and (s.ends_at <= $1 or exists (select 1 from attendance a where a.session_id = s.id and a.player_id = $4))
          and case when is_squad_session(s.id)
            then exists (select 1 from session_squads q where q.session_id = s.id and q.player_id = $4)
            else $2::age_group = any (s.age_groups) end

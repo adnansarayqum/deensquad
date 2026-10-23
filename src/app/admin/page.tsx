@@ -211,10 +211,11 @@ function Tiles({ d, next }: { d: Dashboard; next: NextSessionSummary | null }) {
       <li className="flex">
         <StatTile
           href="/admin/families"
-          name={`${d.players} children in the club, ${d.joinedThisMonth} joined this month`}
+          name={d.joinedThisMonth > 0 && d.joinedThisMonth < d.players ? `${d.players} children in the club, ${d.joinedThisMonth} joined this month` : `${d.players} children in the club`}
           label="Children in the club"
           value={String(d.players)}
-          of={d.joinedThisMonth > 0 ? `+${d.joinedThisMonth} this month` : "none new this month"}
+          // Not when every child joined this month (the first import): "+118 this month" says nothing.
+          of={d.joinedThisMonth > 0 && d.joinedThisMonth < d.players ? `+${d.joinedThisMonth} this month` : undefined}
         />
       </li>
       <li className="flex">

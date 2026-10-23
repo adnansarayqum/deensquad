@@ -113,6 +113,8 @@ describe("today's check-ins", () => {
       await tx.query(`insert into attendance (session_id, player_id) values ($1, $2)`, [lastWeek, DEV_IDS.musa]);
     });
     const seen = await t.asUser(sara, (tx) => loadCheckInsToday(tx, [DEV_IDS.yusuf, DEV_IDS.musa], at));
-    expect([...seen]).toEqual([[answerKey(today, DEV_IDS.musa), at.toISOString()]]);
+    // The sample club's own Friday session can also be today (a Friday evening), so check ours, not the whole list.
+    expect(seen.get(answerKey(today, DEV_IDS.musa))).toBe(at.toISOString());
+    expect(seen.has(answerKey(lastWeek, DEV_IDS.musa))).toBe(false);
   });
 });

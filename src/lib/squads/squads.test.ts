@@ -239,7 +239,8 @@ describe("picking the squad", () => {
   });
 
   it("counts a child's season only from when they joined", async () => {
-    // A child who joined today has had no sessions yet; Bilal, moved to joining on the latest register, one.
+    // A child who joined after the latest register has had no sessions yet (not "today": on a Friday evening the
+    // sample club's session today has already been held); Bilal, moved to joining on the latest register, one.
     const [latest] = await t.asSystem((tx) =>
       tx.query<{ day: string }>(
         `select (s.starts_at at time zone 'Europe/London')::date::text as day from sessions s
@@ -249,7 +250,7 @@ describe("picking the squad", () => {
       ),
     );
     await t.asSystem(async (tx) => {
-      await tx.query(`insert into players (first_name, last_name, age_group, joined_on) values ('New', 'Joiner', 'U10', current_date)`);
+      await tx.query(`insert into players (first_name, last_name, age_group, joined_on) values ('New', 'Joiner', 'U10', greatest(current_date, $1::date + 1))`, [latest.day]);
       await tx.query(`update players set joined_on = $1::date where first_name = 'Bilal'`, [latest.day]);
     });
     const view = (await t.asUser(admin, (tx) => loadSquad(tx, cup, null)))!;

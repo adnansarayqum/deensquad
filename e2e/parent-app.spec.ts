@@ -140,7 +140,8 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
   await expect(directions).toHaveAttribute("target", "_blank");
   expect((await directions.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   // The QR codes are one tap away from every screen, beside Messages, and the two fit side by side.
-  const qrShortcut = page.getByRole("link", { name: /^Attendance QR codes/ });
+  // Exact: on a day without a session, Friday also has an "Attendance QR codes" card.
+  const qrShortcut = page.getByRole("link", { name: /^Attendance QR codes(: session today)?$/ });
   const messagesShortcut = page.getByRole("link", { name: /^Messages/ });
   const [qrBox, messagesBox] = [await qrShortcut.boundingBox(), await messagesShortcut.boundingBox()];
   expect(qrBox!.height).toBeGreaterThanOrEqual(48);
@@ -885,7 +886,7 @@ test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and
   await expect(tiles).toHaveCount(4);
   await expect(page.getByRole("link", { name: /^Attendance this season: \d+%$/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /^\d+ parents on the app, \d+ not yet$/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /^\d+ children in the club, \d+ joined this month$/ })).toHaveAttribute("href", "/admin/families");
+  await expect(page.getByRole("link", { name: /^\d+ children in the club(, \d+ joined this month)?$/ })).toHaveAttribute("href", "/admin/families");
   await expect(page.getByRole("link", { name: /^\d+ of \d+ children coming / })).toHaveAttribute("href", "/admin/coming");
   // The attendance chart: a hover/keyboard tooltip and a table twin with the same numbers.
   const chart = page.getByRole("group", { name: /^Attendance at each session this season/ });
