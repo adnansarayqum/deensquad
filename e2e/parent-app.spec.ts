@@ -885,7 +885,17 @@ test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and
   const tiles = page.getByRole("list", { name: "At a glance" }).getByRole("link");
   await expect(tiles).toHaveCount(4);
   await expect(page.getByRole("link", { name: /^Attendance this season: \d+%$/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /^\d+ parents on the app, \d+ not yet$/ })).toBeVisible();
+  const parentsTile = page.getByRole("link", { name: /^\d+ parents on the app, \d+ not yet$/ });
+  await expect(parentsTile).toHaveAttribute("href", "/admin/parents");
+  // The tile's "N not yet" are listed by name, invited or not.
+  const notYet = Number(/, (\d+) not yet$/.exec((await parentsTile.getAttribute("aria-label"))!)![1]);
+  const parentsPage = await page.context().newPage();
+  await parentsPage.goto("/admin/parents");
+  await expect(parentsPage.getByText(new RegExp(`^${notYet} parents? (hasn't|haven't) signed in yet\\.$`))).toBeVisible();
+  const listed = await parentsPage.getByRole("heading", { level: 2 }).allTextContents();
+  expect(listed.map((h) => Number(/\((\d+)\)$/.exec(h)![1])).reduce((a, b) => a + b, 0)).toBe(notYet);
+  await parentsPage.screenshot({ path: shot("admin-parents-not-in"), fullPage: true });
+  await parentsPage.close();
   await expect(page.getByRole("link", { name: /^\d+ children in the club(, \d+ joined this month)?$/ })).toHaveAttribute("href", "/admin/families");
   await expect(page.getByRole("link", { name: /^\d+ of \d+ children coming / })).toHaveAttribute("href", "/admin/coming");
   // The attendance chart: a hover/keyboard tooltip and a table twin with the same numbers.

@@ -203,7 +203,7 @@ function NeedsYou({ d, now, canInvite }: { d: Dashboard; now: Date; canInvite: b
 function Tiles({ d, next }: { d: Dashboard; next: NextSessionSummary | null }) {
   const f = d.families;
   const spark = d.attendance.sessions.slice(-10).map((s) => s.pct);
-  const signInHref = f.signedIn === f.parents ? "/admin/families" : f.notInvited > 0 ? "/admin/families?need=invite" : "/admin/families?need=signin";
+  const signInHref = f.signedIn === f.parents ? "/admin/families" : "/admin/parents";
   const notYet = f.parents - f.signedIn;
   const when = next ? (next.day === "Today" || next.day === "Tomorrow" ? next.day.toLowerCase() : next.day) : "";
   return (

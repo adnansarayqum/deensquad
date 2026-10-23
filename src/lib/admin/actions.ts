@@ -151,6 +151,19 @@ export async function resendInvite(formData: FormData): Promise<void> {
   redirect(withQuery(page, failed ? "invite=failed" : "invited=1"));
 }
 
+/** "Send invite" on the Parents not on the app list (/admin/parents): one parent, then back to the list. */
+export async function inviteParentFromList(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const guardian = id(formData.get("guardian"));
+  if (!guardian) return;
+  const page = "/admin/parents";
+  if (!canSendEmail()) redirect(withQuery(page, "invite=no-email"));
+  const base = await inviteBase();
+  if (!base) redirect(withQuery(page, "invite=no-url"));
+  const { failed } = await sendInvites({ guardianIds: [guardian], baseUrl: base });
+  redirect(withQuery(page, failed ? "invite=failed" : "invited=1"));
+}
+
 // Children and parents --------------------------------------------------------
 
 /** `message` replaces the form's usual "saved" line when the result needs saying (e.g. dates skipped). */
