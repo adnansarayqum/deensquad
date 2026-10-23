@@ -63,7 +63,10 @@ test("the admin adds a Girls session; it's on her Friday and its register lists 
   const parent = await newContext(browser, { ...PHONE, storageState: GIRLS_PARENT_STATE });
   const friday = await parent.newPage();
   await friday.goto("/friday");
-  await expect(friday.getByText(`${day} · Girls`, { exact: true })).toBeVisible();
+  // The day in full and in words, so it's never read as another week's.
+  const longDay = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "long", day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00Z`));
+  await expect(friday.getByText(`${longDay} · Girls`, { exact: true })).toBeVisible();
+  await expect(friday.getByRole("heading", { level: 1, name: /^Is Amina coming (this|next) \w+day\?$/ })).toBeVisible();
   await expect(friday.getByRole("group", { name: `Is Amina coming? ${day}` }).getByRole("button", { name: "Amina is coming" })).toBeVisible();
   await expect(friday.getByRole("heading", { name: `${TITLE} briefing` })).toBeVisible();
   await expect(friday.getByRole("region", { name: "Girls this week" })).toContainText("Girls coming this week");

@@ -113,3 +113,40 @@ export function daysUntil(iso: string, now: Date): number {
   const b = londonDate(new Date(iso));
   return Math.round((Date.UTC(b.year, b.month - 1, b.day) - Date.UTC(a.year, a.month - 1, a.day)) / 86400000);
 }
+
+/** London calendar days from `now` to `iso` (0 = the same day, 7 = a week on). */
+export function londonDaysAhead(iso: string, now: Date): number {
+  const a = londonDate(now);
+  const b = londonDate(new Date(iso));
+  return Math.round((Date.UTC(b.year, b.month - 1, b.day) - Date.UTC(a.year, a.month - 1, a.day)) / 86400000);
+}
+
+const weekdayName = (iso: string) => new Intl.DateTimeFormat("en-GB", { timeZone: TZ, weekday: "long" }).format(new Date(iso));
+
+/**
+ * When a session is, in words that can't be mistaken for another week: "today", "tomorrow", "this Wednesday"
+ * (2 to 6 days ahead), "next Friday" (7 to 13), else "on Fri 6 Nov". Parents read a bare "Fri 30 Oct" under a
+ * cancelled card for today's session as this week's question.
+ */
+export function whenWords(iso: string, now: Date): string {
+  const days = londonDaysAhead(iso, now);
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  if (days >= 2 && days <= 6) return `this ${weekdayName(iso)}`;
+  if (days >= 7 && days <= 13) return `next ${weekdayName(iso)}`;
+  return `on ${shortDay(iso)}`;
+}
+
+/** A session's day as a heading: "Today", "Tomorrow", "This Wednesday, 28 Oct", "Next Friday, 30 Oct", else "Fri 6 Nov". */
+export function dayHeading(iso: string, now: Date): string {
+  const words = whenWords(iso, now);
+  if (words === "today" || words === "tomorrow") return words[0].toUpperCase() + words.slice(1);
+  if (words.startsWith("on ")) return shortDay(iso);
+  const date = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, day: "numeric", month: "short" }).format(new Date(iso));
+  return `${words[0].toUpperCase()}${words.slice(1)}, ${date}`;
+}
+
+/** "Friday 30 October" */
+export function longDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }).format(new Date(iso));
+}

@@ -1185,7 +1185,10 @@ test("session changes: an admin edits a session, cancels it with a reason and te
 
   // The parent sees the cancellation with its reason, and is still asked about Zara's next session.
   await page.goto("/friday");
-  await expect(page.getByText(`Cancelled: U12 extra, ${day} · U12`)).toBeVisible();
+  // Today's, said as today's, so it can't be read as the question below it.
+  await expect(page.getByText("Today's session is cancelled")).toBeVisible();
+  await expect(page.getByText("U12 extra · U12", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^Next session: \w+day \d{1,2} \w+$/)).toBeVisible();
   await expect(page.getByText("Pitch waterlogged")).toBeVisible();
   await expect(page.getByText("Check club news")).toHaveCount(0);
   const next = page.getByRole("group", { name: /Is Zara coming/ });

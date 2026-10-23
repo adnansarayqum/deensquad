@@ -135,7 +135,7 @@ test("no signal at the gate: the codes saved on the phone show for /pass and /fr
     // Back online, Try again loads the real page.
     await signal(true);
     await page.getByRole("button", { name: "Try again" }).click();
-    await expect(page.getByRole("heading", { name: "Is Idris coming?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Is Idris coming today?" })).toBeVisible();
     await expect(page.getByText("No signal. Showing the codes saved on this phone.")).toHaveCount(0);
 
     // Signing out forgets the codes: the next person on this phone sees none, even with no signal.

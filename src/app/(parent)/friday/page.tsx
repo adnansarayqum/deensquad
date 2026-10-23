@@ -13,7 +13,7 @@ import { VenuePassPicture } from "@/components/VenuePassPicture";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { androidCalendarIntent, googleCalendarUrl, sessionIcsOpenPath, sessionIcsPath } from "@/lib/calendar/session";
 import { appUrl } from "@/lib/config";
-import { clock, shortDay } from "@/lib/dates";
+import { clock, dayHeading, longDay, shortDay, whenWords } from "@/lib/dates";
 import { attachmentTitle } from "@/lib/files";
 import { groupPlural, type Session } from "@/lib/domain";
 import type { SquadCounts } from "@/lib/parent/data";
@@ -31,6 +31,8 @@ export default async function FridayPage() {
   // Every child's QR code is kept on the phone for no signal; on a session day, today's children's codes are shown here too.
   const cards = await passCards(family.children);
   const now = new Date();
+  // The next session going ahead, named on a cancelled card so it's never mistaken for the cancelled one.
+  const nextUp = week.flatMap((w) => (w.session && !w.session.cancelled ? [w.session] : [])).sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0] ?? null;
   const today = sessionsToday(week, now);
   /** "Coming · answered by Sara, Tue 2:02pm" (or "by you") under an answer that's already been given. */
   const answered = (w: { answered?: ChildWeek["answered"]; session?: Session }) =>
@@ -69,14 +71,14 @@ export default async function FridayPage() {
       {single?.session ? (
         <AppHeader stripes>
           <p className="text-label text-floodlight uppercase">
-            {shortDay(single.session.startsAt)} · {groupPlural(single.child.ageGroup)}
+            {longDay(single.session.startsAt)} · {groupPlural(single.child.ageGroup)}
           </p>
           <h1 className="font-display text-[48px] leading-[0.92] tracking-[0.02em]">
             {single.checkedInAt
               ? `${single.child.firstName} is here`
               : single.session.squad
-                ? `Can ${single.child.firstName} play?`
-                : `Is ${single.child.firstName} coming?`}
+                ? `Can ${single.child.firstName} play ${whenWords(single.session.startsAt, now)}?`
+                : `Is ${single.child.firstName} coming ${whenWords(single.session.startsAt, now)}?`}
           </h1>
           <p className="text-sm text-on-pitch-muted">
             {single.session.squad ? `${single.session.title} · ` : ""}
@@ -114,7 +116,7 @@ export default async function FridayPage() {
 
         {/* A cancelled session never hides the next one: it shows here, and the next one is asked about below. */}
         {cancelled.map((s) => (
-          <Cancelled key={s.id} session={s} />
+          <Cancelled key={s.id} session={s} now={now} next={nextUp} />
         ))}
 
         {single ? (
@@ -139,7 +141,7 @@ export default async function FridayPage() {
           // Several children: one block per session (date, time and venue said once), a row per child, one calendar.
           <>
             {sessions.map((s) => (
-              <SessionBlock key={s.id} session={s} rows={week.filter((w) => w.session?.id === s.id)} answered={answered} calendar={calendar(s)} />
+              <SessionBlock key={s.id} session={s} now={now} rows={week.filter((w) => w.session?.id === s.id)} answered={answered} calendar={calendar(s)} />
             ))}
             {week
               .filter((w) => !w.session)
@@ -267,11 +269,13 @@ function uniqueSessions(week: ChildWeek[]): Session[] {
  */
 function SessionBlock({
   session,
+  now,
   rows,
   answered,
   calendar,
 }: {
   session: Session;
+  now: Date;
   rows: ChildWeek[];
   answered: (w: ChildWeek) => string | undefined;
   calendar?: CalendarLinks;
@@ -280,7 +284,7 @@ function SessionBlock({
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex flex-col gap-0.5">
         <h2 className="text-[19px] font-extrabold">
-          {session.title} · {shortDay(session.startsAt)}
+          {dayHeading(session.startsAt, now)} · {session.title}
         </h2>
         <div className="flex flex-wrap items-center justify-between gap-x-3">
           <p className="text-sm text-ink-muted">
@@ -448,19 +452,31 @@ function Headcount({ group, counts, squad }: { group: string; counts: SquadCount
   );
 }
 
-/** "Cancelled: Training, Fri 9 Oct" with the reason staff gave, if any. */
-function Cancelled({ session }: { session: Session }) {
+/**
+ * A cancelled session, said in words that can't be read as the next one: "Today's session is cancelled" (or
+ * "Cancelled: Training, this Wednesday"), the reason staff gave, and when the next session is. Parents read the old
+ * "Cancelled: …, Fri 23 Oct" above "Is Zakariya coming?" as being asked about today.
+ */
+function Cancelled({ session, now, next }: { session: Session; now: Date; next: Session | null }) {
+  const when = whenWords(session.startsAt, now);
+  const groups = session.squad ? "" : ` · ${session.ageGroups.join(", ")}`;
   return (
-    <div className="flex items-center gap-3 rounded-app border-2 border-kit-orange bg-paper p-3.5">
+    <div className="flex items-start gap-3 rounded-app border-2 border-kit-orange bg-paper p-3.5">
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-orange-tint text-kit-orange">
         <CalendarX aria-hidden size={22} />
       </span>
-      <p className="flex flex-col text-[15px] leading-[22px]">
-        <span className="font-bold">
-          Cancelled: {session.title}, {shortDay(session.startsAt)}
-          {session.squad ? "" : ` · ${session.ageGroups.join(", ")}`}
+      <p className="flex min-w-0 flex-col text-[15px] leading-[22px]">
+        <span className="text-[17px] font-extrabold">
+          {when === "today" ? "Today's session is cancelled" : when === "tomorrow" ? "Tomorrow's session is cancelled" : `Cancelled: ${session.title}, ${when.replace(/^on /, "")}${groups}`}
         </span>
+        {when === "today" || when === "tomorrow" ? (
+          <span className="text-ink-muted">
+            {session.title}
+            {groups}
+          </span>
+        ) : null}
         {session.cancelReason ? <span>{session.cancelReason}</span> : null}
+        {next ? <span className="font-bold">Next session: {longDay(next.startsAt)}</span> : null}
       </p>
     </div>
   );

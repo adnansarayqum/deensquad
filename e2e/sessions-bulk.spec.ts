@@ -79,7 +79,7 @@ test("the admin adds two Girls sessions, bulk edits the venue only, bulk cancels
   const parent = await newContext(browser, { ...PHONE, storageState: GIRLS_PARENT_STATE });
   const friday = await parent.newPage();
   await friday.goto("/friday");
-  for (const d of DAYS) await expect(friday.getByText(`Cancelled: ${TITLE}, ${dayOf(d)} · Girls`)).toBeVisible();
+  await expect(friday.getByText(new RegExp(`^Cancelled: ${TITLE}, this \\w+day · Girls$`))).toHaveCount(DAYS.length);
   await expect(friday.getByText("Half term")).toHaveCount(2);
   await expect(friday.getByRole("group", { name: /Is Amina coming/ })).toBeVisible();
   await friday.goto("/news");

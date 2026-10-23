@@ -8,7 +8,7 @@ import { NotificationsCard } from "@/components/NotificationsCard";
 import { ReadFocus } from "@/components/ReadFocus";
 import { StaffSwitch } from "@/components/StaffSwitch";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
-import { clock, postedLabel, shortDay } from "@/lib/dates";
+import { clock, dayHeading, postedLabel, shortDay } from "@/lib/dates";
 import { getNewsPage } from "@/lib/parent/load";
 import type { AnnouncementView, Family } from "@/lib/parent/data";
 import { sessionsToday, weekSummary } from "@/lib/parent/views";
@@ -48,12 +48,13 @@ export default async function NewsPage() {
                 {shortDay(soonest.startsAt).slice(0, 3).toUpperCase()}
               </span>
               <span className="flex min-w-0 flex-1 flex-col">
+                {/* The day in words ("Next Friday, 30 Oct"), so next week's session is never read as today's. */}
                 <span className="text-[15px] font-bold">
-                  {soonest.cancelled ? `${soonest.title} cancelled` : `${soonest.title} · ${clock(soonest.startsAt)}`}
+                  {soonest.cancelled ? `${soonest.title} cancelled` : `${dayHeading(soonest.startsAt, now)} · ${clock(soonest.startsAt)}`}
                 </span>
                 {soonest.cancelled ? null : <span className="text-[14px] font-bold text-floodlight">{weekSummary(week)}</span>}
                 <span className="text-[13px] text-on-pitch-muted">
-                  {soonest.venue}
+                  {soonest.cancelled ? soonest.venue : `${soonest.title} · ${soonest.venue}`}
                   {soonest.arriveBy && !soonest.cancelled ? ` · arrive ${soonest.arriveBy}` : ""}
                 </span>
               </span>
