@@ -7,6 +7,7 @@ import { MAX_FILE_BYTES, PHOTO_TYPES, sniff } from "../files";
 import { cleanScreenshot } from "../photo-clean";
 import { clearMyVenuePass, setMyVenuePassImage, setMyVenuePassText } from "./data";
 import { cleanVenueCode } from "./qr";
+import { readQrFromImage } from "./read-server";
 
 // The parent's own sports hub entry code on /pass. With JavaScript the phone reads the QR code in the screenshot and
 // sends only its text (`code`); otherwise, or when there's no readable code in it, the screenshot itself
@@ -33,6 +34,13 @@ export async function saveVenuePass(_prev: VenuePassState, formData: FormData): 
   const data = new Uint8Array(await file.arrayBuffer());
   const mime = sniff(data);
   if (!mime || !(PHOTO_TYPES as readonly string[]).includes(mime)) return { error: "Choose a screenshot (a PNG, JPEG or WebP picture)." };
+  // A code the phone didn't read may still be readable here: then it's kept as text and drawn crisp.
+  const read = cleanVenueCode(await readQrFromImage(data));
+  if (read) {
+    await asUser(user.id, (tx) => setMyVenuePassText(tx, read));
+    refresh();
+    return { saved: "code" };
+  }
   // Always re-encoded: no location or other details kept, at most 1200px.
   const clean = await cleanScreenshot(data);
   if (!clean) return { error: "We couldn't open that picture. Try another screenshot." };

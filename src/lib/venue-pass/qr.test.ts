@@ -2,11 +2,12 @@ import jsQR from "jsqr";
 import QRCode from "qrcode";
 import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
-import { cleanVenueCode, fitsOffline, OFFLINE_IMAGE_MAX, readQrPixels, VENUE_CODE_MAX } from "./qr";
+import { cleanVenueCode, fitsOffline, highContrast, OFFLINE_IMAGE_MAX, readQrAnyWay, readQrPixels, readSides, VENUE_CODE_MAX } from "./qr";
 import { QR_OPTIONS, qrDataUrl } from "../qr-picture";
 
 vi.mock("server-only", () => ({}));
 const { cleanScreenshot, SCREENSHOT_SIDE } = await import("../photo-clean");
+const { readQrFromImage } = await import("./read-server");
 
 /** A QR code drawn as RGBA pixels, `scale` pixels a module, the way it's drawn with QR_OPTIONS (quiet zone included). */
 function pixels(text: string, scale = 4, invert = false) {
@@ -91,5 +92,46 @@ describe("cleanScreenshot", () => {
     const meta = await sharp(out!.data).metadata();
     expect([out?.mime, meta.width, meta.height]).toEqual(["image/jpeg", 300, 200]);
     expect(await cleanScreenshot(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]))).toBeNull();
+  });
+});
+
+/** A made-up printed ticket: the code in mid-greys on grey paper, with a shadow across it, as a phone photo shows it. */
+function ticketPhoto(text: string, scale: number) {
+  const { data, side } = pixels(text, scale);
+  for (let y = 0; y < side; y++) {
+    for (let x = 0; x < side; x++) {
+      const i = (y * side + x) * 4;
+      const shade = 1 - 0.45 * (x / side); // darker towards the right, like a hand's shadow
+      const v = (data[i] === 0 ? 70 : 190) * shade;
+      data[i] = data[i + 1] = data[i + 2] = v;
+    }
+  }
+  return { data, side };
+}
+
+describe("reading a photo of a printed code", () => {
+  it("tries the picture's own size and then smaller ones, never larger", () => {
+    expect(readSides(3000)).toEqual([1600, 1000, 700, 500, 350]);
+    expect(readSides(800)).toEqual([800, 700, 500, 350]);
+    expect(readSides(200)).toEqual([200]);
+  });
+
+  it("evens out an unevenly lit grey code into black and white", () => {
+    const out = highContrast(new Uint8ClampedArray([40, 40, 40, 255, 200, 200, 200, 255]));
+    expect([...out]).toEqual([0, 0, 0, 255, 255, 255, 255, 255]);
+  });
+
+  it("reads a shadowed grey code in high contrast", () => {
+    const { data, side } = ticketPhoto("IND000000", 6);
+    expect(readQrAnyWay(jsQR, data, side, side)).toBe("IND000000");
+  });
+
+  it("on the server, reads a code from an uploaded photo so it can be kept as text", async () => {
+    const { data, side } = ticketPhoto("IND123456", 40); // a big photo: about 1500px
+    const png = new Uint8Array(await sharp(Buffer.from(data), { raw: { width: side, height: side, channels: 4 } }).jpeg({ quality: 80 }).toBuffer());
+    expect(await readQrFromImage(png)).toBe("IND123456");
+    const blank = new Uint8Array(await sharp({ create: { width: 400, height: 300, channels: 3, background: "#ddd" } }).png().toBuffer());
+    expect(await readQrFromImage(blank)).toBeNull();
+    expect(await readQrFromImage(new Uint8Array([1, 2, 3]))).toBeNull();
   });
 });

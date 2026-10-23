@@ -25,6 +25,44 @@ export function readQrPixels(jsQR: typeof jsQRType, pixels: Uint8ClampedArray, w
   return found ? cleanVenueCode(found.data) : null;
 }
 
+/**
+ * The longest sides a picture is read at, largest first. A photo of a printed ticket often reads only when shrunk
+ * (paper texture and shadows confuse the reader at full size), while a code that's a small part of a full-page
+ * screenshot needs the large ones.
+ */
+export const READ_SIDES = [1600, 1000, 700, 500, 350] as const;
+
+/** The sides to try for a picture whose longest side is `longest`: never larger than the picture itself. */
+export function readSides(longest: number): number[] {
+  const sides: number[] = READ_SIDES.filter((s) => s < longest);
+  return longest <= READ_SIDES[0] ? [longest, ...sides] : sides;
+}
+
+/** Black and white at the picture's mean brightness: evens out a grey, unevenly lit photo of a printed code. */
+export function highContrast(pixels: Uint8ClampedArray): Uint8ClampedArray {
+  const n = pixels.length / 4;
+  const grey = new Uint8ClampedArray(n);
+  let sum = 0;
+  for (let i = 0; i < n; i++) {
+    const v = (pixels[i * 4] * 299 + pixels[i * 4 + 1] * 587 + pixels[i * 4 + 2] * 114) / 1000;
+    grey[i] = v;
+    sum += v;
+  }
+  const mean = n ? sum / n : 128;
+  const out = new Uint8ClampedArray(pixels.length);
+  for (let i = 0; i < n; i++) {
+    const v = grey[i] < mean ? 0 : 255;
+    out[i * 4] = out[i * 4 + 1] = out[i * 4 + 2] = v;
+    out[i * 4 + 3] = 255;
+  }
+  return out;
+}
+
+/** The text of a QR code in these pixels, as they are or in high contrast, or null. */
+export function readQrAnyWay(jsQR: typeof jsQRType, pixels: Uint8ClampedArray, width: number, height: number): string | null {
+  return readQrPixels(jsQR, pixels, width, height) ?? readQrPixels(jsQR, highContrast(pixels), width, height);
+}
+
 /** Whether a screenshot of this many bytes fits on the phone for no signal once it's a base64 data URL. */
 export function fitsOffline(bytes: number): boolean {
   return bytes > 0 && Math.ceil(bytes / 3) * 4 + 32 <= OFFLINE_IMAGE_MAX;
