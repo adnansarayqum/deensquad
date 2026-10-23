@@ -11,6 +11,7 @@ const NEXT_WEEK = "2026-10-16T17:30:00.000Z";
 function dashboard(over: Partial<Dashboard> = {}): Dashboard {
   return {
     players: 21,
+    joinedThisMonth: 0,
     attendance: {
       next: [
         { group: "U7", squad: 5, session: { id: "s1", title: "Training", startsAt: FRIDAY }, coming: 0, away: 0, unanswered: 5 },

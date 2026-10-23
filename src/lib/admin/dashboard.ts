@@ -66,6 +66,8 @@ export type Channel = (typeof CHANNELS)[number];
 
 export type Dashboard = {
   players: number;
+  /** Children who joined this London calendar month (players.joined_on), within the same groups. */
+  joinedThisMonth: number;
   attendance: {
     next: NextSessionGroup[];
     season: SeasonGroup[];
@@ -228,6 +230,7 @@ export async function loadDashboard(
        )
        select
          (select count(*)::int from mine) as players,
+         (select count(*)::int from mine where joined_on >= date_trunc('month', $2::timestamptz at time zone 'Europe/London')::date) as "joinedThisMonth",
          (select count(*)::int from mine p where ${NEEDS.missing3.where}) as "missedLast3",
          (select count(*)::int from parents) as parents,
          (select count(*)::int from parents where auth_user_id is not null) as "signedIn",
@@ -238,7 +241,7 @@ export async function loadDashboard(
          ${(["active", "self_reported", "pay_as_you_go", "missing", "overdue"] as const)
            .map((st) => `(select count(*)::int from mine p left join payment_status ps on ps.player_id = p.id where coalesce(ps.state::text, 'missing') = '${st}') as "pay_${st}"`)
            .join(",\n         ")}`,
-      [groups],
+      [groups, now],
     ),
     withShop
       ? tx.query<{ awaiting_payment: number; to_order: number; ordered: number; ready: number; orders: number; month_pence: number; season_pence: number }>(
@@ -283,6 +286,7 @@ export async function loadDashboard(
   const s = shop?.[0];
   return {
     players: f.players,
+    joinedThisMonth: f.joinedThisMonth,
     attendance: {
       next: next.map((r) => ({
         group: r.group,

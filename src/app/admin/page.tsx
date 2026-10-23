@@ -6,7 +6,7 @@ import { AttendanceChart, Bar, BarLink, HBarList, NeedLink, Sparkline, StackedBa
 import { CHANNELS, loadDashboard, type Channel, type Dashboard } from "@/lib/admin/dashboard";
 import { closeDataRequest } from "@/lib/admin/actions";
 import { TODO_NEEDS } from "@/lib/admin/needs";
-import { attendanceChart, needsYou, newsReadPct, nextSessionSummary, sharedStart, type NextSessionSummary } from "@/lib/admin/overview";
+import { attendanceChart, needsYou, nextSessionSummary, sharedStart, type NextSessionSummary } from "@/lib/admin/overview";
 import { coachLimit, requireStaff } from "@/lib/auth/session";
 import { asUser, isDemo } from "@/lib/db";
 import { clock, shortDay } from "@/lib/dates";
@@ -202,16 +202,37 @@ function NeedsYou({ d, now, canInvite }: { d: Dashboard; now: Date; canInvite: b
 
 function Tiles({ d, next }: { d: Dashboard; next: NextSessionSummary | null }) {
   const f = d.families;
-  const news = newsReadPct(d.news.recent.slice(0, 3));
   const spark = d.attendance.sessions.slice(-10).map((s) => s.pct);
   const signInHref = f.signedIn === f.parents ? "/admin/families" : f.notInvited > 0 ? "/admin/families?need=invite" : "/admin/families?need=signin";
+  const notYet = f.parents - f.signedIn;
+  const when = next ? (next.day === "Today" || next.day === "Tomorrow" ? next.day.toLowerCase() : next.day) : "";
   return (
     <ul aria-label="At a glance" className="grid grid-cols-1 gap-4 min-[300px]:grid-cols-2 lg:grid-cols-4">
       <li className="flex">
         <StatTile
+          href="/admin/families"
+          name={`${d.players} children in the club, ${d.joinedThisMonth} joined this month`}
+          label="Children in the club"
+          value={String(d.players)}
+          of={d.joinedThisMonth > 0 ? `+${d.joinedThisMonth} this month` : "none new this month"}
+        />
+      </li>
+      <li className="flex">
+        <StatTile
+          href={signInHref}
+          name={`${f.signedIn} parents on the app, ${notYet} not yet`}
+          label="Parents on the app"
+          value={String(f.signedIn)}
+          of={notYet === 0 ? "every parent" : `${notYet} not yet`}
+        >
+          <Bar thin label="Parents" segments={[{ label: "on the app", value: f.signedIn, tone: "done" }, { label: "not yet", value: notYet, tone: "rest" }]} />
+        </StatTile>
+      </li>
+      <li className="flex">
+        <StatTile
           href={next?.href ?? "/admin/sessions"}
-          name={next ? `${next.coming} of ${next.squad} coming ${next.day === "Today" || next.day === "Tomorrow" ? next.day.toLowerCase() : `on ${next.day}`}` : "No session coming up"}
-          label={next ? `Coming ${next.day === "Today" || next.day === "Tomorrow" ? next.day.toLowerCase() : next.day}` : "Next session"}
+          name={next ? `${next.coming} of ${next.squad} children coming ${when === "today" || when === "tomorrow" ? when : `on ${when}`}` : "No session coming up"}
+          label={next ? `Coming ${when}` : "Next session"}
           value={next ? String(next.coming) : "–"}
           of={next ? `of ${next.squad} children` : "none coming up"}
         >
@@ -227,28 +248,6 @@ function Tiles({ d, next }: { d: Dashboard; next: NextSessionSummary | null }) {
           of={d.attendance.seasonPct === null ? "no register yet" : undefined}
         >
           <Sparkline values={spark} />
-        </StatTile>
-      </li>
-      <li className="flex">
-        <StatTile
-          href={signInHref}
-          name={`${f.signedIn} parents on the app, ${f.parents - f.signedIn} not yet`}
-          label="Parents on the app"
-          value={String(f.signedIn)}
-          of={f.parents === f.signedIn ? "every parent" : `${f.parents - f.signedIn} not yet`}
-        >
-          <Bar thin label="Parents" segments={[{ label: "signed in", value: f.signedIn, tone: "done" }, { label: "not yet", value: f.parents - f.signedIn, tone: "rest" }]} />
-        </StatTile>
-      </li>
-      <li className="flex">
-        <StatTile
-          href="/admin/news"
-          name={news ? `News read: ${news.pct}% (${news.read} of ${news.total}) on the latest messages` : "News read: nothing asks to be read yet"}
-          label="News read"
-          value={news ? `${news.pct}%` : "–"}
-          of={news ? `latest ${Math.min(3, d.news.recent.length)}` : "none asked"}
-        >
-          {news ? <Bar thin label="Read" segments={[{ label: "read", value: news.read, tone: "done" }, { label: "not read", value: news.total - news.read, tone: "rest" }]} /> : null}
         </StatTile>
       </li>
     </ul>

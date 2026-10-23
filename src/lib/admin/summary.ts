@@ -62,6 +62,11 @@ export type MonthlySummary = {
   joined: { children: number; parents: number };
   news: { posted: number; askedToRead: number; readPct: number | null };
   shop: { orders: number; takingsPence: number };
+  /** Session fees taken at the gate in the month (pay as you go, no plan yet, trials). */
+  gate: { payments: number; pence: number };
+  /** Trial bookings for sessions in the month (not cancelled), and how many arrived. */
+  trials: { booked: number; came: number };
+  incidents: number;
   now: { invitedNotIn: number; noPlan: number; overdue: number; contractUnsigned: number; deletionRequests: number; missedLast3: number };
 };
 
@@ -79,7 +84,10 @@ export async function loadMonthlySummary(tx: Queryable, month: SummaryMonth, now
     loadDashboard(tx, { now, limit: null, withShop: true, withRequests: true }),
     groupAttendance(tx, groups, from, until),
     groupAttendance(tx, groups, before.from, before.to),
-    tx.query<{ held: number; cancelled: number; children: number; parents: number; orders: number; takings: number }>(
+    tx.query<{
+      held: number; cancelled: number; children: number; parents: number; orders: number; takings: number;
+      gate_payments: number; gate_pence: number; trials_booked: number; trials_came: number; incidents: number;
+    }>(
       `select
          (select count(*)::int from sessions where starts_at >= $1 and starts_at < $2 and ends_at <= $3 and cancelled_at is null) as held,
          (select count(*)::int from sessions where starts_at >= $1 and starts_at < $2 and cancelled_at is not null) as cancelled,
@@ -87,7 +95,14 @@ export async function loadMonthlySummary(tx: Queryable, month: SummaryMonth, now
          (select count(*)::int from guardians where created_at >= $1 and created_at < $2) as parents,
          (select count(*)::int from shop_orders where created_at >= $1 and created_at < $2 and status <> 'cancelled') as orders,
          (select coalesce(sum(total_pence), 0)::int from shop_orders
-           where status in ('paid', 'ordered', 'ready', 'collected') and paid_at >= $1 and paid_at < $2) as takings`,
+           where status in ('paid', 'ordered', 'ready', 'collected') and paid_at >= $1 and paid_at < $2) as takings,
+         (select count(*)::int from session_payments where taken_at >= $1 and taken_at < $2) as gate_payments,
+         (select coalesce(sum(amount_pence), 0)::int from session_payments where taken_at >= $1 and taken_at < $2) as gate_pence,
+         (select count(*)::int from trial_bookings t join sessions s on s.id = t.session_id
+           where s.starts_at >= $1 and s.starts_at < $2 and t.cancelled_at is null) as trials_booked,
+         (select count(*)::int from trial_bookings t join sessions s on s.id = t.session_id
+           where s.starts_at >= $1 and s.starts_at < $2 and t.cancelled_at is null and t.arrived_at is not null) as trials_came,
+         (select count(*)::int from incidents where happened_at >= $1 and happened_at < $2) as incidents`,
       [from, to, now],
     ),
     // The same read counts as the overview's news list, over the messages posted in the month that ask to be read.
@@ -120,6 +135,9 @@ export async function loadMonthlySummary(tx: Queryable, month: SummaryMonth, now
     joined: { children: counts.children, parents: counts.parents },
     news: { posted: news.posted, askedToRead: news.asked, readPct: averagePct(news.read, news.total) },
     shop: { orders: counts.orders, takingsPence: counts.takings },
+    gate: { payments: counts.gate_payments, pence: counts.gate_pence },
+    trials: { booked: counts.trials_booked, came: counts.trials_came },
+    incidents: counts.incidents,
     now: {
       invitedNotIn: dash.families.invited,
       noPlan: dash.payments.missing,
@@ -169,7 +187,13 @@ export function summarySections(s: MonthlySummary): SummarySection[] {
               : `News: ${n(s.news.posted, "message", "messages")} posted. On the ${s.news.askedToRead} that asked, ${s.news.readPct ?? 0}% of parents tapped ‘I’ve read this’.`,
           path: "/admin/news",
         },
+        { text: `Paid at the gate: ${pounds(s.gate.pence)} from ${n(s.gate.payments, "session fee", "session fees")}.`, path: "/admin" },
+        {
+          text: s.trials.booked === 0 ? "Trial sessions: none booked." : `Trial sessions: ${s.trials.booked} booked, ${s.trials.came} came.`,
+          path: "/admin/trials",
+        },
         { text: `Shop: ${n(s.shop.orders, "order", "orders")} placed, ${pounds(s.shop.takingsPence)} paid.`, path: "/admin/shop" },
+        { text: `Accidents and incidents logged: ${s.incidents}.`, path: "/coach/incidents" },
       ],
     },
     {

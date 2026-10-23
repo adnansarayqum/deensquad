@@ -116,7 +116,10 @@ describe("what the summary says", () => {
         "U10: 6% over 3 sessions with the register taken (August: 6%).",
         "Joined: 0 children and 0 new parents.",
         "News: 3 messages posted. On the 3 that asked, 3% of parents tapped ‘I’ve read this’.",
+        "Paid at the gate: £0.00 from 0 session fees.",
+        "Trial sessions: none booked.",
         "Shop: 1 order placed, £25.00 paid.",
+        "Accidents and incidents logged: 0.",
       ]
     `);
     expect(month.lines.map((l) => l.path)).toContain("/admin/shop");
