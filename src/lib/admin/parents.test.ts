@@ -12,6 +12,7 @@ let admin: string;
 beforeAll(async () => {
   t = await testDatabase({ seed: true, now: new Date("2031-10-15T12:00:00Z") });
   admin = await t.signIn(DEV_EMAILS.admin);
+  await t.signIn(DEV_EMAILS.parent); // Yusuf's parent, on the app
 });
 
 describe("parents not on the app", () => {
@@ -32,6 +33,8 @@ describe("parents not on the app", () => {
     const second = list.find((p) => p.email === "second@example.com")!;
     expect(second.invitedAt).not.toBeNull();
     expect(second.children.map((c) => c.id)).toContain(DEV_IDS.yusuf);
+    // Yusuf's signed-in parent is named, so staff can see the family is already reachable.
+    expect(second.partnersOnApp.length).toBeGreaterThan(0);
   });
 
   it("keeps a group coach to their own groups", async () => {

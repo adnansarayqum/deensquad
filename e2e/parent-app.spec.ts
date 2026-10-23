@@ -891,7 +891,7 @@ test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and
   const notYet = Number(/, (\d+) not yet$/.exec((await parentsTile.getAttribute("aria-label"))!)![1]);
   const parentsPage = await page.context().newPage();
   await parentsPage.goto("/admin/parents");
-  await expect(parentsPage.getByText(new RegExp(`^${notYet} parents? (hasn't|haven't) signed in yet\\.$`))).toBeVisible();
+  await expect(parentsPage.getByText(new RegExp(`^${notYet} parents? (hasn't|haven't) signed in yet$`))).toBeVisible();
   const listed = await parentsPage.getByRole("heading", { level: 2 }).allTextContents();
   expect(listed.map((h) => Number(/\((\d+)\)$/.exec(h)![1])).reduce((a, b) => a + b, 0)).toBe(notYet);
   await parentsPage.screenshot({ path: shot("admin-parents-not-in"), fullPage: true });
