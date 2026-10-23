@@ -176,6 +176,19 @@ async function seasonAttendance(
   return { groups: seasonGroups, sessions };
 }
 
+/**
+ * A group's next session (`g.grp`, from `$2` on): not cancelled, not finished, and for a tournament squad only when
+ * some of the group are picked. Shared by the overview's Next session figures and Who's coming (`coming.ts`), so the
+ * page a figure opens counts the same children.
+ */
+export const NEXT_SESSION_FOR_GROUP = `
+         select s.id, s.title, s.starts_at, s.ends_at, s.venue, s.age_groups from sessions s
+         where s.ends_at > $2 and s.cancelled_at is null and g.grp = any (s.age_groups::text[])
+           -- a squad session counts for a group only when some of the group are picked
+           and (not is_squad_session(s.id) or exists (
+             select 1 from session_squads q join players qp on qp.id = q.player_id where q.session_id = s.id and qp.age_group::text = g.grp))
+         order by s.starts_at, s.created_at limit 1`;
+
 // A message reaches a child when it's for everyone (null or empty audience) or for the child's group,
 // or, for a message to a tournament squad, when the child is in that squad.
 const reaches = newsReaches("a", "p");
@@ -202,14 +215,7 @@ export async function loadDashboard(
          (select count(*)::int from availability v join players p on p.id = v.player_id
            where v.session_id = s.id and p.age_group::text = g.grp and v.answer = 'away' and ${sessionIsFor("s", "p")}) as away
        from unnest($1::text[]) with ordinality as g (grp, ord)
-       left join lateral (
-         select s.id, s.title, s.starts_at, s.age_groups from sessions s
-         where s.ends_at > $2 and s.cancelled_at is null and g.grp = any (s.age_groups::text[])
-           -- a squad session counts for a group only when some of the group are picked
-           and (not is_squad_session(s.id) or exists (
-             select 1 from session_squads q join players qp on qp.id = q.player_id where q.session_id = s.id and qp.age_group::text = g.grp))
-         order by s.starts_at, s.created_at limit 1
-       ) s on true
+       left join lateral (${NEXT_SESSION_FOR_GROUP}) s on true
        order by g.ord`,
       [groups, now],
     ),

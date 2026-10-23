@@ -6,7 +6,7 @@ import { AttendanceChart, Bar, BarLink, HBarList, NeedLink, Sparkline, StackedBa
 import { CHANNELS, loadDashboard, type Channel, type Dashboard } from "@/lib/admin/dashboard";
 import { closeDataRequest } from "@/lib/admin/actions";
 import { TODO_NEEDS } from "@/lib/admin/needs";
-import { attendanceChart, needsYou, newsReadPct, nextSessionSummary, registerHref, sharedStart, type NextSessionSummary } from "@/lib/admin/overview";
+import { attendanceChart, needsYou, newsReadPct, nextSessionSummary, sharedStart, type NextSessionSummary } from "@/lib/admin/overview";
 import { coachLimit, requireStaff } from "@/lib/auth/session";
 import { asUser, isDemo } from "@/lib/db";
 import { clock, shortDay } from "@/lib/dates";
@@ -289,8 +289,8 @@ function NextSessionSection({ d }: { d: Dashboard }) {
           <li key={g.group}>
             {g.session ? (
               <BarLink
-                href={registerHref(g.session.id, [g.group])}
-                name={`${g.group}, ${shortDay(g.session.startsAt)}: ${g.coming} coming, ${g.away} not coming, ${g.unanswered} not answered. Open the register`}
+                href={`/admin/coming?group=${g.group}`}
+                name={`${g.group}, ${shortDay(g.session.startsAt)}: ${g.coming} coming, ${g.away} not coming, ${g.unanswered} not answered. See who`}
                 heading={g.group}
                 aside={sameTime ? undefined : `${shortDay(g.session.startsAt)}, ${clock(g.session.startsAt)}`}
                 label={`${g.group}, ${shortDay(g.session.startsAt)}`}

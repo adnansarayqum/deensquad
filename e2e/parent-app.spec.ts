@@ -885,6 +885,7 @@ test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and
   await expect(tiles).toHaveCount(4);
   await expect(page.getByRole("link", { name: /^Attendance this season: \d+%$/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /^\d+ of \d+ parents signed in$/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^\d+ of \d+ coming / })).toHaveAttribute("href", "/admin/coming");
   // The attendance chart: a hover/keyboard tooltip and a table twin with the same numbers.
   const chart = page.getByRole("group", { name: /^Attendance at each session this season/ });
   await chart.focus();
@@ -905,14 +906,17 @@ test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and
   await page.screenshot({ path: shot("admin-dashboard-desktop-dark"), fullPage: true });
   await page.emulateMedia({ colorScheme: "light" });
 
-  // The U10 bar links to that session's register (not just today's) and the register shows its day.
-  const u10 = page.getByRole("link", { name: /^U10, \w{3} \d{1,2} \w{3,4}: \d+ coming, \d+ not coming, \d+ not answered\. Open the register$/ });
-  const day = (await u10.getAttribute("aria-label"))!.match(/^U10, (\w{3} \d{1,2} \w{3,4}):/)![1];
-  const href = (await u10.getAttribute("href"))!;
-  expect(href).toMatch(/^\/coach\?session=[0-9a-f-]{36}&group=U10$/);
+  // The U10 bar opens Who's coming for U10: the same numbers, each child by name.
+  const u10 = page.getByRole("link", { name: /^U10, \w{3} \d{1,2} \w{3,4}: \d+ coming, \d+ not coming, \d+ not answered\. See who$/ });
+  const [, coming, away, unanswered] = (await u10.getAttribute("aria-label"))!.match(/(\d+) coming, (\d+) not coming, (\d+) not answered/)!;
+  await expect(u10).toHaveAttribute("href", "/admin/coming?group=U10");
   await u10.click();
-  await expect(page).toHaveURL(href);
-  await expect(page.getByText(new RegExp(` · ${day} \\d{1,2}:\\d{2}[ap]m$`))).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Who's coming", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Coming (${coming})` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Not coming (${away})` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Not answered yet (${unanswered})` })).toBeVisible();
+  await expect(page.getByRole("link", { name: "U10", exact: true })).toHaveAttribute("aria-current", "page");
+  await page.screenshot({ path: shot("admin-who-is-coming"), fullPage: true });
   await page.goto("/admin");
 
   // A to-do count opens Families filtered to those children, as a table with one row per child.

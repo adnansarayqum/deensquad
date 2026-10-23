@@ -39,7 +39,6 @@ export function nextSessionSummary(d: Dashboard, now: Date): NextSessionSummary 
   const day = daysAhead(first.session.startsAt, now);
   const groups = withSession.filter((g) => daysAhead(g.session.startsAt, now) === day);
   const sum = (k: "coming" | "away" | "unanswered" | "squad") => groups.reduce((n, g) => n + g[k], 0);
-  const inFirst = groups.filter((g) => g.session.id === first.session.id).map((g) => g.group);
   return {
     startsAt: first.session.startsAt,
     day: day === 0 ? "Today" : day === 1 ? "Tomorrow" : shortDay(first.session.startsAt),
@@ -48,7 +47,7 @@ export function nextSessionSummary(d: Dashboard, now: Date): NextSessionSummary 
     away: sum("away"),
     unanswered: sum("unanswered"),
     squad: sum("squad"),
-    href: registerHref(first.session.id, inFirst),
+    href: "/admin/coming",
   };
 }
 
@@ -79,7 +78,7 @@ export function needsYou(d: Dashboard, now: Date, { canInvite }: { canInvite: bo
       key: "unanswered",
       count: soon?.unanswered ?? 0,
       text: `${plural(soon?.unanswered ?? 0, "child hasn't", "children haven't")} answered for ${soon && (soon.day === "Today" || soon.day === "Tomorrow") ? soon.day.toLowerCase() : (soon?.day ?? "")}`,
-      href: soon?.href ?? "/coach",
+      href: soon ? "/admin/coming#not-answered" : "/coach",
     },
     { key: "overdue", count: d.payments.overdue, text: plural(d.payments.overdue, "payment overdue", "payments overdue"), href: "/admin/families?need=overdue" },
     { key: "check", count: d.payments.self_reported, text: plural(d.payments.self_reported, "payment plan to check", "payment plans to check"), href: "/admin/families?need=check" },

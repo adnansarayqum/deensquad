@@ -55,7 +55,7 @@ describe("overview: Needs you", () => {
   it("lists only what's above 0, most pressing first, each linking to the list its count came from", () => {
     const rows = needsYou(dashboard(), NOW, ADMIN);
     expect(rows.map((r) => [r.count, r.text, r.href])).toEqual([
-      [8, "children haven't answered for Fri 9 Oct", "/coach?session=s1&group=all"],
+      [8, "children haven't answered for Fri 9 Oct", "/admin/coming#not-answered"],
       [21, "parents not invited yet", "/admin/families?need=invite"],
       [15, "children missed their last 3 sessions", "/admin/families?need=missing3"],
       [20, "parents behind on news", "/admin/families?need=unread"],
@@ -111,7 +111,7 @@ describe("overview: next session and tiles", () => {
   it("adds up the groups whose next session is on the first session day", () => {
     const d = dashboard();
     d.attendance.next.push({ group: "U15", squad: 4, session: { id: "s2", title: "Match", startsAt: NEXT_WEEK }, coming: 4, away: 0, unanswered: 0 });
-    expect(nextSessionSummary(d, NOW)).toMatchObject({ day: "Fri 9 Oct", coming: 11, squad: 21, unanswered: 8, href: "/coach?session=s1&group=all" });
+    expect(nextSessionSummary(d, NOW)).toMatchObject({ day: "Fri 9 Oct", coming: 11, squad: 21, unanswered: 8, href: "/admin/coming" });
     expect(nextSessionSummary(dashboard({ attendance: { ...dashboard().attendance, next: [] } }), NOW)).toBeNull();
     expect(registerHref("s9", ["U10"])).toBe("/coach?session=s9&group=U10");
   });
