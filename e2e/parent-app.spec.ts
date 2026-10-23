@@ -1243,11 +1243,11 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
   writeFileSync(video, cameraVideo(picture));
 
   // Large text and 200% zoom (a 195px-wide screen): the tab bar grows and the page makes room for it, so everything
-  // down to the last tip can be scrolled clear of the bar.
+  // down to the last line can be scrolled clear of the bar.
   const clearOfTabBar = async () => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const bar = (await page.getByRole("navigation", { name: "Main" }).boundingBox())!;
-    const tip = (await page.getByText(/this phone keeps a copy/i).boundingBox())!;
+    const tip = (await page.getByText(/not the club or the coaches/i).boundingBox())!;
     return bar.y - (tip.y + tip.height);
   };
   await page.addStyleTag({ content: "html { font-size: 200% !important; }" });

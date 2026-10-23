@@ -63,7 +63,7 @@ test("a parent keeps their sports hub entry code beside the QR codes: read from 
   const page = await context.newPage();
   await page.goto("/pass");
   const card = page.getByRole("region", { name: "Your sports hub entry code" });
-  await expect(card.getByText(/Add your Bobby Moore Sports Hub entry code \(from your screenshots\) so it's here at the gate\./)).toBeVisible();
+  await expect(card.getByText(/Add your Bobby Moore Sports Hub entry code from your screenshots\./)).toBeVisible();
   await expect(card.getByText(/Only you can see it/)).toBeVisible();
   await page.screenshot({ path: shot("pass-hub-empty"), fullPage: true });
 

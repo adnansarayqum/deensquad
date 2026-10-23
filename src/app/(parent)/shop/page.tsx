@@ -14,7 +14,6 @@ export default async function ShopPage() {
     <>
       <AppHeader>
         <ScreenTitle>Club shop</ScreenTitle>
-        <p className="text-sm text-on-pitch-muted">Order kit here and collect it at Friday training.</p>
       </AppHeader>
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
         <div className="grid grid-cols-2 gap-2">

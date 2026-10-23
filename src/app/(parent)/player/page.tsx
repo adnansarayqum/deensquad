@@ -246,16 +246,6 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           </div>
         </section>
 
-        <section aria-labelledby="messages" className="mt-2 flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
-          <h2 id="messages" className="text-base font-extrabold">
-            Messages
-          </h2>
-          <p className="text-[15px] leading-[22px]">Message the coaches, and read their replies to you.</p>
-          <Link href="/messages" className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-grass-text underline">
-            Open messages
-          </Link>
-        </section>
-
         <section aria-labelledby="your-data"className="mt-2 flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
           <h2 id="your-data" className="text-base font-extrabold">
             Your data

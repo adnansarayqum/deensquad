@@ -87,7 +87,6 @@ export default async function FridayPage() {
         <AppHeader stripes>
           <p className="text-label text-floodlight uppercase">Next sessions</p>
           <h1 className="font-display text-[48px] leading-[0.92] tracking-[0.02em]">{single ? "Sessions" : "Who's coming?"}</h1>
-          {week.length > 1 ? <p className="text-sm text-on-pitch-muted">Tap once for each child. Their coach sees it straight away.</p> : null}
         </AppHeader>
       )}
 
@@ -473,7 +472,7 @@ function NoSession({ name }: { name: string }) {
       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold-tint text-gold-text">
         <MoonStar aria-hidden size={24} />
       </span>
-      <p className="text-[15px] leading-[22px]">No session scheduled for {name}&apos;s group yet. The club will add the dates here.</p>
+      <p className="text-[15px] leading-[22px]">No sessions for {name}&apos;s group yet.</p>
     </Card>
   );
 }

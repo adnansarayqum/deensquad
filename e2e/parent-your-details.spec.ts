@@ -83,7 +83,6 @@ test("a parent adds a child in U10: on Player, on Friday, on the admin's Familie
   await page.goto("/player/add-child");
   await expect(page.getByRole("heading", { name: "Add a child" })).toBeVisible();
   await expect(page.getByLabel("Last name")).toHaveValue("Haddad");
-  await expect(page.getByText("To give the other parent their own sign-in, use Add the other parent on Players.")).toBeVisible();
   await page.screenshot({ path: shot("player-add-child"), fullPage: true });
 
   // A child already on the account (same first name and date of birth) is refused.

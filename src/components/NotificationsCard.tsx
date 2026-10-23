@@ -81,7 +81,7 @@ export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
         ) : (
           <>
             <p className="text-[15px] leading-[22px]">
-              <b>Get a notification when the club posts</b>, instead of finding out on Friday.
+              <b>Get a notification when the club posts.</b>
             </p>
             <button type="button" onClick={enable} disabled={state === "working"} className="btn-chunky btn-grass btn-small self-start">
               {state === "working" ? "Turning on…" : "Turn on notifications"}

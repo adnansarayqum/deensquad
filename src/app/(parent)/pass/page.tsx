@@ -40,7 +40,7 @@ export default async function PassPage({ searchParams }: PageProps<"/pass">) {
             <PassCarousel cards={cards} />
             <p className="flex items-start gap-2 text-sm leading-5 text-ink-muted">
               <Sun aria-hidden size={18} className="mt-0.5 shrink-0" />
-              At the gate, turn your screen brightness up. Each code stays the same every week, and this phone keeps a copy for when there&apos;s no signal.
+              Turn your screen brightness up at the gate. The codes work with no signal too.
             </p>
           </>
         )}

@@ -68,7 +68,7 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
         <>
           <VenuePassPicture view={view} />
           <p className="text-sm leading-5 text-ink-muted">
-            Show this at the Bobby Moore Sports Hub entrance. Only you can see it: not the club or the coaches.{" "}
+            Only you can see this, not the club or the coaches.{" "}
             {view.kind === "code" || view.offline
               ? "This phone keeps a copy for when there's no signal."
               : "Keep a copy in your photos as well, for when there's no signal."}
@@ -76,8 +76,7 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
         </>
       ) : (
         <p className="text-[15px] leading-[22px]">
-          Add your Bobby Moore Sports Hub entry code (from your screenshots) so it&apos;s here at the gate. Only you can see it: not the club or the
-          coaches.
+          Add your Bobby Moore Sports Hub entry code from your screenshots. Only you can see it, not the club or the coaches.
         </p>
       )}
 

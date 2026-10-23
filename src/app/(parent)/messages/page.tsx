@@ -32,7 +32,7 @@ export default async function MessagesPage({ searchParams }: PageProps<"/message
           <Card className="p-4 text-[15px] leading-[22px]">No players are linked to your email yet. Ask the club to add your child.</Card>
         )}
         {conversations.length === 0 && family.children.length ? (
-          <Card className="p-4 text-[15px] leading-[22px] text-ink-muted">No messages yet. Replies to club news and your messages to the coaches will be here.</Card>
+          <Card className="p-4 text-[15px] leading-[22px] text-ink-muted">No messages yet.</Card>
         ) : null}
         {conversations.length ? (
           <ul aria-label="Conversations" className="flex flex-col gap-2.5">

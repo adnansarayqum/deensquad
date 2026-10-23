@@ -58,11 +58,9 @@ export default async function ChecklistPage() {
                 {done} / {total}
               </span>
             </div>
-            <p className="text-sm text-on-pitch-muted">
-              {remaining === 0
-                ? `All done. ${single ? `${who} is` : "Everyone is"} fully set up.`
-                : `${remaining === 1 ? "One more step" : `${remaining} more steps`} and ${single ? `${who} is` : "everyone is"} fully set up.`}
-            </p>
+            {remaining === 0 ? (
+              <p className="text-sm text-on-pitch-muted">All done. {single ? `${who} is` : "Everyone is"} fully set up.</p>
+            ) : null}
           </>
         ) : null}
       </AppHeader>
