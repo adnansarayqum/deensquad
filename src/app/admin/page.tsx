@@ -213,7 +213,7 @@ function Tiles({ d, next }: { d: Dashboard; next: NextSessionSummary | null }) {
           name={next ? `${next.coming} of ${next.squad} coming ${next.day === "Today" || next.day === "Tomorrow" ? next.day.toLowerCase() : `on ${next.day}`}` : "No session coming up"}
           label={next ? `Coming ${next.day === "Today" || next.day === "Tomorrow" ? next.day.toLowerCase() : next.day}` : "Next session"}
           value={next ? String(next.coming) : "–"}
-          of={next ? `of ${next.squad}` : "none coming up"}
+          of={next ? `of ${next.squad} children` : "none coming up"}
         >
           {next ? <Bar thin label="Coming" segments={[{ label: "coming", value: next.coming, tone: "done" }, { label: "not yet", value: next.squad - next.coming, tone: "rest" }]} /> : null}
         </StatTile>
@@ -230,7 +230,13 @@ function Tiles({ d, next }: { d: Dashboard; next: NextSessionSummary | null }) {
         </StatTile>
       </li>
       <li className="flex">
-        <StatTile href={signInHref} name={`${f.signedIn} of ${f.parents} parents signed in`} label="Parents signed in" value={String(f.signedIn)} of={`of ${f.parents}`}>
+        <StatTile
+          href={signInHref}
+          name={`${f.signedIn} parents on the app, ${f.parents - f.signedIn} not yet`}
+          label="Parents on the app"
+          value={String(f.signedIn)}
+          of={f.parents === f.signedIn ? "every parent" : `${f.parents - f.signedIn} not yet`}
+        >
           <Bar thin label="Parents" segments={[{ label: "signed in", value: f.signedIn, tone: "done" }, { label: "not yet", value: f.parents - f.signedIn, tone: "rest" }]} />
         </StatTile>
       </li>

@@ -884,7 +884,7 @@ test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and
   const tiles = page.getByRole("list", { name: "At a glance" }).getByRole("link");
   await expect(tiles).toHaveCount(4);
   await expect(page.getByRole("link", { name: /^Attendance this season: \d+%$/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /^\d+ of \d+ parents signed in$/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^\d+ parents on the app, \d+ not yet$/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /^\d+ of \d+ coming / })).toHaveAttribute("href", "/admin/coming");
   // The attendance chart: a hover/keyboard tooltip and a table twin with the same numbers.
   const chart = page.getByRole("group", { name: /^Attendance at each session this season/ });
