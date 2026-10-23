@@ -60,7 +60,7 @@ test("no signal at the gate: the codes saved on the phone show for /pass and /fr
 
     // The app opens on News: on a session day, its first card leads to the QR code.
     await expect(page.getByRole("heading", { name: "Club news" })).toBeVisible();
-    const qrCard = page.getByRole("main").getByRole("link", { name: /today: show the QR code/ });
+    const qrCard = page.getByRole("link", { name: /^Show QR codes?: .* today$/ });
     await expect(qrCard).toBeVisible();
     // The shortcut beside Messages, ringed in gold today, opens the same codes from any screen.
     const shortcut = page.getByRole("link", { name: "Attendance QR codes: session today" });

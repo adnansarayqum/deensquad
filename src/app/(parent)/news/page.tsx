@@ -26,6 +26,7 @@ export default async function NewsPage() {
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
   // On a session day the app still opens on News: the first thing on it is the way to the QR code.
   const today = sessionsToday(week, now).sort((a, b) => a.session.startsAt.localeCompare(b.session.startsAt))[0];
+  const qrLabel = family.children.length > 1 ? "Show QR codes" : "Show QR code";
 
   return (
     <>
@@ -41,43 +42,39 @@ export default async function NewsPage() {
           </div>
         </div>
         {soonest ? (
-          <Link href="/friday" className="flex items-center gap-3 rounded-app bg-pitch-deep px-3.5 py-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-floodlight font-display text-[22px] leading-none text-on-gold">
-              {shortDay(soonest.startsAt).slice(0, 3).toUpperCase()}
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[15px] font-bold">
-                {soonest.cancelled ? `${soonest.title} cancelled` : `${soonest.title} · ${clock(soonest.startsAt)}`}
+          <div className="flex flex-col gap-1 rounded-app bg-pitch-deep">
+            <Link href="/friday" className="flex items-center gap-3 px-3.5 py-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-floodlight font-display text-[22px] leading-none text-on-gold">
+                {shortDay(soonest.startsAt).slice(0, 3).toUpperCase()}
               </span>
-              {soonest.cancelled ? null : <span className="text-[14px] font-bold text-floodlight">{weekSummary(week)}</span>}
-              <span className="text-[13px] text-on-pitch-muted">
-                {soonest.venue}
-                {soonest.arriveBy && !soonest.cancelled ? ` · arrive ${soonest.arriveBy}` : ""}
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[15px] font-bold">
+                  {soonest.cancelled ? `${soonest.title} cancelled` : `${soonest.title} · ${clock(soonest.startsAt)}`}
+                </span>
+                {soonest.cancelled ? null : <span className="text-[14px] font-bold text-floodlight">{weekSummary(week)}</span>}
+                <span className="text-[13px] text-on-pitch-muted">
+                  {soonest.venue}
+                  {soonest.arriveBy && !soonest.cancelled ? ` · arrive ${soonest.arriveBy}` : ""}
+                </span>
               </span>
-            </span>
-            <ChevronRight aria-hidden size={20} className="shrink-0 text-on-pitch-muted" />
-          </Link>
+              <ChevronRight aria-hidden size={20} className="shrink-0 text-on-pitch-muted" />
+            </Link>
+            {/* On a session day the app still opens on News: the way to the QR codes sits with the session itself. */}
+            {today ? (
+              <Link
+                href="/pass?from=/news"
+                aria-label={`${qrLabel}: ${today.session.title} today`}
+                className="mx-3.5 mb-3.5 flex min-h-12 items-center justify-center gap-2 rounded-app bg-floodlight px-4 text-[15px] font-extrabold text-on-gold transition-transform active:translate-y-0.5"
+              >
+                <QrCode aria-hidden size={20} />
+                {qrLabel}
+              </Link>
+            ) : null}
+          </div>
         ) : null}
       </AppHeader>
 
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
-        {today ? (
-          <Link
-            href="/pass?from=/news"
-            className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
-          >
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold">
-              <QrCode aria-hidden size={24} />
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[15px] font-bold">{today.session.title} today: show the QR code</span>
-              <span className="text-[13px] text-ink-muted">
-                {clock(today.session.startsAt)} · {today.session.venue}
-              </span>
-            </span>
-            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
-          </Link>
-        ) : null}
         {unreadMessages > 0 ? (
           <Link
             href="/messages?from=/news"
@@ -90,7 +87,6 @@ export default async function NewsPage() {
               <span className="text-[15px] font-bold">
                 {unreadMessages === 1 ? "1 new message from the club" : `${unreadMessages} new messages from the club`}
               </span>
-              <span className="text-[13px]">Open Messages to read and reply</span>
             </span>
             <ChevronRight aria-hidden size={20} className="shrink-0" />
           </Link>
