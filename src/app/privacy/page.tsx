@@ -87,6 +87,8 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "kit they have ordered from the club shop",
               "if you pay for each session, the session fees taken at the gate (the date and amount; card payments go through the club's card machine, and the app never sees card details)",
               "a record of any accident or incident at the club (what happened and what the coaches did), written by the coach: you are sent it in the app straight away, and the club's coaches and admins can see it",
+              "for away trips, your yes or no, the mobile number you give for the day and any note for the coaches: the club's coaches and admins can see it",
+              "wellbeing check-ins, if you choose to send one (how your child is finding football, and any note): given with your consent each time, seen only by you and the club's admins, never coaches or other parents, and never put in an email",
             ]}
           />
           <p>

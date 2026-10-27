@@ -132,6 +132,14 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
     `select player_id, kind, happened_at, what_happened, action_taken, reported_by_name from incidents
      where player_id in (select my_player_ids()) order by happened_at`,
   );
+  const wellbeing = await tx.query<{ player_id: string; mood: string; note: string | null; created_at: Date; followed_up_at: Date | null }>(
+    `select player_id, mood, note, created_at, followed_up_at from wellbeing_checkins where player_id in (select my_player_ids()) order by created_at`,
+  );
+  const tripConsents = await tx.query<{ player_id: string; title: string; starts_at: Date; consent: boolean; day_phone: string | null; note: string | null; answered_at: Date }>(
+    `select c.player_id, s.title, s.starts_at, c.consent, c.day_phone, c.note, c.answered_at
+     from trip_consents c join sessions s on s.id = c.session_id
+     where c.player_id in (select my_player_ids()) order by s.starts_at`,
+  );
   const gatePayments = await tx.query<{ player_id: string; title: string; starts_at: Date; amount_pence: number; method: string }>(
     `select sp.player_id, s.title, s.starts_at, sp.amount_pence, sp.method from session_payments sp join sessions s on s.id = sp.session_id
      where sp.player_id in (select my_player_ids()) order by s.starts_at`,
@@ -200,6 +208,20 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
         whatHappened: i.what_happened,
         whatWeDid: i.action_taken,
         loggedBy: i.reported_by_name,
+      })),
+      wellbeingCheckIns: forChild(wellbeing, c.id).map((w) => ({
+        feeling: ({ good: "Good", ok: "OK", low: "Not great" } as Record<string, string>)[w.mood] ?? w.mood,
+        note: w.note,
+        sentAt: at(w.created_at),
+        followedUpAt: w.followed_up_at ? at(w.followed_up_at) : null,
+      })),
+      awayTripConsent: forChild(tripConsents, c.id).map((t) => ({
+        trip: t.title,
+        startsAt: at(t.starts_at),
+        answer: t.consent ? "yes" : "no",
+        phoneOnTheDay: t.day_phone,
+        note: t.note,
+        answeredAt: at(t.answered_at),
       })),
       paidAtTheGate: forChild(gatePayments, c.id).map((g) => ({ session: g.title, startsAt: at(g.starts_at), amount: pounds(g.amount_pence), how: g.method })),
       quickAnswers: forChild(quickAnswers, c.id).map((q) => ({ message: q.title, answer: q.answer, answeredAt: at(q.answered_at), answeredByYou: q.by_you })),

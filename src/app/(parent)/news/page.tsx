@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { TripCards } from "@/components/TripCards";
 import { Check, ChevronRight, ListChecks, MessageCircle, QrCode, Reply } from "lucide-react";
 import { AcknowledgeButton } from "@/components/AcknowledgeButton";
 import { QuickAnswers } from "@/components/messages/QuickAnswers";
@@ -17,7 +18,7 @@ import { groupsPlural } from "@/lib/domain";
 export const metadata: Metadata = { title: "Club news" };
 
 export default async function NewsPage() {
-  const { family, news, week, stepsLeft, unreadMessages } = await getNewsPage();
+  const { family, news, week, stepsLeft, unreadMessages, trips, wellbeingChild } = await getNewsPage();
   const now = new Date();
   const unread = news.filter((a) => !a.read);
   const earlier = news.filter((a) => a.read);
@@ -92,6 +93,7 @@ export default async function NewsPage() {
             <ChevronRight aria-hidden size={20} className="shrink-0" />
           </Link>
         ) : null}
+        <TripCards trips={trips.filter((t) => t.children.some((c) => !c.answer))} from="/news" />
         {stepsLeft > 0 ? (
           <Link
             href="/checklist"
@@ -109,6 +111,18 @@ export default async function NewsPage() {
               </span>
             </span>
             <ChevronRight aria-hidden size={20} className="shrink-0" />
+          </Link>
+        ) : null}
+        {wellbeingChild ? (
+          <Link
+            href={`/player/wellbeing?child=${wellbeingChild.id}&from=/news`}
+            className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3 text-ink"
+          >
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-[15px] font-bold">How&apos;s {wellbeingChild.firstName} finding football?</span>
+              <span className="text-[13px] text-ink-muted">A quick private check-in with the club</span>
+            </span>
+            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
           </Link>
         ) : null}
         <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} />

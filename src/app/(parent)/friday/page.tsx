@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { staffNameForParents } from "@/lib/greeting";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { TripCards } from "@/components/TripCards";
 import { BookOpen, CalendarX, ChevronDown, ChevronRight, ClipboardList, Clock, ExternalLink, Info, MapPin, MoonStar, QrCode, Shirt } from "lucide-react";
 import { AddToCalendar, AvailabilityPicker, type CalendarLinks } from "@/components/AvailabilityPicker";
 import { CheckedIn } from "@/components/CheckedIn";
@@ -26,7 +27,7 @@ import type { VenuePassView } from "@/lib/venue-pass/card";
 export const metadata: Metadata = { title: "Sessions" };
 
 export default async function FridayPage() {
-  const [{ family, week, cancelled, invites, upcoming, plans, latestSheet, venuePass }, { user }] = await Promise.all([getFridayPage(), getFamily()]);
+  const [{ family, week, cancelled, invites, upcoming, plans, latestSheet, venuePass, trips }, { user }] = await Promise.all([getFridayPage(), getFamily()]);
   const single = week.length === 1 ? week[0] : null;
   // Every child's QR code is kept on the phone for no signal; on a session day, today's children's codes are shown here too.
   const cards = await passCards(family.children);
@@ -94,6 +95,7 @@ export default async function FridayPage() {
 
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
         <PassCacheWriter user={user.id} passes={cachedPasses(cards)} hub={venuePass?.cache ?? null} />
+        <TripCards trips={trips} from="/friday" />
         {todayCards.length > 0 ? (
           <TodaysCodes cards={todayCards} title={today[0].session.title} venuePass={venuePass} />
         ) : family.children.length > 0 ? (

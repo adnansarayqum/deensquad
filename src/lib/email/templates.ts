@@ -497,3 +497,25 @@ export function newsTestEmail(opts: { to: string; title: string; body: string; a
   );
   return { to, subject, text, html };
 }
+
+/** A member of staff's check (DBS, first aid, …) runs out soon or has run out: to them and to each admin. */
+export function staffCheckEmail(opts: { to: string; forThem: boolean; staffName: string; check: string; when: string; expired: boolean; link: string | null; appUrl: string | null }): Email {
+  const { to, forThem, staffName, check, when, expired, link, appUrl } = opts;
+  const whose = forThem ? "Your" : `${staffName}'s`;
+  const subject = `${whose} ${check} ${expired ? "has run out" : `runs out ${when}`}`;
+  const first = expired ? `${whose} ${check} ran out on ${when}.` : `${whose} ${check} runs out on ${when}.`;
+  const next = forThem ? "Please book a renewal and send the club the new details." : "Ask them to renew it, then update the date on the Staff page.";
+  const text = [first, "", next, ...(link ? ["", `Open it: ${link}`] : [])].join("\n");
+  const html = layout(appUrl, `<p style="margin:0">${escape(first)}</p>\n<p>${escape(next)}</p>\n${link ? button(link, "Open staff checks") : ""}`);
+  return { to, subject, text, html };
+}
+
+/** A parent's wellbeing check-in needs a look (not great, or with a note). Never the mood or the note itself. */
+export function wellbeingAlertEmail(opts: { to: string; childFirstName: string; group: string; link: string | null; appUrl: string | null }): Email {
+  const { to, childFirstName, group, link, appUrl } = opts;
+  const subject = `Wellbeing check-in to look at: ${childFirstName} (${group})`;
+  const line = `A parent has shared how ${childFirstName} (${group}) is feeling and it may need a follow-up. Open the app to read it; only the club's admins can see it.`;
+  const text = [line, ...(link ? ["", `Open it: ${link}`] : [])].join("\n");
+  const html = layout(appUrl, `<p style="margin:0">${escape(line)}</p>\n${link ? button(link, "Open wellbeing check-ins") : ""}`);
+  return { to, subject, text, html };
+}

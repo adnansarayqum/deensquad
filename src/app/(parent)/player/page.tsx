@@ -202,6 +202,19 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           </div>
         ) : null}
 
+        {child ? (
+          <Link
+            href={`/player/wellbeing?child=${child.id}`}
+            className="mt-2 flex min-h-12 items-center justify-between gap-3 rounded-app border-2 border-line bg-paper px-4 py-3 text-[15px] font-bold"
+          >
+            <span className="flex flex-col">
+              How&apos;s {child.firstName} finding football?
+              <span className="text-[13px] font-normal text-ink-muted">A private check-in with the club</span>
+            </span>
+            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+          </Link>
+        ) : null}
+
         <section aria-labelledby="your-family" className="mt-2 flex flex-col rounded-app border-2 border-line bg-paper p-1">
           <h2 id="your-family" className="px-3 pt-3 pb-1 text-base font-extrabold">
             Your family

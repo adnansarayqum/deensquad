@@ -33,6 +33,8 @@ import {
   type SquadCounts,
 } from "./data";
 import { clubFeeText, teamFeePayUrl } from "../config";
+import { loadFamilyTrips } from "../trips/data";
+import { childrenToAsk } from "../wellbeing/data";
 import { buildChecklist, buildFamilyChecklist, buildWeek, computeStats, countSteps, nextSessionFor, paymentNeeds, sortNews, squadInvites } from "./views";
 
 // One loader per parent screen. Each checks the session, then reads as that parent (row level security on).
@@ -88,7 +90,12 @@ export async function getNewsPage() {
     family.children.length ? asUser(user.id, (tx) => loadParentUnreadMessages(tx, childIds)) : Promise.resolve(0),
   ]);
   const stats = family.children.length === 1 ? await getStats(user.id, family.children[0], now) : null;
-  return { family, news: sortNews(news), week, streakWeeks: stats?.streakWeeks ?? null, stepsLeft: facts ? stepsLeft(family, facts) : 0, unreadMessages };
+  const [trips, askWellbeing] = childIds.length
+    ? await asUser(user.id, async (tx) => [await loadFamilyTrips(tx, childIds, now), await childrenToAsk(tx, childIds, now)] as const)
+    : [[], []];
+  // About once a month, after training: "How's Musa finding football?" (the first child due a check-in).
+  const wellbeingChild = family.children.find((c) => askWellbeing.includes(c.id)) ?? null;
+  return { family, news: sortNews(news), week, streakWeeks: stats?.streakWeeks ?? null, stepsLeft: facts ? stepsLeft(family, facts) : 0, unreadMessages, trips, wellbeingChild };
 }
 
 /** News with the family's quick answers filled in (only messages that ask for one need a look). */
@@ -155,6 +162,7 @@ export async function getFridayPage() {
     latestSheet: sheets[0] ?? null,
     /** The parent's own sports hub entry code, shown with the children's codes on a session day and kept on the phone. */
     venuePass: await venuePassView(venuePass),
+    trips: family.children.length ? await asUser(user.id, (tx) => loadFamilyTrips(tx, family.children.map((c) => c.id), new Date())) : [],
   };
 }
 

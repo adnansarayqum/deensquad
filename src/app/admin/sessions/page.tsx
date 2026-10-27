@@ -146,6 +146,12 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
             {s.picked ? "Squad" : "Pick squad"}
           </Link>
         ) : null}
+        {/* Away trips: details and parents' consent (matches and tournaments). */}
+        {s.kind !== "training" ? (
+          <Link href={`/admin/sessions/${s.id}/trip`} className={action} aria-label={`Away trip for ${s.title} ${shortDay(s.startsAt)}`}>
+            Trip
+          </Link>
+        ) : null}
         <Link href={`/admin/sessions/${s.id}/edit`} className={action} aria-label={`Edit ${s.title} ${shortDay(s.startsAt)}`}>
           Edit
         </Link>

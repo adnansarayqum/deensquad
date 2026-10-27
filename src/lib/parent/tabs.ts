@@ -8,6 +8,7 @@ const TAB_OF_SEGMENT: Record<string, Tab> = {
   friday: "friday",
   pass: "friday",
   practice: "friday",
+  trip: "friday",
   checklist: "checklist",
   shop: "shop",
   player: "player",

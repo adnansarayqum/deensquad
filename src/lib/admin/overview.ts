@@ -81,6 +81,8 @@ export function needsYou(d: Dashboard, now: Date, { canInvite }: { canInvite: bo
       href: soon ? "/admin/coming#not-answered" : "/coach",
     },
     { key: "overdue", count: d.payments.overdue, text: plural(d.payments.overdue, "payment overdue", "payments overdue"), href: "/admin/families?need=overdue" },
+    { key: "wellbeing", count: d.wellbeing ?? 0, text: plural(d.wellbeing ?? 0, "wellbeing check-in to look at", "wellbeing check-ins to look at"), href: "/admin/wellbeing" },
+    { key: "staff", count: d.staffChecks ?? 0, text: plural(d.staffChecks ?? 0, "member of staff needs a DBS or certificate sorted", "staff need a DBS or certificate sorted"), href: "/admin/staff#checks" },
     { key: "check", count: d.payments.self_reported, text: plural(d.payments.self_reported, "payment plan to check", "payment plans to check"), href: "/admin/families?need=check" },
     { key: "shop", count: d.shop?.toOrder ?? 0, text: plural(d.shop?.toOrder ?? 0, "paid kit order to place", "paid kit orders to place"), href: "/admin/shop" },
     { key: "invite", count: canInvite ? f.notInvited : 0, text: plural(f.notInvited, "parent not invited yet", "parents not invited yet"), href: "/admin/families?need=invite" },

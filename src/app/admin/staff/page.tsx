@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { FoldCard, PageHeader } from "@/components/admin/bits";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
+import { ClearancePill } from "@/components/admin/ClearancePill";
+import { FoldCard, PageHeader, Section } from "@/components/admin/bits";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
 import { addStaff, removeStaff, setStaffGroups, setStaffRole } from "@/lib/admin/actions";
@@ -8,12 +11,27 @@ import { loadStaff, type StaffRow } from "@/lib/admin/data";
 import { requireAdmin } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { AGE_GROUPS, type AgeGroup } from "@/lib/domain";
+import { clearance, londonIsoDay } from "@/lib/staff-checks/checks";
+import { loadAllStaffChecks } from "@/lib/staff-checks/data";
 
 export const metadata: Metadata = { title: "Staff" };
 
 export default async function StaffPage() {
   const user = await requireAdmin();
-  const staff = await asUser(user.id, loadStaff);
+  const [staff, allChecks] = await asUser(user.id, async (tx) => [await loadStaff(tx), await loadAllStaffChecks(tx)] as const);
+  const today = londonIsoDay(new Date());
+  const cleared = new Map(staff.map((s) => [s.id, clearance(allChecks.filter((c) => c.staffId === s.id), today)]));
+  const needing = staff.filter((s) => cleared.get(s.id)!.state !== "ok");
+  const checksLink = (s: StaffRow, compact = false) => (
+    <Link
+      href={`/admin/staff/${s.id}`}
+      aria-label={`DBS and certificates for ${s.displayName}: ${cleared.get(s.id)!.words}`}
+      className={`inline-flex min-h-12 items-center gap-1 ${compact ? "" : "text-[15px] font-bold text-grass-text"}`}
+    >
+      <ClearancePill state={cleared.get(s.id)!.state} words={cleared.get(s.id)!.words} />
+      {compact ? null : <span className="underline underline-offset-4">DBS and certificates</span>}
+    </Link>
+  );
   const admins = staff.filter((s) => s.role === "admin").length;
   // Never the last admin and never your own role (or removal).
   const changeable = (s: StaffRow) => s.id !== user.staff.id && !(s.role === "admin" && admins <= 1);
@@ -78,6 +96,25 @@ export default async function StaffPage() {
     <>
       <PageHeader title="Staff" subtitle="Coaches see the groups ticked against them; none ticked means every group. Admins see everything." />
 
+      <Section title={needing.length ? `Checks to sort (${needing.length})` : "DBS and certificates"}>
+        <div id="checks" className="-mt-2 scroll-mt-4" />
+        {needing.length === 0 ? (
+          <p className="text-[15px] text-ink-muted">Every coach and admin has a DBS check, and nothing runs out in the next 60 days.</p>
+        ) : (
+          <ul className="flex flex-col">
+            {needing.map((s) => (
+              <li key={s.id}>
+                <Link href={`/admin/staff/${s.id}`} className="-mx-2 flex min-h-12 items-center gap-3 rounded-dash px-2 hover:bg-cream">
+                  <span className="min-w-0 flex-1 text-[15px] font-bold">{s.displayName}</span>
+                  <ClearancePill state={cleared.get(s.id)!.state} words={cleared.get(s.id)!.words} />
+                  <ChevronRight aria-hidden size={18} className="shrink-0 text-ink-muted" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+
       <FoldCard id="add-staff" title="Add a coach or admin">
         <StatefulForm action={addStaff} submitLabel="Add" savedMessage="Added. They can sign in with that email straight away.">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -130,6 +167,7 @@ export default async function StaffPage() {
                 {s.signedIn ? <Pill tone="done">Signed in</Pill> : <Pill tone="neutral">Not yet</Pill>}
               </span>
             </div>
+            {checksLink(s)}
             <p className="text-[13px] text-ink-muted">
               {s.role === "admin" ? "Every group" : s.ageGroups.length ? `Groups: ${s.ageGroups.join(", ")}` : "Every group"}
               {s.signedIn ? "" : ` · Not signed in yet: ask them to sign in with ${s.email}`}
@@ -172,6 +210,9 @@ export default async function StaffPage() {
                 Signed in
               </th>
               <th scope="col" className="px-2 py-2.5 font-bold">
+                Checks
+              </th>
+              <th scope="col" className="px-2 py-2.5 font-bold">
                 Groups
               </th>
               <th scope="col" className="w-px py-2.5 pr-1 pl-2 font-bold">
@@ -190,6 +231,7 @@ export default async function StaffPage() {
                   <Pill tone={s.role === "admin" ? "gold" : "neutral"}>{s.role === "admin" ? "Admin" : "Coach"}</Pill>
                 </td>
                 <td className="px-2 py-1.5 whitespace-nowrap">{s.signedIn ? <Pill tone="done">Signed in</Pill> : <Pill tone="neutral">Not yet</Pill>}</td>
+                <td className="px-2 py-1.5 whitespace-nowrap">{checksLink(s, true)}</td>
                 <td className="px-2 py-1.5">{groupsForm(s, true)}</td>
                 <td className="py-1.5 pr-1 pl-2 whitespace-nowrap">
                   {changeable(s) ? (

@@ -1,3 +1,6 @@
+import { londonIsoDay } from "../staff-checks/checks";
+import { countStaffNeedingChecks } from "../staff-checks/data";
+import { countOpenCheckins } from "../wellbeing/data";
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { londonDate, londonTime } from "../dates";
@@ -88,6 +91,10 @@ export type Dashboard = {
     todo: Record<(typeof TODO_NEEDS)[number], number>;
   };
   payments: Record<PaymentState, number>;
+  /** Admins only (with the shop): staff with a DBS missing or run out, or a check running out within 60 days. */
+  staffChecks: number | null;
+  /** Admins only: wellbeing check-ins ("not great" or with a note) not yet followed up. */
+  wellbeing: number | null;
   /** Admins only (the shop is theirs to run); null for coaches. */
   shop: {
     awaitingPayment: number;
@@ -312,6 +319,8 @@ export async function loadDashboard(
       childrenAwaitingSignIn: f.childrenAwaitingSignIn,
       todo: Object.fromEntries(TODO_NEEDS.map((n) => [n, f[`todo_${n}`]])) as Dashboard["families"]["todo"],
     },
+    staffChecks: withShop ? await countStaffNeedingChecks(tx, londonIsoDay(now)) : null,
+    wellbeing: withShop ? await countOpenCheckins(tx) : null,
     payments: { active: f.pay_active, self_reported: f.pay_self_reported, pay_as_you_go: f.pay_pay_as_you_go, missing: f.pay_missing, overdue: f.pay_overdue },
     shop: s
       ? {

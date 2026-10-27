@@ -47,10 +47,18 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
         title="Families"
         actions={
           isAdmin ? (
-            <Link href="/admin/families/import" className="btn-chunky btn-paper btn-small">
-              <Upload aria-hidden size={16} />
-              Import families
-            </Link>
+            <span className="flex flex-wrap gap-2">
+              <Link href="/admin/families/import" className="btn-chunky btn-paper btn-small">
+                <Upload aria-hidden size={16} />
+                Import families
+              </Link>
+              <Link href="/admin/families/teamfeepay" className="btn-chunky btn-paper btn-small">
+                Update plans from TeamFeePay
+              </Link>
+              <Link href="/admin/wellbeing" className="btn-chunky btn-paper btn-small">
+                Wellbeing check-ins
+              </Link>
+            </span>
           ) : null
         }
       />

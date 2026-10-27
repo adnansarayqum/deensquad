@@ -12,6 +12,8 @@ function dashboard(over: Partial<Dashboard> = {}): Dashboard {
   return {
     players: 21,
     joinedThisMonth: 0,
+    staffChecks: null,
+    wellbeing: null,
     attendance: {
       next: [
         { group: "U7", squad: 5, session: { id: "s1", title: "Training", startsAt: FRIDAY }, coming: 0, away: 0, unanswered: 5 },

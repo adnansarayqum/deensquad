@@ -38,7 +38,7 @@ export default async function ParentsNotInPage({ searchParams }: PageProps<"/adm
           "Every parent has signed in to the app."
         ) : (
           <>
-            <strong>{n === 1 ? "1 parent hasn't" : `${n} parents haven't`} signed in yet</strong>, so they don't get club news,
+            <strong>{n === 1 ? "1 parent hasn't" : `${n} parents haven't`} signed in yet</strong>, so they don&apos;t get club news,
             session questions or messages in the app. Their children are still in the club.
           </>
         )}
