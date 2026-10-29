@@ -167,7 +167,10 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               <>
                 <b>Anthropic</b> (Claude) helps coaches tidy up text they write, such as session plans and notes, and can draft a progress report
                 from your child&apos;s first name, ratings, attendance, points and the coaches&apos; notes. Coaches are asked not to include
-                children&apos;s surnames, and nothing is sent to parents without a coach checking it.
+                children&apos;s surnames, and nothing is sent to parents without a coach checking it. The club&apos;s admins can also ask an
+                assistant built on Claude about the club, which looks up what the app holds (such as names, contact details, payments, attendance
+                and sessions) to answer; it never sees medical needs, wellbeing check-ins or sports hub codes, and changes nothing unless an admin
+                confirms it.
               </>,
               <>
                 <b>SumUp</b> takes card payments in the club shop. Your card details go to SumUp, never to the club or the app.

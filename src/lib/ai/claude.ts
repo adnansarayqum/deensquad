@@ -33,3 +33,19 @@ export async function askClaude(system: string, user: string, maxTokens = 900): 
   if (!text) throw new Error("Claude returned no text.");
   return text;
 }
+
+/** One raw call to the Messages API (the admins' assistant, which uses tools). Throws on a refusal or a timeout. */
+export async function callMessages(request: Record<string, unknown>, timeoutMs = 45_000): Promise<unknown> {
+  const res = await fetch(API, {
+    method: "POST",
+    headers: {
+      "x-api-key": process.env.ANTHROPIC_API_KEY ?? "",
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(request),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!res.ok) throw new Error(`Claude refused the request (${res.status}): ${(await res.text().catch(() => "")).slice(0, 200)}`);
+  return res.json();
+}
