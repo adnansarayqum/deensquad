@@ -1,3 +1,4 @@
+import { loadMediaFor, type MediaItem } from "../media/data";
 import { CONTRACT } from "../documents/contract";
 import { staffNameForParents } from "../greeting";
 import type { Queryable } from "../db/types";
@@ -105,6 +106,8 @@ export type AnnouncementView = Announcement & {
   answers: Record<string, QuickAnswer>;
   /** The family's latest reply to it in Messages, and that conversation (null: no reply yet). */
   replied?: { at: string; conversation: string } | null;
+  /** Photos and videos on it (migration 0038). */
+  media: MediaItem[];
 };
 
 /**
@@ -146,6 +149,7 @@ export async function loadNews(tx: Queryable, family: Family, limit = 50): Promi
      limit $3`,
     [family.guardian.id, familyGroups(family), limit, family.children.map((c) => c.id)],
   );
+  const media = await loadMediaFor(tx, "announcement", rows.map((r) => r.id));
   return rows.map((r) => ({
     id: r.id,
     topic: r.topic,
@@ -160,6 +164,7 @@ export async function loadNews(tx: Queryable, family: Family, limit = 50): Promi
     quickAnswers: r.quick_answers,
     reaches: r.reaches ?? [],
     answers: {},
+    media: media.get(r.id) ?? [],
   }));
 }
 

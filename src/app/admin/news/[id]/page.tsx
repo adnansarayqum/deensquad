@@ -6,6 +6,8 @@ import { Notice, PageHeader, ReadBar, Section } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
 import { chaseOnWhatsApp, deleteNews } from "@/lib/admin/actions";
 import { audienceLabel, loadNewsDetail } from "@/lib/admin/data";
+import { MediaGallery } from "@/components/media/MediaGallery";
+import { loadMediaFor } from "@/lib/media/data";
 import { within } from "@/lib/admin/scope";
 import { UUID } from "@/lib/auth/tokens";
 import { coachLimit, requireStaff } from "@/lib/auth/session";
@@ -28,10 +30,10 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
   const mine = coachLimit(user.staff);
   const detail = await asUser(user.id, async (tx) => {
     const found = await loadNewsDetail(tx, id, mine);
-    return found ? { ...found, answers: await loadNewsAnswers(tx, id, mine), replies: await countReplies(tx, id) } : null;
+    return found ? { ...found, answers: await loadNewsAnswers(tx, id, mine), replies: await countReplies(tx, id), media: (await loadMediaFor(tx, "announcement", [id])).get(id) ?? [] } : null;
   });
   if (!detail) notFound();
-  const { news, unread, answers, replies } = detail;
+  const { news, unread, answers, replies, media } = detail;
   const tally = answers?.options ? tallyAnswers(answers.options, answers.children) : null;
   // A group coach can delete only messages that went to their own groups alone.
   const canDelete = !mine || within(news.audience, mine);
@@ -64,6 +66,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
       <Section title="Message">
         {news.chosen && news.chosen.length > 2 ? <p className="text-sm text-ink-muted">For {news.chosen.join(", ")}</p> : null}
         <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
+        <MediaGallery items={media} label={news.title} />
         {news.requiresAck ? <ReadBar read={news.readCount} total={news.audienceCount} groupsOnly={news.groupsOnly} /> : <p className="text-sm text-ink-muted">No read receipts asked for.</p>}
       </Section>
 

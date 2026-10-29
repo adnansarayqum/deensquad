@@ -11,6 +11,16 @@ import { loadFamily, saveQuickAnswer } from "../parent/data";
 import { cleanBody, cleanText } from "../validate";
 import { BODY_MAX, SUBJECT_MAX, addMessage, loadInbox, loadMessageChild, loadReplyTarget, loadThread, markRead, startParentConversation, startStaffConversation } from "./data";
 import { runMessageNotices } from "./run";
+import type { Queryable } from "../db/types";
+import { attachOrThrow, formMedia, withMediaProblem } from "../media/attach";
+import { mediaPhrase } from "../media/limits";
+
+/** "Sent 2 photos and a video." for a message with pictures and no words. */
+async function onlyMediaBody(tx: Queryable, ids: string[]): Promise<string> {
+  const rows = await tx.query<{ kind: "image" | "video" }>(`select kind from media where id = any ($1::uuid[])`, [ids]);
+  const phrase = mediaPhrase(rows.map((r) => r.kind));
+  return phrase ? `Sent ${phrase}.` : "Sent a photo.";
+}
 
 // Messages between parents and the club, and quick answers on club news (migration 0025). Each action checks the
 // session and its input, then writes as that person, so row level security applies as well.
@@ -92,17 +102,26 @@ export async function sendParentMessage(_prev: MessageFormState, formData: FormD
  */
 export async function sendStaffMessage(_prev: MessageFormState, formData: FormData): Promise<MessageFormState> {
   const user = await requireStaff();
-  const body = readBody(formData);
+  // Staff can attach photos and videos (the owner's decision: parents send words only). A message that's only
+  // pictures says so in words ("Sent 2 photos."), which is what lists and screen readers show.
+  const media = await formMedia(formData, user.staff.id);
+  if ("error" in media) return media;
+  let body = readBody(formData);
+  if (!body && media.ids.length) body = await asUser(user.id, (tx) => onlyMediaBody(tx, media.ids));
   const problem = bodyProblem(body);
   if (problem) return { error: problem };
+  const attach = async (tx: Queryable, messageId: string) => attachOrThrow(tx, "message", messageId, media.ids, user.staff.id);
   const conversation = formData.get("conversation");
   if (typeof conversation === "string" && conversation) {
     if (!UUID.test(conversation)) return { error: RELOAD };
-    const ok = await asUser(user.id, async (tx) => {
-      if (!(await loadThread(tx, conversation, "staff"))) return false;
-      await addMessage(tx, conversation, "staff", body!);
-      return true;
-    });
+    const ok = await withMediaProblem(() =>
+      asUser(user.id, async (tx) => {
+        if (!(await loadThread(tx, conversation, "staff"))) return false;
+        await attach(tx, await addMessage(tx, conversation, "staff", body!));
+        return true;
+      }),
+    );
+    if (typeof ok === "object") return ok;
     if (!ok) return { error: RELOAD };
     notifyAfter(conversation);
     refresh();
@@ -113,10 +132,16 @@ export async function sendStaffMessage(_prev: MessageFormState, formData: FormDa
   if (typeof child !== "string" || !UUID.test(child)) return { error: RELOAD };
   const subject = cleanText(formData.get("subject"), SUBJECT_MAX);
   const mine = coachLimit(user.staff);
-  const id = await asUser(user.id, async (tx) => {
-    if (!(await loadMessageChild(tx, child, mine))) return null;
-    return startStaffConversation(tx, { childId: child, staffId: user.staff.id, subject, body: body! });
-  });
+  const id = await withMediaProblem(() =>
+    asUser(user.id, async (tx) => {
+      if (!(await loadMessageChild(tx, child, mine))) return null;
+      const started = await startStaffConversation(tx, { childId: child, staffId: user.staff.id, subject, body: body! });
+      const [first] = await tx.query<{ id: string }>(`select id from conversation_messages where conversation_id = $1 order by created_at, id limit 1`, [started]);
+      await attach(tx, first.id);
+      return started;
+    }),
+  );
+  if (id && typeof id === "object") return id;
   if (!id) return { error: mine ? `You can message families in your own groups only (${mine.join(", ")}).` : RELOAD };
   notifyAfter(id);
   redirect(`/admin/messages/${id}?sent=1`);

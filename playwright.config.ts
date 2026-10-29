@@ -21,6 +21,8 @@ const env = [
   `DATABASE_URL=${process.env.E2E_DATABASE_URL ?? "pglite://memory"}`,
   "EMAIL_OUTBOX=e2e/.results/outbox.jsonl",
   "APP_URL=http://localhost:3100",
+  // Photos and videos go to a folder, as in dev (production: the club's Railway bucket).
+  "MEDIA_DIR=e2e/.results/media",
   // The club's own settings, on this server only: the 3101 server shows what parents see without them.
   "TEAMFEEPAY_URL=https://teamfeepay.example/deensquad",
   "CLUB_FEE_TEXT='£30 a month per child, paid by direct debit through TeamFeePay'",
@@ -55,7 +57,7 @@ export default defineConfig({
   webServer: [
     { command: "node e2e/fake-claude.mjs", url: "http://localhost:3199/health", reuseExistingServer: false },
     {
-      command: `rm -f e2e/.results/outbox.jsonl && ${env} npx next start --port 3100`,
+      command: `rm -rf e2e/.results/outbox.jsonl e2e/.results/media && ${env} npx next start --port 3100`,
       url: "http://localhost:3100/api/health",
       reuseExistingServer: false,
       timeout: 90_000,

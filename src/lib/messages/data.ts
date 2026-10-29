@@ -1,5 +1,6 @@
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
+import { loadMediaFor, type MediaItem } from "../media/data";
 import type { AgeGroup } from "../domain";
 import { newsReaches } from "../squads/sql";
 import { shortName } from "../admin/news-audience";
@@ -14,7 +15,7 @@ export const PREVIEW_LENGTH = 90;
 
 export type AuthorKind = "parent" | "staff";
 
-export type MessageView = { id: string; authorKind: AuthorKind; authorName: string; mine: boolean; body: string; at: string };
+export type MessageView = { id: string; authorKind: AuthorKind; authorName: string; mine: boolean; body: string; at: string; media: MediaItem[] };
 
 /** One line of a message for lists and notifications: whitespace folded, cut at a word near `max`. */
 export function preview(body: string, max = PREVIEW_LENGTH): string {
@@ -164,6 +165,7 @@ export async function loadThread(tx: Queryable, id: string, side: { parent: read
       `select id, author_kind, author_name, author_user, body, created_at from conversation_messages where conversation_id = $1 order by created_at, id`,
       [id],
   );
+  const media = await loadMediaFor(tx, "message", messages.map((m) => m.id));
   const parents = await tx.query<{ id: string; first_name: string; last_name: string }>(
     `select g.id, g.first_name, g.last_name from guardians g join player_guardians pg on pg.guardian_id = g.id where pg.player_id = $1 order by g.first_name`,
     [c.player_id],
@@ -186,6 +188,7 @@ export async function loadThread(tx: Queryable, id: string, side: { parent: read
       mine: m.author_user !== null && m.author_user === me,
       body: m.body,
       at: iso(m.created_at),
+      media: media.get(m.id) ?? [],
     })),
   };
 }

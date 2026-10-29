@@ -7,6 +7,8 @@ import { audienceLabel, loadNewsList } from "@/lib/admin/data";
 import { loadNewsChildren } from "@/lib/admin/news";
 import { NewsAudience } from "@/components/admin/NewsAudience";
 import { NewsReplyOptions } from "@/components/admin/NewsReplyOptions";
+import { MediaPicker } from "@/components/media/MediaPicker";
+import { PHOTO_CONSENT_HINT } from "@/lib/media/limits";
 import { TOPICS } from "@/lib/admin/topics";
 import { WritingHelp } from "@/components/writing/WritingHelp";
 import { aiConfigured } from "@/lib/ai/claude";
@@ -58,6 +60,7 @@ export default async function AdminNewsPage() {
                 <WritingHelp bodyId="body" titleId="title" kind="news" ai={aiConfigured()} />
               </div>
             </div>
+            <MediaPicker hint={PHOTO_CONSENT_HINT} />
             <NewsAudience limited={limited} myGroups={myGroups} list={children} />
             <NewsReplyOptions />
             <label className="flex min-h-11 items-center gap-3 text-[15px]">

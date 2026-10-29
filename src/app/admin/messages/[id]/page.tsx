@@ -67,7 +67,7 @@ export default async function AdminConversationPage({ params, searchParams }: Pa
       <Thread messages={thread.messages} now={new Date()} />
 
       <Section title="Reply">
-        <MessageForm action={sendStaffMessage} hidden={{ conversation: thread.id }} label={`Reply to ${thread.child.firstName}'s parents`} submitLabel="Send reply" compact />
+        <MessageForm action={sendStaffMessage} hidden={{ conversation: thread.id }} label={`Reply to ${thread.child.firstName}'s parents`} submitLabel="Send reply" compact media />
         <p className="text-[13px] text-ink-muted">Both of {thread.child.firstName}&apos;s parents see it. The club&apos;s admins can read every conversation. Messages can&apos;t be edited or deleted.</p>
       </Section>
     </div>

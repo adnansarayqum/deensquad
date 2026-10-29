@@ -72,6 +72,8 @@ export type Session = {
    * are picked. Absent on an ordinary session, which is for every child in its age groups.
    */
   squad?: string[];
+  /** Photos and videos staff added on its Edit page (migration 0038), where a page has loaded them. */
+  media?: import("./media/data").MediaItem[];
 };
 
 export type Availability = "coming" | "away";

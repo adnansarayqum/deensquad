@@ -34,7 +34,7 @@ export default async function NewStaffMessagePage({ searchParams }: PageProps<"/
         </p>
       </PageHeader>
       <Section title={child.parents.length ? `To ${child.parents.join(" and ")}` : "No parent linked yet"}>
-        <MessageForm action={sendStaffMessage} hidden={{ child: child.id }} submitLabel="Send to the family">
+        <MessageForm action={sendStaffMessage} hidden={{ child: child.id }} submitLabel="Send to the family" media>
           <div>
             <label htmlFor="message-subject" className="field-label">
               Subject (optional)

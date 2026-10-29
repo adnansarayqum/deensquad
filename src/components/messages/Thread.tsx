@@ -1,5 +1,6 @@
 import { postedLabel } from "@/lib/dates";
 import type { MessageView } from "@/lib/messages/data";
+import { MediaGallery } from "@/components/media/MediaGallery";
 
 /**
  * A conversation's messages, oldest first, as bubbles: the viewer's own on the right ("You"), everyone else's on the
@@ -19,6 +20,11 @@ export function Thread({ messages, now }: { messages: MessageView[]; now: Date }
             )}
             <span>{postedLabel(m.at, now)}</span>
           </p>
+          {m.media.length ? (
+            <div className="w-[85%] max-w-[320px]">
+              <MediaGallery items={m.media} label={`${m.mine ? "Your" : `${m.authorName}'s`} message`} compact />
+            </div>
+          ) : null}
           <p
             className={`max-w-[85%] rounded-app border-2 px-3.5 py-2.5 text-[15px] leading-[22px] break-words whitespace-pre-line ${
               m.mine ? "border-grass bg-grass-tint text-ink" : "border-line bg-paper text-ink"

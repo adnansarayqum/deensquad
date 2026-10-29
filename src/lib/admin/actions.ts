@@ -29,6 +29,8 @@ import { closeDeletionRequest } from "../data-requests";
 import { TOPICS } from "./topics";
 import { checkChosenChildren, insertNews } from "./news";
 import { parseQuickAnswers } from "../messages/quick-answers";
+import { attachOrThrow, formMedia, withMediaProblem } from "../media/attach";
+import type { Queryable } from "../db/types";
 
 // Club admin Server Actions. Each checks the role first, then writes as that person,
 // so row level security still applies (staff manage the club; only admins manage staff).
@@ -317,6 +319,9 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
   }
   const requiresAck = formData.get("requiresAck") === "on";
   const allowReplies = formData.get("allowReplies") === "on";
+  const media = await formMedia(formData, user.staff.id);
+  if ("error" in media) return media;
+  const attach = (tx: Queryable, newsId: string) => attachOrThrow(tx, "announcement", newsId, media.ids, user.staff.id);
   const quick = parseQuickAnswers(formData.get("quickAnswer") === "on", formData.getAll("option"));
   if ("error" in quick) return quick;
   const quickAnswers = quick.answers;
@@ -324,13 +329,15 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
     // The group ticks belong to "Only these groups" (hidden under this choice), so they're ignored here. The children
     // are checked and the message written in one transaction, so a child removed meanwhile can't fail the insert.
     const ids = formData.getAll("player").filter((v): v is string => typeof v === "string" && UUID.test(v));
-    const result = await asUser(user.id, async (tx) => {
-      const checked = await checkChosenChildren(tx, ids, coachLimit(user.staff));
-      if ("error" in checked) return checked;
-      return {
-        id: await insertNews(tx, { topic: topic as string, title, body, audience: checked.groups, requiresAck, postedBy: user.staff.id, squadSession: null, children: ids, allowReplies, quickAnswers }),
-      };
-    });
+    const result = await withMediaProblem(() =>
+      asUser(user.id, async (tx) => {
+        const checked = await checkChosenChildren(tx, ids, coachLimit(user.staff));
+        if ("error" in checked) return checked;
+        const newsId = await insertNews(tx, { topic: topic as string, title, body, audience: checked.groups, requiresAck, postedBy: user.staff.id, squadSession: null, children: ids, allowReplies, quickAnswers });
+        await attach(tx, newsId);
+        return { id: newsId };
+      }),
+    );
     if ("error" in result) return result;
     return posted(result.id, requiresAck);
   }
@@ -356,11 +363,17 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
     const mine = staffGroups(user.staff);
     if (everyone || groups.some((g) => !mine.includes(g))) return { error: `You can post to your own groups: ${mine.join(", ")}.` };
   }
-  const newsId = await asUser(user.id, (tx) =>
-    insertNews(tx, { topic: topic as string, title, body, audience: everyone ? null : groups, requiresAck, postedBy: user.staff.id, squadSession: squadSession ?? null, children: null, allowReplies, quickAnswers }),
+  const inserted = await withMediaProblem(() =>
+    asUser(user.id, async (tx) => {
+      const newsId = await insertNews(tx, { topic: topic as string, title, body, audience: everyone ? null : groups, requiresAck, postedBy: user.staff.id, squadSession: squadSession ?? null, children: null, allowReplies, quickAnswers });
+      await attach(tx, newsId);
+      return { id: newsId };
+    }),
   );
-  return posted(newsId, requiresAck);
+  if ("error" in inserted) return inserted;
+  return posted(inserted.id, requiresAck);
 }
+
 
 function posted(newsId: string, requiresAck: boolean): never {
   // First rung of the chase ladder: notify parents once the response has gone (unless it's night-time; the hourly
@@ -492,11 +505,18 @@ export async function updateSession(_prev: FormState, formData: FormData): Promi
   if ("error" in checked) return { error: checked.error };
   const edit: SessionEdit = { ...checked.fields, ...checked.times(checked.day) };
   const tell = formData.get("notify") === "on";
-  const result = await asUser(user.id, async (tx) => {
-    const saved = await editSession(tx, session, edit, coachLimit(user.staff));
-    const news = saved.ok && tell ? await postSessionNotice(tx, session, "changed", user.staff.id) : null;
-    return { saved, news };
-  });
+  const media = await formMedia(formData, user.staff.id);
+  if ("error" in media) return media;
+  const result = await withMediaProblem(() =>
+    asUser(user.id, async (tx) => {
+      const saved = await editSession(tx, session, edit, coachLimit(user.staff));
+      // The page lists its photos and videos as they should now be (MediaPicker), so this replaces what it had.
+      if (saved.ok) await attachOrThrow(tx, "session", session, media.ids, user.staff.id);
+      const news = saved.ok && tell ? await postSessionNotice(tx, session, "changed", user.staff.id) : null;
+      return { saved, news };
+    }),
+  );
+  if ("error" in result) return result;
   if (!result.saved.ok) {
     return { error: result.saved.reason === "not_yours" ? "Only an admin can change this session." : "That session has gone. Reload and try again." };
   }

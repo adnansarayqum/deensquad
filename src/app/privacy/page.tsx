@@ -150,6 +150,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "Other parents never see your details. They only see how many children in a group are coming to a session, not who.",
               "Your child's other parents or carers in the app (added by the club, or by you or them from Players → Your family, with their own email and sign-in) see what you see about that child, and your name and answers. Adding someone sends them a sign-in link, and the club is told. To take someone off, ask the club.",
               "Messages in the app between you and the club are about one child. Both of that child's parents can read them, as can the coach they were sent to, the child's coaches and the club's admins (so no conversation with a child's family is ever hidden from the club). Other parents never see them. Messages can't be edited or deleted: they are kept as club records.",
+              "Photos and videos the club's staff add to club news, session details or a message are seen only by the people who can read that news, session or message: for news and sessions, the families it is for; for a message, that child's parents and the club's staff. Staff post only children whose parents have said yes to photos. Location and camera details are removed from every photo and video before it is stored, in a private storage bucket with Railway. Parents can't add photos or videos to messages.",
               "Ratings and progress reports are written by the club's coaches and admins. Staff can see them; you see your own child's in the app once the club turns this on, and only reports the coach has published. Other parents never see them, and you never see other children's.",
             ]}
           />
@@ -239,6 +240,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "Shop orders and payment records (including session fees paid at the gate) are kept for 6 years for accounting.",
               "Accident and incident records are kept as safeguarding records: at least while your child is at the club, and longer where the law or our safeguarding duties require it.",
               "Trial bookings: names and contact details are removed 6 months after the trial.",
+              "Photos and videos on club news, sessions and messages are kept while that news, session or message is; when it is deleted, they are deleted within a day.",
               "Messages with the club are kept as club records while your child is at the club, and deleted with their record when they leave, unless our safeguarding duties mean we must keep them longer.",
               "Sign-in codes expire after 15 minutes and old sign-in records are deleted after 30 days.",
             ]}

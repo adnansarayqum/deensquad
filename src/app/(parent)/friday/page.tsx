@@ -23,11 +23,18 @@ import { answeredLine, availabilityQuestion, directionsUrl, sessionsToday, type 
 import { cachedPasses, passCards, type PassCard } from "@/lib/pass/cards";
 import type { SessionPlan } from "@/lib/plans/data";
 import type { VenuePassView } from "@/lib/venue-pass/card";
+import { MediaGallery } from "@/components/media/MediaGallery";
+import { asUser } from "@/lib/db";
+import { loadMediaFor } from "@/lib/media/data";
 
 export const metadata: Metadata = { title: "Sessions" };
 
 export default async function FridayPage() {
   const [{ family, week, cancelled, invites, upcoming, plans, latestSheet, venuePass, trips }, { user }] = await Promise.all([getFridayPage(), getFamily()]);
+  // Photos and videos on the sessions shown (staff add them on a session's Edit page).
+  const shown = [...week.flatMap((w) => (w.session ? [w.session] : [])), ...invites.map((i) => i.session)];
+  const media = await asUser(user.id, (tx) => loadMediaFor(tx, "session", shown.map((s) => s.id)));
+  for (const s of shown) s.media = media.get(s.id) ?? [];
   const single = week.length === 1 ? week[0] : null;
   // Every child's QR code is kept on the phone for no signal; on a session day, today's children's codes are shown here too.
   const cards = await passCards(family.children);
@@ -350,6 +357,7 @@ function InviteCard({ invite: { child, session, answer, answered: record }, answ
         <Directions venue={session.venue} />
       </div>
       {session.notes ? <p className="-mt-1.5 text-sm whitespace-pre-line">{session.notes}</p> : null}
+      {session.media?.length ? <MediaGallery items={session.media} label={session.title} /> : null}
       <AvailabilityPicker sessionId={session.id} playerId={child.id} answer={answer} childName={child.firstName} question={question} squad answered={answered} reason={record?.reason ?? null} calendar={calendar} compact />
     </Card>
   );
@@ -399,6 +407,7 @@ function BriefingDetails({ session }: { session: Session }) {
           <span className="min-w-0 flex-1 break-words">{session.notes}</span>
         </p>
       ) : null}
+      {session.media?.length ? <MediaGallery items={session.media} label={session.title} /> : null}
       {rows.length > 0 ? (
         <details className="group">
           <summary className="flex min-h-12 cursor-pointer list-none items-center gap-1.5 text-[15px] font-bold text-grass-text [&::-webkit-details-marker]:hidden">
@@ -425,7 +434,7 @@ function BriefingDetails({ session }: { session: Session }) {
 
 /** The briefing under a single child's answer. */
 function Briefing({ session }: { session: Session }) {
-  if (!session.notes && briefingRows(session).length === 0) return null;
+  if (!session.notes && !session.media?.length && briefingRows(session).length === 0) return null;
   return (
     <Card className="flex flex-col gap-2 p-4">
       <h2 className="text-base font-extrabold">{session.title} briefing</h2>

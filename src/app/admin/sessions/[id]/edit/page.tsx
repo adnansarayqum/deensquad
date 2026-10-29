@@ -10,6 +10,9 @@ import { loadAdminSession } from "@/lib/admin/data";
 import { UUID } from "@/lib/auth/tokens";
 import { coachLimit, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
+import { MediaPicker } from "@/components/media/MediaPicker";
+import { loadMediaFor } from "@/lib/media/data";
+import { PHOTO_CONSENT_HINT } from "@/lib/media/limits";
 
 export const metadata: Metadata = { title: "Edit session" };
 
@@ -18,8 +21,12 @@ export default async function EditSessionPage({ params }: PageProps<"/admin/sess
   const user = await requireStaff();
   const { id } = await params;
   if (!UUID.test(id)) notFound();
-  const session = await asUser(user.id, (tx) => loadAdminSession(tx, id, coachLimit(user.staff)));
-  if (!session) notFound();
+  const found = await asUser(user.id, async (tx) => {
+    const s = await loadAdminSession(tx, id, coachLimit(user.staff));
+    return s ? { session: s, media: (await loadMediaFor(tx, "session", [id])).get(id) ?? [] } : null;
+  });
+  if (!found) notFound();
+  const { session, media } = found;
 
   return (
     <div className="flex flex-col gap-4 lg:max-w-3xl">
@@ -37,6 +44,7 @@ export default async function EditSessionPage({ params }: PageProps<"/admin/sess
               groups: session.ageGroups,
             }}
           />
+          <MediaPicker initial={media} hint={`Parents see these with the session's details. ${PHOTO_CONSENT_HINT}`} />
           {session.picked ? (
             <p className="text-[13px] text-ink-muted">
               If you take a group off, its children come out of the squad. Answers stay when you change the date or time.

@@ -12,6 +12,7 @@ import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { clock, dayHeading, postedLabel, shortDay } from "@/lib/dates";
 import { getNewsPage } from "@/lib/parent/load";
 import type { AnnouncementView, Family } from "@/lib/parent/data";
+import { MediaGallery } from "@/components/media/MediaGallery";
 import { sessionsToday, weekSummary } from "@/lib/parent/views";
 import { groupsPlural } from "@/lib/domain";
 
@@ -149,6 +150,7 @@ export default async function NewsPage() {
                 </div>
                 <h2 className="text-[19px] leading-[25px] font-bold">{a.title}</h2>
                 <p className="text-[15px] leading-[22px] whitespace-pre-line">{a.body}</p>
+                <MediaGallery items={a.media} label={a.title} />
                 {a.postedBy ? <p className="text-[13px] text-ink-muted">From {a.postedBy}</p> : null}
                 {a.quickAnswers && a.reaches.length ? <Answers a={a} family={family} /> : <AcknowledgeButton announcementId={a.id} title={a.title} />}
                 <ReplyLink a={a} />
@@ -189,6 +191,7 @@ export default async function NewsPage() {
                 </div>
                 <h2 className="text-base leading-[22px] font-bold">{a.title}</h2>
                 <p className="text-[14px] leading-5 whitespace-pre-line text-ink-muted">{a.body}</p>
+                <MediaGallery items={a.media} label={a.title} />
                 {a.quickAnswers && a.reaches.length ? <Answers a={a} family={family} /> : null}
                 <ReplyLink a={a} />
               </ReadFocus>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
+import { MediaPicker } from "@/components/media/MediaPicker";
 import { submitKeepingInput } from "@/components/submitKeepingInput";
 import type { MessageFormState } from "@/lib/messages/actions";
 import { BODY_MAX } from "@/lib/messages/limits";
@@ -18,6 +19,7 @@ export function MessageForm({
   placeholder,
   children,
   compact = false,
+  media = false,
 }: {
   action: (prev: MessageFormState, formData: FormData) => Promise<MessageFormState>;
   hidden: Record<string, string>;
@@ -27,9 +29,18 @@ export function MessageForm({
   children?: ReactNode;
   /** A reply under a thread: two lines that grow as you type, with Send beside the box so it's always in reach. */
   compact?: boolean;
+  /** Staff only: "Add photos or videos" above the box (src/components/media). */
+  media?: boolean;
 }) {
   const [state, run, pending] = useActionState<MessageFormState, FormData>(action, {});
   const form = useRef<HTMLFormElement>(null);
+  // A sent message starts the picker afresh (its uploads went with it).
+  const [sent, setSent] = useState(0);
+  const [seen, setSeen] = useState(state);
+  if (state !== seen) {
+    setSeen(state);
+    if (state.saved) setSent((n) => n + 1);
+  }
   useEffect(() => {
     if (!state.saved) return;
     form.current?.reset();
@@ -42,6 +53,7 @@ export function MessageForm({
         <input key={name} type="hidden" name={name} value={value} />
       ))}
       {children}
+      {media ? <MediaPicker key={sent} /> : null}
       {compact ? (
         <div>
           <label htmlFor="message-body" className="field-label">

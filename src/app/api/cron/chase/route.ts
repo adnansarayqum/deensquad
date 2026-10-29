@@ -4,6 +4,7 @@ import { runMonthlySummary } from "@/lib/admin/summary-run";
 import { enqueue } from "@/lib/background";
 import { purgeExpiredSessions } from "@/lib/auth/service";
 import { runChase } from "@/lib/chase/run";
+import { runMediaCleanup } from "@/lib/media/run";
 import { runMessageNotices } from "@/lib/messages/run";
 import { asSystem } from "@/lib/db";
 import { runPlanNotifications } from "@/lib/plans/run";
@@ -17,7 +18,7 @@ import { runWellbeingAlerts } from "@/lib/wellbeing/run";
 // job; everything else is best-effort and can't stop it: plan notifications, message notifications held back by
 // quiet hours or the 15-minute gap (src/lib/messages/notify.ts), the weekly "Is <child> coming?" reminder
 // (src/lib/reminders, on its day from its hour) and the owner's monthly summary (on the
-// 1st) and the trial follow-ups (src/lib/trials: "join the club" emails, old bookings anonymised) and staff check reminders (src/lib/staff-checks: a DBS or certificate running out within 60 days) never throw, long-expired sign-in sessions are cleared, and the copying-in of linked shop photos (slow hosts,
+// 1st) and the trial follow-ups (src/lib/trials: "join the club" emails, old bookings anonymised) and staff check reminders (src/lib/staff-checks: a DBS or certificate running out within 60 days) never throw, photos and videos attached to nothing for a day are removed (src/lib/media), long-expired sign-in sessions are cleared, and the copying-in of linked shop photos (slow hosts,
 // 20 s each) runs after the response has gone, one task at a time with the app's other background work.
 
 function authorised(header: string | null): boolean {
@@ -40,7 +41,7 @@ async function purgeSessions(): Promise<number> {
 export async function POST(request: Request) {
   if (!authorised(request.headers.get("authorization"))) return Response.json({ error: "unauthorised" }, { status: 401 });
   try {
-    const result = { ...(await runChase()), plans: await runPlanNotifications(), messages: await runMessageNotices(), attendanceReminder: await runAttendanceReminder(), summary: await runMonthlySummary(), trials: await runTrialFollowUps(), staffChecks: await runStaffCheckReminders(), wellbeing: await runWellbeingAlerts(), sessionsPurged: await purgeSessions() };
+    const result = { ...(await runChase()), plans: await runPlanNotifications(), messages: await runMessageNotices(), attendanceReminder: await runAttendanceReminder(), summary: await runMonthlySummary(), trials: await runTrialFollowUps(), staffChecks: await runStaffCheckReminders(), wellbeing: await runWellbeingAlerts(), media: await runMediaCleanup(), sessionsPurged: await purgeSessions() };
     console.info("[chase]", JSON.stringify(result));
     after(() => enqueue("shop photo copy", () => localiseProductImages()));
     return Response.json(result);

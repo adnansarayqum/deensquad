@@ -4,6 +4,8 @@ import { useActionState, useRef, useState, useSyncExternalStore, type ReactNode 
 import { Eye, Mail, Pencil } from "lucide-react";
 import { submitKeepingInput } from "@/components/submitKeepingInput";
 import type { FormState } from "@/lib/admin/actions";
+import { MediaGallery } from "@/components/media/MediaGallery";
+import type { MediaItem } from "@/lib/media/data";
 
 const noSubscribe = () => () => {};
 
@@ -17,7 +19,7 @@ export function NewsComposeForm({ action, children }: { action: (prev: FormState
   const [state, run, pending] = useActionState<FormState, FormData>(action, {});
   const live = useSyncExternalStore(noSubscribe, () => true, () => false);
   const form = useRef<HTMLFormElement>(null);
-  const [preview, setPreview] = useState<{ topic: string; title: string; body: string; reach: string } | null>(null);
+  const [preview, setPreview] = useState<{ topic: string; title: string; body: string; reach: string; media: MediaItem[] } | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
   const openPreview = () => {
@@ -31,7 +33,14 @@ export function NewsComposeForm({ action, children }: { action: (prev: FormState
     setProblem(null);
     // The audience's live line ("This goes to 14 parents in U7.") says exactly who it reaches.
     const reach = f.querySelector("[data-news-reach]")?.textContent?.trim() ?? "";
-    setPreview({ topic: String(data.get("topic") ?? ""), title, body, reach });
+    // The pictures and videos already uploaded (MediaPicker lists them on itself).
+    let media: MediaItem[] = [];
+    try {
+      media = JSON.parse(f.querySelector("[data-media-items]")?.getAttribute("data-media-items") ?? "[]") as MediaItem[];
+    } catch {
+      media = [];
+    }
+    setPreview({ topic: String(data.get("topic") ?? ""), title, body, reach, media });
     requestAnimationFrame(() => f.querySelector<HTMLElement>("[data-preview]")?.focus());
   };
 
@@ -52,6 +61,7 @@ export function NewsComposeForm({ action, children }: { action: (prev: FormState
             <p className="text-label text-kit-orange uppercase">{preview.topic}</p>
             <h3 className="text-[19px] leading-[25px] font-bold">{preview.title}</h3>
             <p className="text-[15px] leading-[22px] whitespace-pre-line">{preview.body}</p>
+            <MediaGallery items={preview.media} label={preview.title} />
           </div>
           {preview.reach ? <p className="rounded-app bg-cream px-3.5 py-2.5 text-[15px] font-bold">{preview.reach}</p> : null}
         </section>
