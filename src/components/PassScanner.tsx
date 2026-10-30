@@ -177,6 +177,16 @@ export function PassScanner({
       let frames = 0;
       const tick = async () => {
         if (cancelled) return;
+        try {
+          await readFrame();
+        } catch (error) {
+          // jsQR throws on some noisy frames (dark venues, glare). One bad frame must never stop the scanner: before
+          // this, the loop died silently and the camera kept showing with nothing read (Fri 30 Oct 2026).
+          console.warn("[scanner] frame skipped:", error instanceof Error ? error.message : error);
+        }
+        if (!cancelled) frame = requestAnimationFrame(tick);
+      };
+      const readFrame = async () => {
         const v = video.current;
         const c = canvas.current;
         if (v && c && v.readyState >= 2 && v.videoWidth > 0 && !busy.current) {
@@ -201,7 +211,6 @@ export function PassScanner({
             await send(code.data);
           }
         }
-        frame = requestAnimationFrame(tick);
       };
       frame = requestAnimationFrame(tick);
     })();
