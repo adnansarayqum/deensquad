@@ -7,6 +7,7 @@ import "@fontsource/dm-sans/800.css";
 import "./globals.css";
 import { Analytics } from "@/components/observability/Analytics";
 import { MonitoringUser } from "@/components/observability/MonitoringUser";
+import { ClientErrorReporter } from "@/components/observability/ClientErrorReporter";
 import { getCurrentUser } from "@/lib/auth/session";
 import { analyticsConfig, SENTRY_CLIENT_ON } from "@/lib/observability/config";
 import { monitoringUser } from "@/lib/observability/user";
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full bg-cream text-ink">
         {children}
+        <ClientErrorReporter />
         {SENTRY_CLIENT_ON ? <SignedInMonitoringUser /> : null}
         {analytics ? <Analytics config={analytics} /> : null}
       </body>

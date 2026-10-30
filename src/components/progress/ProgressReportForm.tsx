@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Sparkles, Undo2 } from "lucide-react";
-import { submitKeepingInput } from "@/components/submitKeepingInput";
+import { useKeptActionState } from "@/components/submitKeepingInput";
 import { draftProgressReport, saveProgressReport, type ProgressFormState } from "@/lib/progress/actions";
 import { REPORT_MAX } from "@/lib/progress/ratings";
 
@@ -28,7 +28,7 @@ export function ProgressReportForm({
   published: boolean;
   ai: boolean;
 }) {
-  const [state, run, pending] = useActionState<ProgressFormState, FormData>(saveProgressReport, {});
+  const [state, run, pending, keep] = useKeptActionState<ProgressFormState>(saveProgressReport, {});
   const [drafting, startDraft] = useTransition();
   const [message, setMessage] = useState<{ tone: "error" | "info"; text: string } | null>(null);
   const [undo, setUndo] = useState<string | null>(null);
@@ -41,7 +41,10 @@ export function ProgressReportForm({
     const before = el.value;
     setMessage(null);
     startDraft(async () => {
-      const result = await draftProgressReport(playerId, month, before);
+      const result = await draftProgressReport(playerId, month, before).catch(() => ({
+        error: "The AI couldn't help just now (check your signal). Your text is unchanged.",
+        body: undefined,
+      }));
       if (result.error || !result.body) {
         setMessage({ tone: "error", text: result.error ?? "The AI couldn't help just now." });
         return;
@@ -53,7 +56,7 @@ export function ProgressReportForm({
   }
 
   return (
-    <form action={run} onSubmit={submitKeepingInput(run)} className="flex flex-col gap-3" noValidate>
+    <form action={run} onSubmit={keep} className="flex flex-col gap-3" noValidate>
       <input type="hidden" name="player" value={playerId} />
       <input type="hidden" name="month" value={month} />
       <label htmlFor={id} className="field-label">

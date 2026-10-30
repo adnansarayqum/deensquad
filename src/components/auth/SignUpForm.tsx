@@ -1,18 +1,18 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { register, type FormState } from "@/lib/auth/actions";
 import { FormError } from "./AuthShell";
-import { submitKeepingInput } from "@/components/submitKeepingInput";
+import { useKeptActionState } from "@/components/submitKeepingInput";
 
 type Group = { value: string; label: string };
 
 export function SignUpForm({ groups, maxChildren }: { groups: Group[]; maxChildren: number }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(register, {});
+  const [state, action, pending, keep] = useKeptActionState<FormState>(register, {});
   const [children, setChildren] = useState(1);
 
   return (
-    <form action={action} onSubmit={submitKeepingInput(action)} className="flex flex-col gap-5" noValidate>
+    <form action={action} onSubmit={keep} className="flex flex-col gap-5" noValidate>
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-1 text-[19px] font-extrabold">About you</legend>
         <div className="grid grid-cols-2 gap-3">

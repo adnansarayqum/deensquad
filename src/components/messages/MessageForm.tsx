@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MediaPicker } from "@/components/media/MediaPicker";
-import { submitKeepingInput } from "@/components/submitKeepingInput";
+import { useKeptActionState } from "@/components/submitKeepingInput";
 import type { MessageFormState } from "@/lib/messages/actions";
 import { BODY_MAX } from "@/lib/messages/limits";
 
@@ -32,7 +32,7 @@ export function MessageForm({
   /** Staff only: "Add photos or videos" above the box (src/components/media). */
   media?: boolean;
 }) {
-  const [state, run, pending] = useActionState<MessageFormState, FormData>(action, {});
+  const [state, run, pending, keep] = useKeptActionState<MessageFormState>(action, {});
   const form = useRef<HTMLFormElement>(null);
   // A sent message starts the picker afresh (its uploads went with it).
   const [sent, setSent] = useState(0);
@@ -48,7 +48,7 @@ export function MessageForm({
     if (box) box.style.height = "";
   }, [state]);
   return (
-    <form ref={form} action={run} onSubmit={submitKeepingInput(run)} className="flex flex-col gap-3" noValidate>
+    <form ref={form} action={run} onSubmit={keep} className="flex flex-col gap-3" noValidate>
       {Object.entries(hidden).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}

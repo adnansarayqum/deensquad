@@ -4,6 +4,7 @@ import { runMonthlySummary } from "@/lib/admin/summary-run";
 import { enqueue } from "@/lib/background";
 import { purgeExpiredSessions } from "@/lib/auth/service";
 import { runChase } from "@/lib/chase/run";
+import { sendErrorAlert } from "@/lib/alerts";
 import { runMediaCleanup } from "@/lib/media/run";
 import { runMessageNotices } from "@/lib/messages/run";
 import { asSystem } from "@/lib/db";
@@ -41,12 +42,19 @@ async function purgeSessions(): Promise<number> {
 export async function POST(request: Request) {
   if (!authorised(request.headers.get("authorization"))) return Response.json({ error: "unauthorised" }, { status: 401 });
   try {
-    const result = { ...(await runChase()), plans: await runPlanNotifications(), messages: await runMessageNotices(), attendanceReminder: await runAttendanceReminder(), summary: await runMonthlySummary(), trials: await runTrialFollowUps(), staffChecks: await runStaffCheckReminders(), wellbeing: await runWellbeingAlerts(), media: await runMediaCleanup(), sessionsPurged: await purgeSessions() };
+    // The chase in its own try/catch like every other job, so a fault in it can't stop the rest (or the next hour's).
+    const chase = await runChase().catch((error: unknown) => {
+      console.error("[chase] ladder failed:", error instanceof Error ? error.message : error);
+      void sendErrorAlert({ message: `The hourly reminders failed: ${error instanceof Error ? error.message : String(error)}`, path: "/api/cron/chase", kind: "cron job" });
+      return { failed: ["chase"] };
+    });
+    const result = { ...chase, plans: await runPlanNotifications(), messages: await runMessageNotices(), attendanceReminder: await runAttendanceReminder(), summary: await runMonthlySummary(), trials: await runTrialFollowUps(), staffChecks: await runStaffCheckReminders(), wellbeing: await runWellbeingAlerts(), media: await runMediaCleanup(), sessionsPurged: await purgeSessions() };
     console.info("[chase]", JSON.stringify(result));
     after(() => enqueue("shop photo copy", () => localiseProductImages()));
     return Response.json(result);
   } catch (error) {
     console.error("[chase] failed:", error instanceof Error ? error.message : error);
+    await sendErrorAlert({ message: `The hourly jobs failed: ${error instanceof Error ? error.message : String(error)}`, path: "/api/cron/chase", kind: "cron job" });
     return Response.json({ error: "failed" }, { status: 500 });
   }
 }

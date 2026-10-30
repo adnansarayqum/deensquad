@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { PoundSterling } from "lucide-react";
 import { recordGatePayment, undoGatePaymentAction } from "@/lib/staff/actions";
-import { tapAction, TapProblem, type Problem } from "./TapProblem";
+import { tapAction, tapRoute, TapProblem, type Problem } from "./TapProblem";
 
 // "Paid £7" for a child who pays at the gate (pay as you go, or no plan yet), or a trial child: one tap once the card
 // machine says approved. Then a grass "Paid £7" with Undo for a tap by mistake. Like Mark here, a tap that doesn't
@@ -32,9 +33,18 @@ export function GatePayButton({
 }) {
   const [pending, startTransition] = useTransition();
   const [problem, setProblem] = useState<Problem | null>(null);
+  const router = useRouter();
   const run = (undo: boolean) =>
     startTransition(async () => {
       setProblem(null);
+      // A child's payment goes to its own route (so a stuck tap never holds up the others); a trial's is an action
+      // that gives up after 10 s.
+      if (kind === "child") {
+        const p = await tapRoute("/api/coach/payment", { session: sessionId, child: id, undo });
+        setProblem(p);
+        if (!p) router.refresh();
+        return;
+      }
       setProblem(await tapAction(() => (undo ? undoGatePaymentAction(sessionId, id, kind) : recordGatePayment(sessionId, id, kind))));
     });
 

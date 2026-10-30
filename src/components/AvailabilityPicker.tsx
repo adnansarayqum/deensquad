@@ -1,12 +1,12 @@
 "use client";
 
-import { useActionState, useId, useOptimistic, useState, useSyncExternalStore, useTransition } from "react";
+import { useId, useOptimistic, useState, useSyncExternalStore, useTransition } from "react";
 import { CalendarPlus, Check, MessageSquare, X } from "lucide-react";
 import Link from "next/link";
 import type { Availability } from "@/lib/domain";
 import { track } from "@/lib/analytics";
 import { sendAwayReason, setAvailability, type AwayReasonState } from "@/lib/parent/actions";
-import { submitKeepingInput } from "./submitKeepingInput";
+import { useKeptActionState } from "./submitKeepingInput";
 import { tapAction, TapProblem, type Problem } from "./TapProblem";
 
 /** The longest reason (as AWAY_REASON_MAX on the server). */
@@ -125,7 +125,7 @@ export function AvailabilityPicker({
  * child. Once sent it shows what was sent, with Change. A plain form: it works before the page's script has loaded.
  */
 function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: string; playerId: string; childName: string; saved: string | null }) {
-  const [state, run, sending] = useActionState<AwayReasonState, FormData>(sendAwayReason, {});
+  const [state, run, sending, keep] = useKeptActionState<AwayReasonState>(sendAwayReason, {});
   const [editing, setEditing] = useState(false);
   const [sentAt, setSentAt] = useState<AwayReasonState | null>(null);
   const id = useId();
@@ -164,7 +164,7 @@ function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: stri
   }
 
   return (
-    <form action={run} onSubmit={submitKeepingInput(run)} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper px-3.5 py-3">
+    <form action={run} onSubmit={keep} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper px-3.5 py-3">
       <input type="hidden" name="session" value={sessionId} />
       <input type="hidden" name="child" value={playerId} />
       <label htmlFor={id} className="text-[15px] font-bold">

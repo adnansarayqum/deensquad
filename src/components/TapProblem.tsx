@@ -19,12 +19,39 @@ export type Refusal = { error?: string } | void;
 export async function tapAction(run: () => Promise<Refusal>): Promise<Problem | null> {
   let result: Refusal;
   try {
-    result = await run();
+    // A request that never answers (a weak signal) says so after 10 s instead of "Saving…" for ever.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const gaveUp = new Promise<"timeout">((resolve) => (timer = setTimeout(() => resolve("timeout"), TAP_TIMEOUT_MS)));
+    const answer = await Promise.race([run(), gaveUp]).finally(() => clearTimeout(timer));
+    if (answer === "timeout") return { kind: "offline" };
+    result = answer;
   } catch (error) {
     unstable_rethrow(error);
     return { kind: "offline" };
   }
   return result?.error ? { kind: "refused", message: result.error } : null;
+}
+
+export const TAP_TIMEOUT_MS = 10_000;
+
+/**
+ * A tap sent to a route (not a Server Action, which Next queues one at a time with no time limit, so one stuck tap
+ * would hold up every other): JSON in, `{ error? }` out, given up after 10 s. Signed out comes back as a refusal.
+ */
+export async function tapRoute(url: string, body: unknown): Promise<Problem | null> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), TAP_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: abort.signal });
+    const answer = (await res.json().catch(() => ({}))) as { error?: unknown };
+    if (res.status === 401) return { kind: "refused", message: "You've been signed out. Reload and sign in again." };
+    if (!res.ok && typeof answer.error !== "string") return { kind: "offline" };
+    return typeof answer.error === "string" ? { kind: "refused", message: answer.error } : null;
+  } catch {
+    return { kind: "offline" };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**

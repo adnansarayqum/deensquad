@@ -1,19 +1,19 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useId } from "react";
 import { saveIncident, type IncidentFormState } from "@/lib/incidents/actions";
 import { INCIDENT_KINDS, INCIDENT_TEXT_MAX } from "@/lib/incidents/kinds";
-import { submitKeepingInput } from "../submitKeepingInput";
+import { useKeptActionState } from "../submitKeepingInput";
 
 type Child = { id: string; name: string; group: string };
 
 /** Log an accident or incident: one plain form (works before the script loads); keeps what was typed after an error. */
 export function IncidentForm({ childList: children, childId, sessionId, sessionLabel, now }: { childList: Child[]; childId: string | null; sessionId: string | null; sessionLabel: string | null; now: string }) {
-  const [state, run, saving] = useActionState<IncidentFormState, FormData>(saveIncident, {});
+  const [state, run, saving, keep] = useKeptActionState<IncidentFormState>(saveIncident, {});
   const id = useId();
   const groups = [...new Set(children.map((c) => c.group))];
   return (
-    <form action={run} onSubmit={submitKeepingInput(run)} className="flex flex-col gap-4">
+    <form action={run} onSubmit={keep} className="flex flex-col gap-4">
       {sessionId ? <input type="hidden" name="session" value={sessionId} /> : null}
       <div className="flex flex-col gap-1">
         <label htmlFor={`${id}-child`} className="field-label">

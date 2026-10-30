@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type FormEvent, type ReactNode } from "react";
 import { addChild, addParent, saveMyChild, saveMyDetails, type AddParentState, type ProfileFormState } from "@/lib/parent/actions";
-import { submitKeepingInput } from "@/components/submitKeepingInput";
+import { useKeptActionState } from "@/components/submitKeepingInput";
 
 // Player → Your details, a child's details and Add a child. Each is a plain form posting a server action
 // (`action={run}` keeps it working before hydration); `submitKeepingInput` keeps what was typed when the action
@@ -60,23 +60,23 @@ function Outcome({ state, pending, saved }: { state: ProfileFormState; pending: 
   );
 }
 
-function Form({ run, state, children, className = "" }: { run: (formData: FormData) => void; state?: ProfileFormState; children: ReactNode; className?: string }) {
+function Form({ run, keep, state, children, className = "" }: { run: (formData: FormData) => void; keep: (e: FormEvent<HTMLFormElement>) => void; state?: ProfileFormState; children: ReactNode; className?: string }) {
   const form = useRef<HTMLFormElement>(null);
   // A new state object each time the action returns, so every save resets, not only the first.
   useEffect(() => {
     if (state?.saved) form.current?.reset();
   }, [state]);
   return (
-    <form ref={form} action={run} onSubmit={submitKeepingInput(run)} className={`flex flex-col gap-4 ${className}`} noValidate>
+    <form ref={form} action={run} onSubmit={keep} className={`flex flex-col gap-4 ${className}`} noValidate>
       {children}
     </form>
   );
 }
 
 export function MyDetailsForm({ details }: { details: { firstName: string; lastName: string; phone: string | null } }) {
-  const [state, run, pending] = useActionState<ProfileFormState, FormData>(saveMyDetails, {});
+  const [state, run, pending, keep] = useKeptActionState<ProfileFormState>(saveMyDetails, {});
   return (
-    <Form run={run} state={state}>
+    <Form run={run} keep={keep} state={state}>
       <div className="grid grid-cols-2 gap-3">
         <Field id="firstName" name="firstName" label="First name" defaultValue={details.firstName} autoComplete="given-name" />
         <Field id="lastName" name="lastName" label="Last name" defaultValue={details.lastName} autoComplete="family-name" />
@@ -100,9 +100,9 @@ export function MyDetailsForm({ details }: { details: { firstName: string; lastN
 }
 
 export function ChildDetailsForm({ child, today }: { child: { id: string; firstName: string; lastName: string; dateOfBirth: string | null }; today: string }) {
-  const [state, run, pending] = useActionState<ProfileFormState, FormData>(saveMyChild, {});
+  const [state, run, pending, keep] = useKeptActionState<ProfileFormState>(saveMyChild, {});
   return (
-    <Form run={run} state={state}>
+    <Form run={run} keep={keep} state={state}>
       <input type="hidden" name="child" value={child.id} />
       <div className="grid grid-cols-2 gap-3">
         <Field id="firstName" name="firstName" label="First name" defaultValue={child.firstName} />
@@ -118,9 +118,9 @@ export function ChildDetailsForm({ child, today }: { child: { id: string; firstN
 }
 
 export function AddChildForm({ groups, lastName, today }: { groups: Group[]; lastName: string; today: string }) {
-  const [state, run, pending] = useActionState<ProfileFormState, FormData>(addChild, {});
+  const [state, run, pending, keep] = useKeptActionState<ProfileFormState>(addChild, {});
   return (
-    <Form run={run}>
+    <Form run={run} keep={keep}>
       <div className="grid grid-cols-2 gap-3">
         <Field id="firstName" name="firstName" label="First name" />
         <Field id="lastName" name="lastName" label="Last name" defaultValue={lastName} />
@@ -155,9 +155,9 @@ export function AddChildForm({ groups, lastName, today }: { groups: Group[]; las
  * each, all ticked to start. Clears itself once they're added and says so.
  */
 export function AddParentForm({ childList: children }: { childList: { id: string; firstName: string }[] }) {
-  const [state, run, pending] = useActionState<AddParentState, FormData>(addParent, {});
+  const [state, run, pending, keep] = useKeptActionState<AddParentState>(addParent, {});
   return (
-    <Form run={run} state={state}>
+    <Form run={run} keep={keep} state={state}>
       <div className="grid grid-cols-2 gap-3">
         <Field id="parentFirstName" name="firstName" label="First name" />
         <Field id="parentLastName" name="lastName" label="Last name" />

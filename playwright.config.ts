@@ -54,6 +54,14 @@ export default defineConfig({
     baseURL: "http://localhost:3100",
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } : {},
   },
+  // Every spec in Chrome. With E2E_WEBKIT=1 (the GitHub run, .github/workflows/test.yml) the Friday smoke test runs
+  // again afterwards in WebKit, Safari's engine, on an iPhone screen. WebKit can't be downloaded in every workspace.
+  projects: [
+    { name: "chrome" },
+    ...(process.env.E2E_WEBKIT
+      ? [{ name: "iphone-webkit", testMatch: /zz-iphone-smoke\.spec\.ts/, dependencies: ["chrome"], use: { ...devices["iPhone 13"], baseURL: "http://localhost:3100", launchOptions: {} } }]
+      : []),
+  ],
   webServer: [
     { command: "node e2e/fake-claude.mjs", url: "http://localhost:3199/health", reuseExistingServer: false },
     {

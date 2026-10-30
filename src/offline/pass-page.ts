@@ -26,6 +26,11 @@ async function draw() {
       // The same picture /pass draws on the server.
       picture.append(qrImage(await qrDataUrl(pass.token), `QR code that checks ${pass.firstName} in`));
     } catch {
+      // Never a code missing without a word, at the gate with no signal.
+      const missing = document.createElement("p");
+      missing.textContent = `Couldn't show ${pass.firstName}'s code here. Ask the coach to mark ${pass.firstName} here.`;
+      section.append(name, missing);
+      list.append(section);
       continue;
     }
     section.append(name, picture);

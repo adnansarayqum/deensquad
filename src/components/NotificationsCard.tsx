@@ -35,8 +35,9 @@ export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
       if (Notification.permission === "granted") {
         // Keep the saved subscription fresh (it can change, or belong to whoever signed in last).
         const sub = existing ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) }));
-        await savePushSubscription(sub.toJSON() as never);
-        if (!cancelled) setState("hidden");
+        // Only hidden once the club has the subscription: if saving failed, offer the button again.
+        const saved = await savePushSubscription(sub.toJSON() as never).catch(() => null);
+        if (!cancelled) setState(saved?.ok ? "hidden" : "offer");
       } else if (!cancelled) {
         // Blocked on this phone: say where to switch them back on, or the parent never hears from the club.
         setState(Notification.permission === "denied" ? "blocked" : "offer");

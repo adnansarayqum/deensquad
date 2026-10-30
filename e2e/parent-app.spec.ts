@@ -1322,8 +1322,8 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await expect(here.getByRole("heading", { name: "Here (0)" })).toBeVisible();
 
     // No signal at the gate: the scanner says so (not "not a pass") and offers to try again.
-    // The scanner posts to its own route; Mark here and Undo are Server Actions on /coach.
-    const offline = (url: URL) => url.pathname === "/coach" || url.pathname === "/api/coach/scan";
+    // The scanner, Mark here, Undo and Paid post to their own routes (/api/coach/…).
+    const offline = (url: URL) => url.pathname === "/coach" || url.pathname.startsWith("/api/coach/");
     await coach.route(offline, (route) => (route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue()));
     await coach.getByRole("button", { name: "Scan QR codes" }).click();
     const scanner = coach.getByRole("dialog", { name: "Scan attendance QR codes" });
@@ -1489,7 +1489,11 @@ test("gate register: with 12 children in, the list still to arrive starts on the
   const heading = notHere.getByRole("heading", { name: "Not here yet (2)" });
   await expect(heading).toBeVisible();
   await page.screenshot({ path: shot("coach-register-busy") });
-  expect((await heading.boundingBox())!.y).toBeLessThan(700);
+  // On a Friday the sample club's own training is today too, so the session chips wrap to a second row: the rule is
+  // about the register's own layout, so a row of chips this test added doesn't count against it.
+  const chips = page.getByRole("navigation", { name: "Today's sessions" });
+  const chipRows = (await chips.count()) ? Math.max(0, (await chips.boundingBox())!.height - (await chips.getByRole("link").first().boundingBox())!.height) : 0;
+  expect((await heading.boundingBox())!.y - chipRows).toBeLessThan(700);
 
   // Search narrows every list as you type.
   const search = page.getByLabel("Find a child");

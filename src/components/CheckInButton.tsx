@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { checkInPlayer, undoCheckIn } from "@/lib/staff/actions";
-import { tapAction, TapProblem, type Problem } from "./TapProblem";
+import { useRouter } from "next/navigation";
+import { tapRoute, TapProblem, type Problem } from "./TapProblem";
 
 // Mark here and Undo on the register. A tap that doesn't save (no signal) leaves the register as it is and says so
 // on that child's row, with Try again, so the coach doesn't have to find the child again. Each renders the button and,
@@ -13,10 +13,13 @@ const NOTE = "order-last basis-full";
 export function CheckInButton({ sessionId, playerId, name, disabled = false }: { sessionId: string; playerId: string; name: string; disabled?: boolean }) {
   const [pending, startTransition] = useTransition();
   const [problem, setProblem] = useState<Problem | null>(null);
+  const router = useRouter();
   const mark = () =>
     startTransition(async () => {
       setProblem(null);
-      setProblem(await tapAction(() => checkInPlayer(sessionId, playerId)));
+      const p = await tapRoute("/api/coach/register", { session: sessionId, child: playerId });
+      setProblem(p);
+      if (!p) router.refresh();
     });
   return (
     <>
@@ -37,10 +40,13 @@ export function CheckInButton({ sessionId, playerId, name, disabled = false }: {
 export function UndoCheckInButton({ sessionId, playerId, name, disabled = false }: { sessionId: string; playerId: string; name: string; disabled?: boolean }) {
   const [pending, startTransition] = useTransition();
   const [problem, setProblem] = useState<Problem | null>(null);
+  const router = useRouter();
   const undo = () =>
     startTransition(async () => {
       setProblem(null);
-      setProblem(await tapAction(() => undoCheckIn(sessionId, playerId)));
+      const p = await tapRoute("/api/coach/register", { session: sessionId, child: playerId, undo: true });
+      setProblem(p);
+      if (!p) router.refresh();
     });
   return (
     <>

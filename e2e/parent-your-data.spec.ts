@@ -132,6 +132,8 @@ test("your data: a parent downloads their family's data, which holds their child
   let downloads = 0;
   page.on("download", () => downloads++);
   await page.route("**/api/me/export", (route) => route.fulfill({ status: 429, body: "That's a lot of downloads in one hour. Try again later." }));
+  // The first download has finished (the button isn't busy), so this tap isn't ignored.
+  await expect(section.getByRole("link", { name: "Download my data" })).not.toHaveAttribute("aria-disabled", "true");
   await section.getByRole("link", { name: "Download my data" }).click();
   await expect(section.getByRole("status")).toHaveText("You've downloaded this a lot in the last hour. Try again later.");
   await page.screenshot({ path: shot("your-data-too-many") });

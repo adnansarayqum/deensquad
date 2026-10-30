@@ -24,7 +24,8 @@ export function DownloadMyData() {
     setBusy(true);
     setProblem(null);
     try {
-      const res = await fetch("/api/me/export", { redirect: "manual", cache: "no-store" });
+      // A stalled connection gives up after 30 s and says so, rather than a busy button for ever.
+      const res = await fetch("/api/me/export", { redirect: "manual", cache: "no-store", signal: AbortSignal.timeout?.(30_000) });
       if (res.status === 401 || res.type === "opaqueredirect") {
         router.push("/sign-in?next=%2Fplayer");
         return;

@@ -29,21 +29,53 @@ function fromItem(m: MediaItem): Tile {
   return { key: m.id, kind: m.kind, status: "done", progress: 1, local: null, media: m, error: null };
 }
 
-function upload(body: Blob, onProgress: (p: number) => void): Promise<MediaItem> {
+/** Gives up when nothing has moved for this long while sending, or the server hasn't answered this long after. */
+const STALL_MS = 45_000;
+const PROCESS_MS = 180_000;
+const STALLED = "That upload stalled. Check your signal, remove it and add it again.";
+
+/**
+ * Sends one file. A connection that stalls never fires an error, so a watchdog gives up after 45 s without progress
+ * (or 3 minutes after the last byte, while the server cleans a video); `cancel` (Remove) stops it too.
+ */
+function upload(body: Blob, onProgress: (p: number) => void, cancels: Map<string, () => void>, key: string): Promise<MediaItem> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    let last = Date.now();
+    let sent = false;
+    const done = () => {
+      clearInterval(watch);
+      cancels.delete(key);
+    };
+    const watch = setInterval(() => {
+      if (Date.now() - last > (sent ? PROCESS_MS : STALL_MS)) xhr.abort();
+    }, 5_000);
+    cancels.set(key, () => xhr.abort());
     xhr.open("POST", "/api/media-upload");
     xhr.responseType = "json";
     xhr.upload.onprogress = (e) => {
+      last = Date.now();
       if (e.lengthComputable) onProgress(e.loaded / e.total);
     };
+    xhr.upload.onload = () => {
+      sent = true;
+      last = Date.now();
+    };
     xhr.onload = () => {
+      done();
       const res = xhr.response as (MediaItem & { error?: string }) | null;
       if (xhr.status === 200 && res?.id) resolve(res);
       else if (xhr.status === 401) reject(new Error("Your sign-in has run out. Sign in again in another tab, then try again."));
       else reject(new Error(res?.error ?? "That didn't upload. Try again."));
     };
-    xhr.onerror = () => reject(new Error("That didn't upload. Check your signal and try again."));
+    xhr.onerror = () => {
+      done();
+      reject(new Error("That didn't upload. Check your signal and try again."));
+    };
+    xhr.onabort = xhr.ontimeout = () => {
+      done();
+      reject(new Error(STALLED));
+    };
     xhr.send(body);
   });
 }
@@ -55,6 +87,8 @@ export function MediaPicker({ initial = [], hint }: { initial?: MediaItem[]; hin
   const box = useRef<HTMLFieldSetElement>(null);
   const uploading = tiles.some((t) => t.status === "uploading");
   const queue = useRef<Promise<void>>(Promise.resolve());
+  const cancels = useRef(new Map<string, () => void>());
+  const alive = useRef(new Set<string>());
 
   const patch = (key: string, p: Partial<Tile>) => setTiles((all) => all.map((t) => (t.key === key ? { ...t, ...p } : t)));
 
@@ -84,6 +118,7 @@ export function MediaPicker({ initial = [], hint }: { initial?: MediaItem[]; hin
     if (files.length > chosen.length) setProblem(`Up to ${MAX_MEDIA_ITEMS} photos and videos. The rest weren't added.`);
     for (const file of chosen) {
       const key = crypto.randomUUID();
+      alive.current.add(key);
       const kind: "image" | "video" = file.type.startsWith("video/") ? "video" : "image";
       const tooBig = kind === "video" && file.size > MAX_VIDEO_BYTES ? videoTooBig(file.size) : null;
       const local = kind === "image" ? URL.createObjectURL(file) : null;
@@ -99,7 +134,8 @@ export function MediaPicker({ initial = [], hint }: { initial?: MediaItem[]; hin
             if (small) body = small;
             else if (file.size > MAX_IMAGE_BYTES) throw new Error(imageTooBig(file.size));
           }
-          const media = await upload(body, (p) => patch(key, { progress: p }));
+          if (!alive.current.has(key)) return; // removed while waiting its turn
+          const media = await upload(body, (p) => patch(key, { progress: p }), cancels.current, key);
           patch(key, { status: "done", progress: 1, media });
         } catch (e) {
           patch(key, { status: "error", error: e instanceof Error ? e.message : "That didn't upload. Try again." });
@@ -108,7 +144,12 @@ export function MediaPicker({ initial = [], hint }: { initial?: MediaItem[]; hin
     }
   };
 
-  const remove = (key: string) => setTiles((all) => all.filter((t) => t.key !== key));
+  const remove = (key: string) => {
+    // Removing a tile stops its upload (or its turn in the queue), so the queue never waits on it.
+    alive.current.delete(key);
+    cancels.current.get(key)?.();
+    setTiles((all) => all.filter((t) => t.key !== key));
+  };
   const done = tiles.filter((t) => t.status === "done" && t.media);
   const label = (t: Tile, i: number) => `${t.kind === "video" ? "video" : "photo"} ${i + 1}`;
 

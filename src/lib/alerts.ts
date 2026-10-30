@@ -51,3 +51,27 @@ export async function sendErrorAlert(error: { name?: string; message: string; di
     return false;
   }
 }
+
+const warnedSessions = new Set<string>();
+
+/**
+ * "The scanner may not be working": once per session (and an idempotency key, so a second server can't repeat it), to
+ * the same people as error alerts. See src/lib/staff/scanner-watch.ts.
+ */
+export async function sendScannerWarning(sessionId: string, title: string, manual: number): Promise<boolean> {
+  if (process.env.NODE_ENV !== "production" || !emailConfigured() || warnedSessions.has(sessionId)) return false;
+  const to = recipients();
+  if (to.length === 0) return false;
+  warnedSessions.add(sessionId);
+  const text = [
+    `At ${title} today, ${manual} children have been marked here by hand and no QR code has been scanned.`,
+    ``,
+    `If coaches aren't using the scanner on purpose, it may not be working. Ask a coach to open Scan QR codes and try one code. Mark here still works in the meantime.`,
+    ...(appUrl() ? [``, `Register: ${appUrl()}/coach`] : []),
+  ].join("\n");
+  const { sent } = await sendEmails(
+    to.map((email) => ({ to: email, subject: `Deen Squad: no QR scans at ${title} today`, text, html: `<p>${text.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!).replace(/\n/g, "<br>")}</p>`, idempotencyKey: `scanner-quiet:${sessionId}:${email}` })),
+  );
+  if (sent.length === 0) warnedSessions.delete(sessionId);
+  return sent.length > 0;
+}

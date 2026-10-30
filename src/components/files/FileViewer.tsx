@@ -35,7 +35,11 @@ async function loadPdf(src: string, signal: AbortSignal): Promise<Loaded> {
   let data: Uint8Array;
   try {
     pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    const res = await fetch(src, { credentials: "same-origin", signal });
+    // A stalled connection says "check your signal" after 30 s instead of "Opening…" for ever.
+    const stall = new AbortController();
+    const timer = setTimeout(() => stall.abort(), 30_000);
+    signal.addEventListener("abort", () => stall.abort());
+    const res = await fetch(src, { credentials: "same-origin", signal: stall.signal }).finally(() => clearTimeout(timer));
     if (!res.ok) throw new Error(`File request failed: ${res.status}`);
     data = new Uint8Array(await res.arrayBuffer());
   } catch (error) {

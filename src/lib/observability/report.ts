@@ -2,6 +2,7 @@
 // NEXT_PUBLIC_SENTRY_DSN and Sentry has started (src/instrumentation-client.ts puts it on window).
 
 import type { MonitoringUser } from "./scrub";
+import { reportToServer } from "@/components/observability/ClientErrorReporter";
 
 type SentryClient = typeof import("./sentry-client");
 export type SentryWindow = Window & {
@@ -33,6 +34,8 @@ export function reportClientError(error: unknown) {
   if (!w) return;
   const digest = (error as { digest?: unknown } | null)?.digest;
   if (typeof digest === "string" && digest) return;
+  // Emailed to the club's maintainer too, whether or not Sentry is on (src/lib/observability/client-errors.ts).
+  reportToServer(error);
   setTimeout(() => {
     if (w.__dsSentry) sendClientError(w, w.__dsSentry, error);
     else if (process.env.NEXT_PUBLIC_SENTRY_DSN) {

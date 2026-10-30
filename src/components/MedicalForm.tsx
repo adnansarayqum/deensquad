@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { removeChildMedical, saveChildMedical, type MedicalFormState } from "@/lib/medical/actions";
 import { MEDICAL_FIELD_MAX, type MedicalField, type MedicalText } from "@/lib/medical/data";
-import { submitKeepingInput } from "./submitKeepingInput";
+import { useKeptActionState } from "./submitKeepingInput";
 
 // Player → a child's details → Medical and additional needs. Plain forms posting server actions (`action={run}`, so
 // they work before the page has loaded); `submitKeepingInput` keeps what was typed when the action returns an error,
@@ -32,7 +32,7 @@ function Outcome({ state, pending, saved }: { state: MedicalFormState; pending: 
 }
 
 export function MedicalForm({ child, medical }: { child: { id: string; firstName: string }; medical: MedicalText | null }) {
-  const [state, run, pending] = useActionState<MedicalFormState, FormData>(saveChildMedical, {});
+  const [state, run, pending, keep] = useKeptActionState<MedicalFormState>(saveChildMedical, {});
   const form = useRef<HTMLFormElement>(null);
   // A new state object each time the action returns, so every save resets to what was saved.
   useEffect(() => {
@@ -40,7 +40,7 @@ export function MedicalForm({ child, medical }: { child: { id: string; firstName
   }, [state]);
   const name = child.firstName;
   return (
-    <form ref={form} action={run} onSubmit={submitKeepingInput(run)} className="flex flex-col gap-4" noValidate>
+    <form ref={form} action={run} onSubmit={keep} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="child" value={child.id} />
       {FIELDS.map((f) => (
         <div key={f.name}>
@@ -83,10 +83,10 @@ export function MedicalForm({ child, medical }: { child: { id: string; firstName
 }
 
 export function RemoveMedicalForm({ child }: { child: { id: string; firstName: string } }) {
-  const [state, run, pending] = useActionState<MedicalFormState, FormData>(removeChildMedical, {});
+  const [state, run, pending, keep] = useKeptActionState<MedicalFormState>(removeChildMedical, {});
   const name = child.firstName;
   return (
-    <form action={run} onSubmit={submitKeepingInput(run)} className="flex flex-col gap-3" noValidate>
+    <form action={run} onSubmit={keep} className="flex flex-col gap-3" noValidate>
       <input type="hidden" name="child" value={child.id} />
       <label className="flex min-h-12 items-center gap-3 text-[15px] font-bold">
         <input type="checkbox" name="confirm" value="yes" className="h-6 w-6 shrink-0 accent-[var(--kit-orange)]" />

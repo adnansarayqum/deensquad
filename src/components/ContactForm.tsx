@@ -1,20 +1,20 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { addEmergencyContact, type ContactFormState } from "@/lib/parent/actions";
-import { submitKeepingInput } from "@/components/submitKeepingInput";
+import { useKeptActionState } from "@/components/submitKeepingInput";
 
 type Kid = { id: string; firstName: string };
 
 export function ContactForm({ child, siblings }: { child: Kid; siblings: Kid[] }) {
-  const [state, action, pending] = useActionState<ContactFormState, FormData>(addEmergencyContact, {});
+  const [state, action, pending, keep] = useKeptActionState<ContactFormState>(addEmergencyContact, {});
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state.saved) form.current?.reset();
   }, [state]);
 
   return (
-    <form ref={form} action={action} onSubmit={submitKeepingInput(action)} className="flex flex-col gap-4" noValidate>
+    <form ref={form} action={action} onSubmit={keep} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="child" value={child.id} />
       <div>
         <label htmlFor="name" className="field-label">

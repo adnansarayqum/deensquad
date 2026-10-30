@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Eye, Mail, Pencil } from "lucide-react";
-import { submitKeepingInput } from "@/components/submitKeepingInput";
+import { useKeptActionState } from "@/components/submitKeepingInput";
 import type { FormState } from "@/lib/admin/actions";
 import { MediaGallery } from "@/components/media/MediaGallery";
 import type { MediaItem } from "@/lib/media/data";
@@ -16,7 +16,7 @@ const noSubscribe = () => () => {};
  * Posting redirects to the post's page; a test keeps everything typed.
  */
 export function NewsComposeForm({ action, children }: { action: (prev: FormState, formData: FormData) => Promise<FormState>; children: ReactNode }) {
-  const [state, run, pending] = useActionState<FormState, FormData>(action, {});
+  const [state, run, pending, keep] = useKeptActionState<FormState>(action, {});
   const live = useSyncExternalStore(noSubscribe, () => true, () => false);
   const form = useRef<HTMLFormElement>(null);
   const [preview, setPreview] = useState<{ topic: string; title: string; body: string; reach: string; media: MediaItem[] } | null>(null);
@@ -52,7 +52,7 @@ export function NewsComposeForm({ action, children }: { action: (prev: FormState
   }
   const error = problem ?? (state.error && !pending ? state.error : null);
   return (
-    <form ref={form} action={run} onSubmit={submitKeepingInput(run)} className="flex flex-col gap-4" noValidate>
+    <form ref={form} action={run} onSubmit={keep} className="flex flex-col gap-4" noValidate>
       <div className={preview ? "hidden" : "contents"}>{children}</div>
       {preview ? (
         <section data-preview tabIndex={-1} aria-label="Preview" className="flex flex-col gap-3 outline-none">

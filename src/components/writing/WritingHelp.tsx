@@ -27,6 +27,9 @@ function recognitionCtor(): RecognitionCtor | null {
 
 const noop = () => () => {};
 
+/** A request that didn't come back (weak signal, signed out): the text box is left as it was. */
+const AI_FAILED = "The AI couldn't help just now (check your signal). Your text is unchanged.";
+
 function field(id: string) {
   return document.getElementById(id) as HTMLTextAreaElement | HTMLInputElement | null;
 }
@@ -104,7 +107,7 @@ export function WritingHelp({
     setMessage(null);
     start(async () => {
       const notes = title ? `${title}\n${body}` : body;
-      const result = await draftWithAI(kind, notes, context);
+      const result = await draftWithAI(kind, notes, context).catch(() => ({ error: AI_FAILED, body: undefined, title: undefined }));
       if (result.error || !result.body) {
         setMessage({ tone: "error", text: result.error ?? "The AI couldn't help just now." });
         return;
@@ -194,7 +197,7 @@ export function PracticeFromPlan({ plans, titleId, bodyId }: { plans: { id: stri
             start(async () => {
               setError(null);
               const plan = plans.find((p) => p.id === choice);
-              const result = await draftWithAI("practiceFromPlan", plan?.text ?? "", plan?.label);
+              const result = await draftWithAI("practiceFromPlan", plan?.text ?? "", plan?.label).catch(() => ({ error: AI_FAILED, body: undefined, title: undefined }));
               if (result.error || !result.body) return setError(result.error ?? "The AI couldn't help just now.");
               setValue(bodyId, result.body);
               if (result.title) setValue(titleId, result.title);

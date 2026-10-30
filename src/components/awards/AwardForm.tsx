@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Star } from "lucide-react";
 import { giveAward, writeCoachNote, type AwardState } from "@/lib/awards/actions";
 import { WritingHelp } from "@/components/writing/WritingHelp";
-import { submitKeepingInput } from "@/components/submitKeepingInput";
+import { useKeptActionState } from "@/components/submitKeepingInput";
 
 const POINTS = [1, 2, 5, 10];
 
@@ -26,14 +26,14 @@ function Messages({ state, pending, saved }: { state: AwardState; pending: boole
 }
 
 export function AwardForm({ playerId, firstName }: { playerId: string; firstName: string }) {
-  const [state, action, pending] = useActionState<AwardState, FormData>(giveAward, {});
+  const [state, action, pending, keep] = useKeptActionState<AwardState>(giveAward, {});
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state.saved) form.current?.reset();
   }, [state]);
 
   return (
-    <form ref={form} action={action} onSubmit={submitKeepingInput(action)} className="flex flex-col gap-4" noValidate>
+    <form ref={form} action={action} onSubmit={keep} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="player" value={playerId} />
       <h2 className="text-[17px] font-extrabold">Give {firstName} points or a star</h2>
       <fieldset className="flex flex-col gap-2">
@@ -70,13 +70,13 @@ export function AwardForm({ playerId, firstName }: { playerId: string; firstName
 }
 
 export function NoteForm({ playerId, firstName, ai }: { playerId: string; firstName: string; ai: boolean }) {
-  const [state, action, pending] = useActionState<AwardState, FormData>(writeCoachNote, {});
+  const [state, action, pending, keep] = useKeptActionState<AwardState>(writeCoachNote, {});
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state.saved) form.current?.reset();
   }, [state]);
   return (
-    <form ref={form} action={action} onSubmit={submitKeepingInput(action)} className="flex flex-col gap-3" noValidate>
+    <form ref={form} action={action} onSubmit={keep} className="flex flex-col gap-3" noValidate>
       <input type="hidden" name="player" value={playerId} />
       <label htmlFor="note" className="text-[17px] font-extrabold">
         Note for {firstName}&apos;s parents

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Minus, Plus } from "lucide-react";
 import { addToBasket, type AddState } from "@/lib/shop/actions";
 import { formatPence } from "@/lib/shop/data";
-import { submitKeepingInput } from "@/components/submitKeepingInput";
+import { useKeptActionState } from "@/components/submitKeepingInput";
 
 type Kid = { id: string; firstName: string };
 
@@ -31,7 +31,7 @@ export function AddToBasketForm({
   kids: Kid[];
   basketCount: number;
 }) {
-  const [state, run, pending] = useActionState<AddState, FormData>(addToBasket, {});
+  const [state, run, pending, keep] = useKeptActionState<AddState>(addToBasket, {});
   const [initials, setInitials] = useState("");
   const [quantity, setQuantity] = useState(1);
   // A problem found in the browser before sending (no size or child chosen); the server checks again.
@@ -64,7 +64,7 @@ export function AddToBasketForm({
       return;
     }
     setLocal(null);
-    submitKeepingInput(run)(e);
+    keep(e);
   }
 
   const fieldError = (field: "size" | "player") =>

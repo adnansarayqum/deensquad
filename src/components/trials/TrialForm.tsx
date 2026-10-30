@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useId, useState } from "react";
 import { bookTrialAction, type TrialFormState } from "@/lib/trials/actions";
-import { submitKeepingInput } from "../submitKeepingInput";
+import { useKeptActionState } from "../submitKeepingInput";
 
 export type TrialSessionOption = { id: string; label: string; detail: string; groups: string[] };
 
@@ -11,7 +11,7 @@ export type TrialSessionOption = { id: string; label: string; detail: string; gr
  * groups); with JavaScript, choosing the group shows only that group's sessions. Keeps what was typed after an error.
  */
 export function TrialForm({ groups, sessions, fee, privacyHref }: { groups: { value: string; label: string }[]; sessions: TrialSessionOption[]; fee: string; privacyHref: string }) {
-  const [state, run, saving] = useActionState<TrialFormState, FormData>(bookTrialAction, {});
+  const [state, run, saving, keep] = useKeptActionState<TrialFormState>(bookTrialAction, {});
   const [group, setGroup] = useState("");
   const id = useId();
   const shown = group ? sessions.filter((s) => s.groups.includes(group)) : sessions;
@@ -24,7 +24,7 @@ export function TrialForm({ groups, sessions, fee, privacyHref }: { groups: { va
     </div>
   );
   return (
-    <form action={run} onSubmit={submitKeepingInput(run)} className="flex flex-col gap-4">
+    <form action={run} onSubmit={keep} className="flex flex-col gap-4">
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-1 text-base font-extrabold">Your child</legend>
         <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">

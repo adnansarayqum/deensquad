@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+
 import { ChildAvatar } from "@/components/ChildAvatar";
-import { submitKeepingInput } from "@/components/submitKeepingInput";
+import { useKeptActionState } from "@/components/submitKeepingInput";
 import { saveRatings, type ProgressFormState } from "@/lib/progress/actions";
 import { CATEGORIES, type Scores } from "@/lib/progress/ratings";
 
@@ -16,14 +16,14 @@ const SCORES = [1, 2, 3, 4, 5] as const;
  * JavaScript; with it, typed scores stay after an error and each row gets a Clear button. Blank rows are left alone.
  */
 export function RatingsForm({ sessionId, rows }: { sessionId: string; rows: RatingFormRow[] }) {
-  const [state, run, pending] = useActionState<ProgressFormState, FormData>(saveRatings, {});
+  const [state, run, pending, keep] = useKeptActionState<ProgressFormState>(saveRatings, {});
 
   const clear = (id: string) => {
     for (const input of document.querySelectorAll<HTMLInputElement>(`input[type=radio][name^="r.${id}."]`)) input.checked = false;
   };
 
   return (
-    <form action={run} onSubmit={submitKeepingInput(run)} className="flex flex-col gap-3" noValidate>
+    <form action={run} onSubmit={keep} className="flex flex-col gap-3" noValidate>
       <input type="hidden" name="session" value={sessionId} />
       <ul className="flex flex-col gap-3">
         {rows.map((r) => {
