@@ -47,3 +47,5 @@ next-env.d.ts
 
 # local database and email outbox for development
 /.data/
+e2e-output.log
+e2e-tail.txt
