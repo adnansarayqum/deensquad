@@ -267,7 +267,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
                       </td>
                       <td className="px-3">
                         {f.payment === "active" ? (
-                          <Pill tone="done">Plan active</Pill>
+                          <Pill tone="done">Monthly plan</Pill>
                         ) : f.payment === "self_reported" ? (
                           <Pill tone="gold">To check</Pill>
                         ) : f.payment === "pay_as_you_go" ? (

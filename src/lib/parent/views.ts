@@ -242,7 +242,7 @@ export function buildFamilyChecklist(children: Child[], facts: ChecklistFacts, f
     detail:
       needed.length === 0
         ? allActive
-          ? "Monthly plan active"
+          ? "Monthly plan"
           : settled && payg.length > 0
             ? payg.length === children.length || !several
               ? "Paying as you go, each session"

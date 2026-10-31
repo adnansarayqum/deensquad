@@ -230,7 +230,7 @@ test("to-do: contacts copied to a sibling, consent and payments", async ({ page 
   // Yusuf's plan is already active, so the family's one payment step covers Musa.
   await family.getByRole("link", { name: /Set up payments/ }).click();
   await expect(page.getByText("£30 a month per child, paid by direct debit through TeamFeePay")).toBeVisible();
-  await expect(page.getByText("Monthly plan active for Yusuf.")).toBeVisible();
+  await expect(page.getByText("Monthly plan for Yusuf.")).toBeVisible();
   await page.getByRole("button", { name: "I've set it up for Musa" }).click();
   await expect(page).toHaveURL(/\/checklist$/);
   await expect(page.getByRole("progressbar", { name: "7 of 9 steps done" })).toBeVisible();

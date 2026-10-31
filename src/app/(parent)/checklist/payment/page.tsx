@@ -45,7 +45,7 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
           </div>
         </Card>
 
-        {active.length > 0 ? <Status>Monthly plan active for {names(active)}.</Status> : null}
+        {active.length > 0 ? <Status>Monthly plan for {names(active)}.</Status> : null}
         {payg.length > 0 ? <Status>Paying as you go for {names(payg)}. You pay for each session at the gate, by card or cash.</Status> : null}
         {reported.length > 0 ? <Status>You&apos;ve told the club it&apos;s set up for {names(reported)}. The club will confirm.</Status> : null}
         {overdue.length > 0 ? (

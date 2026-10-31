@@ -126,7 +126,7 @@ export const TOOLS: ToolDef[] = [
 ];
 
 const PAYMENT_WORDS: Record<PaymentState, string> = {
-  active: "monthly plan (active)",
+  active: "monthly plan",
   self_reported: "monthly plan (parent says it's set up; to check)",
   overdue: "monthly plan overdue",
   missing: "no payment plan",

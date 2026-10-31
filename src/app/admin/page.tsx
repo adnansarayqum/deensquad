@@ -357,7 +357,7 @@ function FamiliesSection({ d }: { d: Dashboard }) {
         label="Payments"
         hideZero
         segments={[
-          { label: "active", value: p.active, tone: "done", href: "/admin/families" },
+          { label: "monthly plan", value: p.active, tone: "done", href: "/admin/families" },
           { label: "pay as you go", value: p.pay_as_you_go, tone: "other", href: "/admin/families?need=payg" },
           { label: "to check", value: p.self_reported, tone: "neutral", href: "/admin/families?need=check" },
           { label: "overdue", value: p.overdue, tone: "strong", href: "/admin/families?need=overdue" },

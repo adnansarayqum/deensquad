@@ -22,7 +22,7 @@ import { loadMedicalForStaff } from "@/lib/medical/data";
 export const metadata: Metadata = { title: "Child" };
 
 const paymentLabel: Record<PaymentState, string> = {
-  active: "Monthly plan active",
+  active: "Monthly plan",
   self_reported: "Parent says it's set up",
   missing: "No payment plan",
   overdue: "Payment overdue",
