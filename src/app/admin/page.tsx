@@ -373,7 +373,7 @@ function NewsSection({ d }: { d: Dashboard }) {
   const sent = CHANNELS.filter((c) => n.reminders[c] > 0);
   return (
     <Section
-      title="News"
+      title="Announcements"
       aside={
         <Link href="/admin/news" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
           Post news

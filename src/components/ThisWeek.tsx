@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarX, CheckCircle2, ChevronRight, ListChecks, QrCode, Shirt } from "lucide-react";
+import { CalendarX, CheckCircle2, ChevronDown, ChevronRight, ListChecks, QrCode, Shirt } from "lucide-react";
 import { AllComing } from "./AllComing";
 import { AvailabilityPicker } from "./AvailabilityPicker";
 import { CheckedIn } from "./CheckedIn";
@@ -110,8 +110,9 @@ function SessionPart({ session, rows, family, now }: { session: Session; rows: C
   const notYetComing = open.filter((w) => w.answer !== "coming").map((w) => w.child);
   const start = new Date(session.startsAt);
   const named = rows.length > 1 || family.children.length > 1;
-  return (
-    <section aria-label={`${dayHeading(session.startsAt, now)}, ${session.title}`} className="flex flex-col border-t border-line">
+  // Every child answered (or already in): fold the session to one line, so the club's news is on the first screen.
+  const settled = rows.length > 0 && rows.every((w) => w.checkedInAt || w.answer);
+  const details = (
       <div className="flex gap-3.5 px-4 py-4">
         {/* The date as a tile, like a fixture card: the day's number big, the month small. */}
         <span aria-hidden className="flex h-[60px] w-14 shrink-0 flex-col items-center justify-center rounded-[14px] bg-pitch text-on-pitch">
@@ -151,6 +152,9 @@ function SessionPart({ session, rows, family, now }: { session: Session; rows: C
           ) : null}
         </div>
       </div>
+  );
+  const list = (
+    <>
       <ul className="flex flex-col divide-y divide-line border-t border-line">
         {rows.map((w) => (
           <li key={w.child.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
@@ -187,6 +191,56 @@ function SessionPart({ session, rows, family, now }: { session: Session; rows: C
           <AllComing sessionId={session.id} kids={notYetComing} />
         </div>
       ) : null}
+    </>
+  );
+  const label = `${dayHeading(session.startsAt, now)}, ${session.title}`;
+  if (!settled) {
+    return (
+      <section aria-label={label} className="flex flex-col border-t border-line">
+        {details}
+        {list}
+      </section>
+    );
+  }
+  return (
+    <section aria-label={label} className="border-t border-line">
+      <details className="group/week">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3.5 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+          <span aria-hidden className="flex h-12 w-11 shrink-0 flex-col items-center justify-center rounded-[12px] bg-pitch text-on-pitch">
+            <span className="font-display text-[22px] leading-none">{new Intl.DateTimeFormat("en-GB", { day: "numeric", timeZone: "Europe/London" }).format(start)}</span>
+            <span className="text-[10px] font-bold text-floodlight">{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "Europe/London" }).format(start).toUpperCase()}</span>
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-[16px] leading-6 font-bold">
+              {dayHeading(session.startsAt, now)} · {clock(session.startsAt)}
+            </span>
+            <span className="text-[15px] leading-[22px] text-grass-text font-bold">{answeredSummary(rows)}</span>
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-1 text-[15px] font-bold text-grass-text">
+            <span className="group-open/week:hidden">Change</span>
+            <span className="hidden group-open/week:inline">Close</span>
+            <ChevronDown aria-hidden size={18} className="transition-transform group-open/week:rotate-180" />
+          </span>
+        </summary>
+        <div className="border-t border-line">
+          {details}
+          {list}
+        </div>
+      </details>
     </section>
   );
+}
+
+/** "Yusuf and Hudhayfah are coming" / "Yusuf coming · Musa not coming" / "Musa is in", for the folded session. */
+export function answeredSummary(rows: Pick<ChildWeek, "child" | "answer" | "checkedInAt">[]): string {
+  const name = (w: (typeof rows)[number]) => w.child.firstName;
+  const join = (names: string[]) => (names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`);
+  const inNow = rows.filter((w) => w.checkedInAt).map(name);
+  const coming = rows.filter((w) => !w.checkedInAt && w.answer === "coming").map(name);
+  const away = rows.filter((w) => !w.checkedInAt && w.answer === "away").map(name);
+  const parts: string[] = [];
+  if (inNow.length) parts.push(`${join(inNow)} checked in`);
+  if (coming.length) parts.push(parts.length || away.length ? `${join(coming)} coming` : `${join(coming)} ${coming.length > 1 ? "are" : "is"} coming`);
+  if (away.length) parts.push(parts.length ? `${join(away)} not coming` : `${join(away)} ${away.length > 1 ? "aren't" : "isn't"} coming`);
+  return parts.join(" · ");
 }

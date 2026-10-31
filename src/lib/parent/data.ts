@@ -106,6 +106,9 @@ export type AnnouncementView = Announcement & {
   replied?: { at: string; conversation: string } | null;
   /** Photos and videos on it (migration 0038). */
   media: MediaItem[];
+  /** Hearts (migration 0042): how many parents liked it, and whether this parent did. */
+  likes?: number;
+  liked?: boolean;
   /** A session notice or a "Who's coming?" post (migration 0040): the session and what it says now. */
   session: NewsSession | null;
 };

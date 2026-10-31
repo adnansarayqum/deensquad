@@ -198,6 +198,10 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
   await page.getByRole("link", { name: "Home" }).click();
   await expect(page.getByRole("button", { name: "Yusuf is coming", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Not coming: Musa isn't coming", exact: true })).toHaveAttribute("aria-pressed", "true");
+  // Both answered: the session folds to one line, so the club's news is on the first screen; Change opens it.
+  await expect(page.getByText("Yusuf coming · Musa not coming")).toBeVisible();
+  await page.getByText("Yusuf coming · Musa not coming").click();
+  await expect(page.getByRole("button", { name: "Yusuf is coming", exact: true })).toBeVisible();
 });
 
 test("to-do: contacts copied to a sibling, consent and payments", async ({ page }) => {
@@ -883,7 +887,7 @@ test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and
   await expect(sidebar.getByRole("link", { name: "Shop" })).toBeVisible();
   await expect(sidebar.getByRole("button", { name: "Sign out" })).toBeVisible();
   await expect(page.locator("header")).toBeHidden();
-  for (const name of ["Needs you", "Attendance this season", "Next session", "Families and payments", "News", "Shop"]) {
+  for (const name of ["Needs you", "Attendance this season", "Next session", "Families and payments", "Announcements", "Shop"]) {
     await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
   }
   await expect(page.getByRole("img", { name: /^U10, .*: \d+ coming, \d+ not coming, \d+ not answered$/ })).toBeVisible();

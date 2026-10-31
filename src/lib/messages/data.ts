@@ -284,7 +284,7 @@ export type InboxRow = {
  */
 export async function loadInbox(
   tx: Queryable,
-  opts: { unreadOnly?: boolean; about?: string | null; limit?: number; absences?: boolean } = {},
+  opts: { unreadOnly?: boolean; about?: string | null; limit?: number; absences?: boolean; sent?: boolean } = {},
 ): Promise<InboxRow[]> {
   const rows = await tx.query<{
     id: string;
@@ -320,10 +320,11 @@ export async function loadInbox(
        ) m on true
        where ${STAFF_SEES} and ($1::uuid is null or c.announcement_id = $1) and (not $4 or c.session_id is not null)
      ) x
-     where not $2 or (x.unread and not x.absence)
+     where (not $2 or (x.unread and not x.absence))
+       and (not $5 or (x.author_kind = 'staff' and not x.absence))
      order by x.last_message_at desc
      limit $3`,
-    [opts.about ?? null, Boolean(opts.unreadOnly), opts.limit ?? 200, Boolean(opts.absences)],
+    [opts.about ?? null, Boolean(opts.unreadOnly), opts.limit ?? 200, Boolean(opts.absences), Boolean(opts.sent)],
   );
   return rows.map((r) => ({
     id: r.id,

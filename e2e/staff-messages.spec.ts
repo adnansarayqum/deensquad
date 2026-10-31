@@ -87,8 +87,8 @@ test("the admin sees the answer and the unread reply, and replies back", async (
   await expect(page.getByText("1 conversation with families about this message.")).toBeVisible();
 
   const nav = page.getByRole("navigation", { name: "Club admin" });
-  await expect(nav.getByRole("link", { name: "Messages, 1 unread" })).toBeVisible();
-  await nav.getByRole("link", { name: "Messages, 1 unread" }).click();
+  await expect(nav.getByRole("link", { name: "Inbox, 1 unread" })).toBeVisible();
+  await nav.getByRole("link", { name: "Inbox, 1 unread" }).click();
   await expect(page).toHaveURL(/\/admin\/messages$/);
   const row = page.getByRole("link", { name: new RegExp(`Re: ${HEADLINE}`) });
   await expect(row).toContainText("Unread");
@@ -104,7 +104,7 @@ test("the admin sees the answer and the unread reply, and replies back", async (
   await expect(page.getByRole("status").filter({ hasText: "Sent." })).toBeVisible();
   // Opened and answered: nothing unread any more.
   await page.goto("/admin/messages");
-  await expect(nav.getByRole("link", { name: "Messages", exact: true })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Inbox", exact: true })).toBeVisible();
   await expect(page.getByText("Nothing waiting for a reply.")).toBeVisible();
   await admin.close();
 });
@@ -160,7 +160,7 @@ test("the coaches get the reason as a message and see it on the register", async
   await page.goto("/admin/messages");
   // A reason for not coming isn't a message waiting for a reply: it's under Not coming, not in the badge.
   const nav = page.getByRole("navigation", { name: "Club admin" });
-  await expect(nav.getByRole("link", { name: "Messages", exact: true })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Inbox", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Not coming (1 new)" }).click();
   const row = page.getByRole("link", { name: /Not coming: / });
   await expect(row).toContainText("Yunus V");

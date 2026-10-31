@@ -10,7 +10,7 @@ import { postedLabel } from "@/lib/dates";
 import { markAllRead } from "@/lib/messages/actions";
 import { loadStaffUnread, loadInbox, type InboxRow } from "@/lib/messages/data";
 
-export const metadata: Metadata = { title: "Messages" };
+export const metadata: Metadata = { title: "Inbox" };
 
 /**
  * The staff inbox: conversations with families about children this person covers (their groups; every group for
@@ -22,9 +22,10 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
   const params = await searchParams;
   const about = typeof params.about === "string" && UUID.test(params.about) ? params.about : null;
   const absences = params.show === "absences" && !about;
-  const all = params.show === "all" || absences || Boolean(about);
+  const sent = params.show === "sent" && !about;
+  const all = params.show === "all" || absences || sent || Boolean(about);
   const [rows, newsTitle, newAbsences] = await asUser(user.id, async (tx) => {
-    const list = await loadInbox(tx, { unreadOnly: !all, about, absences });
+    const list = await loadInbox(tx, { unreadOnly: !all, about, absences, sent });
     const [news] = about ? await tx.query<{ title: string }>(`select title from announcements where id = $1`, [about]) : [];
     return [list, news?.title ?? null, await loadStaffUnread(tx, { absences: true })] as const;
   });
@@ -37,22 +38,26 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
   return (
     <>
       <PageHeader
-        title="Messages"
+        title="Inbox"
         subtitle={
           user.staff.role === "admin"
-            ? "Conversations with families. As an admin you can read every one."
-            : "Conversations with families in your groups, and any sent to you."
+            ? "Private conversations with one family at a time. As an admin you can read every one. Posts to many families are Announcements."
+            : "Private conversations with families in your groups, and any sent to you. Posts to many families are Announcements."
         }
       >
         <nav aria-label="Show" className="flex flex-wrap gap-2">
           <Link href="/admin/messages" aria-current={!all ? "page" : undefined} className={tab(!all)}>
             Needs reply
           </Link>
-          <Link href="/admin/messages?show=all" aria-current={all && !about && !absences ? "page" : undefined} className={tab(all && !about && !absences)}>
-            All
+          {/* Sent, waiting: the club had the last word, so the family owes a reply (or the thread is done). */}
+          <Link href="/admin/messages?show=sent" aria-current={sent ? "page" : undefined} className={tab(sent)}>
+            Sent, waiting
           </Link>
           <Link href="/admin/messages?show=absences" aria-current={absences ? "page" : undefined} className={tab(absences)}>
             {newAbsences ? `Not coming (${newAbsences} new)` : "Not coming"}
+          </Link>
+          <Link href="/admin/messages?show=all" aria-current={all && !about && !absences && !sent ? "page" : undefined} className={tab(all && !about && !absences && !sent)}>
+            All
           </Link>
           <span className="ml-auto flex flex-wrap gap-2">
             {/* One message to several families at once (a news post to chosen children, replies on): Coach Jav's request. */}
@@ -96,8 +101,8 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
 
       {rows.length === 0 ? (
         <p className="rounded-app border border-line bg-paper p-4 text-[15px] text-ink-muted">
-          {all ? "No conversations yet." : "Nothing waiting for a reply. "}
-          {all ? null : (
+          {sent ? "Nothing waiting on a family. " : all ? "No conversations yet." : "Nothing waiting for a reply. "}
+          {all && !sent ? null : (
             <Link href="/admin/messages?show=all" className="font-bold text-grass-text underline">
               See all conversations
             </Link>

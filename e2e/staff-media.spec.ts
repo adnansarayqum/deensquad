@@ -101,6 +101,11 @@ test("news with a photo and a video: the parent sees both and opens them full sc
   const part = await p.request.get(videoUrl!, { headers: { Range: "bytes=0-99" } });
   expect(part.status()).toBe(206);
   expect((await part.body()).byteLength).toBe(100);
+  // A heart under the post: tap to like (it counts 1), and it stays after a reload.
+  await p.getByRole("button", { name: `Like: ${HEADLINE}` }).click();
+  await expect(p.getByRole("button", { name: `Like: ${HEADLINE}, 1 like` })).toHaveAttribute("aria-pressed", "true");
+  await p.reload();
+  await expect(p.getByRole("button", { name: `Like: ${HEADLINE}, 1 like` })).toHaveAttribute("aria-pressed", "true");
   await parent.close();
 
   // Another family, with the address: nothing.

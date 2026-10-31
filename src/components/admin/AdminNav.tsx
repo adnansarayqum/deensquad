@@ -8,8 +8,9 @@ export const STAFF_NAV = [
   { href: "/admin", label: "Overview", exact: true },
   { href: "/coach", label: "Register", exact: true },
   { href: "/admin/families", label: "Families" },
-  { href: "/admin/news", label: "News" },
-  { href: "/admin/messages", label: "Messages" },
+  // Inbox before Announcements: Inbox fits on the first row beside Families, so an admin's eleven pills stay three rows.
+  { href: "/admin/messages", label: "Inbox" },
+  { href: "/admin/news", label: "Announcements" },
   { href: "/admin/sessions", label: "Sessions" },
   { href: "/coach/plans", label: "Plans" },
   // Shop sits here rather than after Points and stars so an admin's eleven pills (Messages with its count) still pack
@@ -26,8 +27,9 @@ export function AdminNav({ isAdmin, layout = "pills", unreadMessages = 0 }: { is
   const path = usePathname();
   const items = STAFF_NAV.filter((item) => isAdmin || !("adminOnly" in item && item.adminOnly));
   const isActive = (item: (typeof STAFF_NAV)[number]) => ("exact" in item && item.exact ? path === item.href : path.startsWith(item.href) || ("also" in item && path.startsWith(item.also)));
-  // Messages carries how many conversations have a parent's message this person hasn't read. The link is named
-  // "Messages, 3 unread" (an aria-label, so it reads the same everywhere); the badge shows the number.
+  // Pills are 11px either side, not 12: with "Announcements" and "Inbox" an admin's eleven still pack into three rows at 390px.
+  // Inbox carries how many conversations have a parent's message this person hasn't read. The link is named
+  // "Inbox, 3 unread" (an aria-label, so it reads the same everywhere); the badge shows the number.
   const unread = (item: (typeof STAFF_NAV)[number]) => item.href === "/admin/messages" && unreadMessages > 0;
   const label = (item: (typeof STAFF_NAV)[number]) => (unread(item) ? `${item.label}, ${unreadMessages} unread` : undefined);
   const badge = (item: (typeof STAFF_NAV)[number]) =>
@@ -75,7 +77,7 @@ export function AdminNav({ isAdmin, layout = "pills", unreadMessages = 0 }: { is
             href={item.href}
             aria-current={active ? "page" : undefined}
             aria-label={label(item)}
-            className={`inline-flex min-h-11 shrink-0 items-center rounded-pill px-3 text-sm font-bold ${
+            className={`inline-flex min-h-11 shrink-0 items-center rounded-pill px-[11px] text-sm font-bold ${
               active ? "bg-floodlight text-on-gold" : "bg-pitch-deep text-on-pitch"
             }`}
           >

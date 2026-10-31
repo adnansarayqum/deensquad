@@ -18,7 +18,7 @@ import { asUser } from "@/lib/db";
 import { clock, postedLabel, shortDay } from "@/lib/dates";
 import { iso } from "@/lib/db/types";
 
-export const metadata: Metadata = { title: "News" };
+export const metadata: Metadata = { title: "Announcements" };
 
 export default async function AdminNewsPage({ searchParams }: PageProps<"/admin/news">) {
   const user = await requireStaff();
@@ -64,10 +64,10 @@ export default async function AdminNewsPage({ searchParams }: PageProps<"/admin/
 
   return (
     <>
-      <PageHeader title="News" subtitle="Post a message and see who has read it." />
+      <PageHeader title="Announcements" subtitle="One post to many families, with read receipts. A private chat with one family goes in Inbox." />
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        <FoldCard id="post-message" title="Post a message" open={news.length === 0 || Boolean(comingTo) || toChildren}>
+        <FoldCard id="post-message" title="New announcement" open={news.length === 0 || Boolean(comingTo) || toChildren}>
           <NewsComposeForm action={postNews}>
             {came ? (
               <Notice>

@@ -42,6 +42,24 @@ export async function acknowledgeAnnouncement(announcementId: string): Promise<T
   return {};
 }
 
+/** A heart on a news post: tap to like, tap again to take it back. Returns whether it's now liked. */
+export async function toggleLike(announcementId: string): Promise<TapResult & { liked?: boolean }> {
+  const user = await requireParent();
+  if (!UUID.test(announcementId)) return { error: "That didn't save. Reload the page and try again." };
+  const liked = await asUser(user.id, async (tx) => {
+    const gone = await tx.query(`delete from announcement_likes where announcement_id = $1 and guardian_id = my_guardian_id() returning 1`, [announcementId]);
+    if (gone.length) return false;
+    // Only a post this parent can read (row level security on announcements decides).
+    const can = await tx.query(`select 1 from announcements where id = $1`, [announcementId]);
+    if (!can.length) return null;
+    await tx.query(`insert into announcement_likes (announcement_id, guardian_id) values ($1, my_guardian_id()) on conflict do nothing`, [announcementId]);
+    return true;
+  });
+  if (liked === null) return { error: "That post isn't there any more." };
+  refresh();
+  return { liked };
+}
+
 export async function setAvailability(sessionId: string, playerId: string, answer: Availability): Promise<TapResult> {
   const user = await requireParent();
   if (!UUID.test(sessionId) || !UUID.test(playerId) || (answer !== "coming" && answer !== "away")) {

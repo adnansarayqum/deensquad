@@ -128,7 +128,23 @@ async function loadNewsWithAnswers(tx: Queryable, family: Family) {
       if (record) n.session.answers[c] = record;
     }
   }
-  return news.map((n) => ({ ...n, answers: answers.get(n.id) ?? {}, replied: replied.get(n.id) ?? null }));
+  // Hearts: the count for each post (counts only; never who) and whether this parent tapped one.
+  const ids = news.map((n) => n.id);
+  const counts = ids.length
+    ? await tx.query<{ announcement_id: string; likes: number }>(`select announcement_id, likes from announcement_like_counts($1::uuid[])`, [ids])
+    : [];
+  const mine = ids.length
+    ? await tx.query<{ announcement_id: string }>(`select announcement_id from announcement_likes where announcement_id = any($1::uuid[]) and guardian_id = my_guardian_id()`, [ids])
+    : [];
+  const likeCount = new Map(counts.map((c) => [c.announcement_id, c.likes]));
+  const likedSet = new Set(mine.map((m) => m.announcement_id));
+  return news.map((n) => ({
+    ...n,
+    answers: answers.get(n.id) ?? {},
+    replied: replied.get(n.id) ?? null,
+    likes: likeCount.get(n.id) ?? 0,
+    liked: likedSet.has(n.id),
+  }));
 }
 
 /** Messages: the family's conversations with the club, newest first. */

@@ -102,7 +102,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
               <input type="hidden" name="child" value={child.id} />
               <input type="hidden" name="state" value={state} />
               <button type="submit" disabled={child.payment === state} className="btn-chunky btn-paper btn-small">
-                {state === "active" ? "Mark as active" : state === "pay_as_you_go" ? "Pay as you go" : state === "missing" ? "No plan" : "Overdue"}
+                {state === "active" ? "Monthly plan" : state === "pay_as_you_go" ? "Pay as you go" : state === "missing" ? "No plan" : "Overdue"}
               </button>
             </form>
           ))}

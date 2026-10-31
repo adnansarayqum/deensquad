@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MessageCircle, Phone } from "lucide-react";
+import { Heart, MessageCircle, Phone } from "lucide-react";
 import { Notice, PageHeader, ReadBar, Section } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
 import { chaseOnWhatsApp, deleteNews } from "@/lib/admin/actions";
@@ -30,10 +30,13 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
   const mine = coachLimit(user.staff);
   const detail = await asUser(user.id, async (tx) => {
     const found = await loadNewsDetail(tx, id, mine);
-    return found ? { ...found, answers: await loadNewsAnswers(tx, id, mine), replies: await countReplies(tx, id), media: (await loadMediaFor(tx, "announcement", [id])).get(id) ?? [] } : null;
+    return found ? { ...found, answers: await loadNewsAnswers(tx, id, mine), replies: await countReplies(tx, id), likedBy: await tx.query<{ first_name: string; last_name: string }>(
+      `select g.first_name, g.last_name from announcement_likes l join guardians g on g.id = l.guardian_id where l.announcement_id = $1 order by l.created_at`,
+      [id],
+    ), media: (await loadMediaFor(tx, "announcement", [id])).get(id) ?? [] } : null;
   });
   if (!detail) notFound();
-  const { news, unread, answers, replies, media } = detail;
+  const { news, unread, answers, replies, media, likedBy } = detail;
   const tally = answers?.options ? tallyAnswers(answers.options, answers.children) : null;
   // A group coach can delete only messages that went to their own groups alone.
   const canDelete = !mine || within(news.audience, mine);
@@ -56,7 +59,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
   return (
     // Forms and detail read best at phone-to-tablet width, even on a computer.
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <PageHeader back={{ href: "/admin/news", label: "News" }} title={news.title} subtitle={`${news.topic} · ${audienceLabel(news)} · ${postedLabel(news.postedAt, new Date())}${news.postedBy ? ` · ${news.postedBy}` : ""}`} />
+      <PageHeader back={{ href: "/admin/news", label: "Announcements" }} title={news.title} subtitle={`${news.topic} · ${audienceLabel(news)} · ${postedLabel(news.postedAt, new Date())}${news.postedBy ? ` · ${news.postedBy}` : ""}`} />
       {flags.posted ? (
         <Notice>
           Posted. Sent to {news.audienceCount} {news.audienceCount === 1 ? "parent" : "parents"}: they see it on the Home screen.
@@ -67,6 +70,15 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
         {news.chosen && news.chosen.length > 2 ? <p className="text-sm text-ink-muted">For {news.chosen.join(", ")}</p> : null}
         <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
         <MediaGallery items={media} label={news.title} />
+        {likedBy.length ? (
+          <p className="flex items-start gap-1.5 text-sm">
+            <Heart aria-hidden size={16} className="mt-0.5 shrink-0 fill-current text-grass-text" />
+            <span>
+              <span className="font-bold">{likedBy.length === 1 ? "1 like" : `${likedBy.length} likes`}</span>
+              <span className="text-ink-muted">: {likedBy.map((g) => `${g.first_name} ${g.last_name[0] ?? ""}.`).join(", ")}</span>
+            </span>
+          </p>
+        ) : null}
         {news.requiresAck ? <ReadBar read={news.readCount} total={news.audienceCount} groupsOnly={news.groupsOnly} /> : <p className="text-sm text-ink-muted">No read receipts asked for.</p>}
         {/* The three numbers that make up the total, side by side (admin UX review, Oct 2026: 50 read, 39 to remind and 8
             whose partner read it looked like a mismatch when the 8 were only at the foot of the list). */}

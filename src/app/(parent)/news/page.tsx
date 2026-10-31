@@ -4,6 +4,7 @@ import Link from "next/link";
 import { TripCards } from "@/components/TripCards";
 import { Check, ChevronRight, MessageCircle, Reply } from "lucide-react";
 import { AcknowledgeButton } from "@/components/AcknowledgeButton";
+import { LikeButton } from "@/components/LikeButton";
 import { QuickAnswers } from "@/components/messages/QuickAnswers";
 import { NotificationsCard } from "@/components/NotificationsCard";
 import { ReadFocus } from "@/components/ReadFocus";
@@ -135,7 +136,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
                 ) : (
                   <AcknowledgeButton announcementId={a.id} title={a.title} />
                 )}
-                <ReplyLink a={a} />
+                <PostFoot a={a} />
               </Card>
             ))}
           </section>
@@ -183,7 +184,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
                 <MediaGallery items={a.media} label={a.title} />
                 {outOfDate(a) ? <SessionNow session={a.session!} now={now} /> : null}
                 {a.quickAnswers && a.reaches.length ? <Answers a={a} family={family} /> : canAnswerComing(a.session) ? <ComingOnNews session={a.session} family={family} now={now} /> : null}
-                <ReplyLink a={a} />
+                <PostFoot a={a} />
               </ReadFocus>
             ))}
           </section>
@@ -211,6 +212,16 @@ function Answers({ a, family }: { a: AnnouncementView; family: Family }) {
     return [{ childId: id, childName: several ? child.firstName : null, answer: given?.answer ?? null, answeredBy: given && !given.mine ? given.byName : null }];
   });
   return <QuickAnswers announcementId={a.id} title={a.title} options={a.quickAnswers ?? []} rows={rows} />;
+}
+
+/** Under a post: the heart, and Reply when the post takes replies. */
+function PostFoot({ a }: { a: AnnouncementView }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-5">
+      <LikeButton announcementId={a.id} title={a.title} liked={Boolean(a.liked)} likes={a.likes ?? 0} />
+      <ReplyLink a={a} />
+    </div>
+  );
 }
 
 /** "Reply to Coach Monju": starts (or opens) a conversation with whoever posted it, about the child it's for. */
