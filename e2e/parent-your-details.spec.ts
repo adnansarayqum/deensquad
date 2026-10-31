@@ -15,14 +15,14 @@ test("a parent changes their mobile and a child's date of birth; the admin's chi
   test.skip(!existsSync(YOUR_DATA_PARENT_STATE), "needs the sign-up in parent-your-data.spec.ts");
   const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
   const page = await context.newPage();
-  await page.goto("/player");
-  const family = page.getByRole("region", { name: "Your family" });
-  for (const name of ["Layla's details", "Your details", "Add a child"]) {
+  await page.goto("/player/settings");
+  const family = page.getByRole("region", { name: "You and your family" });
+  for (const name of [/^Your details/, /^Add a child/]) {
     expect((await family.getByRole("link", { name }).boundingBox())!.height).toBeGreaterThanOrEqual(48);
   }
 
   // Your details: the mobile changes, the email can't.
-  await family.getByRole("link", { name: "Your details" }).click();
+  await family.getByRole("link", { name: /^Your details/ }).click();
   await expect(page).toHaveURL(/\/player\/me$/);
   await expect(page.getByLabel("First name")).toHaveValue("Maryam");
   await expect(page.getByLabel("Mobile number")).toHaveValue("07700 900777");
@@ -42,7 +42,8 @@ test("a parent changes their mobile and a child's date of birth; the admin's chi
 
   // Layla's details: the date of birth changes; the group is read-only.
   await page.goto("/player");
-  await family.getByRole("link", { name: "Layla's details" }).click();
+  await page.getByRole("navigation", { name: "Choose a child" }).getByRole("link", { name: "Layla" }).click();
+  await page.getByRole("region", { name: "Layla's details" }).getByRole("link", { name: /^Name, date of birth and photo/ }).click();
   await expect(page).toHaveURL(/\/player\/child\/[0-9a-f-]{36}$/);
   const childUrl = page.url();
   await expect(page.getByRole("heading", { name: "Layla's details" })).toBeVisible();
@@ -128,8 +129,8 @@ test("a parent adds the other parent: they're emailed a link, sign in and see th
   test.skip(!existsSync(YOUR_DATA_PARENT_STATE), "needs the sign-up in parent-your-data.spec.ts");
   const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
   const page = await context.newPage();
-  await page.goto("/player");
-  const link = page.getByRole("region", { name: "Your family" }).getByRole("link", { name: "Add a parent or carer" });
+  await page.goto("/player/settings");
+  const link = page.getByRole("region", { name: "You and your family" }).getByRole("link", { name: /^Add a parent or carer/ });
   expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   await link.click();
   await expect(page).toHaveURL(/\/player\/add-parent$/);

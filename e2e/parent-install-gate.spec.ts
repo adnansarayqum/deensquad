@@ -269,7 +269,7 @@ test("the attendance QR code is never covered; the gate waits for the next scree
   await settled(page);
   await expect(page.getByRole("dialog", GATE)).toHaveCount(0);
   await expect(page.locator("[inert]")).toHaveCount(0);
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "News" }).click();
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Home" }).click();
   await expect(page).toHaveURL(/\/news$/);
   await expect(page.getByRole("dialog", GATE)).toBeVisible();
   await ctx.close();
@@ -307,7 +307,7 @@ test("no gate in the installed app (standalone) or on a computer", async ({ brow
   });
   const app = await installed.newPage();
   await app.goto("/news");
-  await expect(app.getByRole("heading", { name: "Club news" })).toBeVisible();
+  await expect(app.getByRole("heading", { name: "Deen Squad", level: 1 })).toBeVisible();
   await settled(app);
   await expect(app.getByRole("dialog", GATE)).toHaveCount(0);
   await installed.close();
@@ -315,7 +315,7 @@ test("no gate in the installed app (standalone) or on a computer", async ({ brow
   const desktop = await context(browser, { viewport: { width: 1280, height: 800 }, storageState: PARENT_STATE });
   const computer = await desktop.newPage();
   await computer.goto("/news");
-  await expect(computer.getByRole("heading", { name: "Club news" })).toBeVisible();
+  await expect(computer.getByRole("heading", { name: "Deen Squad", level: 1 })).toBeVisible();
   await settled(computer);
   await expect(computer.getByRole("dialog", GATE)).toHaveCount(0);
   await desktop.close();
@@ -346,7 +346,7 @@ test("a parent who is also on the staff never gets the gate", async ({ browser }
   // A new visit on the same phone: still a parent, now staff, and no gate.
   const later = await phone.newPage();
   await later.goto("/news");
-  await expect(later.getByRole("heading", { name: "Club news" })).toBeVisible();
+  await expect(later.getByRole("heading", { name: "Deen Squad", level: 1 })).toBeVisible();
   await settled(later);
   await expect(later.getByRole("dialog", GATE)).toHaveCount(0);
   // The way to their coach tools is at the top of News (and Players), and the register leads back.

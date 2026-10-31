@@ -45,7 +45,7 @@ export default async function MessagesPage({ searchParams }: PageProps<"/message
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="flex items-center gap-2">
                       {c.unread ? (
-                        <span className="shrink-0 rounded-pill bg-kit-orange px-2 py-0.5 text-[11px] font-bold text-on-orange uppercase">New</span>
+                        <span className="shrink-0 rounded-pill bg-kit-orange px-2 py-0.5 text-[13px] font-bold text-on-orange uppercase">New</span>
                       ) : null}
                       <span className="truncate text-[15px] font-bold">{c.title}</span>
                     </span>

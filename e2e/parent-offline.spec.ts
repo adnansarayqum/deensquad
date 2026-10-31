@@ -59,7 +59,7 @@ test("no signal at the gate: the codes saved on the phone show for /pass and /fr
     await signIn(page, "parent4@example.com");
 
     // The app opens on News: on a session day, its first card leads to the QR code.
-    await expect(page.getByRole("heading", { name: "Club news" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Deen Squad", level: 1 })).toBeVisible();
     const qrCard = page.getByRole("link", { name: /^Show QR codes?: .* today$/ });
     await expect(qrCard).toBeVisible();
     // The shortcut beside Messages, ringed in gold today, opens the same codes from any screen.
@@ -139,7 +139,7 @@ test("no signal at the gate: the codes saved on the phone show for /pass and /fr
     await expect(page.getByText("No signal. Showing the codes saved on this phone.")).toHaveCount(0);
 
     // Signing out forgets the codes: the next person on this phone sees none, even with no signal.
-    await page.goto("/player");
+    await page.goto("/player/settings");
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/sign-in$/);
     expect(await page.evaluate(() => localStorage.getItem("ds-pass-cache"))).toBeNull();

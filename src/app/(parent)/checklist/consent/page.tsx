@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { backTarget } from "@/lib/parent/tabs";
 import { redirect } from "next/navigation";
 import { BackHeader } from "@/components/BackHeader";
 import { savePhotoConsent } from "@/lib/parent/actions";
@@ -7,7 +8,9 @@ import { getChild } from "@/lib/parent/load";
 export const metadata: Metadata = { title: "Photo consent" };
 
 export default async function ConsentPage({ searchParams }: PageProps<"/checklist/consent">) {
-  const { child, family } = await getChild((await searchParams).child);
+  const params = await searchParams;
+  const { child, family } = await getChild(params.child);
+  const back = backTarget(params.from, { href: "/checklist", label: "To-do" });
   if (!child) redirect("/checklist");
   const name = child.firstName;
   const current = child.photoConsent === null ? null : child.photoConsent ? "yes" : "no";
@@ -19,7 +22,7 @@ export default async function ConsentPage({ searchParams }: PageProps<"/checklis
 
   return (
     <>
-      <BackHeader back="/checklist" backLabel="To-do" title="Photo consent">
+      <BackHeader back={back.href} backLabel={back.label} title="Photo consent">
         We share match and training photos with parents and on the club&apos;s social media. You can change this at any time.
       </BackHeader>
 

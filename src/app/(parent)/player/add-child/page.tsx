@@ -20,7 +20,7 @@ export default async function AddChildPage() {
 
   return (
     <>
-      <BackHeader back="/player" backLabel="Family" title="Add a child">
+      <BackHeader back="/player/settings" backLabel="Settings" title="Add a child">
         Another child of yours who plays at the club. They&apos;re added to your account straight away.
       </BackHeader>
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">

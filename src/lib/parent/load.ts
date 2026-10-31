@@ -163,7 +163,17 @@ export async function getFridayPage() {
   );
   // Only the plan for each child's own group at the session they're going to.
   const wanted = new Set(week.flatMap((w) => (w.session && !w.session.cancelled ? [`${w.session.id}|${w.child.ageGroup}`] : [])));
+  // Coming up: the next sessions after these, answerable ahead (UX review, Oct 2026). Squad sessions come as invites.
+  const later = sessions.filter((s) => !shown.has(s.id)).slice(0, 4);
+  const aheadIds = later.filter((s) => !s.cancelled && !s.squad).map((s) => s.id);
+  const aheadAnswers = aheadIds.length ? await asUser(user.id, (tx) => loadAnswers(tx, aheadIds, family.children.map((c) => c.id))) : new Map();
+  const ahead = later.map((session) => ({
+    session,
+    children: session.cancelled || session.squad ? [] : family.children.filter((c) => session.ageGroups.includes(c.ageGroup)),
+  }));
   return {
+    ahead,
+    aheadAnswers,
     family,
     week,
     /** Cancelled sessions before a child's next one, shown as notices above it. */
@@ -243,14 +253,25 @@ export async function getPlayerPage(childParam: unknown) {
   // No child in the address (the Family tab): the child shown last time, if it's still one of this family's.
   const remembered = childParam ? childParam : (await cookies()).get(CHILD_COOKIE)?.value;
   const { family, child, userId } = await getChild(remembered);
-  if (!child) return { family, child: null, stats: null, badges: [], note: null, awards: null, progress: null };
+  if (!child) return { family, child: null, stats: null, badges: [], note: null, awards: null, progress: null, records: null };
   const now = new Date();
-  const [{ facts, ...stats }, awards, progress] = await Promise.all([
+  const [{ facts, ...stats }, awards, progress, records] = await Promise.all([
     getStats(userId, child, now),
     asUser(userId, (tx) => loadAwards(tx, child.id)),
     asUser(userId, (tx) => loadChildProgress(tx, child.id, now)),
+    // The child's records for the details list (contacts, medical, payment), as the To-do reads them.
+    asUser(userId, (tx) => loadChecklistFacts(tx, [child.id])),
   ]);
-  return { family, child, stats, badges: facts.badges, note: facts.note, awards, progress };
+  return {
+    family,
+    child,
+    stats,
+    badges: facts.badges,
+    note: facts.note,
+    awards,
+    progress,
+    records: { contacts: records.contacts.get(child.id) ?? 0, medical: Boolean(records.medical?.has(child.id)), payment: records.payment.get(child.id) ?? "missing" },
+  };
 }
 
 /**

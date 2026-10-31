@@ -26,7 +26,7 @@ export default async function AddParentPage() {
 
   return (
     <>
-      <BackHeader back="/player" backLabel="Family" title="Add a parent or carer">
+      <BackHeader back="/player/settings" backLabel="Settings" title="Add a parent or carer">
         Add your child&apos;s other parent or carer. They get their own sign-in and see the same as you: news, Friday answers, messages and
         progress.
       </BackHeader>

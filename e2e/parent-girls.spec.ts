@@ -69,7 +69,8 @@ test("the admin adds a Girls session; it's on her Friday and its register lists 
   await expect(friday.getByRole("heading", { level: 1, name: /^Is Amina coming (this|next) \w+day\?$/ })).toBeVisible();
   await expect(friday.getByRole("group", { name: `Is Amina coming? ${day}` }).getByRole("button", { name: "Amina is coming" })).toBeVisible();
   await expect(friday.getByRole("heading", { name: `${TITLE} briefing` })).toBeVisible();
-  await expect(friday.getByRole("region", { name: "Girls this week" })).toContainText("Girls coming this week");
+  // The group's headcount waits until 5 families have answered, so a new group shows none yet.
+  await expect(friday.getByRole("region", { name: "Girls this week" })).toHaveCount(0);
   await expect(friday.locator("body")).not.toContainText("Girlss");
   await friday.screenshot({ path: shot("girls-friday") });
   await parent.close();

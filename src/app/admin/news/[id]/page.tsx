@@ -59,7 +59,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
       <PageHeader back={{ href: "/admin/news", label: "News" }} title={news.title} subtitle={`${news.topic} · ${audienceLabel(news)} · ${postedLabel(news.postedAt, new Date())}${news.postedBy ? ` · ${news.postedBy}` : ""}`} />
       {flags.posted ? (
         <Notice>
-          Posted. Sent to {news.audienceCount} {news.audienceCount === 1 ? "parent" : "parents"}: they see it at the top of Club news.
+          Posted. Sent to {news.audienceCount} {news.audienceCount === 1 ? "parent" : "parents"}: they see it on the Home screen.
         </Notice>
       ) : null}
 

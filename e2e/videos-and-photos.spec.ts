@@ -76,7 +76,8 @@ test("a parent with photo consent adds a photo; the coach's register shows it; c
   const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
   const page = await context.newPage();
   await page.goto("/player");
-  await page.getByRole("region", { name: "Your family" }).getByRole("link", { name: "Layla's details" }).click();
+  await page.getByRole("navigation", { name: "Choose a child" }).getByRole("link", { name: "Layla" }).click();
+  await page.getByRole("region", { name: "Layla's details" }).getByRole("link", { name: /^Name, date of birth and photo/ }).click();
   await expect(page).toHaveURL(/\/player\/child\/[0-9a-f-]{36}$/);
   const childUrl = page.url();
   const layla = childUrl.split("/").at(-1)!;

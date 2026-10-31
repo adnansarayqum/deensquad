@@ -35,6 +35,6 @@ describe("backTarget", () => {
 
   it("names screens", () => {
     expect(sectionName("/friday")).toBe("Sessions");
-    expect(sectionName("/news")).toBe("Club news");
+    expect(sectionName("/news")).toBe("Home");
   });
 });

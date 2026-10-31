@@ -39,7 +39,7 @@ test("the admin posts to one chosen child: that child's parent sees it, another 
   await page.screenshot({ path: shot("admin-news-chosen"), fullPage: true });
   await previewAndPost(page);
   await expect(page).toHaveURL(/\/admin\/news\/[0-9a-f-]{36}\?posted=1$/);
-  await expect(page.getByText("Posted. Sent to 1 parent: they see it at the top of Club news.")).toBeVisible();
+  await expect(page.getByText("Posted. Sent to 1 parent: they see it on the Home screen.")).toBeVisible();
   await expect(page.getByText(/1 child: Isa G\./)).toBeVisible();
   await expect(page.getByText("0 of 1 read")).toBeVisible();
   await page.goto("/admin/news");

@@ -39,7 +39,7 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
     if (targets.length === 0) {
       return (
         <>
-          <BackHeader back="/news" backLabel="Club news" title="Reply" />
+          <BackHeader back="/news" backLabel="Home" title="Reply" />
           <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
             <Card className="p-4 text-[15px] leading-[22px]">
               Replies are closed for this message.{" "}
@@ -56,7 +56,7 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
     if (!chosen) {
       return (
         <>
-          <BackHeader back="/news" backLabel="Club news" title="Reply">
+          <BackHeader back="/news" backLabel="Home" title="Reply">
             Which child is it about?
           </BackHeader>
           <main className="flex flex-col gap-2.5 px-4 pt-[18px] pb-4">
@@ -79,7 +79,7 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
     const to = staffNameForParents(chosen.target.postedBy) ?? "the club";
     return (
       <>
-        <BackHeader back="/news" backLabel="Club news" title={`Reply to ${to}`}>
+        <BackHeader back="/news" backLabel="Home" title={`Reply to ${to}`}>
           About {chosen.child.firstName}: “{chosen.target.title}”. Your reply goes to {to}. Who can read it: {chosen.child.firstName}&apos;s parents and carers on the app (so your partner too), {chosen.child.firstName}&apos;s coaches and the club&apos;s admins. Other families never see it.
         </BackHeader>
         <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { backTarget } from "@/lib/parent/tabs";
 import { redirect } from "next/navigation";
 import { Phone, Trash2 } from "lucide-react";
 import { BackHeader } from "@/components/BackHeader";
@@ -10,13 +11,16 @@ import { getContactsPage } from "@/lib/parent/load";
 export const metadata: Metadata = { title: "Emergency contacts" };
 
 export default async function ContactsPage({ searchParams }: PageProps<"/checklist/contacts">) {
-  const { family, child, contacts } = await getContactsPage((await searchParams).child);
+  const params = await searchParams;
+  const { family, child, contacts } = await getContactsPage(params.child);
+  // Opened from Family's details list, the back link goes back there.
+  const back = backTarget(params.from, { href: "/checklist", label: "To-do" });
   if (!child) redirect("/checklist");
   const siblings = family.children.filter((c) => c.id !== child.id).map((c) => ({ id: c.id, firstName: c.firstName }));
 
   return (
     <>
-      <BackHeader back="/checklist" backLabel="To-do" title="Emergency contacts">
+      <BackHeader back={back.href} backLabel={back.label} title="Emergency contacts">
         Someone other than you and the other parent, who the club can call about {child.firstName} if they can&apos;t reach you. Two is best.
       </BackHeader>
 

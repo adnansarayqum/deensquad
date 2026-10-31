@@ -17,13 +17,18 @@ import { ThisWeek } from "@/components/ThisWeek";
 import { ComingOnNews, SessionNow, canAnswerComing } from "@/components/NewsSession";
 import { groupsPlural } from "@/lib/domain";
 
-export const metadata: Metadata = { title: "Club news" };
+export const metadata: Metadata = { title: "Home" };
 
-export default async function NewsPage() {
+export default async function NewsPage({ searchParams }: PageProps<"/news">) {
   const { family, news, week, stepsLeft, unreadMessages, trips, wellbeingChild } = await getNewsPage();
   const now = new Date();
-  const unread = news.filter((a) => !a.read);
-  const earlier = news.filter((a) => a.read);
+  // Filter chips (redesign brief, Oct 2026): links, so they work without JavaScript; the address keeps the choice.
+  const raw = (await searchParams).show;
+  const show: NewsFilter = raw === "needs" || raw === "sessions" || raw === "general" ? raw : "all";
+  const shown = news.filter((a) => show === "all" || (show === "needs" ? !a.read : show === "sessions" ? isSessionNews(a) : !isSessionNews(a)));
+  const unread = shown.filter((a) => !a.read);
+  const earlier = shown.filter((a) => a.read);
+  const needsCount = news.filter((a) => !a.read).length;
 
   return (
     <>
@@ -34,7 +39,7 @@ export default async function NewsPage() {
             <Image src="/crest.png" alt="Deen Squad crest" width={44} height={44} className="rounded-[10px]" priority />
             <div>
               <p className="text-[13px] text-on-pitch-muted">Assalamu alaikum, {family.guardian.firstName}</p>
-              <h1 className="font-display text-[34px] leading-none tracking-[0.02em]">Club news</h1>
+              <h1 className="font-display text-[34px] leading-none tracking-[0.02em]">Deen Squad</h1>
             </div>
           </div>
         </div>
@@ -73,6 +78,29 @@ export default async function NewsPage() {
           </Link>
         ) : null}
         <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} />
+        {news.length > 3 ? (
+          <nav aria-label="Show club news" className="flex flex-wrap gap-2">
+            {(
+              [
+                ["all", "All"],
+                ["needs", needsCount ? `Needs you (${needsCount})` : "Needs you"],
+                ["sessions", "Training"],
+                ["general", "General"],
+              ] as const
+            ).map(([key, label]) => (
+              <Link
+                key={key}
+                href={key === "all" ? "/news" : `/news?show=${key}`}
+                aria-current={show === key ? "page" : undefined}
+                className={`inline-flex min-h-11 items-center rounded-pill border-2 px-3.5 text-[15px] font-bold ${
+                  show === key ? "border-grass bg-grass-tint text-grass-text" : "border-line bg-paper text-ink"
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
         {family.children.length === 0 ? (
           <Card className="p-4 text-[15px] leading-[22px]">
             No players are linked to your email yet. Ask the club to add your child, then open the app again.
@@ -83,7 +111,7 @@ export default async function NewsPage() {
               <Eyebrow>
                 <span id="needs-tap">Needs your tap</span>
               </Eyebrow>
-              <span className="rounded-pill bg-kit-orange px-2.5 py-0.5 text-xs font-bold text-on-orange">{unread.length} unread</span>
+              <span className="rounded-pill bg-kit-orange px-2.5 py-0.5 text-[13px] font-bold text-on-orange">{unread.length} unread</span>
             </div>
             {unread.map((a) => (
               <Card key={a.id} tone="gold" className="flex flex-col gap-3 p-4">
@@ -113,7 +141,9 @@ export default async function NewsPage() {
           </section>
         ) : (
           <p className="flex items-center gap-2 px-1 text-[15px] font-bold text-grass-text">
-            {news.length ? (
+            {news.length && show !== "all" && shown.length === 0 ? (
+              <span className="font-normal text-ink-muted">Nothing here right now.</span>
+            ) : news.length ? (
               <>
                 <Check aria-hidden size={18} strokeWidth={3} />
                 You&apos;re all caught up.
@@ -162,6 +192,11 @@ export default async function NewsPage() {
     </>
   );
 }
+
+type NewsFilter = "all" | "needs" | "sessions" | "general";
+
+/** News about training or a match: a session notice or "Who's coming?" post, or posted under Training or Matches. */
+const isSessionNews = (a: AnnouncementView) => Boolean(a.session) || a.topic === "Training" || a.topic === "Matches";
 
 /** A session notice with a newer notice about the same session after it. */
 const outOfDate = (a: AnnouncementView) => Boolean(a.session && a.session.notice !== "attendance" && !a.session.latest);

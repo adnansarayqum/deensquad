@@ -100,7 +100,7 @@ test("Friday at 200% zoom (195px wide) doesn't scroll sideways, and the tab bar 
   expect(brokenWords).toEqual([]);
   await page.screenshot({ path: shot("friday-195px"), fullPage: true });
   const tabs = page.getByRole("navigation", { name: "Main" });
-  for (const name of ["News", "Sessions", "To-do", "Shop", "Family"]) await expect(tabs.getByRole("link", { name })).toBeVisible();
+  for (const name of ["Home", "Sessions", "To-do", "Shop", "Family"]) await expect(tabs.getByRole("link", { name })).toBeVisible();
   // No label is cut off: at this width they're icons, each still named.
   const clipped = await tabs.locator("a span").evaluateAll((spans) =>
     spans.filter((s) => getComputedStyle(s).position !== "absolute" && s.scrollWidth > s.clientWidth + 1).map((s) => s.textContent),
@@ -113,7 +113,7 @@ test("your data: a parent downloads their family's data, which holds their child
   test.skip(!existsSync(YOUR_DATA_PARENT_STATE), "needs the sign-up test above");
   const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE, acceptDownloads: true });
   const page = await context.newPage();
-  await page.goto("/player");
+  await page.goto("/player/settings");
   const section = page.getByRole("region", { name: "Your data" });
   await expect(section).toBeVisible();
   const [download] = await Promise.all([page.waitForEvent("download"), section.getByRole("link", { name: "Download my data" }).click()]);
@@ -155,7 +155,7 @@ test("your data: a parent asks the club to delete their account; the club is ema
   test.skip(!existsSync(YOUR_DATA_PARENT_STATE), "needs the sign-up test above");
   const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
   const page = await context.newPage();
-  await page.goto("/player");
+  await page.goto("/player/settings");
   await page.getByRole("link", { name: "Ask the club to delete my account" }).click();
   await expect(page).toHaveURL(/\/player\/delete-account$/);
   await expect(page.getByRole("heading", { name: "Delete my account" })).toBeVisible();
@@ -174,8 +174,8 @@ test("your data: a parent asks the club to delete their account; the club is ema
   expect(asked.map((m) => m.to)).toEqual(["admin@deensquad.test"]);
   expect(asked[0].text).not.toMatch(/Layla|Zaid|07700|@example\.com/);
 
-  // Back on the player screen it says so, and there's nothing more to ask.
-  await page.goto("/player");
+  // Back in Settings it says so, and there's nothing more to ask.
+  await page.goto("/player/settings");
   await expect(page.getByRole("region", { name: "Your data" }).getByText(/You asked the club to delete your account on/)).toBeVisible();
   await expect(page.getByRole("link", { name: "Ask the club to delete my account" })).toHaveCount(0);
   await context.close();

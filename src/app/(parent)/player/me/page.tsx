@@ -19,7 +19,7 @@ export default async function MyDetailsPage() {
 
   return (
     <>
-      <BackHeader back="/player" backLabel="Family" title="Your details">
+      <BackHeader back="/player/settings" backLabel="Settings" title="Your details">
         What the club has for you. Keep it up to date so the coaches can reach you.
       </BackHeader>
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">

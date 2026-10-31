@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarX, ChevronRight, ListChecks, QrCode } from "lucide-react";
+import { CalendarX, CheckCircle2, ChevronRight, ListChecks, QrCode, Shirt } from "lucide-react";
 import { AllComing } from "./AllComing";
 import { AvailabilityPicker } from "./AvailabilityPicker";
 import { CheckedIn } from "./CheckedIn";
@@ -20,7 +20,7 @@ export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; wee
     a.startsAt.localeCompare(b.startsAt),
   );
   const cancelled = [...new Map(week.flatMap((w) => w.cancelled.map((s) => [s.id, s] as const))).values()].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  if (sessions.length === 0 && cancelled.length === 0 && stepsLeft === 0) return null;
+  if (family.children.length === 0) return null;
   const today = sessionsToday(week, now);
   const several = family.children.length > 1;
   const qrLabel = several ? "Show QR codes" : "Show QR code";
@@ -55,6 +55,7 @@ export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; wee
       {sessions.map((s) => (
         <SessionPart key={s.id} session={s} rows={week.filter((w) => w.session?.id === s.id)} family={family} now={now} />
       ))}
+      {sessions.length === 0 ? <p className="text-[16px] text-ink-muted">No sessions coming up yet. They&apos;ll show here as soon as the club adds them.</p> : null}
 
       {today.length ? (
         <Link
@@ -76,9 +77,26 @@ export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; wee
           </span>
           <ChevronRight aria-hidden size={20} className="shrink-0" />
         </Link>
-      ) : null}
+      ) : (
+        // Nothing left to set up: a quiet line, with the To-do still a tap away to look over.
+        <Link href="/checklist" className="inline-flex min-h-12 items-center gap-2 self-start text-[15px] font-bold text-grass-text">
+          <CheckCircle2 aria-hidden size={18} />
+          Everything&apos;s set up
+          <span className="font-normal text-ink-muted underline">Review</span>
+        </Link>
+      )}
     </Card>
   );
+}
+
+/** "Green top · shin pads, water bottle" → ["Green top", "Shin pads", "Water bottle"], for chips. */
+export function kitItems(kit: string): string[] {
+  return kit
+    .split(/\s*(?:·|,|;|\/|\band\b|\+)\s*/i)
+    .map((k) => k.trim())
+    .filter(Boolean)
+    .map((k) => k[0].toUpperCase() + k.slice(1))
+    .slice(0, 8);
 }
 
 function SessionPart({ session, rows, family, now }: { session: Session; rows: ChildWeek[]; family: Family; now: Date }) {
@@ -100,6 +118,19 @@ function SessionPart({ session, rows, family, now }: { session: Session; rows: C
           </p>
           <Directions venue={session.venue} />
         </div>
+        {session.kit ? (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="inline-flex items-center gap-1 text-label text-ink-muted uppercase">
+              <Shirt aria-hidden size={14} />
+              Bring
+            </span>
+            {kitItems(session.kit).map((k) => (
+              <span key={k} className="inline-flex min-h-8 items-center gap-1 rounded-pill border border-line bg-cream px-2.5 text-[14px] font-bold">
+                {k}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
       {/* "All coming" only where it saves taps: two or more children here who haven't said Coming yet. */}
       {!session.squad && notYetComing.length > 1 ? <AllComing sessionId={session.id} kids={notYetComing} /> : null}

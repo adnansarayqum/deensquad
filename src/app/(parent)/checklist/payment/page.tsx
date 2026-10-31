@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { backTarget } from "@/lib/parent/tabs";
 import type { ReactNode } from "react";
 import { Check, ExternalLink, PoundSterling } from "lucide-react";
 import { BackHeader } from "@/components/BackHeader";
@@ -14,8 +15,9 @@ export const metadata: Metadata = { title: "Set up payments" };
 // every child whose plan is still missing (or overdue). Families who've agreed to pay for each session say "We're
 // paying as we go" instead (children with no plan only), which also finishes the step. The club still confirms each
 // child's plan on its own, and can change any of them.
-export default async function PaymentPage() {
+export default async function PaymentPage({ searchParams }: PageProps<"/checklist/payment">) {
   const { family, payment, needed, overdue } = await getPaymentPage();
+  const back = backTarget((await searchParams).from, { href: "/checklist", label: "To-do" });
   const url = teamFeePayUrl();
   const fee = clubFeeText();
   const names = (children: { firstName: string }[]) => joinNames(children.map((c) => c.firstName));
@@ -28,7 +30,7 @@ export default async function PaymentPage() {
 
   return (
     <>
-      <BackHeader back="/checklist" backLabel="To-do" title="Set up payments">
+      <BackHeader back={back.href} backLabel={back.label} title="Set up payments">
         {url ? "The club takes the monthly fee through TeamFeePay. It takes about two minutes." : "How the club takes the monthly fee."}
       </BackHeader>
 

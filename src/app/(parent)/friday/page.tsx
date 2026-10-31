@@ -14,13 +14,13 @@ import { PassCarousel } from "@/components/PassCarousel";
 import { Attachment } from "@/components/plans/Attachment";
 import { VideoCard } from "@/components/plans/VideoCard";
 import { VenuePassPicture } from "@/components/VenuePassPicture";
-import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
+import { AppHeader, Card, Pill } from "@/components/ui";
 import { androidCalendarIntent, googleCalendarUrl, sessionIcsOpenPath, sessionIcsPath } from "@/lib/calendar/session";
 import { appUrl } from "@/lib/config";
 import { clock, dayHeading, longDay, shortDay, whenWords } from "@/lib/dates";
 import { attachmentTitle } from "@/lib/files";
-import { groupPlural, type Session } from "@/lib/domain";
-import type { SquadCounts } from "@/lib/parent/data";
+import { groupPlural, type Child, type Session } from "@/lib/domain";
+import { answerKey, type AnswerRecord, type Family, type SquadCounts } from "@/lib/parent/data";
 import { getFamily, getFridayPage } from "@/lib/parent/load";
 import { answeredLine, availabilityQuestion, sessionsToday, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
 import { cachedPasses, passCards, type PassCard } from "@/lib/pass/cards";
@@ -32,8 +32,10 @@ import { loadMediaFor } from "@/lib/media/data";
 
 export const metadata: Metadata = { title: "Sessions" };
 
-export default async function FridayPage() {
-  const [{ family, week, cancelled, invites, upcoming, plans, latestSheet, venuePass, trips }, { user }] = await Promise.all([getFridayPage(), getFamily()]);
+export default async function FridayPage({ searchParams }: PageProps<"/friday">) {
+  const [{ family, week, cancelled, invites, upcoming, plans, latestSheet, venuePass, trips, ahead, aheadAnswers }, { user }] = await Promise.all([getFridayPage(), getFamily()]);
+  // This week / Coming up (redesign brief, Oct 2026): links, so they work without JavaScript.
+  const view = (await searchParams).view === "upcoming" ? "upcoming" : "week";
   // Photos and videos on the sessions shown (staff add them on a session's Edit page).
   const shown = [...week.flatMap((w) => (w.session ? [w.session] : [])), ...invites.map((i) => i.session)];
   const media = await asUser(user.id, (tx) => loadMediaFor(tx, "session", shown.map((s) => s.id)));
@@ -84,7 +86,7 @@ export default async function FridayPage() {
           <p className="text-label text-floodlight uppercase">
             {longDay(single.session.startsAt)} · {groupPlural(single.child.ageGroup)}
           </p>
-          <h1 className="font-display text-[48px] leading-[0.92] tracking-[0.02em]">
+          <h1 className="pr-36 font-display text-[48px] leading-[0.92] tracking-[0.02em] max-[374px]:pr-28">
             {single.checkedInAt
               ? `${single.child.firstName} is here`
               : single.session.squad
@@ -99,12 +101,35 @@ export default async function FridayPage() {
       ) : (
         <AppHeader stripes>
           <p className="text-label text-floodlight uppercase">Next sessions</p>
-          <h1 className="font-display text-[48px] leading-[0.92] tracking-[0.02em]">{single ? "Sessions" : "Who's coming?"}</h1>
+          <h1 className="pr-36 font-display text-[48px] leading-[0.92] tracking-[0.02em] max-[374px]:pr-28">{single ? "Sessions" : "Who's coming?"}</h1>
         </AppHeader>
       )}
 
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
         <PassCacheWriter user={user.id} passes={cachedPasses(cards)} hub={venuePass?.cache ?? null} />
+        {upcoming.length > 0 ? (
+          <nav aria-label="Which sessions" className="grid grid-cols-2 gap-1 rounded-app border-2 border-line bg-paper p-1">
+            {(
+              [
+                ["week", "This week", "/friday"],
+                ["upcoming", `Coming up (${upcoming.length})`, "/friday?view=upcoming"],
+              ] as const
+            ).map(([key, label, href]) => (
+              <Link
+                key={key}
+                href={href}
+                aria-current={view === key ? "page" : undefined}
+                className={`flex min-h-12 items-center justify-center rounded-[14px] text-[16px] font-bold ${view === key ? "bg-grass-tint text-grass-text" : "text-ink-muted"}`}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+        {view === "upcoming" ? (
+          <ComingUp ahead={ahead} answers={aheadAnswers} family={family} now={now} />
+        ) : (
+        <>
         <TripCards trips={trips} from="/friday" />
         {todayCards.length > 0 ? (
           <TodaysCodes cards={todayCards} title={today[0].session.title} venuePass={venuePass} />
@@ -194,30 +219,8 @@ export default async function FridayPage() {
           <Headcount group={single.child.ageGroup} counts={single.counts} squad={Boolean(single.session.squad)} />
         ) : null}
 
-        {upcoming.length > 0 ? (
-          <section aria-labelledby="coming-up" className="flex flex-col gap-2">
-            <Eyebrow>
-              <span id="coming-up">Coming up</span>
-            </Eyebrow>
-            <ul className="flex flex-col divide-y-2 divide-line rounded-app border-2 border-line bg-paper px-3.5">
-              {upcoming.map((s) => (
-                <li key={s.id} className="flex items-center justify-between gap-3 py-3">
-                  <div className="flex min-w-0 flex-col">
-                    <span className="text-[15px] font-bold">
-                      {shortDay(s.startsAt)} · {s.title}
-                    </span>
-                    <span className="text-[13px] text-ink-muted">
-                      {clock(s.startsAt)} · {s.venue}
-                    </span>
-                    {s.cancelled && s.cancelReason ? <span className="text-[13px]">{s.cancelReason}</span> : null}
-                    {!s.cancelled && s.notes ? <span className="line-clamp-2 text-[13px] whitespace-pre-line">{s.notes}</span> : null}
-                  </div>
-                  {s.cancelled ? <Pill tone="action">Cancelled</Pill> : <span className="shrink-0 text-[13px] font-bold text-ink-muted">{s.ageGroups.join(", ")}</span>}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
+        </>
+        )}
 
         {week.some((w) => w.answer === "coming") ? null : (
           <Link href="/player/calendar?from=/friday" className="inline-flex min-h-12 items-center self-start text-sm font-bold text-grass-text underline">
@@ -226,6 +229,73 @@ export default async function FridayPage() {
         )}
       </main>
     </>
+  );
+}
+
+/**
+ * Coming up: the next sessions after this week's, each answerable now (UX review, Oct 2026: parents could only
+ * answer for this Friday). The same Coming / Not coming as this week, for the children each session is for.
+ */
+function ComingUp({ ahead, answers, family, now }: { ahead: { session: Session; children: Child[] }[]; answers: Map<string, AnswerRecord>; family: Family; now: Date }) {
+  if (ahead.length === 0) return <p className="text-[16px] text-ink-muted">Nothing else in the diary yet.</p>;
+  return (
+    <ul className="flex flex-col gap-3">
+      {ahead.map(({ session, children }) => {
+        const start = new Date(session.startsAt);
+        const notYet = children.filter((c) => answers.get(answerKey(session.id, c.id))?.answer !== "coming");
+        return (
+          <li key={session.id}>
+            <Card className="flex flex-col gap-3 p-4">
+              <div className="flex items-start gap-3">
+                <span aria-hidden className="flex w-14 shrink-0 flex-col items-center rounded-[14px] bg-pitch py-1.5 text-on-pitch">
+                  <span className="font-display text-[30px] leading-none">{new Intl.DateTimeFormat("en-GB", { day: "numeric", timeZone: "Europe/London" }).format(start)}</span>
+                  <span className="text-[13px] font-bold uppercase">{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "Europe/London" }).format(start)}</span>
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <h2 className="text-[18px] font-extrabold">
+                    {dayHeading(session.startsAt, now)} · {session.title}
+                  </h2>
+                  <p className="text-[15px] text-ink-muted">
+                    {clock(session.startsAt)}–{clock(session.endsAt)} · {session.venue}
+                  </p>
+                  {session.cancelled ? (
+                    <span className="flex flex-wrap items-center gap-2 pt-1">
+                      <Pill tone="action">Cancelled</Pill>
+                      {session.cancelReason ? <span className="text-[15px]">{session.cancelReason}</span> : null}
+                    </span>
+                  ) : session.notes ? (
+                    <p className="line-clamp-2 text-[15px] whitespace-pre-line">{session.notes}</p>
+                  ) : null}
+                </div>
+              </div>
+              {session.squad && !session.cancelled ? (
+                <p className="text-[15px] text-ink-muted">A squad the coaches pick. If yours is picked, you&apos;re asked on This week.</p>
+              ) : null}
+              {children.length > 1 && notYet.length > 1 ? <AllComing sessionId={session.id} kids={notYet} /> : null}
+              {children.map((c) => {
+                const record = answers.get(answerKey(session.id, c.id));
+                return (
+                  <div key={c.id} className="flex flex-col gap-2">
+                    {children.length > 1 || family.children.length > 1 ? <p className="text-[16px] font-extrabold">{c.firstName}</p> : null}
+                    <AvailabilityPicker
+                      sessionId={session.id}
+                      playerId={c.id}
+                      answer={record?.answer}
+                      childName={c.firstName}
+                      question={availabilityQuestion(c.firstName, session, shortDay(session.startsAt))}
+                      answered={record ? answeredLine(record, family.guardian.id, now, false) : undefined}
+                      reason={record?.reason ?? null}
+                      compact
+                      quiet
+                    />
+                  </div>
+                );
+              })}
+            </Card>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -313,8 +383,8 @@ function SessionBlock({
               <h3 className="text-[17px] font-extrabold">
                 {w.child.firstName} <span className="text-[15px] font-bold text-ink-muted">· {groupPlural(w.child.ageGroup)}</span>
               </h3>
-              {w.counts ? (
-                <span className="text-[13px] text-ink-muted tabular-nums">
+              {showHeadcount(w.counts) ? (
+                <span className="text-[14px] text-ink-muted tabular-nums">
                   {w.counts.coming} of {w.counts.squad} coming
                 </span>
               ) : null}
@@ -427,7 +497,15 @@ function Briefing({ session }: { session: Session }) {
   );
 }
 
+/**
+ * Group headcounts wait until 5 families have answered (UX review, Oct 2026): "0 of 36 coming" days ahead read as
+ * "nobody's going". The parent's own children's answers are the main thing; this is background.
+ */
+const HEADCOUNT_FROM = 5;
+const showHeadcount = (c: SquadCounts | undefined): c is SquadCounts => Boolean(c && c.coming + c.away >= HEADCOUNT_FROM);
+
 function Headcount({ group, counts, squad }: { group: string; counts: SquadCounts; squad: boolean }) {
+  if (!showHeadcount(counts)) return null;
   const unanswered = Math.max(0, counts.squad - counts.coming - counts.away);
   const total = Math.max(1, counts.squad);
   return (

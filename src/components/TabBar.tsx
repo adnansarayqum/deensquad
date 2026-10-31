@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams, useSelectedLayoutSegment } from "next/navigation";
-import { CalendarDays, ListChecks, Megaphone, ShoppingBag, Users } from "lucide-react";
+import { CalendarDays, House, ListChecks, ShoppingBag, Users } from "lucide-react";
 import { tabFor } from "@/lib/parent/tabs";
 
 export function TabBar({ unread }: { unread: number }) {
@@ -25,7 +25,7 @@ export function TabBar({ unread }: { unread: number }) {
     };
   }, []);
   const tabs = [
-    { segment: "news", label: "News", icon: Megaphone },
+    { segment: "news", label: "Home", icon: House },
     { segment: "friday", label: "Sessions", icon: CalendarDays },
     { segment: "checklist", label: "To-do", icon: ListChecks },
     { segment: "shop", label: "Shop", icon: ShoppingBag },
@@ -45,7 +45,7 @@ export function TabBar({ unread }: { unread: number }) {
               <Link
                 href={`/${segment}`}
                 aria-current={isActive ? "page" : undefined}
-                className={`relative flex flex-col items-center gap-0.5 rounded-[14px] border-2 py-2 text-xs ${
+                className={`relative flex flex-col items-center gap-0.5 rounded-[14px] border-2 py-2 text-[13px] ${
                   isActive ? "border-grass bg-grass-tint font-extrabold text-grass-text" : "border-transparent font-bold text-ink-muted"
                 }`}
               >
@@ -53,7 +53,7 @@ export function TabBar({ unread }: { unread: number }) {
                 {/* At very narrow widths (200% zoom on a phone) the labels would be cut off, so only the icons show; the label stays as the name. */}
                 <span className="max-w-full truncate px-0.5 max-[239px]:sr-only">{label}</span>
                 {segment === "news" && unread > 0 ? (
-                  <span className="absolute top-1 right-[calc(50%-22px)] grid h-5 min-w-5 place-items-center rounded-pill bg-kit-orange px-1 text-[11px] font-bold text-on-orange">
+                  <span className="absolute top-1 right-[calc(50%-22px)] grid h-5 min-w-5 place-items-center rounded-pill bg-kit-orange px-1 text-[13px] font-bold text-on-orange">
                     {unread}
                     <span className="sr-only"> unread</span>
                   </span>

@@ -98,7 +98,7 @@ test("an unknown email gets the same screen and no email", async ({ page }) => {
 
 test("news: a parent of two acknowledges the kit message", async ({ page }) => {
   await signIn(page, "adnan@example.com");
-  await expect(page.getByRole("heading", { name: "Club news" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Deen Squad", level: 1 })).toBeVisible();
   // This week, first on News: training, and both children's answers right there with one "All coming".
   const week = page.getByRole("heading", { name: "This week" }).locator("xpath=../..");
   await expect(week.getByText("Going ahead")).toBeVisible();
@@ -115,7 +115,7 @@ test("news: a parent of two acknowledges the kit message", async ({ page }) => {
   const headline = (await read.getAttribute("aria-label"))!.replace("I've read this: ", "");
   await read.click();
   await expect(page.getByRole("alert").getByText("That didn't save. Check your signal and try again.")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Club news" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Deen Squad", level: 1 })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Something went wrong" })).toHaveCount(0);
   await page.unroute(newsOffline);
   await page.getByRole("button", { name: "Try again" }).click();
@@ -195,7 +195,7 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
   await expect(page.getByText("Saved. Coach can see Yusuf is coming.")).toBeVisible();
 
   // News's This week card shows the same answers, ready to change there too.
-  await page.getByRole("link", { name: "News" }).click();
+  await page.getByRole("link", { name: "Home" }).click();
   await expect(page.getByRole("button", { name: "Yusuf is coming", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Not coming: Musa isn't coming", exact: true })).toHaveAttribute("aria-pressed", "true");
 });
@@ -250,19 +250,23 @@ test("player: switch between children and sign out", async ({ page }) => {
   await page.screenshot({ path: shot("player"), fullPage: true });
   await page.getByRole("link", { name: "Musa", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Musa S." })).toBeVisible();
-  const musaPage = new URL(page.url());
-  // The privacy notice has a way back into the app, to the child that was showing.
+  // Family remembers Musa after another tab.
+  await page.getByRole("link", { name: "Sessions" }).click();
+  await page.getByRole("link", { name: "Family" }).click();
+  await expect(page.getByRole("heading", { name: "Musa S." })).toBeVisible();
+  // Account things are in Settings; the privacy notice has a way back to it.
+  await page.getByRole("link", { name: /^Settings/ }).click();
+  await expect(page).toHaveURL(/\/player\/settings$/);
   await page.getByRole("link", { name: "Privacy", exact: true }).click();
-  await expect(page).toHaveURL(/\/privacy\?from=%2Fplayer%3Fchild%3D[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/privacy\?from=\/player\/settings$/);
   const back = page.getByRole("link", { name: "Back", exact: true });
   expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   await back.click();
-  await expect(page).toHaveURL(musaPage.href);
-  await expect(page.getByRole("heading", { name: "Musa S." })).toBeVisible();
+  await expect(page).toHaveURL(/\/player\/settings$/);
   // A made-up Back target off the site is ignored.
   await page.goto("/privacy?from=//evil.example");
   await expect(page.getByRole("link", { name: "Back", exact: true })).toHaveAttribute("href", "/player");
-  await page.getByRole("link", { name: "Back", exact: true }).click();
+  await page.goto("/player/settings");
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   await page.goto("/news");
@@ -1110,7 +1114,7 @@ test("tournament squads: the admin picks two U10s and messages them; only their 
   await admin.getByLabel("Headline").fill("County Cup: meet at 9am");
   await admin.getByLabel("Message", { exact: true }).fill("Bring water and the away kit.");
   await admin.getByRole("button", { name: "Send to the squad's parents" }).click();
-  await expect(admin.getByText("Posted. Sent to 2 parents: they see it at the top of Club news.")).toBeVisible();
+  await expect(admin.getByText("Posted. Sent to 2 parents: they see it on the Home screen.")).toBeVisible();
   await expect(admin.getByText(/Squad · County Cup/)).toBeVisible();
   await expect(admin.getByText("0 of 2 read")).toBeVisible();
   await expect(admin.getByText("Parent R", { exact: true })).toBeVisible();
@@ -1135,7 +1139,7 @@ test("tournament squads: the admin picks two U10s and messages them; only their 
   await expect(other.getByRole("heading", { name: /Is Ahmed coming/ })).toBeVisible();
   await expect(other.getByText(/County Cup/)).toHaveCount(0);
   await other.goto("/news");
-  await expect(other.getByRole("heading", { name: "Club news" })).toBeVisible();
+  await expect(other.getByRole("heading", { name: "Deen Squad", level: 1 })).toBeVisible();
   await expect(other.getByText(/County Cup/)).toHaveCount(0);
   await otherContext.close();
 

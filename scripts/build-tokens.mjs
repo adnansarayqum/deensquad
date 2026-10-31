@@ -23,12 +23,21 @@ for (const [key, stack] of Object.entries(tokens.type.families)) out(`  --font-$
 out("  color-scheme: light;");
 out("}");
 out();
+// Dark follows the phone (prefers-color-scheme) unless the person chose Light or Dark in Settings → Appearance,
+// which sets data-theme on <html> (src/components/ThemeScript.tsx, before the first paint).
+const darkBody = (indent) => {
+  for (const t of tokens.color.tokens) if (t.value[dark] !== t.value[light]) out(`${indent}--${t.name}: ${t.value[dark]};`);
+  for (const t of tokens.shadow.tokens) if (t.value[dark] !== t.value[light]) out(`${indent}--${t.name}: ${t.value[dark]};`);
+  out(`${indent}color-scheme: dark;`);
+};
 out("@media (prefers-color-scheme: dark) {");
-out("  :root {");
-for (const t of tokens.color.tokens) if (t.value[dark] !== t.value[light]) out(`    --${t.name}: ${t.value[dark]};`);
-for (const t of tokens.shadow.tokens) if (t.value[dark] !== t.value[light]) out(`    --${t.name}: ${t.value[dark]};`);
-out("    color-scheme: dark;");
+out('  :root:not([data-theme="light"]) {');
+darkBody("    ");
 out("  }");
+out("}");
+out();
+out(':root[data-theme="dark"] {');
+darkBody("  ");
 out("}");
 out();
 out("@theme inline {");

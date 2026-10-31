@@ -1,27 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Clock, Flame, Lock, LogOut, Star, Target, Trophy } from "lucide-react";
-import { Card } from "@/components/ui";
-import { loadMyDeletionRequest } from "@/lib/data-requests";
-import { asUser } from "@/lib/db";
-import { BADGE_RULES, groupPlural, type Badge } from "@/lib/domain";
-import { loadFamilyParents } from "@/lib/parent/profile";
-import { getFamily, getPlayerPage } from "@/lib/parent/load";
+import { ChevronRight, Clock, Flame, Lock, Star, Target, Trophy } from "lucide-react";
+import { Card, Pill } from "@/components/ui";
+import { BADGE_RULES, groupPlural, type Badge, type PaymentState } from "@/lib/domain";
+import { getPlayerPage } from "@/lib/parent/load";
 import { RememberChild } from "@/components/RememberChild";
-import { DownloadMyData } from "@/components/DownloadMyData";
-import { SignOutForm } from "@/components/SignOutForm";
 import { StaffSwitch } from "@/components/StaffSwitch";
 import { ProgressSummaryView } from "@/components/progress/ProgressSummary";
 import { monthLabel } from "@/lib/progress/ratings";
 
-export const metadata: Metadata = { title: "Player" };
+export const metadata: Metadata = { title: "Family" };
 
 const badgeIcons: Record<Badge["icon"], typeof Star> = { star: Star, clock: Clock, trophy: Trophy, flame: Flame, target: Target };
 
 export default async function PlayerPage({ searchParams }: PageProps<"/player">) {
   const flags = await searchParams;
-  const [{ family, child, stats, badges, note, awards, progress }, { user }] = await Promise.all([getPlayerPage(flags.child), getFamily()]);
-  const [deletionAsked, parents] = await asUser(user.id, (tx) => Promise.all([loadMyDeletionRequest(tx), loadFamilyParents(tx)]));
+  const { family, child, stats, badges, note, awards, progress, records } = await getPlayerPage(flags.child);
   // Back from Add a child: the child it opened on was just added (only said for the child that's showing).
   const justAdded = child && flags.added === "1" && flags.child === child.id;
 
@@ -33,7 +27,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           <div aria-hidden className="stripes-v absolute inset-0 opacity-60" />
           <StaffSwitch on="pitch-deep" className="pt-4" />
           {family.children.length > 1 ? (
-            <nav aria-label="Choose a child" className="relative flex flex-wrap gap-2 pt-4">
+            <nav aria-label="Choose a child" className="relative flex flex-wrap gap-2 pt-4 pr-36 max-[374px]:pr-28">
               {family.children.map((c) => (
                 <Link
                   key={c.id}
@@ -106,17 +100,58 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           ) : (
             <dl className="grid grid-cols-2 gap-2.5">
               <Card className="flex flex-col-reverse items-center p-2.5">
-                <dt className="text-xs font-bold text-ink-muted">{stats.sessions === 1 ? "session" : "sessions"}</dt>
+                <dt className="text-[13px] font-bold text-ink-muted">{stats.sessions === 1 ? "session" : "sessions"}</dt>
                 <dd className="font-display text-[40px] leading-none text-ink tabular-nums">{stats.sessions}</dd>
               </Card>
               <Card className="flex flex-col-reverse items-center p-2.5">
-                <dt className="text-xs font-bold text-ink-muted">attendance</dt>
+                <dt className="text-[13px] font-bold text-ink-muted">attendance</dt>
                 <dd className="font-display text-[40px] leading-none text-ink tabular-nums">{stats.attendancePct}%</dd>
               </Card>
               <ScoreTile label={(awards?.totals.points ?? 0) === 1 ? "point" : "points"} value={awards?.totals.points ?? 0} />
               <ScoreTile label={(awards?.totals.stars ?? 0) === 1 ? "star" : "stars"} value={awards?.totals.stars ?? 0} />
             </dl>
           )
+        ) : null}
+
+        {/* The child's records first, before achievements (redesign brief, Oct 2026): each row says where it stands. */}
+        {child && records ? (
+          <section aria-labelledby="child-records" className="flex flex-col rounded-app border-2 border-line bg-paper p-1">
+            <h2 id="child-records" className="px-3 pt-3 pb-1 text-[17px] font-extrabold">
+              {child.firstName}&apos;s details
+            </h2>
+            <DetailRow href={`/player/child/${child.id}`} title="Name, date of birth and photo" pill={child.photoFileId ? { tone: "done", text: "Photo added" } : { tone: "neutral", text: "Optional" }} />
+            <DetailRow
+              href={`/player/child/${child.id}/medical?from=/player`}
+              title="Medical and additional needs"
+              hint={records.medical ? undefined : "Optional, but please tell us about any allergies or medication."}
+              pill={records.medical ? { tone: "done", text: "Added" } : { tone: "neutral", text: "Optional" }}
+            />
+            <DetailRow
+              href={`/checklist/contacts?child=${child.id}&from=/player`}
+              title="Emergency contacts"
+              hint={records.contacts === 1 ? "Two is best." : undefined}
+              pill={records.contacts ? { tone: "done", text: `${records.contacts} saved` } : { tone: "action", text: "Add one" }}
+            />
+            <DetailRow
+              href={`/checklist/consent?child=${child.id}&from=/player`}
+              title="Photo consent"
+              pill={child.photoConsent === true ? { tone: "done", text: "Yes" } : child.photoConsent === false ? { tone: "neutral", text: "No" } : { tone: "action", text: "Not answered" }}
+            />
+            <DetailRow href="/checklist/payment?from=/player" title="Payment" pill={PAYMENT_PILL[records.payment]} />
+          </section>
+        ) : null}
+
+        {child ? (
+          <Link
+            href={`/player/wellbeing?child=${child.id}`}
+            className="flex min-h-12 items-center justify-between gap-3 rounded-app border-2 border-line bg-paper px-4 py-3 text-[16px] font-bold"
+          >
+            <span className="flex flex-col">
+              How&apos;s {child.firstName} finding football?
+              <span className="text-[14px] font-normal text-ink-muted">A private check-in with the club</span>
+            </span>
+            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+          </Link>
         ) : null}
 
         {child && awards && awards.recent.length > 0 ? (
@@ -159,10 +194,19 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                     >
                       <Icon aria-hidden size={26} />
                     </span>
-                    <span className={`text-xs font-bold ${b.earnedOn ? "" : "text-ink-muted"}`}>{b.name}</span>
-                    <span className="text-[11px] leading-[14px] text-ink-muted">
+                    <span className={`text-[13px] font-bold ${b.earnedOn ? "" : "text-ink-muted"}`}>{b.name}</span>
+                    <span className="text-[13px] leading-[17px] text-ink-muted">
                       {b.earnedOn ? "Earned" : (BADGE_RULES[b.id] ?? "Given by the coaches.")}
                     </span>
+                    {/* How close, where the app knows (sessions come from the register). Coaches still award it. */}
+                    {!b.earnedOn && b.id === "ten-sessions" && stats ? (
+                      <span className="flex w-full flex-col items-center gap-1">
+                        <span className="text-[13px] font-bold text-gold-text tabular-nums">{Math.min(stats.sessions, 10)} of 10 so far</span>
+                        <span aria-hidden className="h-1.5 w-full overflow-hidden rounded-pill bg-line">
+                          <span className="block h-full bg-crest-gold" style={{ width: `${Math.min(100, stats.sessions * 10)}%` }} />
+                        </span>
+                      </span>
+                    ) : null}
                   </li>
                 );
               })}
@@ -204,100 +248,40 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           </div>
         ) : null}
 
-        {child ? (
-          <Link
-            href={`/player/wellbeing?child=${child.id}`}
-            className="mt-2 flex min-h-12 items-center justify-between gap-3 rounded-app border-2 border-line bg-paper px-4 py-3 text-[15px] font-bold"
-          >
-            <span className="flex flex-col">
-              How&apos;s {child.firstName} finding football?
-              <span className="text-[13px] font-normal text-ink-muted">A private check-in with the club</span>
-            </span>
-            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
-          </Link>
-        ) : null}
-
-        <section aria-labelledby="your-family" className="mt-2 flex flex-col rounded-app border-2 border-line bg-paper p-1">
-          <h2 id="your-family" className="px-3 pt-3 pb-1 text-base font-extrabold">
-            Your family
-          </h2>
-          {family.children.map((c) => (
-            <Link
-              key={c.id}
-              href={`/player/child/${c.id}`}
-              className="flex min-h-12 items-center justify-between gap-3 border-b-2 border-line px-3 text-[15px] font-bold"
-            >
-              <span>
-                {c.firstName}&apos;s details
-                <span className="font-normal text-ink-muted"> · {groupPlural(c.ageGroup)}</span>
-              </span>
-              <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
-            </Link>
-          ))}
-          <Link href="/player/me" className="flex min-h-12 items-center justify-between gap-3 border-b-2 border-line px-3 text-[15px] font-bold">
-            <span>
-              Your details
-              <span className="font-normal text-ink-muted"> · {parents.find((p) => p.you)?.firstName ?? "you"}</span>
-            </span>
-            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
-          </Link>
-          {parents
-            .filter((p) => !p.you)
-            .map((p) => (
-              <p key={p.id} className="flex min-h-12 items-center gap-1 border-b-2 border-line px-3 text-[15px] font-bold">
-                {p.firstName} {p.lastName}
-                <span className="font-normal text-ink-muted">· {p.signedIn ? "using the app" : p.invited ? "invited" : "not invited yet"}</span>
-              </p>
-            ))}
-          <div className="flex flex-wrap gap-x-5 px-3 py-1">
-            <Link href="/player/add-child" className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
-              Add a child
-            </Link>
-            {family.children.length > 0 ? (
-              <Link href="/player/add-parent" className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
-                {parents.some((p) => !p.you) ? "Add another parent or carer" : "Add a parent or carer"}
-              </Link>
-            ) : null}
-          </div>
-        </section>
-
-        <section aria-labelledby="your-data"className="mt-2 flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
-          <h2 id="your-data" className="text-base font-extrabold">
-            Your data
-          </h2>
-          <p className="text-[15px] leading-[22px]">See everything the app holds about you and your children, or ask the club to delete your account.</p>
-          <DownloadMyData />
-          {deletionAsked ? (
-            <p role="status" className="text-[15px] leading-[22px]">
-              You asked the club to delete your account on{" "}
-              {new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "Europe/London" }).format(new Date(deletionAsked))}. An admin will be in
-              touch.
-            </p>
-          ) : (
-            <Link href="/player/delete-account" className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-ink-muted underline">
-              Ask the club to delete my account
-            </Link>
-          )}
-        </section>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-sm">
-          <span className="min-w-0 text-ink-muted [overflow-wrap:anywhere]">Signed in as {user.email}</span>
-          <a
-            // Back from the notice returns to the child that was showing.
-            href={child ? `/privacy?from=${encodeURIComponent(`/player?child=${child.id}`)}` : "/privacy"}
-            className="inline-flex min-h-12 items-center font-bold text-ink-muted underline"
-          >
-            Privacy
-          </a>
-          <SignOutForm>
-            <button type="submit" className="inline-flex min-h-12 items-center gap-1.5 font-bold text-ink-muted">
-              <LogOut aria-hidden size={16} />
-              Sign out
-            </button>
-          </SignOutForm>
-        </div>
+        {/* Account things live in Settings, so Family stays about the children. */}
+        <Link href="/player/settings" className="flex min-h-[52px] items-center justify-between gap-3 rounded-app border-2 border-line bg-paper px-4 py-3 text-[16px] font-bold">
+          <span className="flex flex-col">
+            Settings
+            <span className="text-[14px] font-normal text-ink-muted">Your details, parents and carers, notifications, your data, sign out</span>
+          </span>
+          <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+        </Link>
       </main>
     </>
+  );
+}
+
+const PAYMENT_PILL: Record<PaymentState, { tone: "done" | "action" | "neutral" | "gold"; text: string }> = {
+  active: { tone: "done", text: "Monthly plan" },
+  self_reported: { tone: "gold", text: "Club checking" },
+  pay_as_you_go: { tone: "neutral", text: "Pay as you go" },
+  overdue: { tone: "action", text: "Overdue" },
+  missing: { tone: "action", text: "Not set up" },
+};
+
+/** A row in the child's details: what it is, where it stands (a pill with a word), and a chevron. */
+function DetailRow({ href, title, hint, pill }: { href: string; title: string; hint?: string; pill: { tone: "done" | "action" | "neutral" | "gold"; text: string } }) {
+  return (
+    <Link href={href} className="flex min-h-[52px] flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b-2 border-line px-3 py-2 last:border-b-0">
+      <span className="flex min-w-0 flex-col">
+        <span className="text-[16px] font-bold">{title}</span>
+        {hint ? <span className="text-[14px] text-ink-muted">{hint}</span> : null}
+      </span>
+      <span className="ml-auto flex min-w-0 items-center gap-1">
+        <Pill tone={pill.tone}>{pill.text}</Pill>
+        <ChevronRight aria-hidden size={20} className="text-ink-muted" />
+      </span>
+    </Link>
   );
 }
 
@@ -305,7 +289,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 function ScoreTile({ label, value }: { label: string; value: number }) {
   return (
     <Card tone={value > 0 ? "gold" : undefined} className="flex flex-col-reverse items-center p-2.5">
-      <dt className={`text-xs font-bold ${value > 0 ? "text-gold-text" : "text-ink-muted"}`}>{label}</dt>
+      <dt className={`text-[13px] font-bold ${value > 0 ? "text-gold-text" : "text-ink-muted"}`}>{label}</dt>
       <dd className={`font-display text-[40px] leading-none tabular-nums ${value > 0 ? "text-gold-text" : "text-ink"}`}>{value}</dd>
     </Card>
   );

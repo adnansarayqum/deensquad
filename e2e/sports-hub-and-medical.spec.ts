@@ -168,7 +168,7 @@ test("medical and additional needs: saved by the parent with consent; the U7 coa
     await page.goto("/player");
     // Player shows one child at a time: switch to Zaid first.
     await page.getByRole("navigation", { name: "Choose a child" }).getByRole("link", { name: "Zaid" }).click();
-    await page.getByRole("region", { name: "Your family" }).getByRole("link", { name: "Zaid's details" }).click();
+    await page.getByRole("region", { name: "Zaid's details" }).getByRole("link", { name: /^Name, date of birth and photo/ }).click();
     await expect(page).toHaveURL(/\/player\/child\/[0-9a-f-]{36}$/);
     const zaid = page.url().split("/").at(-1)!;
     await page.getByRole("link", { name: /Medical and additional needs/ }).click();
@@ -191,7 +191,7 @@ test("medical and additional needs: saved by the parent with consent; the U7 coa
     // Layla (U10) too.
     await page.goto("/player");
     await page.getByRole("navigation", { name: "Choose a child" }).getByRole("link", { name: "Layla" }).click();
-    await page.getByRole("region", { name: "Your family" }).getByRole("link", { name: "Layla's details" }).click();
+    await page.getByRole("region", { name: "Layla's details" }).getByRole("link", { name: /^Name, date of birth and photo/ }).click();
     await expect(page).toHaveURL(/\/player\/child\/[0-9a-f-]{36}$/);
     const layla = page.url().split("/").at(-1)!;
     await page.goto(`/player/child/${layla}/medical`);

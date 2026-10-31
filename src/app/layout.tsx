@@ -11,6 +11,7 @@ import { ClientErrorReporter } from "@/components/observability/ClientErrorRepor
 import { getCurrentUser } from "@/lib/auth/session";
 import { analyticsConfig, SENTRY_CLIENT_ON } from "@/lib/observability/config";
 import { monitoringUser } from "@/lib/observability/user";
+import { THEME_SCRIPT } from "@/lib/theme/theme";
 
 export const metadata: Metadata = {
   title: { default: "Deen Squad", template: "%s · Deen Squad" },
@@ -46,13 +47,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   // see src/lib/observability/config.ts. Analytics is read at run time; Sentry in the browser at build time.
   const analytics = analyticsConfig();
   return (
-    <html lang="en-GB" className="h-full antialiased">
+    <html lang="en-GB" className="h-full antialiased" suppressHydrationWarning>
       <head>
         {/* Android browsers can offer their install prompt before React has loaded: keep it for the parent
             screens' "add to home screen" step (src/components/InstallGate.tsx), which hears when one arrives.
             A plain inline script runs while the page is parsed; next/script's beforeInteractive only runs once
             Next's own bundle has loaded, which can be too late. */}
         <script dangerouslySetInnerHTML={{ __html: INSTALL_PROMPT_SCRIPT }} />
+        {/* Settings → Appearance: a chosen Light or Dark is applied before the first paint (src/lib/theme). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-full bg-cream text-ink">
         {children}

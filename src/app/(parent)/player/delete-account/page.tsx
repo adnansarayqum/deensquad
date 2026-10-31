@@ -20,7 +20,7 @@ export default async function DeleteAccountPage() {
 
   return (
     <>
-      <BackHeader back="/player" backLabel="Family" title="Delete my account">
+      <BackHeader back="/player/settings" backLabel="Settings" title="Delete my account">
         Ask the club to remove you from the app.
       </BackHeader>
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">
