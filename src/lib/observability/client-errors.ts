@@ -16,6 +16,9 @@ const NOISE = [
   /NEXT_REDIRECT|NEXT_HTTP_ERROR_FALLBACK|NEXT_NOT_FOUND/,
   /The play\(\) request was interrupted/i,
   /NotAllowedError/i,
+  // Safari's words for a fetch it dropped, e.g. Next's background prefetch of a page cancelled by moving to
+  // another one ("Fetch API cannot load …?_rsc=… due to access control checks"), seen in the iPhone tests.
+  /due to access control checks/i,
 ];
 
 export function isNoise(message: string, source?: string | null): boolean {

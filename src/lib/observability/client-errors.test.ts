@@ -15,4 +15,8 @@ describe("errors from people's phones", () => {
     expect(readReport({ message: "x", path: "https://evil.example" })).toBeNull();
     expect(readReport(null)).toBeNull();
   });
+
+it("treats Safari's dropped fetches (a cancelled prefetch) as noise", () => {
+  expect(isNoise("Fetch API cannot load http://localhost:3100/shop?_rsc=abc due to access control checks.")).toBe(true);
+});
 });

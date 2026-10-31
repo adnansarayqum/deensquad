@@ -147,6 +147,8 @@ const NOISE = [
   // Lost signal mid-request: Safari says "Load failed", Firefox "NetworkError when attempting to fetch resource", Chrome "Failed to fetch"
   // (Sentry can add the host in brackets: "Failed to fetch (app.example)").
   /^(TypeError: )?Load failed( \(.*\))?$/i,
+  // Safari: a fetch it dropped, such as a cancelled prefetch ("… due to access control checks").
+  /due to access control checks/i,
   /NetworkError when attempting to fetch resource/i,
   /^(TypeError: )?Failed to fetch( \(.*\))?$/i,
 ];

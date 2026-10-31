@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { devices, expect, test, type Page } from "@playwright/test";
 import { ADMIN_STATE, newContext, signIn } from "./helpers";
+import { isNoise } from "../src/lib/observability/client-errors";
 
 // The flows that matter most on a Friday, as a quick pass on the phone people actually use. In the normal run this
 // is one more Chrome test (named zz- so it runs last, after every other spec). With E2E_WEBKIT=1 (the GitHub run) it
@@ -16,7 +17,8 @@ const phone = (browserName: string) => ({ ...devices[browserName === "webkit" ? 
 
 function watchErrors(page: Page): string[] {
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+  // Noise is what the app's own phone-error reporter ignores too (a prefetch Safari dropped when the test moved on).
+  page.on("pageerror", (e) => isNoise(e.message) || errors.push(e.message));
   return errors;
 }
 
