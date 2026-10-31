@@ -54,7 +54,7 @@ function AnswerRow({ announcementId, title, options, row }: { announcementId: st
               aria-pressed={chosen}
               aria-label={answerButtonName(option, row.childName)}
               onClick={() => choose(option)}
-              className={`flex min-h-12 min-w-0 flex-1 basis-24 items-center justify-center rounded-app border-2 px-3 text-center text-base font-bold break-words shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none ${
+              className={`flex min-h-12 min-w-0 flex-1 basis-24 items-center justify-center rounded-app border-2 px-3 text-center text-base font-bold break-words transition-transform active:scale-[0.99] ${
                 chosen ? "border-ink bg-cream text-ink" : "border-line bg-paper text-ink"
               }`}
             >

@@ -7,7 +7,7 @@ const day = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric",
 /** Placed → paid → ready → collected, with a tick and a date for each step that's done. */
 export function OrderTimeline({ order }: { order: Order }) {
   return (
-    <ol aria-label="Order progress" className="flex flex-col gap-2.5 rounded-app border border-line bg-paper p-4">
+    <ol aria-label="Order progress" className="flex flex-col gap-2.5 rounded-app bg-paper shadow-card p-4">
       {orderTimeline(order).map((step) => (
         <li key={step.label} className="flex items-center gap-3 text-[15px]">
           {step.done ? (

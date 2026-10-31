@@ -21,7 +21,7 @@ export default async function OrdersPage() {
           <Link
             key={o.id}
             href={`/shop/orders/${o.id}`}
-            className="flex flex-col gap-2 rounded-app border border-line bg-paper p-3.5 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
+            className="flex flex-col gap-2 rounded-app bg-paper shadow-card p-3.5 transition-transform active:scale-[0.99]"
           >
             <span className="flex items-center justify-between gap-2">
               <OrderStatusPill status={o.status} payBy={o.payBy} />

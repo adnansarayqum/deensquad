@@ -14,9 +14,10 @@
   --orange-tint: #fbe6d8;
   --gold-tint: #fbefd2;
   --gold-text: #8a6418;
-  --cream: #fff4e3;
+  --cream: #f7f4ee;
   --paper: #ffffff;
-  --line: #e6dac4;
+  --line: #ebe5d9;
+  --fill: #efebe3;
   --ink: #13201a;
   --ink-muted: #56625a;
   --on-pitch: #fff4e3;
@@ -31,7 +32,8 @@
   --chart-3: #4a3aa7;
   --chart-4: #b07800;
   --lip-grass: 0 4px 0 #23561f;
-  --lip-neutral: 0 4px 0 #e6dac4;
+  --lip-neutral: 0 4px 0 #ebe5d9;
+  --card: 0 1px 2px rgba(20, 32, 26, 0.06), 0 6px 20px rgba(20, 32, 26, 0.05);
   --lip-gold: 0 4px 0 #8a6418;
   --space-1: 4px;
   --space-2: 8px;
@@ -67,6 +69,7 @@
     --cream: #101912;
     --paper: #17231a;
     --line: #2c3b30;
+    --fill: #223026;
     --ink: #f1e9da;
     --ink-muted: #aab6ad;
     --on-gold: #0b150e;
@@ -80,6 +83,7 @@
     --chart-4: #c98500;
     --lip-grass: 0 4px 0 #3e8c3a;
     --lip-neutral: 0 4px 0 #2c3b30;
+    --card: 0 0 0 1px #2c3b30;
     color-scheme: dark;
   }
 }
@@ -100,6 +104,7 @@
   --cream: #101912;
   --paper: #17231a;
   --line: #2c3b30;
+  --fill: #223026;
   --ink: #f1e9da;
   --ink-muted: #aab6ad;
   --on-gold: #0b150e;
@@ -113,6 +118,7 @@
   --chart-4: #c98500;
   --lip-grass: 0 4px 0 #3e8c3a;
   --lip-neutral: 0 4px 0 #2c3b30;
+  --card: 0 0 0 1px #2c3b30;
   color-scheme: dark;
 }
 
@@ -133,6 +139,7 @@
   --color-cream: var(--cream);
   --color-paper: var(--paper);
   --color-line: var(--line);
+  --color-fill: var(--fill);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
   --color-on-pitch: var(--on-pitch);
@@ -148,6 +155,7 @@
   --color-chart-4: var(--chart-4);
   --shadow-lip-grass: var(--lip-grass);
   --shadow-lip-neutral: var(--lip-neutral);
+  --shadow-card: var(--card);
   --shadow-lip-gold: var(--lip-gold);
   --radius-dash: var(--radius-s);
   --radius-web: var(--radius-m);

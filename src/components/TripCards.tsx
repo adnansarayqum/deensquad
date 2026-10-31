@@ -19,7 +19,7 @@ export function TripCards({ trips, from }: { trips: FamilyTrip[]; from: string }
         const going = t.children.filter((c) => c.answer?.consent);
         const href = `/trip/${t.session.id}?from=${encodeURIComponent(from)}`;
         return waiting.length > 0 ? (
-          <Link key={t.session.id} href={href} className="flex items-center gap-3 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 py-3 text-ink transition-transform active:translate-y-1">
+          <Link key={t.session.id} href={href} className="flex items-center gap-3 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 py-3 text-ink transition-transform active:scale-[0.99]">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-kit-orange text-on-orange">
               <Bus aria-hidden size={24} />
             </span>
@@ -32,7 +32,7 @@ export function TripCards({ trips, from }: { trips: FamilyTrip[]; from: string }
             <ChevronRight aria-hidden size={20} className="shrink-0" />
           </Link>
         ) : (
-          <Link key={t.session.id} href={href} className="flex items-center gap-3 rounded-app border border-line bg-paper px-3.5 py-3 text-ink">
+          <Link key={t.session.id} href={href} className="flex items-center gap-3 rounded-app bg-paper shadow-card px-3.5 py-3 text-ink">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-grass-tint text-grass-text">
               <Bus aria-hidden size={24} />
             </span>

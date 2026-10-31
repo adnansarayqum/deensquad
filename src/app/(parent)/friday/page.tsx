@@ -14,7 +14,7 @@ import { PassCarousel } from "@/components/PassCarousel";
 import { Attachment } from "@/components/plans/Attachment";
 import { VideoCard } from "@/components/plans/VideoCard";
 import { VenuePassPicture } from "@/components/VenuePassPicture";
-import { AppHeader, Card, Pill } from "@/components/ui";
+import { AppHeader, Card, Pill, TITLE } from "@/components/ui";
 import { androidCalendarIntent, googleCalendarUrl, sessionIcsOpenPath, sessionIcsPath } from "@/lib/calendar/session";
 import { appUrl } from "@/lib/config";
 import { clock, dayHeading, longDay, shortDay, whenWords } from "@/lib/dates";
@@ -83,31 +83,31 @@ export default async function FridayPage({ searchParams }: PageProps<"/friday">)
     <>
       {single?.session ? (
         <AppHeader stripes>
-          <p className="text-[15px] leading-5 font-bold text-floodlight">
+          <p className="text-[15px] leading-5 font-bold text-gold-text">
             {longDay(single.session.startsAt)} · {groupPlural(single.child.ageGroup)}
           </p>
-          <h1 className="pr-36 font-display text-[48px] leading-[0.92] tracking-[0.02em] max-[374px]:pr-28">
+          <h1 className={`pr-36 max-[374px]:pr-28 ${TITLE}`}>
             {single.checkedInAt
               ? `${single.child.firstName} is here`
               : single.session.squad
                 ? `Can ${single.child.firstName} play ${whenWords(single.session.startsAt, now)}?`
                 : `Is ${single.child.firstName} coming ${whenWords(single.session.startsAt, now)}?`}
           </h1>
-          <p className="text-[15px] text-on-pitch-muted">
+          <p className="text-[15px] text-ink-muted">
             {single.session.squad ? `${single.session.title} · ` : ""}
             {clock(single.session.startsAt)}–{clock(single.session.endsAt)} · {single.session.venue}
           </p>
         </AppHeader>
       ) : (
         <AppHeader stripes>
-          <h1 className="pr-36 font-display text-[48px] leading-[0.92] tracking-[0.02em] max-[374px]:pr-28">{single ? "Sessions" : "Who's coming?"}</h1>
+          <h1 className={`pr-36 max-[374px]:pr-28 ${TITLE}`}>{single ? "Sessions" : "Who's coming?"}</h1>
         </AppHeader>
       )}
 
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
         <PassCacheWriter user={user.id} passes={cachedPasses(cards)} hub={venuePass?.cache ?? null} />
         {upcoming.length > 0 ? (
-          <nav aria-label="Which sessions" className="grid grid-cols-2 gap-1 rounded-app border border-line bg-paper p-1">
+          <nav aria-label="Which sessions" className="grid grid-cols-2 gap-1 rounded-[16px] bg-fill p-1">
             {(
               [
                 ["week", "This week", "/friday"],
@@ -118,7 +118,7 @@ export default async function FridayPage({ searchParams }: PageProps<"/friday">)
                 key={key}
                 href={href}
                 aria-current={view === key ? "page" : undefined}
-                className={`flex min-h-12 items-center justify-center rounded-[14px] text-[16px] font-bold ${view === key ? "bg-grass-tint text-grass-text" : "text-ink-muted"}`}
+                className={`flex min-h-12 items-center justify-center rounded-[12px] text-[16px] font-bold ${view === key ? "bg-paper text-ink shadow-card" : "text-ink-muted"}`}
               >
                 {label}
               </Link>
@@ -133,7 +133,7 @@ export default async function FridayPage({ searchParams }: PageProps<"/friday">)
         {todayCards.length > 0 ? (
           <TodaysCodes cards={todayCards} title={today[0].session.title} venuePass={venuePass} />
         ) : family.children.length > 0 ? (
-          <Link href="/pass" className="flex items-center gap-3 rounded-app bg-pitch-deep px-3.5 py-3 text-on-pitch">
+          <Link href="/pass" className="flex items-center gap-3 rounded-app bg-paper px-3.5 py-3 text-ink shadow-card">
             {/* The icon steps aside on a very narrow screen (200% zoom), so the heading's words fit whole rather than breaking mid-word. */}
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-floodlight text-on-gold max-[239px]:hidden">
               <QrCode aria-hidden size={24} />
@@ -141,9 +141,9 @@ export default async function FridayPage({ searchParams }: PageProps<"/friday">)
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="text-[15px] font-bold">{family.children.length > 1 ? "Attendance QR codes" : "Attendance QR code"}</span>
               {/* Only this line can hold a long name, so only it may break inside a word. */}
-              <span className="text-[13px] break-words text-on-pitch-muted">{family.children.length > 1 ? "One for each child. Show it to the coach when you arrive" : `Show it to the coach to check ${family.children[0].firstName} in`}</span>
+              <span className="text-[14px] break-words text-ink-muted">{family.children.length > 1 ? "One for each child. Show it to the coach when you arrive" : `Show it to the coach to check ${family.children[0].firstName} in`}</span>
             </span>
-            <ChevronRight aria-hidden size={20} className="shrink-0 text-on-pitch-muted" />
+            <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
           </Link>
         ) : null}
         {family.children.length === 0 ? (
@@ -199,7 +199,7 @@ export default async function FridayPage({ searchParams }: PageProps<"/friday">)
 
         {latestSheet ? (
           <div className="flex flex-col gap-2">
-            <Link href="/practice" className="flex items-center gap-3 rounded-app border border-line bg-paper px-3.5 py-3 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none">
+            <Link href="/practice" className="flex items-center gap-3 rounded-app bg-paper shadow-card px-3.5 py-3 transition-transform active:scale-[0.99]">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-grass-tint text-grass-text">
                 <BookOpen aria-hidden size={22} />
               </span>
@@ -270,7 +270,6 @@ function ComingUp({ ahead, answers, family, now }: { ahead: { session: Session; 
               {session.squad && !session.cancelled ? (
                 <p className="text-[15px] text-ink-muted">A squad the coaches pick. If yours is picked, you&apos;re asked on This week.</p>
               ) : null}
-              {children.length > 1 && notYet.length > 1 ? <AllComing sessionId={session.id} kids={notYet} /> : null}
               {children.map((c) => {
                 const record = answers.get(answerKey(session.id, c.id));
                 return (
@@ -290,6 +289,7 @@ function ComingUp({ ahead, answers, family, now }: { ahead: { session: Session; 
                   </div>
                 );
               })}
+              {children.length > 1 && notYet.length > 1 ? <AllComing sessionId={session.id} kids={notYet} /> : null}
             </Card>
           </li>
         );
@@ -374,13 +374,12 @@ function SessionBlock({
           <Directions venue={session.venue} />
         </div>
       </div>
-      {!session.squad ? <AllComing sessionId={session.id} kids={rows.filter((w) => !w.checkedInAt && w.answer !== "coming").map((w) => w.child)} /> : null}
       <ul className="flex flex-col divide-y divide-line">
         {rows.map((w) => (
           <li key={w.child.id} className="flex flex-col gap-2 py-3 first:pt-0">
             <div className="flex items-baseline justify-between gap-2">
-              <h3 className="text-[18px] font-bold">
-                {w.child.firstName} <span className="text-[15px] font-bold text-ink-muted">· {groupPlural(w.child.ageGroup)}</span>
+              <h3 className="text-[16px] font-bold">
+                {w.child.firstName} <span className="font-normal text-ink-muted">{groupPlural(w.child.ageGroup)}</span>
               </h3>
               {showHeadcount(w.counts) ? (
                 <span className="text-[15px] text-ink-muted tabular-nums">
@@ -406,6 +405,8 @@ function SessionBlock({
           </li>
         ))}
       </ul>
+      {/* The family action comes after the children's own switches, as on Home. */}
+      {!session.squad ? <AllComing sessionId={session.id} kids={rows.filter((w) => !w.checkedInAt && w.answer !== "coming").map((w) => w.child)} /> : null}
       {calendar && rows.some((w) => w.answer === "coming") ? <AddToCalendar links={calendar} /> : null}
       <BriefingDetails session={session} />
     </Card>
@@ -508,15 +509,15 @@ function Headcount({ group, counts, squad }: { group: string; counts: SquadCount
   const unanswered = Math.max(0, counts.squad - counts.coming - counts.away);
   const total = Math.max(1, counts.squad);
   return (
-    <section aria-label={squad ? `${groupPlural(group)} in the squad` : `${groupPlural(group)} this week`} className="flex items-center gap-4 rounded-app bg-pitch-deep p-4 text-on-pitch">
-      <span className="font-display text-[56px] leading-[0.9] text-floodlight tabular-nums">{counts.coming}</span>
+    <section aria-label={squad ? `${groupPlural(group)} in the squad` : `${groupPlural(group)} this week`} className="flex items-center gap-4 rounded-app bg-paper p-4 text-ink shadow-card">
+      <span className="font-display text-[56px] leading-[0.9] text-grass-text tabular-nums">{counts.coming}</span>
       <div className="flex flex-1 flex-col gap-1.5">
         <span className="text-[15px] font-bold">{squad ? `of the ${counts.squad} ${groupPlural(group)} picked can play` : `${groupPlural(group)} coming this week`}</span>
-        <div className="flex h-2.5 overflow-hidden rounded-pill bg-pitch" aria-hidden>
+        <div className="flex h-2.5 overflow-hidden rounded-pill bg-fill" aria-hidden>
           <div className="bg-grass" style={{ width: `${(counts.coming / total) * 100}%` }} />
           <div className="bg-kit-orange" style={{ width: `${(counts.away / total) * 100}%` }} />
         </div>
-        <span className="text-[13px] text-on-pitch-muted">
+        <span className="text-[14px] text-ink-muted">
           {counts.away} {squad ? "can't play" : "away"} · {unanswered} still to answer
         </span>
       </div>

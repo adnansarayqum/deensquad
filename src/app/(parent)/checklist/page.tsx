@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Camera, Check, ChevronRight, CreditCard, FileSignature, HeartPulse, IdCard, Phone, QrCode } from "lucide-react";
-import { AppHeader, Card, Eyebrow, Progress } from "@/components/ui";
+import { TITLE, AppHeader, Card, Eyebrow, Progress } from "@/components/ui";
 import { getChecklistPage } from "@/lib/parent/load";
 import { countSteps, type ChecklistItemView } from "@/lib/parent/views";
 
@@ -48,19 +48,19 @@ export default async function ChecklistPage() {
     <>
       <AppHeader>
         {/* Named like its tab, and kept clear of the QR codes and Messages buttons in the top corner. */}
-        <h1 className="pr-36 font-display text-[40px] leading-[0.95] tracking-[0.02em] max-[374px]:pr-28">
+        <h1 className={`pr-36 max-[374px]:pr-28 ${TITLE}`}>
           {single ? `${single.child.firstName}'s to-do` : "To-do"}
         </h1>
         {total > 0 ? (
           <>
             <div className="flex items-center gap-3">
-              <Progress value={done} max={total} label={`${done} of ${total} steps done`} onDark />
-              <span className="font-display text-[26px] leading-none text-floodlight tabular-nums">
+              <Progress value={done} max={total} label={`${done} of ${total} steps done`} />
+              <span className="text-[15px] font-bold text-ink-muted tabular-nums">
                 {done} / {total}
               </span>
             </div>
             {remaining === 0 ? (
-              <p className="text-[15px] text-on-pitch-muted">All done. {single ? `${who} is` : "Everyone is"} fully set up.</p>
+              <p className="text-[15px] text-grass-text font-bold">All done. {single ? `${who} is` : "Everyone is"} fully set up.</p>
             ) : null}
           </>
         ) : null}
@@ -80,7 +80,7 @@ export default async function ChecklistPage() {
           // A child with nothing left folds to one line, so the screen shows what still needs doing.
           if (heading && todo.length === 0) {
             return (
-              <details key={key} aria-label={label} className="group mt-2 rounded-app border border-line bg-paper">
+              <details key={key} aria-label={label} className="group mt-2 rounded-app bg-paper shadow-card">
                 <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-2 [&::-webkit-details-marker]:hidden">
                   <span className="text-[18px] font-bold">{heading}</span>
                   <span className="flex items-center gap-1.5 text-[15px] font-bold text-grass-text tabular-nums">
@@ -159,7 +159,7 @@ function TodoRow({ item }: { item: ChecklistItemView }) {
   return (
     <Link
       href={item.href ?? "/checklist"}
-      className="flex items-center gap-3.5 rounded-app border border-line bg-paper p-3.5 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
+      className="flex items-center gap-3.5 rounded-app bg-paper shadow-card p-3.5 transition-transform active:scale-[0.99]"
     >
       <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[14px] bg-orange-tint text-kit-orange">
         <Icon aria-hidden size={24} />
@@ -169,7 +169,7 @@ function TodoRow({ item }: { item: ChecklistItemView }) {
         <span className="text-[15px] text-ink-muted">{item.detail}</span>
         {item.note ? <span className="text-[15px] font-bold">{item.note}</span> : null}
       </span>
-      <span className="rounded-xl bg-grass px-3 py-2 text-[15px] font-bold text-on-grass shadow-[0_3px_0_var(--grass-lip)]">{item.actionLabel}</span>
+      <span className="rounded-xl bg-grass px-3 py-2 text-[15px] font-bold text-on-grass">{item.actionLabel}</span>
     </Link>
   );
 }
@@ -178,7 +178,7 @@ function TodoRow({ item }: { item: ChecklistItemView }) {
 function OptionalRow({ item }: { item: ChecklistItemView }) {
   const Icon = icons[item.icon];
   return (
-    <Link href={item.href ?? "/checklist"} className="flex min-h-12 items-center gap-3.5 rounded-app border border-line bg-paper px-3.5 py-3">
+    <Link href={item.href ?? "/checklist"} className="flex min-h-12 items-center gap-3.5 rounded-app bg-paper shadow-card px-3.5 py-3">
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cream text-ink-muted">
         <Icon aria-hidden size={22} />
       </span>
@@ -196,7 +196,7 @@ function OptionalRow({ item }: { item: ChecklistItemView }) {
 function PartsRow({ item }: { item: ChecklistItemView }) {
   const Icon = icons[item.icon];
   return (
-    <div className="flex flex-col gap-3 rounded-app border border-line bg-paper p-3.5 shadow-lip-neutral">
+    <div className="flex flex-col gap-3 rounded-app bg-paper shadow-card p-3.5">
       <div className="flex items-center gap-3.5">
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[14px] bg-orange-tint text-kit-orange">
           <Icon aria-hidden size={24} />

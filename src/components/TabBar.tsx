@@ -35,7 +35,7 @@ export function TabBar({ unread }: { unread: number }) {
     <nav
       ref={bar}
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[430px] border-t border-line bg-paper px-1 pt-1.5 pb-[max(env(safe-area-inset-bottom),16px)]"
+      className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[430px] border-t border-line bg-paper/95 px-1 backdrop-blur pt-1.5 pb-[max(env(safe-area-inset-bottom),16px)]"
     >
       <ul className="grid grid-cols-5">
         {tabs.map(({ segment, label, icon: Icon }) => {

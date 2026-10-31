@@ -61,27 +61,35 @@ export function AvailabilityPicker({
       track("availability_answered", { answer: value });
     });
 
-  const base = `flex ${compact ? "min-h-[56px] flex-row gap-2 text-base" : "min-h-[100px] flex-col gap-1.5 text-[18px]"} min-w-0 flex-1 basis-32 items-center justify-center rounded-app border-2 px-2 text-center font-bold transition-transform active:translate-y-1 active:shadow-none`;
   const coming = optimistic === "coming";
   const away = optimistic === "away";
-  const icon = compact ? 22 : 30;
   // Each button is named for the child, so a family with several children doesn't hear "Coming" again and again. The
   // visible word stays in the name (voice control users say what they see).
   const comingName = squad ? `Yes, ${childName} can play` : `${childName} is coming`;
   const awayName = squad ? `No, ${childName} can't play` : `Not coming: ${childName} isn't coming`;
-  // Once answered, the other button steps back, so the answer reads at a glance; it can still be tapped to change.
-  const dim = "opacity-60";
+
+  // Several children on one screen: a segmented switch per child (one track, the chosen side lifted onto white), so
+  // an answer reads as a setting, not as a big button still to press. One child: two large cards, as before.
+  const seg = (on: boolean, tone: "grass" | "ink") =>
+    `flex min-h-12 min-w-0 flex-1 basis-28 items-center justify-center gap-1.5 rounded-[11px] px-2 text-[15px] font-bold transition-colors ${
+      on ? `bg-paper shadow-card ${tone === "grass" ? "text-grass-text" : "text-ink"}` : "text-ink-muted"
+    }`;
+  const card = (on: boolean, tone: "grass" | "ink") =>
+    `flex min-h-[96px] min-w-0 flex-1 basis-32 flex-col items-center justify-center gap-1.5 rounded-[18px] border-[1.5px] px-2 text-center text-[18px] font-bold transition-transform active:scale-[0.99] ${
+      on ? (tone === "grass" ? "border-grass bg-grass-tint text-grass-text" : "border-ink bg-fill text-ink") : "border-line bg-paper text-ink"
+    }`;
+  const icon = compact ? 18 : 28;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2.5">
       {/* Side by side on a phone; one above the other when the screen is very narrow (200% zoom), never wider than it. */}
-      <div role="group" aria-label={question} className="flex flex-wrap gap-3">
+      <div role="group" aria-label={question} className={compact ? "flex flex-wrap gap-1 rounded-[14px] bg-fill p-1" : "flex flex-wrap gap-3"}>
         <button
           type="button"
           aria-pressed={coming}
           aria-label={comingName}
           onClick={() => choose("coming")}
-          className={`${base} ${coming ? "border-grass bg-grass text-on-grass shadow-lip-grass" : `border-line bg-paper text-ink shadow-lip-neutral ${away ? dim : ""}`}`}
+          className={compact ? seg(coming, "grass") : card(coming, "grass")}
         >
           <Check aria-hidden size={icon} strokeWidth={3} />
           {squad ? "Yes" : "Coming"}
@@ -91,7 +99,7 @@ export function AvailabilityPicker({
           aria-pressed={away}
           aria-label={awayName}
           onClick={() => choose("away")}
-          className={`${base} ${away ? "border-ink bg-cream text-ink shadow-lip-neutral" : `border-line bg-paper text-ink shadow-lip-neutral ${coming ? dim : ""}`}`}
+          className={compact ? seg(away, "ink") : card(away, "ink")}
         >
           <X aria-hidden size={icon} strokeWidth={3} />
           {squad ? "No" : "Not coming"}
@@ -100,7 +108,7 @@ export function AvailabilityPicker({
       {failed && !pending ? (
         <TapProblem problem={failed.problem} onRetry={() => choose(failed.value)} />
       ) : (
-      <p className="text-center text-[15px] text-ink-muted" aria-live="polite">
+      <p className={`text-[14px] text-ink-muted empty:hidden ${compact ? "" : "text-center"}`} aria-live="polite">
         {pending
           ? "Saving…"
           : !tapped && answered && optimistic
@@ -144,7 +152,7 @@ function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: stri
 
   if (sent && !editing) {
     return (
-      <div className="flex flex-col gap-1 rounded-app border border-line bg-paper px-3.5 py-3" role="status">
+      <div className="flex flex-col gap-1 rounded-app bg-paper shadow-card px-3.5 py-3" role="status">
         <p className="flex items-start gap-2 text-[15px] leading-[22px]">
           <MessageSquare aria-hidden size={18} className="mt-0.5 shrink-0 text-ink-muted" />
           <span className="min-w-0 break-words">
@@ -169,7 +177,7 @@ function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: stri
   }
 
   return (
-    <form action={run} onSubmit={keep} className="flex flex-col gap-2 rounded-app border border-line bg-paper px-3.5 py-3">
+    <form action={run} onSubmit={keep} className="flex flex-col gap-2 rounded-app bg-paper shadow-card px-3.5 py-3">
       <input type="hidden" name="session" value={sessionId} />
       <input type="hidden" name="child" value={playerId} />
       <label htmlFor={id} className="text-[15px] font-bold">

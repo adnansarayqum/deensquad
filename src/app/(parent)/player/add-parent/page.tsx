@@ -31,7 +31,7 @@ export default async function AddParentPage() {
         progress.
       </BackHeader>
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">
-        <section aria-labelledby="parents-now" className="flex flex-col rounded-app border border-line bg-paper p-1">
+        <section aria-labelledby="parents-now" className="flex flex-col rounded-app bg-paper shadow-card p-1">
           <h2 id="parents-now" className="px-3 pt-3 pb-1 text-base font-bold">
             Parents in the app now
           </h2>

@@ -60,7 +60,7 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
           : null;
 
   return (
-    <section aria-labelledby="hub-code" className="flex w-full flex-col gap-3 rounded-app border border-line bg-paper p-4">
+    <section aria-labelledby="hub-code" className="flex w-full flex-col gap-3 rounded-app bg-paper shadow-card p-4">
       <h2 id="hub-code" className="text-[18px] font-bold">
         Your sports hub entry code
       </h2>

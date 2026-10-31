@@ -22,7 +22,7 @@ export function CheckoutForm({ options, total }: { options: ("card" | "bank")[];
         {options.map((o) => (
           <label
             key={o}
-            className="flex min-h-14 items-center gap-3 rounded-app border border-line bg-paper px-3.5 py-2 has-[:checked]:border-grass has-[:checked]:bg-grass-tint"
+            className="flex min-h-14 items-center gap-3 rounded-app bg-paper shadow-card px-3.5 py-2 has-[:checked]:border-grass has-[:checked]:bg-grass-tint"
           >
             <input
               type="radio"

@@ -26,8 +26,8 @@ export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; wee
   const qrLabel = several ? "Show QR codes" : "Show QR code";
 
   return (
-    <Card className="flex flex-col gap-5 p-4">
-      <div className="flex items-center justify-between gap-2">
+    <Card className="flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-4 pt-2">
         <h2 id="this-week" className="text-[20px] leading-7 font-bold">
           This week
         </h2>
@@ -41,7 +41,7 @@ export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; wee
 
       {/* A cancelled session never hides the next one: it's said first, in words, then the next one is asked about. */}
       {cancelled.map((s) => (
-        <div key={s.id} role="status" className="flex items-start gap-3 rounded-app bg-orange-tint px-3.5 py-3 text-ink">
+        <div key={s.id} role="status" className="mx-4 mb-3 flex items-start gap-3 rounded-[14px] bg-orange-tint px-3.5 py-3 text-ink">
           <CalendarX aria-hidden size={22} className="mt-0.5 shrink-0 text-kit-orange" />
           <p className="flex min-w-0 flex-col gap-0.5">
             <span className="text-[16px] font-bold">
@@ -55,31 +55,36 @@ export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; wee
       {sessions.map((s) => (
         <SessionPart key={s.id} session={s} rows={week.filter((w) => w.session?.id === s.id)} family={family} now={now} />
       ))}
-      {sessions.length === 0 ? <p className="text-[16px] text-ink-muted">No sessions coming up yet. They&apos;ll show here as soon as the club adds them.</p> : null}
+      {sessions.length === 0 ? <p className="px-4 pb-4 text-[16px] text-ink-muted">No sessions coming up yet. They&apos;ll show here as soon as the club adds them.</p> : null}
 
       {today.length ? (
+        <div className="border-t border-line px-4 py-3">
         <Link
           href="/pass?from=/news"
           aria-label={`${qrLabel}: ${today[0].session.title} today`}
-          className="flex min-h-12 items-center justify-center gap-2 rounded-app bg-floodlight px-4 text-[16px] font-bold text-on-gold transition-transform active:translate-y-0.5"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-[14px] bg-floodlight px-4 text-[16px] font-bold text-on-gold transition-transform active:scale-[0.99]"
         >
           <QrCode aria-hidden size={20} />
           {qrLabel}
         </Link>
+        </div>
       ) : null}
 
       {stepsLeft > 0 ? (
-        <Link href="/checklist" className="flex items-center gap-3 rounded-app border border-kit-orange bg-orange-tint px-3.5 py-3 text-ink transition-transform active:translate-y-1">
-          <ListChecks aria-hidden size={22} className="shrink-0 text-kit-orange" />
+        <Link href="/checklist" className="flex items-center gap-3 border-t border-line px-4 py-3.5 text-ink">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-orange-tint text-kit-orange">
+            <ListChecks aria-hidden size={20} />
+          </span>
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="text-[16px] font-bold">{stepsLeft === 1 ? "1 thing left to set up" : `${stepsLeft} things left to set up`}</span>
-            <span className="text-[15px]">For {several ? "your children" : family.children[0]?.firstName}: open your To-do list</span>
+            <span className="text-[14px] text-ink-muted">For {several ? "your children" : family.children[0]?.firstName}: open your To-do list</span>
           </span>
-          <ChevronRight aria-hidden size={20} className="shrink-0" />
+          <span className="rounded-pill bg-kit-orange px-2 py-0.5 text-[13px] font-bold text-on-orange tabular-nums">{stepsLeft}</span>
+          <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
         </Link>
       ) : (
         // Nothing left to set up: a quiet line, with the To-do still a tap away to look over.
-        <Link href="/checklist" className="inline-flex min-h-12 items-center gap-2 self-start text-[15px] font-bold text-grass-text">
+        <Link href="/checklist" className="flex min-h-12 items-center gap-2 border-t border-line px-4 text-[15px] font-bold text-grass-text">
           <CheckCircle2 aria-hidden size={18} />
           Everything&apos;s set up
           <span className="font-normal text-ink-muted underline">Review</span>
@@ -102,68 +107,85 @@ export function kitItems(kit: string): string[] {
 function SessionPart({ session, rows, family, now }: { session: Session; rows: ChildWeek[]; family: Family; now: Date }) {
   const open = rows.filter((w) => !w.checkedInAt);
   const notYetComing = open.filter((w) => w.answer !== "coming").map((w) => w.child);
+  const start = new Date(session.startsAt);
+  const named = rows.length > 1 || family.children.length > 1;
   return (
-    <section aria-label={`${dayHeading(session.startsAt, now)}, ${session.title}`} className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 rounded-app bg-cream p-3.5">
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          <h3 className="text-[18px] leading-6 font-bold">
+    <section aria-label={`${dayHeading(session.startsAt, now)}, ${session.title}`} className="flex flex-col border-t border-line">
+      <div className="flex gap-3.5 px-4 py-4">
+        {/* The date as a tile, like a fixture card: the day's number big, the month small. */}
+        <span aria-hidden className="flex h-[60px] w-14 shrink-0 flex-col items-center justify-center rounded-[14px] bg-pitch text-on-pitch">
+          <span className="font-display text-[28px] leading-none">{new Intl.DateTimeFormat("en-GB", { day: "numeric", timeZone: "Europe/London" }).format(start)}</span>
+          <span className="text-[11px] font-bold text-floodlight">{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "Europe/London" }).format(start).toUpperCase()}</span>
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h3 className="text-[17px] leading-6 font-bold">
             {dayHeading(session.startsAt, now)} · {session.title}
           </h3>
-          <Pill tone="done">Going ahead</Pill>
-        </div>
-        <div className="flex flex-col">
-          <p className="text-[16px] leading-6 font-bold tabular-nums">
-            {clock(session.startsAt)}–{clock(session.endsAt)}
-            {session.arriveBy ? <span className="font-normal text-ink-muted"> · arrive by {session.arriveBy}</span> : null}
+          <p className="text-[15px] leading-[22px] text-ink-muted tabular-nums">
+            <span className="font-bold text-ink">
+              {clock(session.startsAt)}–{clock(session.endsAt)}
+            </span>
+            {session.arriveBy ? ` · arrive by ${session.arriveBy}` : ""}
+            <br />
+            {session.venue}
           </p>
-          <div className="flex flex-wrap items-center justify-between gap-x-3">
-            <p className="min-w-0 text-[15px] leading-[22px] text-ink-muted">{session.venue}</p>
+          <div className="flex flex-wrap items-center gap-x-3">
+            <Pill tone="done" icon>
+              Going ahead
+            </Pill>
             <Directions venue={session.venue} />
           </div>
-        </div>
-        {session.kit ? (
-          <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="inline-flex items-center gap-1 pr-1 text-[13px] font-bold text-ink-muted">
-              <Shirt aria-hidden size={14} />
-              Bring
-            </span>
-            {kitItems(session.kit).map((k) => (
-              <span key={k} className="inline-flex min-h-8 items-center gap-1 rounded-pill border border-line bg-paper px-2.5 text-[15px] font-medium">
-                {k}
+          {session.kit ? (
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="inline-flex items-center gap-1 pr-0.5 text-[13px] font-bold text-ink-muted">
+                <Shirt aria-hidden size={14} />
+                Bring
               </span>
-            ))}
-          </div>
-        ) : null}
+              {kitItems(session.kit).map((k) => (
+                <span key={k} className="inline-flex min-h-7 items-center rounded-pill bg-fill px-2.5 text-[14px] font-medium">
+                  {k}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </div>
-      {/* "Mark both as coming" only where it saves taps: two or more children here who haven't said Coming yet. */}
-      {!session.squad && notYetComing.length > 1 ? <AllComing sessionId={session.id} kids={notYetComing} /> : null}
-      <ul className="flex flex-col divide-y divide-line">
+      <ul className="flex flex-col divide-y divide-line border-t border-line">
         {rows.map((w) => (
-          <li key={w.child.id} className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0">
-            {rows.length > 1 || family.children.length > 1 ? (
-              <p className="text-[16px] font-bold">
-                {w.child.firstName} <span className="font-normal text-ink-muted">{groupPlural(w.child.ageGroup)}</span>
+          <li key={w.child.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
+            {named ? (
+              <p className="flex min-w-0 flex-col">
+                <span className="text-[16px] leading-5 font-bold">{w.child.firstName}</span>
+                <span className="text-[13px] text-ink-muted">{groupPlural(w.child.ageGroup)}</span>
               </p>
             ) : null}
-            {w.checkedInAt ? (
-              <CheckedIn name={w.child.firstName} at={w.checkedInAt} />
-            ) : (
-              <AvailabilityPicker
-                sessionId={session.id}
-                playerId={w.child.id}
-                answer={w.answer}
-                childName={w.child.firstName}
-                question={availabilityQuestion(w.child.firstName, session, shortDay(session.startsAt))}
-                squad={Boolean(session.squad)}
-                answered={w.answered ? answeredLine(w.answered, family.guardian.id, now, Boolean(session.squad)) : undefined}
-                reason={w.answered?.reason ?? null}
-                compact
-                quiet
-              />
-            )}
+            <div className={`min-w-0 ${named ? "flex-1 basis-56" : "w-full"}`}>
+              {w.checkedInAt ? (
+                <CheckedIn name={w.child.firstName} at={w.checkedInAt} />
+              ) : (
+                <AvailabilityPicker
+                  sessionId={session.id}
+                  playerId={w.child.id}
+                  answer={w.answer}
+                  childName={w.child.firstName}
+                  question={availabilityQuestion(w.child.firstName, session, shortDay(session.startsAt))}
+                  squad={Boolean(session.squad)}
+                  answered={w.answered ? answeredLine(w.answered, family.guardian.id, now, Boolean(session.squad)) : undefined}
+                  reason={w.answered?.reason ?? null}
+                  compact
+                  quiet
+                />
+              )}
+            </div>
           </li>
         ))}
       </ul>
+      {/* "Mark both as coming" only where it saves taps: two or more children here who haven't said Coming yet. */}
+      {!session.squad && notYetComing.length > 1 ? (
+        <div className="border-t border-line px-4 py-3">
+          <AllComing sessionId={session.id} kids={notYetComing} />
+        </div>
+      ) : null}
     </section>
   );
 }

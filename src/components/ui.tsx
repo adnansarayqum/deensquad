@@ -25,8 +25,8 @@ export function Pill({ tone, children, icon = false }: { tone: PillTone; childre
 
 export function Card({ children, className = "", tone = "paper" }: { children: ReactNode; className?: string; tone?: "paper" | "gold" | "grass" }) {
   const tones = {
-    paper: "border border-line bg-paper",
-    gold: "border border-crest-gold bg-gold-tint",
+    paper: "bg-paper shadow-card",
+    gold: "bg-gold-tint",
     grass: "bg-grass-tint",
   };
   return <div className={`rounded-app ${tones[tone]} ${className}`}>{children}</div>;
@@ -62,20 +62,21 @@ export function Progress({
   );
 }
 
-/** Green app header with rounded bottom corners. Optional mowing stripes behind the title. */
-export function AppHeader({ children, stripes = false, deep = false }: { children: ReactNode; stripes?: boolean; deep?: boolean }) {
+/**
+ * The parent screens' header: light, on the page's own ground, so the content (not a green band) leads. Back links,
+ * titles and lines inside use ink / ink-muted. `stripes` and `deep` are kept for the call sites and no longer draw.
+ */
+export function AppHeader({ children }: { children: ReactNode; stripes?: boolean; deep?: boolean }) {
   return (
-    <header
-      className={`relative overflow-hidden rounded-b-[24px] px-4 pt-[max(env(safe-area-inset-top),20px)] pb-5 text-on-pitch ${
-        deep ? "bg-pitch-deep" : "bg-pitch"
-      }`}
-    >
-      {stripes ? <div aria-hidden className={`stripes-v absolute inset-0 ${deep ? "opacity-60" : ""}`} /> : null}
-      <div className="relative flex flex-col gap-3 pt-6">{children}</div>
+    <header className="relative px-4 pt-[max(env(safe-area-inset-top),20px)] pb-1 text-ink">
+      <div className="relative flex flex-col gap-2 pt-4">{children}</div>
     </header>
   );
 }
 
+/** A screen's title on parent screens: 30px bold, tight, left-aligned. */
+export const TITLE = "text-[30px] leading-9 font-bold tracking-[-0.02em]";
+
 export function ScreenTitle({ children }: { children: ReactNode }) {
-  return <h1 className="font-display text-[44px] leading-[0.95] tracking-[0.02em]">{children}</h1>;
+  return <h1 className={`pr-36 max-[374px]:pr-28 ${TITLE}`}>{children}</h1>;
 }

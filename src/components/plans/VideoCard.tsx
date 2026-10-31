@@ -46,7 +46,7 @@ export function VideoCard({ video, name, title = "Practice video" }: { video: Yo
             {/* eslint-disable-next-line @next/next/no-img-element -- a plain img: no next/image remote config, no proxying through the app */}
             <img src={thumbnailUrl(video)} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full object-cover" />
             <span aria-hidden className="absolute inset-0 grid place-items-center">
-              <span className="grid h-16 w-16 place-items-center rounded-pill bg-paper text-ink shadow-lip-neutral transition-transform group-active:translate-y-0.5">
+              <span className="grid h-16 w-16 place-items-center rounded-pill bg-paper text-ink transition-transform group-active:translate-y-0.5">
                 <Play size={30} fill="currentColor" className="translate-x-0.5" />
               </span>
             </span>

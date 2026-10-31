@@ -61,7 +61,7 @@ export function MedicalForm({ child, medical }: { child: { id: string; firstName
           </p>
         </div>
       ))}
-      <label className="flex items-start gap-3 rounded-app border border-line bg-cream p-3.5 text-[15px] leading-[22px]">
+      <label className="flex items-start gap-3 rounded-app bg-fill p-3.5 text-[15px] leading-[22px]">
         <input
           type="checkbox"
           name="consent"

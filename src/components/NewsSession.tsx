@@ -43,12 +43,11 @@ export function ComingOnNews({ session, family, now }: { session: NewsSession; f
   const notYet = kids.filter((c) => session.answers[c.id]?.answer !== "coming");
   return (
     <div className="flex flex-col gap-3">
-      {!session.squad && notYet.length > 1 ? <AllComing sessionId={session.id} kids={notYet} /> : null}
       {kids.map((c) => {
         const record = session.answers[c.id];
         return (
           <div key={c.id} className="flex flex-col gap-2">
-            {kids.length > 1 ? <p className="text-[18px] font-bold">{c.firstName}</p> : null}
+            {kids.length > 1 ? <p className="text-[16px] font-bold">{c.firstName}</p> : null}
             <AvailabilityPicker
               sessionId={session.id}
               playerId={c.id}
@@ -64,6 +63,7 @@ export function ComingOnNews({ session, family, now }: { session: NewsSession; f
           </div>
         );
       })}
+      {!session.squad && notYet.length > 1 ? <AllComing sessionId={session.id} kids={notYet} /> : null}
     </div>
   );
 }

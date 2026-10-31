@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, Clock, Flame, Lock, Star, Target, Trophy } from "lucide-react";
-import { Card, Pill } from "@/components/ui";
+import { Card, Pill, TITLE } from "@/components/ui";
 import { BADGE_RULES, groupPlural, type Badge, type PaymentState } from "@/lib/domain";
 import { getPlayerPage } from "@/lib/parent/load";
 import { RememberChild } from "@/components/RememberChild";
@@ -23,9 +23,8 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
     <>
       {child ? <RememberChild id={child.id} /> : null}
       {child && stats ? (
-        <header className="relative overflow-hidden rounded-b-[24px] bg-pitch-deep px-4 pt-[max(env(safe-area-inset-top),20px)] pb-5 text-on-pitch">
-          <div aria-hidden className="stripes-v absolute inset-0 opacity-60" />
-          <StaffSwitch on="pitch-deep" className="pt-4" />
+        <header className="flex flex-col gap-3 px-4 pt-[max(env(safe-area-inset-top),20px)] text-ink">
+          <StaffSwitch className="pt-4" />
           {family.children.length > 1 ? (
             <nav aria-label="Choose a child" className="relative flex flex-wrap gap-2 pt-4 pr-36 max-[374px]:pr-28">
               {family.children.map((c) => (
@@ -34,7 +33,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                   href={`/player?child=${c.id}`}
                   aria-current={c.id === child.id ? "page" : undefined}
                   className={`inline-flex min-h-12 items-center rounded-pill px-4 text-[15px] font-bold ${
-                    c.id === child.id ? "bg-floodlight text-on-gold" : "bg-pitch text-on-pitch"
+                    c.id === child.id ? "bg-pitch text-on-pitch" : "bg-fill text-ink"
                   }`}
                 >
                   {c.firstName}
@@ -42,18 +41,20 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
               ))}
             </nav>
           ) : null}
-          <div className="relative flex items-end gap-4 pt-6">
+          {/* The player card: the one dark, striped surface on the screen, like a squad card. */}
+          <div className={`relative flex items-end gap-4 overflow-hidden rounded-[22px] bg-pitch-deep px-4 pt-5 pb-4 text-on-pitch ${family.children.length > 1 ? "" : "mt-16 max-[374px]:mt-14"}`}>
+            <div aria-hidden className="stripes-v absolute inset-0 opacity-60" />
             {child.shirtNumber !== null ? (
-              <span aria-hidden className="font-display text-[150px] leading-[0.78] text-floodlight">
+              <span aria-hidden className="relative font-display text-[120px] leading-[0.78] text-floodlight">
                 {child.shirtNumber}
               </span>
             ) : child.photoFileId ? (
               // The photo the parent added for the coaches; their own child, so it's theirs to see.
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={`/api/files/${child.photoFileId}`} alt="" width={64} height={64} className="mb-1.5 h-16 w-16 shrink-0 rounded-pill object-cover" />
+              <img src={`/api/files/${child.photoFileId}`} alt="" width={64} height={64} className="relative mb-1.5 h-16 w-16 shrink-0 rounded-pill object-cover" />
             ) : null}
-            <div className="flex flex-col gap-1.5 pb-1.5">
-              <h1 className="font-display text-[44px] leading-[0.9] tracking-[0.02em]">
+            <div className="relative flex min-w-0 flex-col gap-1.5 pb-1.5">
+              <h1 className="font-display text-[40px] leading-[0.9] tracking-[0.02em]">
                 {child.firstName} {child.lastName[0]}.
               </h1>
               <p className="text-[15px] text-on-pitch-muted">
@@ -72,9 +73,9 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           </div>
         </header>
       ) : (
-        <header className="rounded-b-[24px] bg-pitch-deep px-4 pt-[max(env(safe-area-inset-top),20px)] pb-5 text-on-pitch">
-          <StaffSwitch on="pitch-deep" className="pt-4" />
-          <h1 className="pt-6 font-display text-[44px] leading-[0.95]">Players</h1>
+        <header className="px-4 pt-[max(env(safe-area-inset-top),20px)] text-ink">
+          <StaffSwitch className="pt-4" />
+          <h1 className={`pt-6 pr-36 max-[374px]:pr-28 ${TITLE}`}>Players</h1>
         </header>
       )}
 
@@ -115,7 +116,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
         {/* The child's records first, before achievements (redesign brief, Oct 2026): each row says where it stands. */}
         {child && records ? (
-          <section aria-labelledby="child-records" className="flex flex-col rounded-app border border-line bg-paper p-1">
+          <section aria-labelledby="child-records" className="flex flex-col rounded-app bg-paper shadow-card p-1">
             <h2 id="child-records" className="px-3 pt-3 pb-1 text-[18px] font-bold">
               {child.firstName}&apos;s details
             </h2>
@@ -144,7 +145,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         {child ? (
           <Link
             href={`/player/wellbeing?child=${child.id}`}
-            className="flex min-h-12 items-center justify-between gap-3 rounded-app border border-line bg-paper px-4 py-3 text-[16px] font-bold"
+            className="flex min-h-12 items-center justify-between gap-3 rounded-app bg-paper shadow-card px-4 py-3 text-[16px] font-bold"
           >
             <span className="flex flex-col">
               How&apos;s {child.firstName} finding football?
@@ -189,7 +190,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                   <li key={b.id} className="flex flex-col items-center gap-2 text-center">
                     <span
                       className={`grid h-[58px] w-[58px] place-items-center rounded-pill ${
-                        b.earnedOn ? "bg-crest-gold text-on-gold shadow-lip-gold" : "bg-line text-ink-muted shadow-[0_4px_0_#d3c5aa]"
+                        b.earnedOn ? "bg-crest-gold text-on-gold" : "bg-line text-ink-muted shadow-[0_4px_0_#d3c5aa]"
                       }`}
                     >
                       <Icon aria-hidden size={26} />
@@ -249,7 +250,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         ) : null}
 
         {/* Account things live in Settings, so Family stays about the children. */}
-        <Link href="/player/settings" className="flex min-h-[52px] items-center justify-between gap-3 rounded-app border border-line bg-paper px-4 py-3 text-[16px] font-bold">
+        <Link href="/player/settings" className="flex min-h-[52px] items-center justify-between gap-3 rounded-app bg-paper shadow-card px-4 py-3 text-[16px] font-bold">
           <span className="flex flex-col">
             Settings
             <span className="text-[15px] font-normal text-ink-muted">Your details, parents and carers, notifications, your data, sign out</span>

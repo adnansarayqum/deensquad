@@ -81,7 +81,7 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
             </form>
           </>
         ) : (
-          <p className="rounded-app border border-line bg-paper p-3.5 text-[15px] text-ink">The club will tell you how to pay.</p>
+          <p className="rounded-app bg-paper shadow-card p-3.5 text-[15px] text-ink">The club will tell you how to pay.</p>
         )}
 
         {canPayg.length > 0 ? (

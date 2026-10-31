@@ -36,10 +36,10 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
         <StaffSwitch />
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Image src="/crest.png" alt="Deen Squad crest" width={44} height={44} className="rounded-[10px]" priority />
+            <Image src="/crest.png" alt="Deen Squad crest" width={40} height={40} className="rounded-[10px]" priority />
             <div>
-              <p className="text-[13px] text-on-pitch-muted">Assalamu alaikum, {family.guardian.firstName}</p>
-              <h1 className="font-display text-[34px] leading-none tracking-[0.02em]">Deen Squad</h1>
+              <p className="text-[14px] text-ink-muted">Assalamu alaikum, {family.guardian.firstName}</p>
+              <h1 className="text-[20px] leading-6 font-bold tracking-[-0.01em]">Deen Squad</h1>
             </div>
           </div>
         </div>
@@ -51,7 +51,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
         {unreadMessages > 0 ? (
           <Link
             href="/messages?from=/news"
-            className="flex items-center gap-3 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 py-3 text-ink transition-transform active:translate-y-1"
+            className="flex items-center gap-3 rounded-app bg-orange-tint px-3.5 py-3 text-ink transition-transform active:scale-[0.99]"
           >
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-kit-orange text-on-orange">
               <MessageCircle aria-hidden size={24} />
@@ -68,7 +68,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
         {wellbeingChild ? (
           <Link
             href={`/player/wellbeing?child=${wellbeingChild.id}&from=/news`}
-            className="flex items-center gap-3 rounded-app border border-line bg-paper px-3.5 py-3 text-ink"
+            className="flex items-center gap-3 rounded-app bg-paper shadow-card px-3.5 py-3 text-ink"
           >
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="text-[15px] font-bold">How&apos;s {wellbeingChild.firstName} finding football?</span>
@@ -160,7 +160,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
               <span id="earlier">Earlier</span>
             </Eyebrow>
             {earlier.map((a) => (
-              <ReadFocus key={a.id} id={a.id} className="flex flex-col gap-2 rounded-app border border-line bg-paper px-4 py-3.5">
+              <ReadFocus key={a.id} id={a.id} className="flex flex-col gap-2 rounded-app bg-paper shadow-card px-4 py-3.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[15px] text-ink-muted">
                     {a.topic} · {a.audience === "all" ? "All groups" : a.audience.join(", ")} · {postedLabel(a.postedAt, now)}

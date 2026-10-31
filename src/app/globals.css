@@ -30,7 +30,8 @@
     background: repeating-linear-gradient(90deg, var(--pitch) 0 40px, var(--pitch-stripe) 40px 80px);
   }
 
-  /* Chunky app buttons: pressable lip that disappears when pressed. */
+  /* App buttons: flat, rounded, a gentle press (they used to carry a 4px lip; the clean-light look of Oct 2026 drops
+     it). The class names stay so every screen picks the new look up. */
   .btn-chunky {
     display: inline-flex;
     align-items: center;
@@ -38,33 +39,30 @@
     gap: 0.5rem;
     min-height: 52px;
     padding-inline: 1.25rem;
-    border-radius: var(--radius-l);
+    border-radius: 14px;
     font-weight: 700;
     font-size: 16px;
-    transition: transform 150ms ease, box-shadow 150ms ease;
+    transition: transform 120ms ease, filter 120ms ease;
   }
   .btn-chunky:active:not(:disabled) {
-    transform: translateY(4px);
-    box-shadow: none;
+    transform: scale(0.98);
+    filter: brightness(0.96);
   }
   .btn-grass {
     background: var(--grass);
     color: var(--on-grass);
-    box-shadow: var(--lip-grass);
   }
   .btn-paper {
     background: var(--paper);
     color: var(--ink);
-    border: 2px solid var(--line);
-    box-shadow: var(--lip-neutral);
+    border: 1px solid var(--line);
   }
   /* A button that undoes or cancels something for families (Cancel this session): outlined in kit-orange, never the
      green of a go-ahead. Ink text, so it passes contrast in both themes. */
   .btn-warning {
     background: var(--paper);
     color: var(--ink);
-    border: 2px solid var(--kit-orange);
-    box-shadow: var(--lip-neutral);
+    border: 1.5px solid var(--kit-orange);
   }
   .btn-chunky:disabled {
     background: var(--line);
@@ -75,8 +73,8 @@
   .btn-small {
     min-height: 48px;
     padding-inline: 0.875rem;
-    font-size: 14px;
-    border-radius: var(--radius-m);
+    font-size: 15px;
+    border-radius: 12px;
   }
 
   /* Text inputs: 52px tall so they're easy to tap, 17px text so iOS doesn't zoom in. */

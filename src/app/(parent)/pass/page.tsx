@@ -27,7 +27,7 @@ export default async function PassPage({ searchParams }: PageProps<"/pass">) {
       <PassCacheWriter user={user.id} passes={cachedPasses(cards)} hub={venuePass?.cache ?? null} />
       <main className="flex flex-col items-center gap-4 px-4 pt-5 pb-4">
         {cards.length === 0 ? (
-          <p className="rounded-app border border-line bg-paper p-4 text-[15px]">No players are linked to your email yet. Ask the club to add your child.</p>
+          <p className="rounded-app bg-paper shadow-card p-4 text-[15px]">No players are linked to your email yet. Ask the club to add your child.</p>
         ) : (
           <>
             {checkedIn.length > 0 ? (

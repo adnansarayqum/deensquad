@@ -14,7 +14,7 @@ export async function StaffSwitch({ on = "pitch", className = "" }: { on?: "pitc
     <div className={`relative flex justify-start pr-32 ${className}`}>
       <Link
         href={admin ? "/admin" : "/coach"}
-        className={`inline-flex min-h-12 items-center gap-1 rounded-pill px-4 text-[15px] font-bold ${on === "pitch" ? "bg-pitch-deep text-floodlight" : "bg-pitch text-on-pitch"}`}
+        className={`inline-flex min-h-12 items-center gap-1 rounded-pill px-4 text-[15px] font-bold ${on === "pitch" ? "bg-pitch text-on-pitch" : "bg-pitch text-on-pitch"}`}
       >
         {admin ? "Club admin" : "Coach tools"}
         <ChevronRight aria-hidden size={18} />

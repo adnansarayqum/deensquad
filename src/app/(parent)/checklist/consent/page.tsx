@@ -18,7 +18,7 @@ export default async function ConsentPage({ searchParams }: PageProps<"/checklis
   // answer is already saved (perhaps by the other parent) is left unticked and shows it, so it's never changed unseen.
   const siblings = family.children.filter((c) => c.id !== child.id);
   const option =
-    "flex cursor-pointer items-start gap-3 rounded-app border border-line bg-paper p-4 shadow-lip-neutral has-[:checked]:border-grass has-[:checked]:bg-grass-tint";
+    "flex cursor-pointer items-start gap-3 rounded-app bg-paper shadow-card p-4 has-[:checked]:border-grass has-[:checked]:bg-grass-tint";
 
   return (
     <>
@@ -55,7 +55,7 @@ export default async function ConsentPage({ searchParams }: PageProps<"/checklis
             <fieldset className="mt-2 flex flex-col gap-2">
               <legend className="field-label">Same for all my children</legend>
               {siblings.map((s) => (
-                <label key={s.id} className="flex min-h-12 items-center gap-3 rounded-app border border-line bg-paper px-3.5 py-2">
+                <label key={s.id} className="flex min-h-12 items-center gap-3 rounded-app bg-paper shadow-card px-3.5 py-2">
                   <input type="checkbox" name="child" value={s.id} defaultChecked={s.photoConsent === null} className="h-5 w-5 accent-[var(--grass)]" />
                   <span className="flex flex-col">
                     <span className="text-base font-bold">{s.firstName}</span>

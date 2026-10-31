@@ -64,7 +64,7 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
               <Link
                 key={child.id}
                 href={`/messages/new?about=${about}&child=${child.id}`}
-                className="flex min-h-12 items-center justify-between gap-3 rounded-app border border-line bg-paper px-3.5 py-3 text-[15px] font-bold"
+                className="flex min-h-12 items-center justify-between gap-3 rounded-app bg-paper shadow-card px-3.5 py-3 text-[15px] font-bold"
               >
                 About {child.firstName}
                 <ChevronRight aria-hidden size={20} className="text-ink-muted" />
@@ -107,7 +107,7 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
               <fieldset className="flex flex-col gap-2">
                 <legend className="field-label">Which child is it about?</legend>
                 {family.children.map((c) => (
-                  <label key={c.id} className="flex min-h-12 items-center gap-3 rounded-app border border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
+                  <label key={c.id} className="flex min-h-12 items-center gap-3 rounded-app bg-paper shadow-card px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
                     <input type="radio" name="child" value={c.id} defaultChecked={c.id === asked?.id} className="h-5 w-5 accent-[var(--grass)]" />
                     <span className="text-[15px] font-bold">{c.firstName}</span>
                   </label>

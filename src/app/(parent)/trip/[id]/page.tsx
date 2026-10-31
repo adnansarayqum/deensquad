@@ -40,7 +40,7 @@ export default async function ParentTripPage({ params, searchParams }: PageProps
         {longDay(session.startsAt)}
       </BackHeader>
       <main className="flex flex-col gap-4 px-4 pt-5 pb-4">
-        <section className="rounded-app border border-line bg-paper p-4" aria-labelledby="trip-details">
+        <section className="rounded-app bg-paper shadow-card p-4" aria-labelledby="trip-details">
           <h2 id="trip-details" className="text-[18px] font-bold">
             The trip
           </h2>
@@ -56,7 +56,7 @@ export default async function ParentTripPage({ params, searchParams }: PageProps
         </section>
 
         {children.map((c) => (
-          <section key={c.id} className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4" aria-labelledby={`child-${c.id}`}>
+          <section key={c.id} className="flex flex-col gap-3 rounded-app bg-paper shadow-card p-4" aria-labelledby={`child-${c.id}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 id={`child-${c.id}`} className="text-[18px] font-bold">
                 Can {c.firstName} go?

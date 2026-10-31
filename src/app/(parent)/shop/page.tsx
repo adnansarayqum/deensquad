@@ -35,7 +35,7 @@ export default async function ShopPage() {
               <li key={p.id}>
                 <Link
                   href={`/shop/${p.id}`}
-                  className="flex h-full flex-col overflow-hidden rounded-app border border-line bg-paper shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
+                  className="flex h-full flex-col overflow-hidden rounded-app bg-paper shadow-card transition-transform active:scale-[0.99]"
                 >
                   <ProductImage src={p.imageUrl} name={p.name} />
                   <span className="flex flex-1 flex-col gap-0.5 p-3">

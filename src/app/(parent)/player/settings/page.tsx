@@ -29,7 +29,7 @@ export default async function SettingsPage() {
     <>
       <BackHeader back="/player" backLabel="Family" title="Settings" />
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">
-        <section aria-labelledby="account" className="flex flex-col rounded-app border border-line bg-paper p-1">
+        <section aria-labelledby="account" className="flex flex-col rounded-app bg-paper shadow-card p-1">
           <h2 id="account" className="px-3 pt-3 pb-1 text-[18px] font-bold">
             You and your family
           </h2>
@@ -77,7 +77,7 @@ export default async function SettingsPage() {
           <AppearanceChoice />
         </section>
 
-        <section aria-labelledby="your-data" className="flex flex-col gap-2 rounded-app border border-line bg-paper p-4">
+        <section aria-labelledby="your-data" className="flex flex-col gap-2 rounded-app bg-paper shadow-card p-4">
           <h2 id="your-data" className="text-[18px] font-bold">
             Your data
           </h2>
