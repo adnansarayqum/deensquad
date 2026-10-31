@@ -35,6 +35,11 @@ test("the admin asks one family for a quick answer and lets them reply", async (
   await expect(page).toHaveURL(/\/admin\/news\/[0-9a-f-]{36}\?posted=1$/);
   await expect(page.getByText("No answer yet (1)")).toBeVisible();
   await expect(page.getByText("No replies yet.", { exact: false })).toBeVisible();
+  // Who has read it and who hasn't, both listed; one tap reminds everyone still to read it (no push keys in tests).
+  await expect(page.getByRole("heading", { name: "Read (0)" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Not read yet \(\d+\)$/ })).toBeVisible();
+  await page.getByRole("button", { name: new RegExp(`^Send a reminder now to the \\d+ parents? who haven't read ${HEADLINE}`) }).click();
+  await expect(page.getByText("App notifications aren't set up yet.")).toBeVisible();
   await admin.close();
 });
 
@@ -85,6 +90,8 @@ test("the admin sees the answer and the unread reply, and replies back", async (
   await expect(answers.filter({ hasText: "No (0)" })).toHaveCount(1);
   await expect(answers.filter({ hasText: "No answer yet (0)" })).toHaveCount(1);
   await expect(page.getByText("1 conversation with families about this message.")).toBeVisible();
+  // Answering counted as reading: the parent is now under Read.
+  await expect(page.getByRole("heading", { name: "Read (1)" })).toBeVisible();
 
   const nav = page.getByRole("navigation", { name: "Club admin" });
   await expect(nav.getByRole("link", { name: "Inbox, 1 unread" })).toBeVisible();

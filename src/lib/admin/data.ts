@@ -380,6 +380,9 @@ export type UnreadGuardian = {
   chased: string[];
 };
 
+/** A parent who has read a message: who, for which children, and when. */
+export type NewsReader = { id: string; name: string; children: string; readAt: string };
+
 /**
  * One message and the parents who haven't read it. `groups` (a group coach's own) hides a message
  * that doesn't reach them and lists only parents with a child in those groups.
@@ -388,7 +391,7 @@ export async function loadNewsDetail(
   tx: Queryable,
   id: string,
   groups: readonly AgeGroup[] | null = null,
-): Promise<{ news: NewsRow; unread: UnreadGuardian[] } | null> {
+): Promise<{ news: NewsRow; unread: UnreadGuardian[]; readers: NewsReader[] } | null> {
   const [row] = await tx.query<NewsDbRow>(
     `select ${newsColumns("$2")} from announcements a left join staff_names sn on sn.id = a.posted_by where a.id = $1`,
     [id, groups ? [...groups] : null],
@@ -425,8 +428,23 @@ export async function loadNewsDetail(
      order by 7, g.last_name, g.first_name`,
     [id, groups ? [...groups] : null],
   );
+  // Who has read it: parents it reaches (in the coach's groups), newest first, with when.
+  const readers = await tx.query<{ id: string; first_name: string; last_name: string; children: string; read_at: Date }>(
+    `select g.id, g.first_name, g.last_name, string_agg(distinct p.first_name, ', ') as children, r.read_at
+     from announcement_reads r
+     join guardians g on g.id = r.guardian_id
+     join player_guardians pg on pg.guardian_id = g.id
+     join players p on p.id = pg.player_id
+     join announcements a on a.id = r.announcement_id
+     where r.announcement_id = $1 and ${newsReaches()}
+       and ($2::text[] is null or p.age_group::text = any ($2::text[]))
+     group by g.id, r.read_at
+     order by r.read_at desc`,
+    [id, groups ? [...groups] : null],
+  );
   return {
     news: toNews(row, groups),
+    readers: readers.map((r) => ({ id: r.id, name: `${r.first_name} ${r.last_name}`, children: r.children, readAt: new Date(r.read_at).toISOString() })),
     unread: unread.map((u) => ({
       id: u.id,
       name: `${u.first_name} ${u.last_name}`,

@@ -28,6 +28,8 @@ import { deleteLeftoverAccounts, removeChildRecord, unlinkGuardianRecord } from 
 import { closeDeletionRequest } from "../data-requests";
 import { TOPICS } from "./topics";
 import { checkChosenChildren, insertNews } from "./news";
+import { loadNewsDetail } from "./data";
+import { nudgeUnread } from "./nudge";
 import { parseQuickAnswers } from "../messages/quick-answers";
 import { attachOrThrow, formMedia, withMediaProblem } from "../media/attach";
 import type { Queryable } from "../db/types";
@@ -441,6 +443,23 @@ export async function chaseOnWhatsApp(formData: FormData): Promise<void> {
   const base = (await inviteBase()) ?? "";
   const text = `Assalamu alaikum ${found.first_name}, please could you open the Deen Squad app and read "${found.title}"? ${base}/news`;
   redirect(`https://wa.me/${dialable(found.phone)}?text=${encodeURIComponent(text)}`);
+}
+
+/**
+ * "Send a reminder now": an app notification to everyone on the message's not-read list this member of staff can see
+ * (a group coach: their groups' parents), at most once an hour, never at night.
+ */
+export async function remindUnreadNow(formData: FormData): Promise<void> {
+  const user = await requireStaff();
+  const news = id(formData.get("news"));
+  if (!news) redirect("/admin/news");
+  const mine = coachLimit(user.staff);
+  const detail = await asUser(user.id, (tx) => loadNewsDetail(tx, news, mine));
+  if (!detail || !detail.news.requiresAck) redirect(`/admin/news/${news}`);
+  const targets = detail.unread.filter((u) => !u.partnerRead).map((u) => u.id);
+  const result = await asSystem((tx) => nudgeUnread(tx, { newsId: news, title: detail.news.title, guardianIds: targets }));
+  const query = result.ok ? `nudged=${result.reached}&missed=${result.noDevice}` : `nudge=${result.reason}`;
+  redirect(`/admin/news/${news}?${query}#not-read`);
 }
 
 // Sessions --------------------------------------------------------------------

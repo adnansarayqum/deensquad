@@ -49,9 +49,9 @@ export function Notice({ tone = "done", children }: { tone?: "done" | "action"; 
 }
 
 /** The one card: 2px line border on paper, a 17px heading, optional aside on the heading's right. */
-export function Section({ title, children, aside, className = "" }: { title: string; children: ReactNode; aside?: ReactNode; className?: string }) {
+export function Section({ title, children, aside, className = "", id }: { title: string; children: ReactNode; aside?: ReactNode; className?: string; id?: string }) {
   return (
-    <section className={`flex flex-col gap-3 rounded-app border border-line bg-paper p-4 ${className}`}>
+    <section id={id} className={`scroll-mt-4 flex flex-col gap-3 rounded-app border border-line bg-paper p-4 ${className}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-[18px] font-bold">{title}</h2>
         {aside}

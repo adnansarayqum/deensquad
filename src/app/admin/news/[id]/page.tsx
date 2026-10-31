@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Heart, MessageCircle, Phone } from "lucide-react";
+import { BellRing, Check, Heart, MessageCircle, Phone } from "lucide-react";
 import { Notice, PageHeader, ReadBar, Section } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
-import { chaseOnWhatsApp, deleteNews } from "@/lib/admin/actions";
+import { chaseOnWhatsApp, deleteNews, remindUnreadNow } from "@/lib/admin/actions";
+import { countWithDevices, lastNudge } from "@/lib/admin/nudge";
 import { audienceLabel, loadNewsDetail } from "@/lib/admin/data";
 import { MediaGallery } from "@/components/media/MediaGallery";
 import { loadMediaFor } from "@/lib/media/data";
 import { within } from "@/lib/admin/scope";
 import { UUID } from "@/lib/auth/tokens";
 import { coachLimit, requireStaff } from "@/lib/auth/session";
-import { asUser } from "@/lib/db";
+import { asSystem, asUser } from "@/lib/db";
 import { postedLabel, shortDay, clock } from "@/lib/dates";
 import { LADDER } from "@/lib/chase/ladder";
 import { pushConfigured, smsConfigured } from "@/lib/chase/senders";
@@ -36,12 +37,29 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
     ), media: (await loadMediaFor(tx, "announcement", [id])).get(id) ?? [] } : null;
   });
   if (!detail) notFound();
-  const { news, unread, answers, replies, media, likedBy } = detail;
+  const { news, unread, readers, answers, replies, media, likedBy } = detail;
   const tally = answers?.options ? tallyAnswers(answers.options, answers.children) : null;
   // A group coach can delete only messages that went to their own groups alone.
   const canDelete = !mine || within(news.audience, mine);
   const chase = unread.filter((u) => !u.partnerRead);
   const covered = unread.filter((u) => u.partnerRead);
+  // Who a "Send a reminder now" would buzz: the not-read list, those with notifications on (devices are their
+  // owners' under row level security, so counted as the system), and when it was last done.
+  const [withDevices, nudged] = news.requiresAck && chase.length
+    ? await asSystem(async (tx) => [await countWithDevices(tx, chase.map((u) => u.id)), await lastNudge(tx, news.id)] as const)
+    : [0, null];
+  const nudgeNotice =
+    typeof flags.nudged === "string"
+      ? `Reminder sent to ${flags.nudged} ${flags.nudged === "1" ? "parent" : "parents"}.${Number(flags.missed) > 0 ? ` ${flags.missed} don't have notifications on, so they get the automatic email instead.` : ""}`
+      : flags.nudge === "wait"
+        ? "A reminder went less than an hour ago. Try again later."
+        : flags.nudge === "quiet"
+          ? "Reminders aren't sent between 9pm and 8am. Try again after 8am."
+          : flags.nudge === "off"
+            ? "App notifications aren't set up yet."
+            : flags.nudge === "nobody"
+              ? "Everyone has read it."
+              : null;
   const posted = new Date(news.postedAt).getTime();
   const at = (hours: number) => new Date(posted + hours * 3600_000).toISOString();
   const steps = [
@@ -54,7 +72,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
     },
     { label: "Text reminder", when: `${shortDay(at(LADDER.sms.afterHours))} ${clock(at(LADDER.sms.afterHours))}`, ready: smsConfigured() },
   ];
-  const chaseLabel: Record<string, string> = { app: "Notified", email: "Emailed", sms: "Texted", whatsapp: "WhatsApp", gate: "At the gate" };
+  const chaseLabel: Record<string, string> = { nudge: "Reminded", app: "Notified", email: "Emailed", sms: "Texted", whatsapp: "WhatsApp", gate: "At the gate" };
 
   return (
     // Forms and detail read best at phone-to-tablet width, even on a computer.
@@ -84,10 +102,105 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
             whose partner read it looked like a mismatch when the 8 were only at the foot of the list). */}
         {news.requiresAck && unread.length ? (
           <p className="text-sm text-ink-muted">
-            {news.readCount} read · {chase.length} still to read{covered.length ? ` · ${covered.length} whose child's other parent has read it` : ""}
+            <a href="#read" className="font-bold text-grass-text underline">{news.readCount} read</a> ·{" "}
+            <a href="#not-read" className="font-bold text-grass-text underline">{chase.length} still to read</a>
+            {covered.length ? ` · ${covered.length} whose child's other parent has read it` : ""}
           </p>
         ) : null}
       </Section>
+
+      {news.requiresAck ? (
+        <Section id="not-read" title={chase.length ? `Not read yet (${chase.length})` : news.audienceCount === 0 ? "No parents to read it yet" : "Everyone has read it"}>
+          {nudgeNotice ? <Notice>{nudgeNotice}</Notice> : null}
+          {chase.length ? (
+            // Coach Javed's request: buzz everyone still to read in one tap, rather than one WhatsApp at a time.
+            <form action={remindUnreadNow} className="flex flex-col gap-1.5 rounded-app bg-fill px-3.5 py-3">
+              <input type="hidden" name="news" value={news.id} />
+              <button
+                type="submit"
+                className="btn-chunky btn-grass btn-small self-start"
+                aria-label={`Send a reminder now to the ${chase.length === 1 ? "1 parent" : `${chase.length} parents`} who haven't read ${news.title}`}
+              >
+                <BellRing aria-hidden size={16} />
+                Send a reminder now
+              </button>
+              <p className="text-sm text-ink-muted">
+                An app notification to {withDevices === chase.length ? (chase.length === 1 ? "this parent" : `all ${chase.length}`) : `the ${withDevices} of ${chase.length} with notifications on`}.
+                {withDevices < chase.length ? " The others get the automatic email." : ""} At most once an hour, never 9pm to 8am.
+                {nudged ? ` Last sent ${postedLabel(nudged.at, new Date())} to ${nudged.count}.` : ""}
+              </p>
+            </form>
+          ) : null}
+          {chase.length ? <p className="text-sm text-ink-muted">Or WhatsApp one parent: it opens with a short reminder ready to send. Each reminder is logged.</p> : null}
+          <ul className="flex flex-col gap-2">
+            {chase.map((u) => (
+              <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2 first:border-0 first:pt-0">
+                <span className="flex flex-col">
+                  <span className="text-[15px] font-bold">{u.name}</span>
+                  <span className="text-[13px] text-ink-muted">
+                    {u.children} · {u.inApp ? "in the app" : "hasn't signed in yet"}
+                  </span>
+                  {u.chased.length ? (
+                    <span className="mt-1 flex flex-wrap gap-1">
+                      {[...new Set(u.chased)].map((c) => (
+                        <Pill key={c} tone="neutral">
+                          {chaseLabel[c] ?? c}
+                          {c === "whatsapp" && u.chased.filter((x) => x === c).length > 1 ? ` ×${u.chased.filter((x) => x === c).length}` : ""}
+                        </Pill>
+                      ))}
+                    </span>
+                  ) : null}
+                </span>
+                {u.phone ? (
+                  <span className="flex gap-2">
+                    <form action={chaseOnWhatsApp}>
+                      <input type="hidden" name="news" value={news.id} />
+                      <input type="hidden" name="guardian" value={u.id} />
+                      <button type="submit" className="btn-chunky btn-paper btn-small" aria-label={`WhatsApp ${u.name}`}>
+                        <MessageCircle aria-hidden size={16} />
+                        WhatsApp
+                      </button>
+                    </form>
+                    <a href={`tel:+${dialable(u.phone)}`} className="btn-chunky btn-paper btn-small" aria-label={`Call ${u.name}`}>
+                      <Phone aria-hidden size={16} />
+                    </a>
+                  </span>
+                ) : (
+                  <Pill tone="neutral">No phone</Pill>
+                )}
+              </li>
+            ))}
+          </ul>
+          {covered.length ? (
+            <p className="text-sm text-ink-muted">
+              The other parent has read it for: {covered.map((u) => `${u.name} (${u.children})`).join(", ")}.
+            </p>
+          ) : null}
+        </Section>
+      ) : null}
+
+      {news.requiresAck ? (
+        <Section id="read" title={`Read (${readers.length})`}>
+          {readers.length ? (
+            <ul className="flex flex-col gap-2">
+              {readers.map((r) => (
+                <li key={r.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-t border-line pt-2 first:border-0 first:pt-0">
+                  <span className="flex flex-col">
+                    <span className="text-[15px] font-bold">{r.name}</span>
+                    <span className="text-[13px] text-ink-muted">{r.children}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[13px] text-ink-muted">
+                    <Check aria-hidden size={14} strokeWidth={3} className="text-grass-text" />
+                    {postedLabel(r.readAt, new Date())}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-ink-muted">Nobody has read it yet.</p>
+          )}
+        </Section>
+      ) : null}
 
       {tally ? (
         <Section title="Quick answers" aside={<span className="text-sm text-ink-muted">{answers!.children.length - tally.none.length} of {answers!.children.length} answered</span>}>
@@ -140,56 +253,6 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
               </li>
             ))}
           </ol>
-        </Section>
-      ) : null}
-
-      {news.requiresAck ? (
-        <Section title={chase.length ? `Not read yet (${chase.length})` : news.audienceCount === 0 ? "No parents to read it yet" : "Everyone has read it"}>
-          {chase.length ? <p className="text-sm text-ink-muted">WhatsApp opens with a short reminder ready to send. Each reminder is logged.</p> : null}
-          <ul className="flex flex-col gap-2">
-            {chase.map((u) => (
-              <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2 first:border-0 first:pt-0">
-                <span className="flex flex-col">
-                  <span className="text-[15px] font-bold">{u.name}</span>
-                  <span className="text-[13px] text-ink-muted">
-                    {u.children} · {u.inApp ? "in the app" : "hasn't signed in yet"}
-                  </span>
-                  {u.chased.length ? (
-                    <span className="mt-1 flex flex-wrap gap-1">
-                      {[...new Set(u.chased)].map((c) => (
-                        <Pill key={c} tone="neutral">
-                          {chaseLabel[c] ?? c}
-                          {c === "whatsapp" && u.chased.filter((x) => x === c).length > 1 ? ` ×${u.chased.filter((x) => x === c).length}` : ""}
-                        </Pill>
-                      ))}
-                    </span>
-                  ) : null}
-                </span>
-                {u.phone ? (
-                  <span className="flex gap-2">
-                    <form action={chaseOnWhatsApp}>
-                      <input type="hidden" name="news" value={news.id} />
-                      <input type="hidden" name="guardian" value={u.id} />
-                      <button type="submit" className="btn-chunky btn-paper btn-small" aria-label={`WhatsApp ${u.name}`}>
-                        <MessageCircle aria-hidden size={16} />
-                        WhatsApp
-                      </button>
-                    </form>
-                    <a href={`tel:+${dialable(u.phone)}`} className="btn-chunky btn-paper btn-small" aria-label={`Call ${u.name}`}>
-                      <Phone aria-hidden size={16} />
-                    </a>
-                  </span>
-                ) : (
-                  <Pill tone="neutral">No phone</Pill>
-                )}
-              </li>
-            ))}
-          </ul>
-          {covered.length ? (
-            <p className="text-sm text-ink-muted">
-              The other parent has read it for: {covered.map((u) => `${u.name} (${u.children})`).join(", ")}.
-            </p>
-          ) : null}
         </Section>
       ) : null}
 
