@@ -8,6 +8,7 @@ import { checkInByPass } from "../staff/checkin";
 import { loadRegister } from "../staff/register";
 import { passToken } from "../pass/token";
 import { loadSessionPayments, takeGatePayment, undoGatePayment } from "./payments";
+import { loadSessionTotals, loadUnpaidAtGate } from "../admin/session-totals";
 
 // A Friday: the sample club's training (6:30pm, every age group) is today. Yusuf has a monthly plan, Musa none.
 const friday = new Date("2026-10-09T17:00:00Z");
@@ -85,5 +86,27 @@ describe("the fee an admin types", () => {
     expect(parseFee("0")).toBeNull();
     expect(parseFee("seven")).toBeNull();
     expect(parseFee("101")).toBeNull();
+  });
+
+  it("adds up a session's night: who came by group, who pays per session, and card and cash taken", async () => {
+    await t.asSystem((tx) => tx.query(`insert into payment_status (player_id, state) values ($1, 'pay_as_you_go') on conflict (player_id) do update set state = 'pay_as_you_go'`, [DEV_IDS.musa]));
+    await t.asSystem((tx) =>
+      tx.query(`insert into attendance (session_id, player_id, method) values ($1, $2, 'qr'), ($1, $3, 'manual')`, [session, DEV_IDS.musa, DEV_IDS.yusuf]),
+    );
+    const admin = await t.signIn(DEV_EMAILS.admin);
+    // Musa came and pays per session, with nothing taken yet: he's on the list to check.
+    expect((await t.asUser(admin, (tx) => loadUnpaidAtGate(tx, session))).map((c) => c.id)).toEqual([DEV_IDS.musa]);
+    expect(await t.asUser(coach, (tx) => takeGatePayment(tx, session, { playerId: DEV_IDS.musa }, coachId, atGate))).toEqual({});
+    const [totals] = await t.asUser(admin, (tx) => loadSessionTotals(tx, { ids: [session] }));
+    expect(totals).toMatchObject({ total: 2, payAsYouGo: 1, paidCount: 1, cardPence: 700, cashPence: 0 });
+    expect(totals.byGroup).toMatchObject({ U7: 1, U10: 1, U6: 0 });
+    expect(await t.asUser(admin, (tx) => loadUnpaidAtGate(tx, session))).toEqual([]);
+
+    // The attendance spreadsheet ends each session with its totals; the session totals one has a row for it.
+    const attendance = await t.asUser(admin, (tx) => buildExport(tx, "attendance", saturday));
+    expect(attendance.rows.some((r) => r[3] === "Total for the session" && r[5] === 2)).toBe(true);
+    expect(attendance.rows.some((r) => r[3] === "Total U7" && r[5] === 1)).toBe(true);
+    const sheet = await t.asUser(admin, (tx) => buildExport(tx, "session-totals", saturday));
+    expect(sheet.rows.some((r) => r[sheet.header.indexOf("Total came")] === 2 && r[sheet.header.indexOf("Taken by card (£)")] === "7.00")).toBe(true);
   });
 });

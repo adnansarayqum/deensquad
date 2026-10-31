@@ -1,12 +1,17 @@
 import { CONTACT_IS_PARENT } from "../contacts-sql";
 import { CONTRACT } from "../documents/contract";
 import type { Queryable } from "../db/types";
+import { loadSessionTotals, TOTAL_GROUPS } from "../admin/session-totals";
 
 // The spreadsheets admins can download. Each runs as the admin (row level security on).
 
 export const EXPORTS = {
   families: { label: "Families and payments", detail: "Every child with their parents, contact details, payment, consent and contract status" },
-  attendance: { label: "Attendance", detail: "Every check-in this season, one row per child per session" },
+  attendance: { label: "Attendance", detail: "Every check-in this season, one row per child per session, with each session's totals by group" },
+  "session-totals": {
+    label: "Session totals",
+    detail: "One row per session this season: how many came in each group and in all, how many pay per session, and what was taken at the gate (card and cash)",
+  },
   orders: { label: "Shop orders", detail: "Every item ordered, with payment and collection status" },
   awards: { label: "Points, stars and badges", detail: "Each child's totals this season" },
   "gate-payments": { label: "Paid at the gate", detail: "Every session fee taken at the gate this season (pay as you go and trials)" },
@@ -94,9 +99,92 @@ export async function buildExport(tx: Queryable, kind: ExportKind, now: Date): P
          order by s.starts_at, p.age_group, p.last_name, p.first_name`,
         [seasonStart(now)],
       );
+      // After each session's children, its totals: one line per group and one for the session, worked out here rather
+      // than as spreadsheet formulas (a cell starting "=" is defused, see csv.ts), so they're right in any program.
+      const out: unknown[][] = [];
+      const flush = (date: string, title: string, counts: Map<string, number>) => {
+        let all = 0;
+        for (const g of TOTAL_GROUPS) {
+          const n = counts.get(g) ?? 0;
+          if (!n) continue;
+          all += n;
+          out.push([date, title, g, `Total ${g}`, "", n, ""]);
+        }
+        out.push([date, title, "All groups", "Total for the session", "", all, ""]);
+        out.push(["", "", "", "", "", "", ""]);
+      };
+      let key = "";
+      let counts = new Map<string, number>();
+      let last: { date: string; title: string } | null = null;
+      for (const r of rows) {
+        const k = `${new Date(r.starts_at).toISOString()}|${r.title}`;
+        if (last && k !== key) {
+          flush(last.date, last.title, counts);
+          counts = new Map();
+        }
+        key = k;
+        last = { date: day(r.starts_at), title: r.title };
+        counts.set(r.age_group, (counts.get(r.age_group) ?? 0) + 1);
+        out.push([day(r.starts_at), r.title, r.age_group, r.first_name, r.last_name, london(r.checked_in_at), r.method === "qr" ? "QR code" : "Marked by coach"]);
+      }
+      if (last) flush(last.date, last.title, counts);
       return {
         header: ["Session date", "Session", "Group", "Child first name", "Child last name", "Checked in", "How"],
-        rows: rows.map((r) => [day(r.starts_at), r.title, r.age_group, r.first_name, r.last_name, london(r.checked_in_at), r.method === "qr" ? "QR code" : "Marked by coach"]),
+        rows: out,
+      };
+    }
+    case "session-totals": {
+      const sessions = await loadSessionTotals(tx, { from: seasonStart(now) });
+      const sum = (f: (t: (typeof sessions)[number]) => number) => sessions.reduce((a, t) => a + f(t), 0);
+      const line = (t: (typeof sessions)[number]) => [
+        ...TOTAL_GROUPS.map((g) => t.byGroup[g]),
+        t.total,
+        t.trialsCame,
+        t.payAsYouGo,
+        t.noPlanYet,
+        t.payAsYouGo + t.noPlanYet + t.trialsCame,
+        t.paidCount,
+        pounds(t.cardPence),
+        pounds(t.cashPence),
+        pounds(t.cardPence + t.cashPence),
+      ];
+      return {
+        header: [
+          "Session date",
+          "Session",
+          ...TOTAL_GROUPS.map((g) => `${g} came`),
+          "Total came",
+          "Trials who came",
+          "Pay as you go who came",
+          "No payment plan yet who came",
+          "Should pay at the gate (with trials)",
+          "Paid at the gate (children and trials)",
+          "Taken by card (£)",
+          "Taken in cash (£)",
+          "Taken at the gate (£)",
+        ],
+        rows: [
+          ...sessions.map((t) => [day(t.startsAt), t.title, ...line(t)]),
+          ...(sessions.length
+            ? [
+                Array.from({ length: TOTAL_GROUPS.length + 11 }, () => ""),
+                [
+                  "Season so far",
+                  `${sessions.length} sessions`,
+                  ...TOTAL_GROUPS.map((g) => sum((t) => t.byGroup[g])),
+                  sum((t) => t.total),
+                  sum((t) => t.trialsCame),
+                  sum((t) => t.payAsYouGo),
+                  sum((t) => t.noPlanYet),
+                  sum((t) => t.payAsYouGo + t.noPlanYet + t.trialsCame),
+                  sum((t) => t.paidCount),
+                  pounds(sum((t) => t.cardPence)),
+                  pounds(sum((t) => t.cashPence)),
+                  pounds(sum((t) => t.cardPence + t.cashPence)),
+                ],
+              ]
+            : []),
+        ],
       };
     }
     case "orders": {

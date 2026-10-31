@@ -40,6 +40,12 @@ test("a pay-as-you-go child pays £7 at the gate, and it's counted", async ({ br
   await expect(page.getByText(/Paid at the gate for this session/)).toHaveCount(0);
   await here.getByRole("button", { name: "Musa S. paid £7" }).click();
   await expect(here.getByText("Paid £7")).toBeVisible();
+
+  // The session's totals: who came by group and what was taken, to check against the card machine.
+  await page.getByRole("link", { name: "Session totals" }).click();
+  await expect(page.getByRole("heading", { name: /: totals$/ })).toBeVisible();
+  await expect(page.getByText("Pay as you go who came")).toBeVisible();
+  await expect(page.locator("dd", { hasText: "£7" }).first()).toBeVisible();
   await admin.close();
 });
 

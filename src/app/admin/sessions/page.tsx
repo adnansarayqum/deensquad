@@ -143,6 +143,9 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
       // A session that's been: one message to the families of the children who came (a tournament, say).
       s.attended > 0 ? (
         <span className="-mx-2 flex flex-wrap items-center">
+          <Link href={`/admin/sessions/${s.id}/totals`} className={action} aria-label={`Totals for ${s.title} ${shortDay(s.startsAt)}`}>
+            Totals
+          </Link>
           <Link href={`/admin/news?cameTo=${s.id}#post-message`} className={action} aria-label={`Message the families who came to ${s.title} ${shortDay(s.startsAt)}`}>
             Message who came
           </Link>

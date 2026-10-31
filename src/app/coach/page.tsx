@@ -214,7 +214,10 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
       {taken && taken.count > 0 ? (
         <p className="text-[15px] text-ink-muted">
           Paid at the gate for this session: <span className="font-bold text-ink">{poundsText(taken.total)}</span> from {taken.count}{" "}
-          {taken.count === 1 ? "child" : "children"}.
+          {taken.count === 1 ? "child" : "children"}.{" "}
+          <Link href={`/admin/sessions/${session.id}/totals`} className="inline-flex min-h-12 items-center font-bold text-grass-text underline underline-offset-4">
+            Session totals
+          </Link>
         </p>
       ) : null}
       {/* After the lists, so it never pushes the children still to arrive down the first screen. */}
