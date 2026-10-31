@@ -56,9 +56,9 @@ export function NewsComposeForm({ action, children }: { action: (prev: FormState
       <div className={preview ? "hidden" : "contents"}>{children}</div>
       {preview ? (
         <section data-preview tabIndex={-1} aria-label="Preview" className="flex flex-col gap-3 outline-none">
-          <p className="text-label text-ink-muted uppercase">How parents will see it</p>
+          <p className="text-[13px] font-bold text-ink-muted">How parents will see it</p>
           <div className="flex flex-col gap-2 rounded-app border-2 border-crest-gold bg-gold-tint p-4">
-            <p className="text-label text-kit-orange uppercase">{preview.topic}</p>
+            <p className="text-[13px] font-bold text-kit-orange">{preview.topic}</p>
             <h3 className="text-[19px] leading-[25px] font-bold">{preview.title}</h3>
             <p className="text-[15px] leading-[22px] whitespace-pre-line">{preview.body}</p>
             <MediaGallery items={preview.media} label={preview.title} />

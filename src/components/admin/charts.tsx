@@ -175,7 +175,7 @@ export function Sparkline({ values }: { values: number[] }) {
 /** A headline figure: a short label, a big number (Bebas), and a small picture of it; the whole tile is the link. */
 export function StatTile({ href, name, label, value, of, children }: { href: string; name: string; label: string; value: string; of?: string; children?: ReactNode }) {
   return (
-    <Link href={href} aria-label={name} className="flex min-h-12 w-full min-w-0 flex-col gap-1.5 rounded-app border-2 border-line bg-paper p-3 hover:bg-cream">
+    <Link href={href} aria-label={name} className="flex min-h-12 w-full min-w-0 flex-col gap-1.5 rounded-app border border-line bg-paper p-3 hover:bg-cream">
       <span className="text-[13px] leading-[18px] font-bold text-ink-muted">{label}</span>
       <span className="flex flex-wrap items-baseline gap-x-1.5">
         <span className="font-display text-[40px] leading-none">{value}</span>
@@ -313,7 +313,7 @@ export function AttendanceChart({ data, title }: { data: AttendanceChartData; ti
           <table className="w-full text-[14px]">
             <caption className="sr-only">{title}</caption>
             <thead>
-              <tr className="text-left text-label text-ink-muted uppercase">
+              <tr className="text-left text-[13px] font-bold text-ink-muted">
                 <th scope="col" className="py-1 pr-3 font-bold">
                   Session
                 </th>

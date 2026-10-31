@@ -32,7 +32,7 @@ export function AdminNav({ isAdmin, layout = "pills", unreadMessages = 0 }: { is
   const label = (item: (typeof STAFF_NAV)[number]) => (unread(item) ? `${item.label}, ${unreadMessages} unread` : undefined);
   const badge = (item: (typeof STAFF_NAV)[number]) =>
     unread(item) ? (
-      <span aria-hidden className="ml-1.5 inline-grid h-6 min-w-6 place-items-center rounded-pill bg-kit-orange px-1.5 text-xs font-extrabold text-on-orange">
+      <span aria-hidden className="ml-1.5 inline-grid h-6 min-w-6 place-items-center rounded-pill bg-kit-orange px-1.5 text-xs font-bold text-on-orange">
         {unreadMessages}
       </span>
     ) : null;
@@ -49,7 +49,7 @@ export function AdminNav({ isAdmin, layout = "pills", unreadMessages = 0 }: { is
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   aria-label={label(item)}
-                  className={`flex min-h-12 items-center rounded-dash px-3 text-[15px] font-extrabold ${
+                  className={`flex min-h-12 items-center rounded-dash px-3 text-[15px] font-bold ${
                     active ? "bg-floodlight text-on-gold" : "text-on-pitch hover:bg-pitch-deep"
                   }`}
                 >
@@ -75,7 +75,7 @@ export function AdminNav({ isAdmin, layout = "pills", unreadMessages = 0 }: { is
             href={item.href}
             aria-current={active ? "page" : undefined}
             aria-label={label(item)}
-            className={`inline-flex min-h-11 shrink-0 items-center rounded-pill px-3 text-sm font-extrabold ${
+            className={`inline-flex min-h-11 shrink-0 items-center rounded-pill px-3 text-sm font-bold ${
               active ? "bg-floodlight text-on-gold" : "bg-pitch-deep text-on-pitch"
             }`}
           >

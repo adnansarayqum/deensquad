@@ -66,7 +66,7 @@ async function ChooseChild({ userId, mine, q }: { userId: string; mine: readonly
           Find
         </button>
       </form>
-      <ul className="flex flex-col divide-y-2 divide-line rounded-app border-2 border-line bg-paper">
+      <ul className="flex flex-col divide-y divide-line rounded-app border border-line bg-paper">
         {shown.length === 0 ? <li className="p-4 text-[15px] text-ink-muted">No child by that name.</li> : null}
         {shown.slice(0, 100).map((c) => (
           <li key={c.id}>

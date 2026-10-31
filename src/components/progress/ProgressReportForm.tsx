@@ -70,7 +70,7 @@ export function ProgressReportForm({
               type="button"
               onClick={draft}
               disabled={drafting}
-              className="inline-flex min-h-12 items-center gap-1.5 rounded-pill border-2 border-grass bg-grass-tint px-3.5 text-sm font-extrabold text-grass-text disabled:opacity-60"
+              className="inline-flex min-h-12 items-center gap-1.5 rounded-pill border-2 border-grass bg-grass-tint px-3.5 text-sm font-bold text-grass-text disabled:opacity-60"
             >
               <Sparkles aria-hidden size={16} />
               {drafting ? "Drafting…" : "Draft with AI"}
@@ -84,7 +84,7 @@ export function ProgressReportForm({
                   setUndo(null);
                   setMessage(null);
                 }}
-                className="inline-flex min-h-12 items-center gap-1.5 rounded-pill border-2 border-line bg-paper px-3.5 text-sm font-extrabold text-ink-muted"
+                className="inline-flex min-h-12 items-center gap-1.5 rounded-pill border border-line bg-paper px-3.5 text-sm font-bold text-ink-muted"
               >
                 <Undo2 aria-hidden size={16} />
                 Undo

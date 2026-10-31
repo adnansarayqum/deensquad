@@ -41,7 +41,7 @@ export function BulkHeader({ title, notYours, skipped }: { title: string; notYou
 /** When nothing picked can be changed on this page. */
 export function NothingToDo({ children }: { children: string }) {
   return (
-    <div className="flex flex-col gap-4 rounded-app border-2 border-line bg-paper p-4">
+    <div className="flex flex-col gap-4 rounded-app border border-line bg-paper p-4">
       <p className="text-[15px]">{children}</p>
       <Link href="/admin/sessions" className="btn-chunky btn-grass self-start">
         Back to Sessions

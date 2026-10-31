@@ -55,7 +55,7 @@ function ProductFields({ p }: { p?: Product }) {
           {p?.imageUrl ? (
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element -- the club's own photo (or its link until copied in) */}
-              <img src={p.imageUrl} alt="" className="h-16 w-16 rounded-xl border-2 border-line object-cover" />
+              <img src={p.imageUrl} alt="" className="h-16 w-16 rounded-xl border border-line object-cover" />
               <label className="flex min-h-11 items-center gap-2 text-[15px]">
                 <input type="checkbox" name="removePhoto" className="h-5 w-5 accent-[var(--grass)]" />
                 Remove photo
@@ -103,7 +103,7 @@ export default async function ShopProductsPage() {
       </Section>
 
       {products.map((p) => (
-        <details key={p.id} className="rounded-app border-2 border-line bg-paper">
+        <details key={p.id} className="rounded-app border border-line bg-paper">
           <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-3 px-4 py-2">
             <span className="text-[15px] font-bold">
               {p.name} · {formatPence(p.pricePence)}
@@ -113,7 +113,7 @@ export default async function ShopProductsPage() {
               {p.active ? <Pill tone="done">On sale</Pill> : <Pill tone="neutral">Hidden</Pill>}
             </span>
           </summary>
-          <div className="border-t-2 border-line p-4">
+          <div className="border-t border-line p-4">
             <StatefulForm action={saveProduct} keepOnFailure="That didn't save. The photo may be too big (8 MB at most), or check your signal and try again." submitLabel="Save changes" savedMessage="Saved.">
               <ProductFields p={p} />
             </StatefulForm>

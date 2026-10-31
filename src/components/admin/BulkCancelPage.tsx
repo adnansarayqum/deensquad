@@ -27,7 +27,7 @@ export async function BulkCancelPage({ restore, ids: raw }: { restore: boolean; 
       {todo.length === 0 ? (
         <NothingToDo>{restore ? "None of the sessions you ticked is cancelled." : "Every session you ticked is already cancelled."}</NothingToDo>
       ) : (
-        <form action={bulkCancelSessions} className="flex flex-col gap-4 rounded-app border-2 border-line bg-paper p-4">
+        <form action={bulkCancelSessions} className="flex flex-col gap-4 rounded-app border border-line bg-paper p-4">
           <input type="hidden" name="cancel" value={restore ? "no" : "yes"} />
           <BulkSessionList sessions={sessions} ids={sessions.map((s) => s.id)} aside={(s) => (s.cancelled === restore ? null : restore ? "Not cancelled" : "Already cancelled")} />
           {restore ? null : (

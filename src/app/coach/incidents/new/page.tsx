@@ -40,7 +40,7 @@ export default async function NewIncidentPage({ searchParams }: PageProps<"/coac
         title="Log an accident or incident"
         subtitle="Injuries, a child feeling unwell, behaviour, anything the parents should know."
       />
-      <div className="rounded-app border-2 border-line bg-paper p-4">
+      <div className="rounded-app border border-line bg-paper p-4">
         <IncidentForm
           childList={children.map((c) => ({ id: c.id, name: `${c.first_name} ${c.last_name}`, group: c.age_group }))}
           childId={childParam && children.some((c) => c.id === childParam) ? childParam : null}

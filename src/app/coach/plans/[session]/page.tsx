@@ -46,7 +46,7 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/coa
   return (
     <div className="flex flex-col gap-4 lg:max-w-3xl">
       <PageHeader back={{ href: "/coach/plans", label: "Session plans" }} title={`${group} plan`} subtitle={`${shortDay(session.startsAt)} · ${session.title} ${clock(session.startsAt)}`} />
-      <div className="rounded-app border-2 border-line bg-paper p-4">
+      <div className="rounded-app border border-line bg-paper p-4">
         <StatefulForm action={savePlan} keepOnFailure="That didn't save. Your plan is still here." submitLabel={plan ? "Save changes" : "Share with parents"} savedMessage={`Saved. ${group} parents can see it on the Friday screen, and get a notification if they have them on.`}>
           <input type="hidden" name="session" value={session.id} />
           <input type="hidden" name="group" value={group} />

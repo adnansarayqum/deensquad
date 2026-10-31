@@ -133,7 +133,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                     </button>
                   </form>
                 ) : null}
-                <details className="w-full rounded-app border-2 border-line px-3.5 py-2.5">
+                <details className="w-full rounded-app border border-line px-3.5 py-2.5">
                   <summary className="cursor-pointer text-sm font-bold">Edit {g.firstName}&apos;s details</summary>
                   <StatefulForm action={saveGuardian} submitLabel={`Save ${g.name}`} savedMessage="Parent saved." className="mt-3">
                     <input type="hidden" name="child" value={child.id} />
@@ -228,7 +228,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
         ) : (
           <ul className="flex flex-col gap-3">
             {incidents.map((i) => (
-              <li key={i.id} className="flex flex-col gap-1 border-t-2 border-line pt-3 first:border-t-0 first:pt-0">
+              <li key={i.id} className="flex flex-col gap-1 border-t border-line pt-3 first:border-t-0 first:pt-0">
                 <span className="text-[15px] font-bold">
                   {INCIDENT_KINDS[i.kind]} · {shortDay(i.happenedAt)} {clock(i.happenedAt)}
                 </span>

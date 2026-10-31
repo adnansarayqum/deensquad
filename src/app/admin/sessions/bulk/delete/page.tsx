@@ -42,7 +42,7 @@ export default async function BulkDelete({ searchParams }: PageProps<"/admin/ses
           {kept.length ? `Children have been checked in to ${kept.map((s) => shortDay(s.startsAt)).join(", ")}, so ${kept.length === 1 ? "it" : "they"} can't be deleted. Cancel instead.` : "None of the sessions you ticked can be deleted."}
         </NothingToDo>
       ) : (
-        <form action={bulkDeleteSessions} className="flex flex-col gap-4 rounded-app border-2 border-line bg-paper p-4">
+        <form action={bulkDeleteSessions} className="flex flex-col gap-4 rounded-app border border-line bg-paper p-4">
           <input type="hidden" name="confirm" value="yes" />
           <BulkSessionList sessions={sessions} ids={sessions.map((s) => s.id)} aside={(s) => (s.attended > 0 ? "Has check-ins: kept" : null)} />
           <p className="text-[15px] font-bold">{lossesSentence(total, true)}</p>

@@ -60,7 +60,7 @@ export function NewsAudience({ limited, myGroups, list }: { limited: boolean; my
       {radio("groups", limited ? (myGroups.length === 1 ? `Everyone in ${myGroups[0]}` : "Only these groups:") : "Only these groups:", limited)}
       <div className={`flex-wrap gap-2 pl-8 ${limited ? "flex group-has-[[value=children]:checked]/aud:hidden" : "hidden group-has-[[value=groups]:checked]/aud:flex"}`}>
         {myGroups.map((g) => (
-          <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
+          <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
             <input
               type="checkbox"
               name="groups"
@@ -69,7 +69,7 @@ export function NewsAudience({ limited, myGroups, list }: { limited: boolean; my
               onChange={(e) => setGroups((prev) => (e.target.checked ? [...prev, g] : prev.filter((x) => x !== g)))}
               className="h-4 w-4 accent-[var(--grass)]"
             />
-            <span className="text-sm font-extrabold">{g}</span>
+            <span className="text-sm font-bold">{g}</span>
           </label>
         ))}
       </div>
@@ -86,7 +86,7 @@ export function NewsAudience({ limited, myGroups, list }: { limited: boolean; my
                     type="button"
                     aria-pressed={group === g}
                     onClick={() => setGroup(g)}
-                    className={`inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill border-2 px-4 text-sm font-extrabold ${
+                    className={`inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill border-2 px-4 text-sm font-bold ${
                       group === g ? "border-grass bg-grass text-on-grass" : "border-line bg-paper text-ink"
                     }`}
                   >
@@ -125,7 +125,7 @@ export function NewsAudience({ limited, myGroups, list }: { limited: boolean; my
             No child here matches. Children already chosen are kept.
           </p>
         ) : null}
-        <ul aria-label="Children" className="flex max-h-96 flex-col gap-1.5 overflow-y-auto rounded-app border-2 border-line p-1.5">
+        <ul aria-label="Children" className="flex max-h-96 flex-col gap-1.5 overflow-y-auto rounded-app border border-line p-1.5">
           {list.map((c) => {
             const name = shortName(c.firstName, c.lastName);
             const on = chosen.has(c.id);

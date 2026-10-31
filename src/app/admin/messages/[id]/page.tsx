@@ -34,7 +34,7 @@ export default async function AdminConversationPage({ params, searchParams }: Pa
         title={thread.title}
         subtitle={thread.withName ? `Sent to ${thread.withName}` : "Sent to the coaches"}
       >
-        <div className="flex flex-col gap-1.5 rounded-app border-2 border-line bg-paper px-4 py-3">
+        <div className="flex flex-col gap-1.5 rounded-app border border-line bg-paper px-4 py-3">
           <p className="flex flex-wrap items-center gap-2 text-[15px]">
             <Link href={familyHref} className="inline-flex min-h-12 items-center font-bold text-grass-text underline underline-offset-4">
               {thread.child.firstName} {thread.child.lastName}

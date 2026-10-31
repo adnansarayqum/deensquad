@@ -31,8 +31,8 @@ export function ImportForm() {
       {preview ? (
         <>
           <input type="hidden" name="csv" value={state.csv} />
-          <div className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4">
-            <h2 className="text-[17px] font-extrabold">Check before importing</h2>
+          <div className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
+            <h2 className="text-[18px] font-bold">Check before importing</h2>
             <p className="text-[15px] leading-[22px]">
               {state.count} {state.count === 1 ? "row" : "rows"} ready: <b>{state.summary!.childrenAdded}</b> new{" "}
               {state.summary!.childrenAdded === 1 ? "child" : "children"}, <b>{state.summary!.childrenUpdated}</b> already in the app (will be
@@ -82,10 +82,10 @@ export function ImportForm() {
               name="file"
               type="file"
               accept=".csv,text/csv"
-              className="block w-full rounded-[14px] border-2 border-dashed border-line bg-paper p-4 text-[15px] file:mr-3 file:rounded-xl file:border-0 file:bg-grass file:px-3 file:py-2 file:font-extrabold file:text-on-grass"
+              className="block w-full rounded-[14px] border-2 border-dashed border-line bg-paper p-4 text-[15px] file:mr-3 file:rounded-xl file:border-0 file:bg-grass file:px-3 file:py-2 file:font-bold file:text-on-grass"
             />
           </div>
-          <details className="rounded-app border-2 border-line bg-paper px-4 py-3">
+          <details className="rounded-app border border-line bg-paper px-4 py-3">
             <summary className="cursor-pointer text-[15px] font-bold">Or paste the rows</summary>
             <textarea name="csv" rows={8} className="field mt-3 font-mono !text-sm" placeholder="Child first name,Child last name,Group,Parent first name,Parent email" />
           </details>

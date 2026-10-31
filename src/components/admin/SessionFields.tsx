@@ -78,9 +78,9 @@ export function SessionFields({ defaults, groups, repeat = false }: { defaults: 
         <legend className="field-label">Groups</legend>
         <div className="flex flex-wrap gap-2">
           {groups.map((g) => (
-            <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
+            <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
               <input type="checkbox" name="groups" value={g} defaultChecked={defaults.groups.includes(g)} className="h-4 w-4 accent-[var(--grass)]" />
-              <span className="text-sm font-extrabold">{g}</span>
+              <span className="text-sm font-bold">{g}</span>
             </label>
           ))}
         </div>

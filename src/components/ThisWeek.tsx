@@ -12,7 +12,7 @@ import { answeredLine, availabilityQuestion, sessionsToday, type ChildWeek } fro
 
 /**
  * The first thing on News: is training on, when and where, and each child's Coming / Not coming, answerable right
- * here (with "All coming" for several children). On a session day the QR codes are one tap away, and anything still
+ * here (with "Mark both as coming" for several children). On a session day the QR codes are one tap away, and anything still
  * to set up is the last line. Everything else about the session (kit, plan, calendar) stays on Sessions.
  */
 export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; week: ChildWeek[]; stepsLeft: number; now: Date }) {
@@ -135,7 +135,7 @@ function SessionPart({ session, rows, family, now }: { session: Session; rows: C
           </div>
         ) : null}
       </div>
-      {/* "All coming" only where it saves taps: two or more children here who haven't said Coming yet. */}
+      {/* "Mark both as coming" only where it saves taps: two or more children here who haven't said Coming yet. */}
       {!session.squad && notYetComing.length > 1 ? <AllComing sessionId={session.id} kids={notYetComing} /> : null}
       <ul className="flex flex-col divide-y divide-line">
         {rows.map((w) => (

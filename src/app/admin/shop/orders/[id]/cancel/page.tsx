@@ -26,7 +26,7 @@ export default async function CancelOrderPage({ params }: PageProps<"/admin/shop
     <div className="flex flex-col gap-4 lg:max-w-3xl">
       <PageHeader back={{ href: "/admin/shop", label: "Shop" }} title={`Cancel order ${order.reference}${who}?`} />
       {cancellable ? (
-        <form action={setOrderStatus} className="flex flex-col gap-4 rounded-app border-2 border-line bg-paper p-4">
+        <form action={setOrderStatus} className="flex flex-col gap-4 rounded-app border border-line bg-paper p-4">
           <input type="hidden" name="order" value={order.id} />
           <input type="hidden" name="status" value="cancelled" />
           <input type="hidden" name="confirm" value="yes" />
@@ -56,7 +56,7 @@ export default async function CancelOrderPage({ params }: PageProps<"/admin/shop
           </div>
         </form>
       ) : (
-        <p className="rounded-app border-2 border-line bg-paper p-4 text-[15px]">
+        <p className="rounded-app border border-line bg-paper p-4 text-[15px]">
           {order.status === "cancelled" ? "This order is already cancelled." : "This order is ready or handed over, so it can't be cancelled here."}
         </p>
       )}

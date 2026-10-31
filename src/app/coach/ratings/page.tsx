@@ -14,7 +14,7 @@ import { progressForParents } from "@/lib/settings";
 export const metadata: Metadata = { title: "Ratings" };
 
 const tab = (active: boolean) =>
-  `inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-sm font-extrabold ${active ? "bg-floodlight text-on-gold" : "border-2 border-line bg-paper text-ink"}`;
+  `inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-sm font-bold ${active ? "bg-floodlight text-on-gold" : "border border-line bg-paper text-ink"}`;
 
 export default async function RatingsPage({ searchParams }: PageProps<"/coach/ratings">) {
   const user = await requireStaff();
@@ -83,7 +83,7 @@ export default async function RatingsPage({ searchParams }: PageProps<"/coach/ra
             <table className="w-full text-[14px]">
               <caption className="sr-only">Average rating per category this month, by group</caption>
               <thead>
-                <tr className="text-left text-label text-ink-muted uppercase">
+                <tr className="text-left text-[13px] font-bold text-ink-muted">
                   <th scope="col" className="py-1 pr-3 font-bold">
                     Category
                   </th>
@@ -124,8 +124,8 @@ export default async function RatingsPage({ searchParams }: PageProps<"/coach/ra
       ) : null}
 
       {isAdmin ? (
-        <section id="parents-switch" aria-labelledby="parents-switch-title" className="flex scroll-mt-4 flex-col gap-3 rounded-app border-2 border-line bg-paper p-4">
-          <h2 id="parents-switch-title" className="text-[17px] font-extrabold">
+        <section id="parents-switch" aria-labelledby="parents-switch-title" className="flex scroll-mt-4 flex-col gap-3 rounded-app border border-line bg-paper p-4">
+          <h2 id="parents-switch-title" className="text-[18px] font-bold">
             Parents see ratings and progress reports: {shown ? "On" : "Off"}
           </h2>
           {sp.switch === "on" ? <Notice>Switched on. Parents now see their own child&apos;s ratings and published reports. No emails were sent for earlier reports.</Notice> : null}

@@ -40,7 +40,7 @@ export function IncidentForm({ childList: children, childId, sessionId, sessionL
         <legend className="field-label">What kind</legend>
         <div className="flex flex-wrap gap-2">
           {Object.entries(INCIDENT_KINDS).map(([value, label], i) => (
-            <label key={value} className="relative inline-flex min-h-12 cursor-pointer items-center rounded-pill border-2 border-line bg-paper px-4 text-[15px] font-bold has-[:checked]:border-ink has-[:checked]:bg-cream has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ink">
+            <label key={value} className="relative inline-flex min-h-12 cursor-pointer items-center rounded-pill border border-line bg-paper px-4 text-[15px] font-bold has-[:checked]:border-ink has-[:checked]:bg-cream has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ink">
               <input type="radio" name="kind" value={value} defaultChecked={i === 0} className="sr-only" />
               {label}
             </label>

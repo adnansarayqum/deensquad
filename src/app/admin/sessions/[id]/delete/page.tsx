@@ -32,7 +32,7 @@ export default async function DeleteSessionPage({ params }: PageProps<"/admin/se
           Children have been checked in to this session, so it can&apos;t be deleted. Cancel it instead.
         </p>
       ) : (
-        <form action={deleteSession} className="flex flex-col gap-4 rounded-app border-2 border-line bg-paper p-4">
+        <form action={deleteSession} className="flex flex-col gap-4 rounded-app border border-line bg-paper p-4">
           <input type="hidden" name="id" value={session.id} />
           <input type="hidden" name="confirm" value="yes" />
           <p className="text-[15px] font-bold">{lossesSentence(losses)}</p>

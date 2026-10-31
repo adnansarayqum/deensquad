@@ -128,7 +128,7 @@ export function WritingHelp({
   }
 
   if (!canDictate && !ai) return null;
-  const chip = "inline-flex min-h-11 items-center gap-1.5 rounded-pill border-2 px-3.5 text-sm font-extrabold disabled:opacity-60";
+  const chip = "inline-flex min-h-11 items-center gap-1.5 rounded-pill border-2 px-3.5 text-sm font-bold disabled:opacity-60";
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
@@ -179,7 +179,7 @@ export function PracticeFromPlan({ plans, titleId, bodyId }: { plans: { id: stri
   if (plans.length === 0) return null;
   return (
     <div className="flex flex-col gap-2 rounded-xl bg-grass-tint p-3">
-      <label htmlFor="fromPlan" className="text-sm font-extrabold text-grass-text">
+      <label htmlFor="fromPlan" className="text-sm font-bold text-grass-text">
         Or let AI draft one from a session plan
       </label>
       <div className="flex gap-2">

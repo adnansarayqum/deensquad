@@ -96,12 +96,12 @@ export default async function AdminNewsPage({ searchParams }: PageProps<"/admin/
         </FoldCard>
 
         <section aria-labelledby="posted" className="flex flex-col gap-2">
-          <h2 id="posted" className="text-label text-ink-muted uppercase">
+          <h2 id="posted" className="text-[13px] font-bold text-ink-muted">
             Posted
           </h2>
           {news.length === 0 ? <p className="text-[15px] text-ink-muted">Nothing posted yet.</p> : null}
           {news.map((n) => (
-            <Link key={n.id} href={`/admin/news/${n.id}`} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper px-4 py-3">
+            <Link key={n.id} href={`/admin/news/${n.id}`} className="flex flex-col gap-2 rounded-app border border-line bg-paper px-4 py-3">
               <span className="text-[13px] text-ink-muted">
                 {n.topic} · {audienceLabel(n)} · {postedLabel(n.postedAt, now)}
                 {n.postedBy ? ` · ${n.postedBy}` : ""}

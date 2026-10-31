@@ -41,7 +41,7 @@ export default async function StaffPracticePage() {
   return (
     <div className="flex flex-col gap-4 lg:max-w-3xl">
       <PageHeader back={{ href: "/coach/plans", label: "Session plans" }} title="Home practice sheets" subtitle="Drills and crib sheets for families to try at home. Parents find them on the Friday screen." />
-      <div className="rounded-app border-2 border-line bg-paper p-4">
+      <div className="rounded-app border border-line bg-paper p-4">
         <StatefulForm action={addPracticeSheet} keepOnFailure="That didn't save. Your sheet is still here." submitLabel="Share with parents" savedMessage="Shared. Parents in those groups can see it now.">
           <div>
             <label htmlFor="title" className="field-label">
@@ -83,9 +83,9 @@ export default async function StaffPracticePage() {
             {/* Shown under "Only these groups" (always, for a coach of some groups), without JavaScript too. */}
             <div className={`flex flex-wrap gap-2 ${limited ? "" : "hidden group-has-[[value=groups]:checked]/for:flex"}`}>
               {groups.map((g) => (
-                <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border-2 border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
+                <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
                   <input type="checkbox" name="groups" value={g} defaultChecked={limited && groups.length === 1} className="h-4 w-4 accent-[var(--grass)]" />
-                  <span className="text-sm font-extrabold">{g}</span>
+                  <span className="text-sm font-bold">{g}</span>
                 </label>
               ))}
             </div>
@@ -93,12 +93,12 @@ export default async function StaffPracticePage() {
         </StatefulForm>
       </div>
 
-      <h2 className="text-label text-ink-muted uppercase">Shared</h2>
+      <h2 className="text-[13px] font-bold text-ink-muted">Shared</h2>
       {sheets.length === 0 ? <Card className="p-4 text-[15px] text-ink-muted">Nothing shared yet.</Card> : null}
       {sheets.map((s) => (
         <Card key={s.id} className="flex flex-col gap-2 p-3.5">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-base font-extrabold">{s.title}</h3>
+            <h3 className="text-base font-bold">{s.title}</h3>
             <span className="flex flex-wrap justify-end gap-1">
               {s.video ? <Pill tone="neutral">Video</Pill> : null}
               <Pill tone="neutral">{s.ageGroups.length ? s.ageGroups.join(", ") : "Everyone"}</Pill>

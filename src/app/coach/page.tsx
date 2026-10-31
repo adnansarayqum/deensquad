@@ -41,7 +41,7 @@ const gate = (r: RegisterRow): GateRow => ({
 });
 
 const tab = (active: boolean) =>
-  `inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-sm font-extrabold ${active ? "bg-floodlight text-on-gold" : "border-2 border-line bg-paper text-ink"}`;
+  `inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-sm font-bold ${active ? "bg-floodlight text-on-gold" : "border border-line bg-paper text-ink"}`;
 
 export default async function CoachRegisterPage({ searchParams }: PageProps<"/coach">) {
   const user = await requireStaff();
@@ -63,7 +63,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
     return (
       <>
         <PageHeader title="Register" subtitle="No sessions coming up for your groups." />
-        <p className="rounded-app border-2 border-line bg-paper p-4 text-[15px] text-ink-muted">
+        <p className="rounded-app border border-line bg-paper p-4 text-[15px] text-ink-muted">
           Add the term&apos;s sessions under{" "}
           <Link href="/admin/sessions" className="font-bold text-grass-text underline">
             Sessions

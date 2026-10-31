@@ -7,7 +7,7 @@ import { setAllComing } from "@/lib/parent/actions";
 import { tapAction, TapProblem, type Problem } from "./TapProblem";
 
 /**
- * One tap for a family with several children at the same session: "All coming" answers Coming for every child shown
+ * One tap for a family with several children at the same session: "Mark both as coming" answers Coming for every child shown
  * who hasn't said so yet. Each child's own buttons stay below it for a different answer.
  */
 export function AllComing({ sessionId, kids }: { sessionId: string; kids: { id: string; firstName: string }[] }) {
@@ -16,6 +16,8 @@ export function AllComing({ sessionId, kids }: { sessionId: string; kids: { id: 
   if (kids.length < 2) return null;
   const names = kids.map((c) => c.firstName);
   const who = `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+  // Says what the tap does, so it never reads as an answer already given: "Mark both as coming".
+  const words = kids.length === 2 ? "Mark both as coming" : `Mark all ${kids.length} as coming`;
   const tap = () =>
     start(async () => {
       setProblem(null);
@@ -29,11 +31,11 @@ export function AllComing({ sessionId, kids }: { sessionId: string; kids: { id: 
         type="button"
         onClick={tap}
         disabled={pending}
-        aria-label={`All coming: ${who} are coming`}
-        className="btn-chunky btn-grass min-h-12 w-full"
+        aria-label={`${words}: ${who}`}
+        className="btn-chunky btn-paper min-h-12 w-full text-grass-text"
       >
-        <CheckCheck aria-hidden size={20} strokeWidth={3} />
-        {pending ? "Saving…" : "All coming"}
+        <CheckCheck aria-hidden size={20} strokeWidth={2.5} />
+        {pending ? "Saving…" : words}
       </button>
       {problem && !pending ? <TapProblem problem={problem} onRetry={tap} /> : null}
     </div>

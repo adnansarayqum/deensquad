@@ -30,7 +30,7 @@ export default async function WhoIsComingPage({ searchParams }: PageProps<"/admi
     return (
       <div className="flex flex-col gap-4 lg:max-w-3xl">
         <PageHeader back={{ href: "/admin", label: "Overview" }} title="Who's coming" />
-        <p className="rounded-app border-2 border-line bg-paper p-4 text-[15px]">No session coming up.</p>
+        <p className="rounded-app border border-line bg-paper p-4 text-[15px]">No session coming up.</p>
       </div>
     );
   }
@@ -63,7 +63,7 @@ export default async function WhoIsComingPage({ searchParams }: PageProps<"/admi
                 key={g ?? "all"}
                 href={g ? `/admin/coming?group=${g}` : "/admin/coming"}
                 aria-current={g === group ? "page" : undefined}
-                className={`inline-flex min-h-12 items-center rounded-pill border-2 px-4 text-sm font-extrabold ${
+                className={`inline-flex min-h-12 items-center rounded-pill border-2 px-4 text-sm font-bold ${
                   g === group ? "border-grass bg-grass-tint text-grass-text" : "border-line bg-paper text-ink"
                 }`}
               >
@@ -77,7 +77,7 @@ export default async function WhoIsComingPage({ searchParams }: PageProps<"/admi
       <ul aria-label="Answers" className="grid grid-cols-3 gap-2">
         {SECTIONS.map((s) => (
           <li key={s.answer}>
-            <a href={`#${s.id}`} className="flex min-h-12 flex-col rounded-app border-2 border-line bg-paper px-3 py-2.5">
+            <a href={`#${s.id}`} className="flex min-h-12 flex-col rounded-app border border-line bg-paper px-3 py-2.5">
               <span className={`font-display text-[34px] leading-none ${s.answer === "coming" ? "text-grass-text" : ""}`}>{counts[s.answer]}</span>
               <span className="text-[13px] font-bold text-ink-muted">{s.title.toLowerCase()}</span>
             </a>
@@ -94,8 +94,8 @@ export default async function WhoIsComingPage({ searchParams }: PageProps<"/admi
 
 function AnswerList({ id, title, list, showGroup }: { id: string; title: string; list: ComingChild[]; showGroup: boolean }) {
   return (
-    <section id={id} aria-labelledby={`${id}-heading`} className="scroll-mt-4 rounded-app border-2 border-line bg-paper p-4">
-      <h2 id={`${id}-heading`} className="text-[17px] font-extrabold">
+    <section id={id} aria-labelledby={`${id}-heading`} className="scroll-mt-4 rounded-app border border-line bg-paper p-4">
+      <h2 id={`${id}-heading`} className="text-[18px] font-bold">
         {title} ({list.length})
       </h2>
       {list.length === 0 ? (

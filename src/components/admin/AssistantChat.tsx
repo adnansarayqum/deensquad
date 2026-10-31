@@ -106,7 +106,7 @@ function DraftCard({ draft }: { draft: Draft }) {
   const done = outcome?.ok;
   return (
     <section aria-label={`Draft: ${draft.summary}`} className="flex flex-col gap-2 rounded-app border-2 border-crest-gold bg-gold-tint p-3.5">
-      <p className="text-label text-gold-text uppercase">{done ? (which === "confirm" ? "Done" : "Not done") : "Check, then confirm"}</p>
+      <p className="text-[13px] font-bold text-gold-text">{done ? (which === "confirm" ? "Done" : "Not done") : "Check, then confirm"}</p>
       <p className="text-[16px] leading-[22px] font-bold">{draft.summary}</p>
       <ul className="flex flex-col gap-1 text-[14px] leading-5 whitespace-pre-line">
         {draft.lines.map((l, i) => (
@@ -219,12 +219,12 @@ export function AssistantChat() {
     <div className="flex flex-col gap-4">
       {entries.length === 0 ? (
         <section aria-labelledby="try" className="flex flex-col gap-2">
-          <h2 id="try" className="text-label text-ink-muted uppercase">
+          <h2 id="try" className="text-[13px] font-bold text-ink-muted">
             Try asking
           </h2>
           <div className="flex flex-wrap gap-2">
             {SUGGESTIONS.map((s) => (
-              <button key={s} type="button" onClick={() => ask(s)} className="min-h-12 rounded-pill border-2 border-line bg-paper px-4 py-2 text-left text-[15px] font-bold">
+              <button key={s} type="button" onClick={() => ask(s)} className="min-h-12 rounded-pill border border-line bg-paper px-4 py-2 text-left text-[15px] font-bold">
                 {s}
               </button>
             ))}
@@ -246,7 +246,7 @@ export function AssistantChat() {
               </p>
             ) : (
               <Fragment>
-                <div className="w-full max-w-[92%] rounded-app border-2 border-line bg-paper px-3.5 py-2.5">
+                <div className="w-full max-w-[92%] rounded-app border border-line bg-paper px-3.5 py-2.5">
                   <span className="sr-only">Assistant: </span>
                   <Rich text={e.text} />
                 </div>
@@ -260,7 +260,7 @@ export function AssistantChat() {
           </li>
         ))}
         {busy ? (
-          <li className="self-start rounded-app border-2 border-line bg-paper px-3.5 py-2.5 text-[15px] text-ink-muted" role="status">
+          <li className="self-start rounded-app border border-line bg-paper px-3.5 py-2.5 text-[15px] text-ink-muted" role="status">
             Looking in the app…
           </li>
         ) : null}
@@ -272,7 +272,7 @@ export function AssistantChat() {
           e.preventDefault();
           void ask(draftText);
         }}
-        className="sticky bottom-0 flex flex-col gap-2 border-t-2 border-line bg-cream pt-3 pb-3"
+        className="sticky bottom-0 flex flex-col gap-2 border-t border-line bg-cream pt-3 pb-3"
       >
         <label htmlFor="ask" className="field-label">
           Ask about the club

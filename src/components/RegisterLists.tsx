@@ -58,7 +58,7 @@ export function MedicalLink({ id, name, from }: { id: string; name: string; from
       href={`/coach/child/${id}/medical?from=${encodeURIComponent(from)}`}
       aria-label={`Medical info for ${name}`}
       // The pill stays small so the row keeps its height; the tap area reaches 48px tall around it.
-      className="relative inline-flex items-center gap-1 rounded-pill bg-pitch px-2.5 py-0.5 text-label text-on-pitch uppercase underline-offset-2 after:absolute after:-inset-x-1 after:-inset-y-3 after:content-[''] hover:underline"
+      className="relative inline-flex items-center gap-1 rounded-pill bg-pitch px-2.5 py-0.5 text-[13px] font-bold text-on-pitch underline-offset-2 after:absolute after:-inset-x-1 after:-inset-y-3 after:content-[''] hover:underline"
     >
       <HeartPulse aria-hidden size={13} />
       Medical info
@@ -151,12 +151,12 @@ export function RegisterLists({
 
       {notHere.length > 0 ? (
         <section aria-labelledby="register-not-here" className="flex flex-col gap-2.5">
-          <h3 id="register-not-here" className="mt-1 text-label text-ink-muted uppercase">
+          <h3 id="register-not-here" className="mt-1 text-[13px] font-bold text-ink-muted">
             Not here yet ({notHere.length})
           </h3>
           <ul className="flex flex-col gap-2.5">
             {n.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-line bg-paper py-2.5 pr-3 pl-3">
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-paper py-2.5 pr-3 pl-3">
                 <span className="flex min-w-0 flex-1 basis-40 items-center gap-3">
                   {face(r)}
                   <span className="flex flex-col items-start gap-1">
@@ -171,18 +171,18 @@ export function RegisterLists({
           </ul>
         </section>
       ) : (
-        <p className="mt-1 text-label text-ink-muted uppercase">Everyone expected is here</p>
+        <p className="mt-1 text-[13px] font-bold text-ink-muted">Everyone expected is here</p>
       )}
 
       {away.length > 0 ? (
         <section aria-labelledby="register-away" className="mt-2 flex flex-col gap-2.5">
-          <h3 id="register-away" className="text-label text-ink-muted uppercase">
+          <h3 id="register-away" className="text-[13px] font-bold text-ink-muted">
             Said not coming ({away.length})
           </h3>
           <p className="text-[13px] text-ink-muted">If one of them turns up, mark them here.</p>
           <ul className="flex flex-col gap-2.5">
             {a.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-line bg-cream py-2.5 pr-3 pl-3">
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-cream py-2.5 pr-3 pl-3">
                 <span className="flex min-w-0 flex-1 basis-40 items-center gap-3">
                   {face(r)}
                   <span className="flex flex-col items-start gap-1">
@@ -204,7 +204,7 @@ export function RegisterLists({
       {children}
 
       <section aria-labelledby="register-here" className="mt-2 flex flex-col gap-2.5">
-        <h3 id="register-here" className="text-label text-ink-muted uppercase">
+        <h3 id="register-here" className="text-[13px] font-bold text-ink-muted">
           Here ({here.length})
         </h3>
         {here.length === 0 ? (

@@ -61,7 +61,7 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
         </nav>
         {!all && rows.length > 1 ? (
           // Reading isn't replying: these families are waiting for an answer, so it asks first.
-          <details open={confirming} className="rounded-app border-2 border-line bg-paper px-3.5 py-1">
+          <details open={confirming} className="rounded-app border border-line bg-paper px-3.5 py-1">
             <summary className="min-h-12 cursor-pointer content-center text-[15px] font-bold text-grass-text underline">Mark all {rows.length} as read</summary>
             <form action={markAllRead} className="flex flex-col gap-2 pb-3">
               <input type="hidden" name="scope" value="reply" />
@@ -88,7 +88,7 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
       </PageHeader>
 
       {rows.length === 0 ? (
-        <p className="rounded-app border-2 border-line bg-paper p-4 text-[15px] text-ink-muted">
+        <p className="rounded-app border border-line bg-paper p-4 text-[15px] text-ink-muted">
           {all ? "No conversations yet." : "Nothing waiting for a reply. "}
           {all ? null : (
             <Link href="/admin/messages?show=all" className="font-bold text-grass-text underline">
@@ -133,11 +133,11 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
 
       {/* Computers: a table, one row per conversation. */}
       {rows.length ? (
-        <div className="hidden overflow-x-auto rounded-app border-2 border-line bg-paper lg:block">
+        <div className="hidden overflow-x-auto rounded-app border border-line bg-paper lg:block">
           <table className="w-full text-[14px]">
             <caption className="sr-only">Conversations</caption>
             <thead>
-              <tr className="border-b-2 border-line text-left text-label text-ink-muted uppercase">
+              <tr className="border-b border-line text-left text-[13px] font-bold text-ink-muted">
                 <th scope="col" className="py-2.5 pr-2 pl-2.5 font-bold">
                   Child
                 </th>

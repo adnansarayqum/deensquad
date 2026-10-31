@@ -96,7 +96,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
               key={g ?? "all"}
               href={familiesHref({ group: g, need, q })}
               aria-current={g === group ? "page" : undefined}
-              className={`inline-flex min-h-11 items-center rounded-pill border-2 px-4 text-sm font-extrabold ${
+              className={`inline-flex min-h-11 items-center rounded-pill border-2 px-4 text-sm font-bold ${
                 g === group ? "border-grass bg-grass-tint text-grass-text" : "border-line bg-paper text-ink"
               }`}
             >
@@ -172,7 +172,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
       ) : null}
 
       {families.length === 0 ? (
-        <p className="rounded-app border-2 border-line bg-paper p-4 text-[15px]">
+        <p className="rounded-app border border-line bg-paper p-4 text-[15px]">
           {filtered
             ? "No children match."
             : group
@@ -188,7 +188,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
               const status = appStatus(f);
               return (
                 <li key={f.id}>
-                  <Link href={familyChildHref(f.id, filter)} className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3">
+                  <Link href={familyChildHref(f.id, filter)} className="flex items-center gap-3 rounded-app border border-line bg-paper px-3.5 py-3">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-pitch font-display text-[20px] text-on-pitch">
                       {f.shirtNumber ?? f.firstName[0]}
                     </span>
@@ -219,11 +219,11 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
           </ul>
 
           {/* Computers: a table, one row per child. */}
-          <div className="hidden overflow-x-auto rounded-dash border-2 border-line bg-paper lg:block">
-            <table className="w-full text-[14px]">
+          <div className="hidden overflow-x-auto rounded-dash border border-line bg-paper lg:block">
+            <table className="w-full text-[14px] [&_.rounded-pill]:whitespace-nowrap">
               <caption className="sr-only">Children{group ? ` in the ${groupPlural(group)}` : ""}, their parents and what they still need</caption>
               <thead>
-                <tr className="border-b-2 border-line text-left text-label text-ink-muted uppercase">
+                <tr className="border-b border-line text-left text-[13px] font-bold text-ink-muted">
                   <th scope="col" className="px-3 py-2.5 font-bold">
                     Child
                   </th>

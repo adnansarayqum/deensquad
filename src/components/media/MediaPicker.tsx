@@ -165,7 +165,7 @@ export function MediaPicker({ initial = [], hint }: { initial?: MediaItem[]; hin
       {tiles.length ? (
         <ul className="grid grid-cols-3 gap-2" aria-label="Photos and videos added">
           {tiles.map((t, i) => (
-            <li key={t.key} className="relative aspect-square overflow-hidden rounded-dash border-2 border-line bg-cream">
+            <li key={t.key} className="relative aspect-square overflow-hidden rounded-dash border border-line bg-cream">
               {t.local || (t.media && (t.kind === "image" || t.media.poster)) ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img

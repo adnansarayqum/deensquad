@@ -65,7 +65,7 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
         <Section title="Given so far">
           <ul className="flex flex-col gap-2">
             {recent.map((a) => (
-              <li key={a.id} className="flex items-center gap-3 rounded-dash border-2 border-line bg-cream px-3.5 py-2.5">
+              <li key={a.id} className="flex items-center gap-3 rounded-dash border border-line bg-cream px-3.5 py-2.5">
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="flex items-center gap-1.5 text-[15px] font-bold">
                     {a.stars ? <Star aria-hidden size={15} className="text-gold-text" fill="currentColor" strokeWidth={0} /> : null}
@@ -95,7 +95,7 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
 
       {badges.length > 0 ? (
           <Card className="flex flex-col gap-3 p-4">
-            <h2 className="text-[17px] font-extrabold">Badges</h2>
+            <h2 className="text-[18px] font-bold">Badges</h2>
             <ul className="flex flex-col gap-2">
               {badges.map((b) => {
                 const Icon = badgeIcons[b.icon] ?? Star;
@@ -153,7 +153,7 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
               key={m}
               href={`/coach/awards/${player.id}?month=${m.slice(0, 7)}`}
               aria-current={m === month ? "page" : undefined}
-              className={`inline-flex min-h-12 items-center justify-center rounded-pill px-4 text-sm font-extrabold ${m === month ? "bg-floodlight text-on-gold" : "border-2 border-line bg-paper text-ink"}`}
+              className={`inline-flex min-h-12 items-center justify-center rounded-pill px-4 text-sm font-bold ${m === month ? "bg-floodlight text-on-gold" : "border border-line bg-paper text-ink"}`}
             >
               {monthOnly(m)}
             </Link>

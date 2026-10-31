@@ -116,8 +116,8 @@ export default async function AdminHome() {
       )}
 
       {isAdmin ? (
-        <details className="rounded-app border-2 border-line bg-paper px-4">
-          <summary className="flex min-h-12 cursor-pointer items-center gap-2 text-[17px] font-extrabold">
+        <details className="rounded-app border border-line bg-paper px-4">
+          <summary className="flex min-h-12 cursor-pointer items-center gap-2 text-[18px] font-bold">
             <Download aria-hidden size={18} className="text-grass-text" />
             Download spreadsheets
           </summary>
@@ -141,14 +141,14 @@ export default async function AdminHome() {
 function DeletionRequests({ requests }: { requests: NonNullable<Dashboard["deletionRequests"]> }) {
   return (
     <section aria-labelledby="deletion-requests" className="flex flex-col gap-3 rounded-app border-2 border-kit-orange bg-paper p-4">
-      <h2 id="deletion-requests" className="text-[17px] font-extrabold">
+      <h2 id="deletion-requests" className="text-[18px] font-bold">
         {requests.length === 1 ? "1 family asked to be deleted" : `${requests.length} families asked to be deleted`}
       </h2>
       <p className="text-[15px] leading-[22px] text-ink-muted">
         Check with the family first. Removing a child on Families deletes parents left with no children, and that closes the request. If another parent is staying, unlink this parent from each child instead, so the child stays. Tap Done if
         you&apos;ve dealt with it another way.
       </p>
-      <ul className="flex flex-col divide-y-2 divide-line">
+      <ul className="flex flex-col divide-y divide-line">
         {requests.map((r) => (
           <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
             <span className="flex min-w-0 flex-col">
@@ -184,9 +184,9 @@ function NeedsYou({ d, now, canInvite }: { d: Dashboard; now: Date; canInvite: b
   const rows = needsYou(d, now, { canInvite });
   const hidden = rows.length - NEEDS_SHOWN;
   return (
-    <section aria-labelledby="needs-you" className="flex flex-col gap-1 rounded-app border-2 border-line bg-paper p-4 pt-2 lg:col-span-1">
+    <section aria-labelledby="needs-you" className="flex flex-col gap-1 rounded-app border border-line bg-paper p-4 pt-2 lg:col-span-1">
       <div className="flex flex-wrap items-center justify-between gap-x-3">
-        <h2 id="needs-you" className="text-[17px] font-extrabold">
+        <h2 id="needs-you" className="text-[18px] font-bold">
           Needs you
         </h2>
         {rows.length ? (
@@ -437,8 +437,8 @@ function ShopSection({ shop }: { shop: NonNullable<Dashboard["shop"]> }) {
     ] as const
   ).filter(([n]) => n > 0);
   return (
-    <section aria-labelledby="shop-figures" className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-app border-2 border-line bg-paper px-4 py-2">
-      <h2 id="shop-figures" className="text-[17px] font-extrabold">
+    <section aria-labelledby="shop-figures" className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-app border border-line bg-paper px-4 py-2">
+      <h2 id="shop-figures" className="text-[18px] font-bold">
         Shop
       </h2>
       <Link

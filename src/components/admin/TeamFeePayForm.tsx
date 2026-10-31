@@ -40,8 +40,8 @@ export function TeamFeePayForm() {
       {preview ? (
         <>
           <input type="hidden" name="csv" value={state.csv} />
-          <section className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4" aria-labelledby="tfp-changes">
-            <h2 id="tfp-changes" className="text-[17px] font-extrabold">
+          <section className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4" aria-labelledby="tfp-changes">
+            <h2 id="tfp-changes" className="text-[18px] font-bold">
               {changes.length === 0 ? "Nothing to change" : `${changes.length} ${changes.length === 1 ? "plan" : "plans"} will change`}
             </h2>
             <p className="text-[15px]">{state.unchanged} already right in the app.</p>
@@ -104,7 +104,7 @@ export function TeamFeePayForm() {
             name="file"
             type="file"
             accept=".csv,text/csv"
-            className="block w-full rounded-[14px] border-2 border-dashed border-line bg-paper p-4 text-[15px] file:mr-3 file:rounded-xl file:border-0 file:bg-grass file:px-3 file:py-2 file:font-extrabold file:text-on-grass"
+            className="block w-full rounded-[14px] border-2 border-dashed border-line bg-paper p-4 text-[15px] file:mr-3 file:rounded-xl file:border-0 file:bg-grass file:px-3 file:py-2 file:font-bold file:text-on-grass"
           />
         </div>
       )}

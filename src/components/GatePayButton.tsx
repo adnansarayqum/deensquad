@@ -52,7 +52,7 @@ export function GatePayButton({
     // A small line under the child's name (not beside the check-in's Undo, so the two Undos are never side by side).
     return (
       <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="inline-flex items-center gap-1 rounded-pill bg-grass px-2.5 py-0.5 text-[13px] font-extrabold whitespace-nowrap text-on-grass">
+        <span className="inline-flex items-center gap-1 rounded-pill bg-grass px-2.5 py-0.5 text-[13px] font-bold whitespace-nowrap text-on-grass">
           <PoundSterling aria-hidden size={12} strokeWidth={3} />
           Paid {paid}
         </span>
@@ -77,7 +77,7 @@ export function GatePayButton({
         disabled={pending || disabled}
         onClick={() => run(false)}
         aria-label={`${name} paid ${fee}`}
-        className="inline-flex min-h-12 shrink-0 items-center gap-1 rounded-xl border-2 border-line bg-paper px-3 text-sm font-extrabold text-ink shadow-[0_3px_0_var(--line)] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-60 disabled:shadow-none"
+        className="inline-flex min-h-12 shrink-0 items-center gap-1 rounded-xl border border-line bg-paper px-3 text-sm font-bold text-ink shadow-[0_3px_0_var(--line)] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-60 disabled:shadow-none"
       >
         <PoundSterling aria-hidden size={14} strokeWidth={3} />
         {pending ? "Saving…" : `Paid ${fee}`}

@@ -99,10 +99,10 @@ test("an unknown email gets the same screen and no email", async ({ page }) => {
 test("news: a parent of two acknowledges the kit message", async ({ page }) => {
   await signIn(page, "adnan@example.com");
   await expect(page.getByRole("heading", { name: "Deen Squad", level: 1 })).toBeVisible();
-  // This week, first on News: training, and both children's answers right there with one "All coming".
+  // This week, first on News: training, and both children's answers right there with one "Mark both as coming".
   const week = page.getByRole("heading", { name: "This week" }).locator("xpath=../..");
   await expect(week.getByText("Going ahead")).toBeVisible();
-  await expect(week.getByRole("button", { name: "All coming: Yusuf and Musa are coming" })).toBeVisible();
+  await expect(week.getByRole("button", { name: "Mark both as coming: Yusuf and Musa" })).toBeVisible();
   await expect(week.getByRole("button", { name: "Yusuf is coming", exact: true })).toBeVisible();
   await expect(page.getByRole("main").getByText("1 unread")).toBeVisible();
   await page.screenshot({ path: shot("news"), fullPage: true });

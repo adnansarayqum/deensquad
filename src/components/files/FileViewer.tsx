@@ -198,7 +198,7 @@ function PdfPage({
   }, [doc, number, width, height]);
 
   return (
-    <figure className="relative overflow-hidden rounded-web border-2 border-line bg-white">
+    <figure className="relative overflow-hidden rounded-web border border-line bg-white">
       <canvas
         ref={canvas}
         role="img"
@@ -236,7 +236,7 @@ function ImageViewer({ src, downloadHref, name, retry }: Props & { retry: () => 
         alt={name}
         onLoad={() => setState("ready")}
         onError={() => setState("error")}
-        className={`h-auto w-full rounded-web border-2 border-line bg-white ${state === "loading" ? "sr-only" : ""}`}
+        className={`h-auto w-full rounded-web border border-line bg-white ${state === "loading" ? "sr-only" : ""}`}
       />
     </>
   );
@@ -244,7 +244,7 @@ function ImageViewer({ src, downloadHref, name, retry }: Props & { retry: () => 
 
 function Loading({ label }: { label: string }) {
   return (
-    <div role="status" className="flex flex-col items-center gap-3 rounded-app border-2 border-line bg-paper px-4 py-10 text-center">
+    <div role="status" className="flex flex-col items-center gap-3 rounded-app border border-line bg-paper px-4 py-10 text-center">
       <span aria-hidden className="h-8 w-8 animate-spin rounded-full border-4 border-line border-t-grass" />
       <span className="text-[15px] text-ink-muted">{label}…</span>
     </div>
@@ -254,12 +254,12 @@ function Loading({ label }: { label: string }) {
 function Failed({ failure, retry, downloadHref }: { failure: Failure; retry: () => void; downloadHref: string }) {
   if (failure === "unreadable") {
     return (
-      <div role="alert" className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4">
+      <div role="alert" className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
         <span className="flex items-center gap-2.5">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-orange-tint text-kit-orange">
             <FileWarning aria-hidden size={20} />
           </span>
-          <span className="text-[17px] font-extrabold">This file can&apos;t be shown here</span>
+          <span className="text-[18px] font-bold">This file can&apos;t be shown here</span>
         </span>
         <p className="text-[15px] leading-[22px]">Download it to open on your phone.</p>
         <a href={downloadHref} className="btn-chunky btn-grass self-start">
@@ -270,12 +270,12 @@ function Failed({ failure, retry, downloadHref }: { failure: Failure; retry: () 
     );
   }
   return (
-    <div role="alert" className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4">
+    <div role="alert" className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
       <span className="flex items-center gap-2.5">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-orange-tint text-kit-orange">
           <FileWarning aria-hidden size={20} />
         </span>
-        <span className="text-[17px] font-extrabold">This file didn&apos;t open</span>
+        <span className="text-[18px] font-bold">This file didn&apos;t open</span>
       </span>
       <p className="text-[15px] leading-[22px]">Check your signal and try again, or download it to open on your phone.</p>
       <div className="flex flex-wrap gap-2">

@@ -33,7 +33,7 @@ export default async function ParentsNotInPage({ searchParams }: PageProps<"/adm
         {flags.invite === "no-url" ? <Notice tone="action">Set APP_URL in Railway so invite links point at the app.</Notice> : null}
       </PageHeader>
 
-      <p className="text-[17px] leading-[26px]">
+      <p className="text-[18px] leading-[26px]">
         {n === 0 ? (
           "Every parent has signed in to the app."
         ) : (
@@ -81,8 +81,8 @@ function ParentList({
   again?: boolean;
 }) {
   return (
-    <section id={id} aria-labelledby={`${id}-heading`} className="rounded-app border-2 border-line bg-paper p-4">
-      <h2 id={`${id}-heading`} className="text-[17px] font-extrabold">
+    <section id={id} aria-labelledby={`${id}-heading`} className="rounded-app border border-line bg-paper p-4">
+      <h2 id={`${id}-heading`} className="text-[18px] font-bold">
         {title}
       </h2>
       {hint ? <p className="text-[15px] text-ink-muted">{hint}</p> : null}
@@ -95,7 +95,7 @@ function ParentList({
             return (
               <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line py-3 first:border-t-0">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[17px] font-bold break-words">{name}</p>
+                  <p className="text-[18px] font-bold break-words">{name}</p>
                   <p className="flex flex-wrap items-center gap-x-1.5 text-[15px]">
                     <span>Parent of</span>
                     {p.children.map((c, i) => (

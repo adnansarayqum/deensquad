@@ -25,7 +25,7 @@ export default async function CancelSessionPage({ params }: PageProps<"/admin/se
     <div className="flex flex-col gap-4 lg:max-w-3xl">
       <SessionHeader session={session} heading={restore ? `Put ${session.title} back on?` : `Cancel ${session.title}?`} />
       {restore && session.cancelReason ? <p className="text-[15px]">Cancelled because: {session.cancelReason}</p> : null}
-      <form action={setSessionCancelled} className="flex flex-col gap-4 rounded-app border-2 border-line bg-paper p-4">
+      <form action={setSessionCancelled} className="flex flex-col gap-4 rounded-app border border-line bg-paper p-4">
         <input type="hidden" name="id" value={session.id} />
         <input type="hidden" name="cancel" value={restore ? "no" : "yes"} />
         {restore ? null : (

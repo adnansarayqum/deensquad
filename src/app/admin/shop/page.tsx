@@ -85,7 +85,7 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
         <Section title="To order from the supplier" aside={<span className="text-sm text-ink-muted">Not yet marked as ordered</span>}>
           <table className="w-full text-[15px]">
             <thead>
-              <tr className="text-left text-label uppercase text-ink-muted">
+              <tr className="text-left text-[13px] font-bold text-ink-muted">
                 <th className="py-1 font-normal">Item</th>
                 <th className="py-1 font-normal">Size</th>
                 <th className="py-1 text-right font-normal">Qty</th>
@@ -94,7 +94,7 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
             </thead>
             <tbody>
               {supplier.map((l) => (
-                <tr key={`${l.productName}|${l.size}`} className="border-t-2 border-line">
+                <tr key={`${l.productName}|${l.size}`} className="border-t border-line">
                   <td className="py-2 font-bold">{l.productName}</td>
                   <td className="py-2">{l.size ?? "One size"}</td>
                   <td className="py-2 text-right tabular-nums">{l.quantity}</td>
@@ -118,7 +118,7 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
       {orders.length === 0 ? <p className="text-[15px] text-ink-muted">No orders here.</p> : null}
       <ul className="grid gap-2 lg:grid-cols-2 lg:items-start">
         {orders.map((o) => (
-          <li key={o.id} className="flex flex-col gap-2.5 rounded-app border-2 border-line bg-paper px-4 py-3">
+          <li key={o.id} className="flex flex-col gap-2.5 rounded-app border border-line bg-paper px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-[15px] font-bold">
                 {o.parentName ?? "Parent removed"} <span className="font-normal text-ink-muted">· {o.reference}</span>
@@ -142,7 +142,7 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
               ))}
             </ul>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[15px] font-extrabold tabular-nums">
+              <span className="text-[15px] font-bold tabular-nums">
                 {formatPence(o.totalPence)}{" "}
                 <span className="font-normal text-ink-muted">
                   {o.paidAt ? `paid by ${o.payBy === "bank" ? "transfer" : "card"}` : o.payBy === "bank" ? `transfer, ref ${o.reference}` : "card, not paid"}

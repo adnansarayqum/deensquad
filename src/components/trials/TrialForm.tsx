@@ -26,7 +26,7 @@ export function TrialForm({ groups, sessions, fee, privacyHref }: { groups: { va
   return (
     <form action={run} onSubmit={keep} className="flex flex-col gap-4">
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1 text-base font-extrabold">Your child</legend>
+        <legend className="mb-1 text-base font-bold">Your child</legend>
         <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
           {field("childFirstName", "First name", { required: true, autoComplete: "off" })}
           {field("childLastName", "Last name", { required: true, autoComplete: "off" })}
@@ -50,14 +50,14 @@ export function TrialForm({ groups, sessions, fee, privacyHref }: { groups: { va
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-base font-extrabold">Which session</legend>
+        <legend className="mb-1 text-base font-bold">Which session</legend>
         {shown.length === 0 ? (
           <p className="text-[15px] text-ink-muted">{group ? `No ${group} sessions in the next four weeks. Contact the club.` : "No sessions to book in the next four weeks."}</p>
         ) : (
           shown.map((s) => (
             <label
               key={s.id}
-              className="flex min-h-12 cursor-pointer items-start gap-3 rounded-app border-2 border-line bg-paper p-3 has-[:checked]:border-grass has-[:checked]:bg-grass-tint"
+              className="flex min-h-12 cursor-pointer items-start gap-3 rounded-app border border-line bg-paper p-3 has-[:checked]:border-grass has-[:checked]:bg-grass-tint"
             >
               <input type="radio" name="session" value={s.id} required className="mt-1 h-5 w-5 shrink-0 accent-[var(--grass)]" />
               <span className="flex flex-col">
@@ -70,7 +70,7 @@ export function TrialForm({ groups, sessions, fee, privacyHref }: { groups: { va
       </fieldset>
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1 text-base font-extrabold">You</legend>
+        <legend className="mb-1 text-base font-bold">You</legend>
         <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
           {field("parentFirstName", "First name", { required: true, autoComplete: "given-name" })}
           {field("parentLastName", "Last name", { required: true, autoComplete: "family-name" })}

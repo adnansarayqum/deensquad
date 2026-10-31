@@ -72,7 +72,7 @@ export function TapProblem({ problem, onRetry, retrying = false, className = "" 
           type="button"
           onClick={onRetry}
           disabled={retrying}
-          className="min-h-12 shrink-0 rounded-xl border-2 border-line bg-paper px-3.5 text-sm font-extrabold text-ink shadow-[0_3px_0_var(--line)] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-60"
+          className="min-h-12 shrink-0 rounded-xl border border-line bg-paper px-3.5 text-sm font-bold text-ink shadow-[0_3px_0_var(--line)] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-60"
         >
           {retrying ? "Saving…" : "Try again"}
         </button>

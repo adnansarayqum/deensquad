@@ -76,7 +76,7 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
               type="button"
               aria-pressed={group === g}
               onClick={() => setGroup(g)}
-              className={`inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill border-2 px-4 text-sm font-extrabold ${
+              className={`inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill border-2 px-4 text-sm font-bold ${
                 group === g ? "border-grass bg-grass text-on-grass" : "border-line bg-paper text-ink"
               }`}
             >
@@ -114,7 +114,7 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
       {list.length === 0 ? <p className="text-[15px] text-ink-muted">No children in these groups yet.</p> : null}
       <table className="w-full border-separate border-spacing-y-1.5 text-left">
         <thead className="sr-only lg:not-sr-only">
-          <tr className="text-label text-ink-muted uppercase">
+          <tr className="text-[13px] font-bold text-ink-muted">
             <th scope="col" className="px-3 pb-1 font-normal">
               Child
             </th>
@@ -183,7 +183,7 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
         </p>
       ) : null}
       {/* Stays on screen at the bottom while the list scrolls under it. */}
-      <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-end gap-3 border-t-2 border-line bg-paper px-1 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]">
+      <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-end gap-3 border-t border-line bg-paper px-1 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]">
         <button type="submit" className="btn-chunky btn-grass" disabled={pending}>
           {pending ? "Saving…" : `Save squad (${picked.size} picked)`}
         </button>

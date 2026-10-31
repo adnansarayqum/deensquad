@@ -63,7 +63,7 @@ export function ChartHover({ xs, tips, label, children }: { xs: number[]; tips: 
           <div
             // Read out only when moved with the keys: a pointer passing over shouldn't talk.
             aria-live={byKey ? "polite" : "off"}
-            className="pointer-events-none absolute top-0 z-10 flex w-max max-w-[15rem] flex-col gap-1 rounded-dash border-2 border-line bg-paper px-2.5 py-2 text-[13px] leading-[18px]"
+            className="pointer-events-none absolute top-0 z-10 flex w-max max-w-[15rem] flex-col gap-1 rounded-dash border border-line bg-paper px-2.5 py-2 text-[13px] leading-[18px]"
             style={{ left: `${x}%`, transform: `translateX(${shift})` }}
           >
             <span className="font-bold">{tip.title}</span>

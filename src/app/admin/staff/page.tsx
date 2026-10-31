@@ -159,7 +159,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
       {/* Phones: one card per person. */}
       <ul className="flex flex-col gap-4 lg:hidden">
         {staff.map((s) => (
-          <li key={s.id} className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4">
+          <li key={s.id} className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <span className="flex min-w-0 flex-col">
                 <span className="text-[15px] font-bold">{name(s)}</span>
@@ -195,11 +195,11 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
       </ul>
 
       {/* Computers: a table, one row per person. */}
-      <div className="hidden overflow-x-auto rounded-app border-2 border-line bg-paper lg:block">
+      <div className="hidden overflow-x-auto rounded-app border border-line bg-paper lg:block">
         <table className="w-full text-[14px]">
           <caption className="sr-only">Coaches and admins</caption>
           <thead>
-            <tr className="border-b-2 border-line text-left text-label text-ink-muted uppercase">
+            <tr className="border-b border-line text-left text-[13px] font-bold text-ink-muted">
               <th scope="col" className="py-2.5 pr-2 pl-2.5 font-bold">
                 Name
               </th>
@@ -260,19 +260,19 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
  * nothing ticked, so the form asks for a choice; an existing coach with no groups shows All groups ticked.
  */
 function GroupBoxes({ selected, small = false, fresh = false }: { selected: AgeGroup[]; /** The staff table's one-line rows: smaller chips. */ small?: boolean; fresh?: boolean }) {
-  const chip = `flex items-center rounded-pill border-2 border-line bg-paper has-[:checked]:border-grass has-[:checked]:bg-grass-tint ${small ? "min-h-9 gap-1 px-1.5" : "min-h-11 gap-2 px-3.5"}`;
+  const chip = `flex items-center rounded-pill border border-line bg-paper has-[:checked]:border-grass has-[:checked]:bg-grass-tint ${small ? "min-h-9 gap-1 px-1.5" : "min-h-11 gap-2 px-3.5"}`;
   const box = `accent-[var(--grass)] ${small ? "h-3.5 w-3.5" : "h-4 w-4"}`;
   return (
     <>
       {AGE_GROUPS.map((g) => (
         <label key={g} className={chip}>
           <input type="checkbox" name="groups" value={g} defaultChecked={selected.includes(g)} className={box} />
-          <span className="text-sm font-extrabold">{g}</span>
+          <span className="text-sm font-bold">{g}</span>
         </label>
       ))}
       <label className={chip}>
         <input type="checkbox" name="allGroups" value="yes" defaultChecked={!fresh && selected.length === 0} className={box} />
-        <span className="text-sm font-extrabold">All groups</span>
+        <span className="text-sm font-bold">All groups</span>
       </label>
     </>
   );

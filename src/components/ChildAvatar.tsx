@@ -28,13 +28,13 @@ export function ChildAvatar({
         height={size}
         loading="lazy"
         decoding="async"
-        className={`${box} shrink-0 rounded-pill border-2 border-line bg-cream object-cover ${className}`}
+        className={`${box} shrink-0 rounded-pill border border-line bg-cream object-cover ${className}`}
       />
     );
   }
   const initials = `${firstName.trim()[0] ?? ""}${lastName?.trim()[0] ?? ""}`.toUpperCase();
   return (
-    <span aria-hidden className={`${box} grid shrink-0 place-items-center rounded-pill border-2 border-line bg-cream font-bold text-ink-muted ${className}`}>
+    <span aria-hidden className={`${box} grid shrink-0 place-items-center rounded-pill border border-line bg-cream font-bold text-ink-muted ${className}`}>
       {initials}
     </span>
   );

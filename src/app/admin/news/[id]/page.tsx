@@ -182,7 +182,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
       ) : null}
 
       {canDelete ? (
-        <details className="rounded-app border-2 border-line bg-paper px-4 py-3">
+        <details className="rounded-app border border-line bg-paper px-4 py-3">
           <summary className="cursor-pointer text-[15px] font-bold">Delete this message</summary>
           <form action={deleteNews} className="mt-3 flex flex-col gap-3">
             <input type="hidden" name="id" value={news.id} />

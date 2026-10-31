@@ -28,13 +28,13 @@ export default async function IncidentsPage({ searchParams }: PageProps<"/coach/
       />
       {params.logged ? <Notice>Logged. The parents have been sent it in the app, and the admins told.</Notice> : null}
       {incidents.length === 0 ? (
-        <p className="rounded-app border-2 border-line bg-paper p-4 text-[15px] text-ink-muted">Nothing logged yet.</p>
+        <p className="rounded-app border border-line bg-paper p-4 text-[15px] text-ink-muted">Nothing logged yet.</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {incidents.map((i) => (
-            <li key={i.id} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
+            <li key={i.id} className="flex flex-col gap-2 rounded-app border border-line bg-paper p-4">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[17px] font-extrabold">{i.childName}</span>
+                <span className="text-[18px] font-bold">{i.childName}</span>
                 <Pill tone="neutral">{i.ageGroup}</Pill>
                 <Pill tone="neutral">{INCIDENT_KINDS[i.kind]}</Pill>
               </div>

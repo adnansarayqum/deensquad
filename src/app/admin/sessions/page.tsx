@@ -71,10 +71,10 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
         </div>
       </FoldCard>
 
-      <section aria-labelledby="coming-up" className="rounded-app border-2 border-line bg-paper p-4">
+      <section aria-labelledby="coming-up" className="rounded-app border border-line bg-paper p-4">
         {/* One plain form: the rows' tick boxes and the bulk bar's buttons (openBulk), so bulk changes work without JavaScript. */}
         <form action={openBulk} className="flex flex-col gap-3">
-          <h2 id="coming-up" className="text-[17px] font-extrabold">
+          <h2 id="coming-up" className="text-[18px] font-bold">
             Coming up
           </h2>
           {upcoming.length === 0 ? (
@@ -91,8 +91,8 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
         </form>
       </section>
       {recent.length ? (
-        <details className="rounded-app border-2 border-line bg-paper px-4">
-          <summary className="flex min-h-12 cursor-pointer items-center text-[17px] font-extrabold">Recent sessions ({recent.length})</summary>
+        <details className="rounded-app border border-line bg-paper px-4">
+          <summary className="flex min-h-12 cursor-pointer items-center text-[18px] font-bold">Recent sessions ({recent.length})</summary>
           <div className="pb-4">
             <SessionTable sessions={recent} mine={mine} />
           </div>
@@ -179,7 +179,7 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
           </li>
         ) : null}
         {sessions.map((s) => (
-          <li key={s.id} className="flex gap-2 rounded-dash border-2 border-line bg-cream px-3.5 py-3 has-[:checked]:border-grass">
+          <li key={s.id} className="flex gap-2 rounded-dash border border-line bg-cream px-3.5 py-3 has-[:checked]:border-grass">
             {selectable ? <div className="-ml-2 shrink-0 self-start">{select(s)}</div> : null}
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <div className="flex flex-col gap-0.5">
@@ -204,7 +204,7 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
         <table className="w-full text-[14px]">
           <caption className="sr-only">{editable ? "Sessions coming up" : "Recent sessions"}</caption>
           <thead>
-            <tr className="border-b-2 border-line text-left text-label text-ink-muted uppercase">
+            <tr className="border-b border-line text-left text-[13px] font-bold text-ink-muted">
               {selectable ? (
                 <th scope="col" className="w-12 px-0 py-1 font-bold">
                   <SelectAll label="Select all" />

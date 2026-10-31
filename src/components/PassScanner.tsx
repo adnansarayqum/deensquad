@@ -269,7 +269,7 @@ export function PassScanner({
         {error ? (
           <p className="rounded-app bg-orange-tint p-4 text-[15px] text-ink">{error}</p>
         ) : checking ? (
-          <p className="text-center text-[17px] font-bold">Checking…</p>
+          <p className="text-center text-[18px] font-bold">Checking…</p>
         ) : !result ? (
           <p className="text-center text-[15px] text-on-pitch-muted">Hold the parent&apos;s QR code inside the box.</p>
         ) : !result.ok && result.reason === "no_signal" ? (
@@ -277,7 +277,7 @@ export function PassScanner({
             <div className="flex items-center gap-3">
               <WifiOff aria-hidden size={28} className="shrink-0 text-kit-orange" />
               <p className="flex flex-col">
-                <span className="text-[17px] font-bold">No signal – not checked in yet</span>
+                <span className="text-[18px] font-bold">No signal – not checked in yet</span>
                 <span className="text-[14px]">The QR code is fine. The app couldn&apos;t reach the club, so try again or use Mark here.</span>
               </p>
             </div>
@@ -287,13 +287,13 @@ export function PassScanner({
             </button>
           </div>
         ) : !result.ok && result.reason === "signed_out" ? (
-          <p className="rounded-app bg-orange-tint p-4 text-[17px] font-bold text-ink">
+          <p className="rounded-app bg-orange-tint p-4 text-[18px] font-bold text-ink">
             You&apos;ve been signed out, so nobody was checked in. Close this and sign in again.
           </p>
         ) : !result.ok ? (
           <div className="flex items-center gap-3 rounded-app bg-orange-tint p-4 text-ink">
             <TriangleAlert aria-hidden size={28} className="shrink-0 text-kit-orange" />
-            <p className="text-[17px] font-bold">{reasonText[result.reason]}</p>
+            <p className="text-[18px] font-bold">{reasonText[result.reason]}</p>
           </div>
         ) : (
           <ChildResult key={`${result.child.id}:${result.child.session?.id ?? ""}`} child={result.child} />
@@ -336,14 +336,14 @@ function ChildResult({ child: c }: { child: Extract<ScanResult, { ok: true }>["c
         {here && c.flags.length ? <span className="text-[14px]">Needs a word: {c.flags.map((f) => FLAG_WORDS[f]).join(", ")}</span> : null}
         {/* How the family pays: pay as you go means taking today's session fee. */}
         {c.paying ? (
-          <span className="mt-1 inline-flex items-center self-start rounded-pill border border-line bg-cream px-2.5 py-0.5 text-label text-ink uppercase">
+          <span className="mt-1 inline-flex items-center self-start rounded-pill border border-line bg-cream px-2.5 py-0.5 text-[13px] font-bold text-ink">
             {PAYING_WORDS[c.paying]}
           </span>
         ) : null}
         {here && c.session && (c.paysAtGate || c.paidPence) ? <ScannerPay child={c} sessionId={c.session.id} /> : null}
         {/* Only a marker (the details are on the register, a tap away): other parents are at the gate. */}
         {c.medical ? (
-          <span className="mt-1 inline-flex items-center gap-1 self-start rounded-pill border border-line bg-cream px-2.5 py-0.5 text-label text-ink uppercase">
+          <span className="mt-1 inline-flex items-center gap-1 self-start rounded-pill border border-line bg-cream px-2.5 py-0.5 text-[13px] font-bold text-ink">
             <HeartPulse aria-hidden size={13} />
             Medical info
           </span>
@@ -390,7 +390,7 @@ function ScannerPay({ child: c, sessionId }: { child: Extract<ScanResult, { ok: 
     }
   };
   if (paid) {
-    return <span className="mt-2 inline-flex items-center self-start rounded-pill bg-grass px-3 py-1 text-sm font-extrabold text-on-grass">Paid {poundsText(paid)}</span>;
+    return <span className="mt-2 inline-flex items-center self-start rounded-pill bg-grass px-3 py-1 text-sm font-bold text-on-grass">Paid {poundsText(paid)}</span>;
   }
   return (
     <span className="mt-2 flex flex-col items-start gap-1">

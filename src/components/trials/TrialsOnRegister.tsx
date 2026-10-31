@@ -17,7 +17,7 @@ export type TrialGateRow = { id: string; childName: string; ageGroup: string; pa
 export function TrialsOnRegister({ sessionId, trials, fee, open }: { sessionId: string; trials: TrialGateRow[]; fee: string; open: boolean }) {
   return (
     <section aria-labelledby="register-trials" className="flex flex-col gap-2.5">
-      <h3 id="register-trials" className="mt-1 text-label text-ink-muted uppercase">
+      <h3 id="register-trials" className="mt-1 text-[13px] font-bold text-ink-muted">
         Trials ({trials.length})
       </h3>
       <ul className="flex flex-col gap-2.5">
@@ -74,7 +74,7 @@ function ArrivedButton({ sessionId, trialId, name, arrived, disabled }: { sessio
           onClick={run}
           disabled={pending || disabled}
           aria-label={`${name} has arrived`}
-          className="min-h-12 shrink-0 rounded-xl border-2 border-line bg-paper px-3.5 text-sm font-extrabold text-grass-text shadow-[0_3px_0_var(--line)] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-60 disabled:shadow-none"
+          className="min-h-12 shrink-0 rounded-xl border border-line bg-paper px-3.5 text-sm font-bold text-grass-text shadow-[0_3px_0_var(--line)] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-60 disabled:shadow-none"
         >
           {pending ? "Saving…" : "Arrived"}
         </button>

@@ -54,7 +54,7 @@ export async function setAvailability(sessionId: string, playerId: string, answe
 }
 
 /**
- * "All coming" on a session with several of the family's children: one tap answers Coming for each of them, the
+ * "Mark both as coming" on a session with several of the family's children: one tap answers Coming for each of them, the
  * same way as tapping each child's button (`saveAnswer` checks each child and the session).
  */
 export async function setAllComing(sessionId: string, playerIds: string[]): Promise<TapResult> {

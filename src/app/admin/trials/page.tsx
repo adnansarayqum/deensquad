@@ -25,9 +25,9 @@ export default async function TrialsPage({ searchParams }: PageProps<"/admin/tri
   const past = trials.filter((t) => !upcoming.includes(t)).reverse();
 
   const card = (t: TrialRow) => (
-    <li key={t.id} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
+    <li key={t.id} className="flex flex-col gap-2 rounded-app border border-line bg-paper p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[17px] font-extrabold">{t.childName}</span>
+        <span className="text-[18px] font-bold">{t.childName}</span>
         <Pill tone="neutral">{t.ageGroup}</Pill>
         <Pill tone={t.cancelledAt ? "neutral" : t.arrivedAt ? "done" : "neutral"}>{status(t, now)}</Pill>
         {t.paidPence ? <Pill tone="done">Paid {poundsText(t.paidPence)}</Pill> : null}
@@ -69,8 +69,8 @@ export default async function TrialsPage({ searchParams }: PageProps<"/admin/tri
       <PageHeader back={{ href: "/admin/sessions", label: "Sessions" }} title="Trials" subtitle="Families who booked a trial session on the club's booking page." />
       {params.cancelled ? <Notice>Booking cancelled. Let the family know.</Notice> : null}
       {params.cancel === "confirm" ? <Notice tone="action">Tick the box to cancel a booking.</Notice> : null}
-      <section className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
-        <h2 className="text-[17px] font-extrabold">Booking page</h2>
+      <section className="flex flex-col gap-2 rounded-app border border-line bg-paper p-4">
+        <h2 className="text-[18px] font-bold">Booking page</h2>
         <p className="text-[15px] leading-[22px]">
           Share this link on the club&apos;s Instagram, WhatsApp or website. Families pick a session for their child&apos;s group and pay the session fee by card or cash
           at the gate. The child shows on that session&apos;s register under Trials.
@@ -79,11 +79,11 @@ export default async function TrialsPage({ searchParams }: PageProps<"/admin/tri
           {`${appUrl() ?? ""}/trial`}
         </Link>
       </section>
-      <h2 className="text-[17px] font-extrabold">Coming up ({upcoming.length})</h2>
+      <h2 className="text-[18px] font-bold">Coming up ({upcoming.length})</h2>
       {upcoming.length ? <ul className="flex flex-col gap-3">{upcoming.map(card)}</ul> : <p className="text-[15px] text-ink-muted">No trials booked.</p>}
       {past.length ? (
-        <details className="rounded-app border-2 border-line bg-paper p-4">
-          <summary className="min-h-12 cursor-pointer py-2 text-[17px] font-extrabold">Last 30 days ({past.length})</summary>
+        <details className="rounded-app border border-line bg-paper p-4">
+          <summary className="min-h-12 cursor-pointer py-2 text-[18px] font-bold">Last 30 days ({past.length})</summary>
           <ul className="mt-3 flex flex-col gap-3">{past.map(card)}</ul>
         </details>
       ) : null}

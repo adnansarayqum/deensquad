@@ -36,7 +36,7 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
                 key={g}
                 href={`/coach/awards?group=${g}`}
                 aria-current={g === group ? "page" : undefined}
-                className={`inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-sm font-extrabold ${g === group ? "bg-floodlight text-on-gold" : "border-2 border-line bg-paper text-ink"}`}
+                className={`inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-sm font-bold ${g === group ? "bg-floodlight text-on-gold" : "border border-line bg-paper text-ink"}`}
               >
                 {g}
               </Link>
@@ -44,8 +44,8 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
           </nav>
         ) : null}
       </PageHeader>
-      <section aria-label={groupPlural(group)} className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4">
-        <h2 className="flex flex-wrap items-baseline justify-between gap-2 text-[17px] font-extrabold">
+      <section aria-label={groupPlural(group)} className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
+        <h2 className="flex flex-wrap items-baseline justify-between gap-2 text-[18px] font-bold">
           {groupPlural(group)}
           {squad.length ? (
             <span className="text-[13px] font-bold text-ink-muted tabular-nums">
@@ -58,7 +58,7 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
           <ul className="grid gap-2 lg:grid-cols-2">
             {squad.map((p) => (
               <li key={p.id}>
-                <Link href={`/coach/awards/${p.id}`} className="flex min-h-14 items-center gap-3 rounded-dash border-2 border-line bg-cream px-3.5 py-2 hover:bg-paper">
+                <Link href={`/coach/awards/${p.id}`} className="flex min-h-14 items-center gap-3 rounded-dash border border-line bg-cream px-3.5 py-2 hover:bg-paper">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-pitch font-display text-[22px] text-on-pitch">
                     {p.shirtNumber ?? p.firstName[0]}
                   </span>
@@ -72,7 +72,7 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
                     </span>
                   </span>
                   {p.stars > 0 ? (
-                    <span className="inline-flex items-center gap-1 rounded-pill bg-gold-tint px-2.5 py-1 text-sm font-extrabold text-gold-text">
+                    <span className="inline-flex items-center gap-1 rounded-pill bg-gold-tint px-2.5 py-1 text-sm font-bold text-gold-text">
                       <Star aria-hidden size={14} fill="currentColor" strokeWidth={0} />
                       {p.stars}
                       <span className="sr-only"> {p.stars === 1 ? "star" : "stars"}</span>

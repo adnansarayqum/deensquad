@@ -35,7 +35,7 @@ export function AwardForm({ playerId, firstName }: { playerId: string; firstName
   return (
     <form ref={form} action={action} onSubmit={keep} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="player" value={playerId} />
-      <h2 className="text-[17px] font-extrabold">Give {firstName} points or a star</h2>
+      <h2 className="text-[18px] font-bold">Give {firstName} points or a star</h2>
       <fieldset className="flex flex-col gap-2">
         <legend className="field-label">Points</legend>
         <div className="flex flex-wrap gap-2">
@@ -50,7 +50,7 @@ export function AwardForm({ playerId, firstName }: { playerId: string; firstName
           ))}
         </div>
       </fieldset>
-      <label className="flex min-h-12 items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 has-[:checked]:border-crest-gold has-[:checked]:bg-gold-tint">
+      <label className="flex min-h-12 items-center gap-3 rounded-app border border-line bg-paper px-3.5 has-[:checked]:border-crest-gold has-[:checked]:bg-gold-tint">
         <input type="checkbox" name="star" className="h-5 w-5 accent-[var(--crest-gold)]" />
         <Star aria-hidden size={20} className="text-gold-text" fill="currentColor" strokeWidth={0} />
         <span className="text-base font-bold">Star player</span>
@@ -78,7 +78,7 @@ export function NoteForm({ playerId, firstName, ai }: { playerId: string; firstN
   return (
     <form ref={form} action={action} onSubmit={keep} className="flex flex-col gap-3" noValidate>
       <input type="hidden" name="player" value={playerId} />
-      <label htmlFor="note" className="text-[17px] font-extrabold">
+      <label htmlFor="note" className="text-[18px] font-bold">
         Note for {firstName}&apos;s parents
       </label>
       <textarea id="note" name="note" rows={3} maxLength={500} placeholder="What went well and what to work on" className="field" />

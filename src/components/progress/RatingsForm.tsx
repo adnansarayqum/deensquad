@@ -29,13 +29,13 @@ export function RatingsForm({ sessionId, rows }: { sessionId: string; rows: Rati
         {rows.map((r) => {
           const name = `${r.firstName} ${r.lastInitial}.`;
           return (
-            <li key={r.id} className="rounded-app border-2 border-line bg-paper p-3">
+            <li key={r.id} className="rounded-app border border-line bg-paper p-3">
               <input type="hidden" name="player" value={r.id} />
               <input type="hidden" name={`name.${r.id}`} value={r.firstName} />
               <fieldset className="flex flex-col gap-2">
                 <legend className="flex w-full items-center gap-3 pb-1">
                   <ChildAvatar photoId={r.photoId} firstName={r.firstName} lastName={r.lastInitial} size={40} />
-                  <span className={`min-w-0 flex-1 text-[16px] font-extrabold ${r.here ? "" : "text-ink-muted"}`}>
+                  <span className={`min-w-0 flex-1 text-[16px] font-bold ${r.here ? "" : "text-ink-muted"}`}>
                     {name}
                     {r.here ? null : <span className="ml-2 text-[13px] font-bold">Not here</span>}
                     {r.mine ? <span className="ml-2 text-[13px] font-bold text-grass-text">Rated</span> : null}
@@ -58,7 +58,7 @@ export function RatingsForm({ sessionId, rows }: { sessionId: string; rows: Rati
                       {SCORES.map((n) => (
                         <label
                           key={n}
-                          className="relative grid h-12 w-10 cursor-pointer place-items-center rounded-dash border-2 border-line bg-cream text-[16px] font-bold tabular-nums has-[:checked]:border-grass has-[:checked]:bg-grass has-[:checked]:text-on-grass has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--focus)]"
+                          className="relative grid h-12 w-10 cursor-pointer place-items-center rounded-dash border border-line bg-cream text-[16px] font-bold tabular-nums has-[:checked]:border-grass has-[:checked]:bg-grass has-[:checked]:text-on-grass has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--focus)]"
                         >
                           <input
                             type="radio"
@@ -81,7 +81,7 @@ export function RatingsForm({ sessionId, rows }: { sessionId: string; rows: Rati
         })}
       </ul>
       {/* Stays on screen at the bottom while the list scrolls under it. */}
-      <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-2 border-t-2 border-line bg-cream px-1 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]">
+      <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-2 border-t border-line bg-cream px-1 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]">
         {state.error ? (
           <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
             {state.error}

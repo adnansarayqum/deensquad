@@ -51,9 +51,9 @@ export function Notice({ tone = "done", children }: { tone?: "done" | "action"; 
 /** The one card: 2px line border on paper, a 17px heading, optional aside on the heading's right. */
 export function Section({ title, children, aside, className = "" }: { title: string; children: ReactNode; aside?: ReactNode; className?: string }) {
   return (
-    <section className={`flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4 ${className}`}>
+    <section className={`flex flex-col gap-3 rounded-app border border-line bg-paper p-4 ${className}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[17px] font-extrabold">{title}</h2>
+        <h2 className="text-[18px] font-bold">{title}</h2>
         {aside}
       </div>
       {children}
@@ -63,7 +63,7 @@ export function Section({ title, children, aside, className = "" }: { title: str
 
 /** A sub-label inside a card (above a list or a bar): small caps in ink-muted. */
 export function SubLabel({ children }: { children: ReactNode }) {
-  return <h3 className="text-label text-ink-muted uppercase">{children}</h3>;
+  return <h3 className="text-[13px] font-bold text-ink-muted">{children}</h3>;
 }
 
 /**
@@ -74,11 +74,11 @@ export function SubLabel({ children }: { children: ReactNode }) {
  */
 export function FoldCard({ id, title, open = false, children }: { id: string; title: string; open?: boolean; children: ReactNode }) {
   return (
-    <section className="rounded-app border-2 border-line bg-paper p-4">
+    <section className="rounded-app border border-line bg-paper p-4">
       <input id={id} type="checkbox" defaultChecked={open} className="peer sr-only" />
       <label
         htmlFor={id}
-        className="flex min-h-12 cursor-pointer items-center justify-between gap-2 text-[17px] font-extrabold peer-checked:[&_svg]:rotate-180 peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus)]"
+        className="flex min-h-12 cursor-pointer items-center justify-between gap-2 text-[18px] font-bold peer-checked:[&_svg]:rotate-180 peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus)]"
       >
         {title}
         <ChevronDown aria-hidden size={20} className="shrink-0 text-ink-muted transition-transform" />

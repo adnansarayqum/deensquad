@@ -61,13 +61,13 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
           </Link>
         }
       />
-      {sessions.length === 0 ? <p className="rounded-app border-2 border-line bg-paper p-4 text-[15px] text-ink-muted">No sessions coming up for your groups. Add them under Sessions.</p> : null}
+      {sessions.length === 0 ? <p className="rounded-app border border-line bg-paper p-4 text-[15px] text-ink-muted">No sessions coming up for your groups. Add them under Sessions.</p> : null}
 
       {/* Phones: a row per group under each session's heading. */}
       <div className="flex flex-col gap-4 lg:hidden">
         {shown.map((s) => (
           <section key={s.id} aria-label={`${shortDay(s.startsAt)} ${s.title}`} className="flex flex-col gap-2">
-            <h2 className="text-label text-ink-muted uppercase">
+            <h2 className="text-[13px] font-bold text-ink-muted">
               {shortDay(s.startsAt)} · {s.title} {clock(s.startsAt)}
             </h2>
             {listed(s).length === 0 ? <p className="text-[15px] text-ink-muted">No children in this session&apos;s groups yet.</p> : null}
@@ -78,7 +78,7 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
                   key={g}
                   href={`/coach/plans/${s.id}?group=${g}`}
                   aria-label={linkName(s, g, plan)}
-                  className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
+                  className="flex items-center gap-3 rounded-app border border-line bg-paper px-3.5 py-3 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
                 >
                   <span className="font-display text-[26px] leading-none">{g}</span>
                   <span className="flex min-w-0 flex-1 flex-col">
@@ -97,11 +97,11 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
 
       {/* Computers: one table, a light row per session and a row per group under it. */}
       {sessions.length ? (
-        <div className="hidden overflow-x-auto rounded-app border-2 border-line bg-paper lg:block">
+        <div className="hidden overflow-x-auto rounded-app border border-line bg-paper lg:block">
           <table className="w-full text-[14px]">
             <caption className="sr-only">Session plans by session and group</caption>
             <thead>
-              <tr className="border-b-2 border-line text-left text-label text-ink-muted uppercase">
+              <tr className="border-b border-line text-left text-[13px] font-bold text-ink-muted">
                 <th scope="col" className="px-4 py-2.5 font-bold">
                   Session
                 </th>

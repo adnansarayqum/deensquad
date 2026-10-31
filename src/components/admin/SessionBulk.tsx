@@ -83,7 +83,7 @@ export function BulkBar() {
       ref={bar}
       role="group"
       aria-label="With the ticked sessions"
-      className="sticky bottom-0 z-10 -mx-4 -mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-b-app border-t-2 border-line bg-paper px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]"
+      className="sticky bottom-0 z-10 -mx-4 -mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-b-app border-t border-line bg-paper px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]"
     >
       <span aria-live="polite" className="min-w-24 text-[15px] font-bold tabular-nums">
         {count === null ? "Ticked sessions:" : `${count} selected`}

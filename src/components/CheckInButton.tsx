@@ -28,7 +28,7 @@ export function CheckInButton({ sessionId, playerId, name, disabled = false }: {
         disabled={pending || disabled}
         onClick={mark}
         aria-label={`Mark ${name} here`}
-        className="min-h-12 shrink-0 rounded-xl border-2 border-line bg-paper px-3.5 text-sm font-extrabold text-grass-text shadow-[0_3px_0_var(--line)] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-60 disabled:shadow-none"
+        className="min-h-12 shrink-0 rounded-xl border border-line bg-paper px-3.5 text-sm font-bold text-grass-text shadow-[0_3px_0_var(--line)] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-60 disabled:shadow-none"
       >
         {pending ? "Saving…" : "Mark here"}
       </button>
