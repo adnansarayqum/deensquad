@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FoldCard, PageHeader, ReadBar } from "@/components/admin/bits";
+import { FoldCard, Notice, PageHeader, ReadBar } from "@/components/admin/bits";
+import { UUID } from "@/lib/auth/tokens";
 import { NewsComposeForm } from "@/components/admin/NewsComposeForm";
 import { postNews } from "@/lib/admin/actions";
 import { audienceLabel, loadNewsList } from "@/lib/admin/data";
@@ -21,12 +22,17 @@ export const metadata: Metadata = { title: "News" };
 
 export default async function AdminNewsPage({ searchParams }: PageProps<"/admin/news">) {
   const user = await requireStaff();
-  const askAbout = (await searchParams).comingTo;
+  const params = await searchParams;
+  const askAbout = params.comingTo;
   const comingTo = typeof askAbout === "string" ? askAbout : "";
+  // "Message who came" from a past session (the children checked in there), or "Message several families" from
+  // Messages: one post to the families chosen, replies on, each reply a private conversation as before.
+  const cameTo = typeof params.cameTo === "string" && UUID.test(params.cameTo) ? params.cameTo : "";
+  const toChildren = params.to === "children" || Boolean(cameTo);
   const limited = isGroupCoach(user.staff);
   const myGroups = staffGroups(user.staff);
   const mine = coachLimit(user.staff);
-  const { news, children, sessions } = await asUser(user.id, async (tx) => ({
+  const { news, children, sessions, came } = await asUser(user.id, async (tx) => ({
     news: await loadNewsList(tx, 50, mine),
     children: await loadNewsChildren(tx, mine),
     // Sessions in the next three weeks that "Ask who's coming" can be about (a group coach's own groups).
@@ -37,8 +43,21 @@ export default async function AdminNewsPage({ searchParams }: PageProps<"/admin/
        order by starts_at limit 12`,
       [mine ? [...mine] : null],
     ),
+    came: cameTo
+      ? (
+          await tx.query<{ title: string; starts_at: Date; ids: string[] }>(
+            `select s.title, s.starts_at, coalesce(array_agg(a.player_id::text) filter (where a.player_id is not null), '{}') as ids
+             from sessions s left join attendance a on a.session_id = s.id
+             where s.id = $1 group by s.id`,
+            [cameTo],
+          )
+        )[0] ?? null
+      : null,
   }));
   const now = new Date();
+  // Only children this member of staff can message (their groups); anyone else checked in is left out.
+  const listed = new Set(children.map((c) => c.id));
+  const cameIds = came ? came.ids.filter((id) => listed.has(id)) : [];
   // From a session's "Ask who's coming": the post starts written, ready to check and send.
   const asked = sessions.find((s) => s.id === comingTo);
   const askTitle = asked ? `Who's coming to ${asked.title.toLowerCase() === "training" ? "training" : asked.title} on ${shortDay(iso(asked.starts_at))}?` : undefined;
@@ -48,8 +67,15 @@ export default async function AdminNewsPage({ searchParams }: PageProps<"/admin/
       <PageHeader title="News" subtitle="Post a message and see who has read it." />
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        <FoldCard id="post-message" title="Post a message" open={news.length === 0 || Boolean(comingTo)}>
+        <FoldCard id="post-message" title="Post a message" open={news.length === 0 || Boolean(comingTo) || toChildren}>
           <NewsComposeForm action={postNews}>
+            {came ? (
+              <Notice>
+                {cameIds.length
+                  ? `Chosen: the ${cameIds.length === 1 ? "child" : `${cameIds.length} children`} checked in at ${came.title}, ${shortDay(iso(came.starts_at))}. Add or take anyone out under "Who is it for?".`
+                  : `Nobody you can message was checked in at ${came.title}, ${shortDay(iso(came.starts_at))}. Choose the children under "Who is it for?".`}
+              </Notice>
+            ) : null}
             <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
               <div>
                 <label htmlFor="topic" className="field-label">
@@ -78,9 +104,10 @@ export default async function AdminNewsPage({ searchParams }: PageProps<"/admin/
               </div>
             </div>
             <MediaPicker hint={PHOTO_CONSENT_HINT} />
-            <NewsAudience limited={limited} myGroups={myGroups} list={children} />
+            <NewsAudience key={cameTo || (toChildren ? "children" : "all")} limited={limited} myGroups={myGroups} list={children} initial={cameIds} startOnChildren={toChildren} />
             <NewsReplyOptions
               comingTo={comingTo}
+              replies={toChildren}
               sessions={sessions.map((s) => ({
                 id: s.id,
                 label: `${shortDay(iso(s.starts_at))} · ${s.title} · ${clock(iso(s.starts_at))} · ${s.age_groups.join(", ")}`,

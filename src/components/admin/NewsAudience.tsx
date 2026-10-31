@@ -14,10 +14,25 @@ const noSubscribe = () => () => {};
  * child list show and hide with CSS (:has on the checked radio), and the whole list is in the page. With JavaScript
  * the name search and group chips only hide rows (`hidden`), so a child ticked in another group is still sent.
  */
-export function NewsAudience({ limited, myGroups, list }: { limited: boolean; myGroups: readonly string[]; list: NewsChild[] }) {
-  const [kind, setKind] = useState<Kind>(limited ? "groups" : "all");
+export function NewsAudience({
+  limited,
+  myGroups,
+  list,
+  initial = [],
+  startOnChildren = false,
+}: {
+  limited: boolean;
+  myGroups: readonly string[];
+  list: NewsChild[];
+  /** Children chosen to start with ("Message who came" from a session, or "Message several families"): opens on Chosen children. */
+  initial?: string[];
+  /** Open on Chosen children even with nobody chosen yet. */
+  startOnChildren?: boolean;
+}) {
+  const startChildren = startOnChildren || initial.length > 0;
+  const [kind, setKind] = useState<Kind>(startChildren ? "children" : limited ? "groups" : "all");
   const [groups, setGroups] = useState<string[]>(limited && myGroups.length === 1 ? [...myGroups] : []);
-  const [chosen, setChosen] = useState<Set<string>>(() => new Set());
+  const [chosen, setChosen] = useState<Set<string>>(() => new Set(initial));
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<string | null>(null);
   // The live line, chips and search need JavaScript, so they appear only once it has run.
@@ -25,6 +40,13 @@ export function NewsAudience({ limited, myGroups, list }: { limited: boolean; my
   const searchId = useId();
   const reachId = useId();
 
+  // Children chosen to start with (who came to a session) are listed first, so the coach sees who it's going to.
+  const ordered = useMemo(() => {
+    const first = new Set(initial);
+    return first.size ? [...list.filter((c) => first.has(c.id)), ...list.filter((c) => !first.has(c.id))] : list;
+    // Only the starting choice decides the order; ticking more later doesn't move rows about.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list]);
   const listGroups = useMemo(() => [...new Set(list.map((c) => c.ageGroup))], [list]);
   const shows = (c: NewsChild) => (group === null || c.ageGroup === group) && matchesName(query, c.firstName, c.lastName);
   const shown = list.filter(shows).length;
@@ -56,8 +78,8 @@ export function NewsAudience({ limited, myGroups, list }: { limited: boolean; my
     // The groups show under "Only these groups" and the children under "Chosen children", without JavaScript too.
     <fieldset className="group/aud flex flex-col gap-2">
       <legend className="field-label">Who is it for?</legend>
-      {limited ? null : radio("all", "Every family", true)}
-      {radio("groups", limited ? (myGroups.length === 1 ? `Everyone in ${myGroups[0]}` : "Only these groups:") : "Only these groups:", limited)}
+      {limited ? null : radio("all", "Every family", !startChildren)}
+      {radio("groups", limited ? (myGroups.length === 1 ? `Everyone in ${myGroups[0]}` : "Only these groups:") : "Only these groups:", limited && !startChildren)}
       <div className={`flex-wrap gap-2 pl-8 ${limited ? "flex group-has-[[value=children]:checked]/aud:hidden" : "hidden group-has-[[value=groups]:checked]/aud:flex"}`}>
         {myGroups.map((g) => (
           <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
@@ -73,7 +95,7 @@ export function NewsAudience({ limited, myGroups, list }: { limited: boolean; my
           </label>
         ))}
       </div>
-      {radio("children", "Chosen children", false)}
+      {radio("children", "Chosen children", startChildren)}
 
       <div className="hidden flex-col gap-2 pl-8 group-has-[[value=children]:checked]/aud:flex">
         {live ? (
@@ -126,7 +148,7 @@ export function NewsAudience({ limited, myGroups, list }: { limited: boolean; my
           </p>
         ) : null}
         <ul aria-label="Children" className="flex max-h-96 flex-col gap-1.5 overflow-y-auto rounded-app border border-line p-1.5">
-          {list.map((c) => {
+          {ordered.map((c) => {
             const name = shortName(c.firstName, c.lastName);
             const on = chosen.has(c.id);
             return (

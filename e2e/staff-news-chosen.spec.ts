@@ -117,3 +117,26 @@ test("after Coming, one tap adds that session to the calendar already on the pho
   expect(missing.status()).toBe(404);
   await context.close();
 });
+
+test("Messages offers one message to several families, and a past session preselects the children who came", async ({ browser }) => {
+  test.skip(!existsSync(ADMIN_STATE), "run with parent-app.spec.ts: needs its saved admin sign-in");
+  const admin = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
+  const page = await admin.newPage();
+  // From Messages: the post form opens on Chosen children, with replies on.
+  await page.goto("/admin/messages");
+  await page.getByRole("link", { name: "Message several families" }).click();
+  await expect(page).toHaveURL(/\/admin\/news\?to=children/);
+  await expect(page.getByLabel("Chosen children")).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /Let parents reply to you/ })).toBeChecked();
+
+  // From a past session with check-ins: those children are chosen already.
+  await page.goto("/admin/sessions");
+  await page.locator("summary", { hasText: "Recent sessions" }).click();
+  const came = page.getByRole("link", { name: /^Message the families who came to / }).first();
+  if ((await came.count()) === 0) return; // no session with check-ins in the past yet in this run
+  await came.click();
+  await expect(page.getByText(/^Chosen: the /)).toBeVisible();
+  await expect(page.getByLabel("Chosen children")).toBeChecked();
+  await expect(page.getByText(/^[1-9]\d* chosen$/)).toBeVisible();
+  await admin.close();
+});

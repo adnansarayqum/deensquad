@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, PenLine } from "lucide-react";
+import { ChevronRight, PenLine, Users } from "lucide-react";
 import { Notice, PageHeader } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
 import { UUID } from "@/lib/auth/tokens";
@@ -54,10 +54,17 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
           <Link href="/admin/messages?show=absences" aria-current={absences ? "page" : undefined} className={tab(absences)}>
             {newAbsences ? `Not coming (${newAbsences} new)` : "Not coming"}
           </Link>
-          <Link href="/admin/messages/new" className="btn-chunky btn-small btn-paper ml-auto">
-            <PenLine aria-hidden size={16} />
-            New message
-          </Link>
+          <span className="ml-auto flex flex-wrap gap-2">
+            {/* One message to several families at once (a news post to chosen children, replies on): Coach Jav's request. */}
+            <Link href="/admin/news?to=children#post-message" className="btn-chunky btn-small btn-paper">
+              <Users aria-hidden size={16} />
+              Message several families
+            </Link>
+            <Link href="/admin/messages/new" className="btn-chunky btn-small btn-paper">
+              <PenLine aria-hidden size={16} />
+              New message
+            </Link>
+          </span>
         </nav>
         {!all && rows.length > 1 ? (
           // Reading isn't replying: these families are waiting for an answer, so it asks first.

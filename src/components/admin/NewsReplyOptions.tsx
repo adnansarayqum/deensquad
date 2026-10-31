@@ -8,12 +8,22 @@ export type ComingToOption = { id: string; label: string };
  * starting Yes / No). The option boxes show only while "Ask for a quick answer" is ticked, by CSS, so the form works
  * without JavaScript.
  */
-export function NewsReplyOptions({ sessions = [], comingTo = "" }: { sessions?: ComingToOption[]; /** Preselected from a session's "Ask who's coming". */ comingTo?: string }) {
+export function NewsReplyOptions({
+  sessions = [],
+  comingTo = "",
+  replies = false,
+}: {
+  sessions?: ComingToOption[];
+  /** Preselected from a session's "Ask who's coming". */
+  comingTo?: string;
+  /** "Let parents reply to you" ticked to start with (a message to chosen families). */
+  replies?: boolean;
+}) {
   return (
     <fieldset className="group/qa flex flex-col gap-2">
       <legend className="field-label">Answers from parents</legend>
       <label className="flex min-h-12 items-center gap-3 text-[15px]">
-        <input type="checkbox" name="allowReplies" className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+        <input type="checkbox" name="allowReplies" defaultChecked={replies} className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
         <span>
           <b>Let parents reply to you</b>: each family&apos;s reply is a private conversation with you
         </span>

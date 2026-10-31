@@ -139,7 +139,16 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
     </span>
   );
   const actions = (s: AdminSession) =>
-    canChange(s) ? (
+    !editable ? (
+      // A session that's been: one message to the families of the children who came (a tournament, say).
+      s.attended > 0 ? (
+        <span className="-mx-2 flex flex-wrap items-center">
+          <Link href={`/admin/news?cameTo=${s.id}#post-message`} className={action} aria-label={`Message the families who came to ${s.title} ${shortDay(s.startsAt)}`}>
+            Message who came
+          </Link>
+        </span>
+      ) : null
+    ) : canChange(s) ? (
       <span className="-mx-2 flex flex-wrap items-center">
         {/* Tournament squads: pick who plays (matches and tournaments, or any session that already has a squad). */}
         {s.picked > 0 || s.kind !== "training" ? (
@@ -231,11 +240,9 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
               <th scope="col" className="px-2 py-2.5 font-bold">
                 Status
               </th>
-              {editable ? (
-                <th scope="col" className="px-2 py-2.5 font-bold">
-                  Actions
-                </th>
-              ) : null}
+              <th scope="col" className="px-2 py-2.5 font-bold">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -256,7 +263,7 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
                 <td className="max-w-56 px-2 py-2 text-ink-muted">{s.venue}</td>
                 <td className="px-2 py-2 whitespace-nowrap tabular-nums">{answers(s)}</td>
                 <td className="px-2 py-2">{status(s)}</td>
-                {editable ? <td className="px-2 py-2">{actions(s)}</td> : null}
+                <td className="px-2 py-2">{actions(s)}</td>
               </tr>
             ))}
           </tbody>
