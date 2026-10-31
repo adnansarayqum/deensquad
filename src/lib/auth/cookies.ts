@@ -8,7 +8,9 @@ export function cookieOptions(maxAgeSeconds: number) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    // Secure in production. The one exception is a production build served at http://localhost (the end-to-end
+    // tests): Safari's engine won't keep a Secure cookie over plain http, so the iPhone tests couldn't sign in.
+    secure: process.env.NODE_ENV === "production" && !(process.env.APP_URL ?? "").startsWith("http://localhost"),
     path: "/",
     maxAge: maxAgeSeconds,
   };
