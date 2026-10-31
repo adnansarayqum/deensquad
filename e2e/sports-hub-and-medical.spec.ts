@@ -163,7 +163,7 @@ test("medical and additional needs: saved by the parent with consent; the U7 coa
 
     // The To-do list offers it, as optional, without counting it as a step.
     await page.goto("/checklist");
-    await expect(page.getByRole("link", { name: /Medical and additional needs \(optional\).*Zaid/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Medical and additional needs.*Zaid/ })).toBeVisible();
 
     await page.goto("/player");
     // Player shows one child at a time: switch to Zaid first.

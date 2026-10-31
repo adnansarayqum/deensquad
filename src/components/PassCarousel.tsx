@@ -32,7 +32,7 @@ export function PassCarousel({ cards }: { cards: PassCard[] }) {
               type="button"
               aria-pressed={i === index}
               onClick={() => goTo(i)}
-              className={`inline-flex min-h-12 items-center rounded-pill border-2 px-4 text-[15px] font-extrabold ${
+              className={`inline-flex min-h-12 items-center rounded-pill border-2 px-4 text-[15px] font-bold ${
                 i === index ? "border-grass bg-grass-tint text-grass-text" : "border-line bg-paper text-ink"
               }`}
             >
@@ -65,7 +65,7 @@ export function PassCarousel({ cards }: { cards: PassCard[] }) {
             <h2 className="text-center font-display text-[40px] leading-none tracking-[0.02em] break-words">
               {c.firstName} <span className="text-ink-muted">· {groupPlural(c.ageGroup)}</span>
             </h2>
-            <div className="w-full max-w-[300px] rounded-app border-2 border-line bg-white p-2">
+            <div className="w-full max-w-[300px] rounded-app border border-line bg-white p-2">
               {/* eslint-disable-next-line @next/next/no-img-element -- a small PNG data URL drawn on the server */}
               <img src={c.src} alt={`QR code that checks ${c.firstName} in`} className={QR_IMG_CLASS} />
             </div>

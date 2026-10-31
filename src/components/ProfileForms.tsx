@@ -38,7 +38,7 @@ function Field({
         {label}
       </label>
       <input id={id} name={name} type={type} defaultValue={defaultValue} autoComplete={autoComplete} inputMode={inputMode} max={max} className="field" />
-      {hint ? <p className="mt-1.5 text-sm text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1.5 text-[15px] text-ink-muted">{hint}</p> : null}
     </div>
   );
 }
@@ -140,7 +140,7 @@ export function AddChildForm({ groups, lastName, today }: { groups: Group[]; las
             </option>
           ))}
         </select>
-        <p className="mt-1.5 text-sm text-ink-muted">Not sure? Pick your best guess. The club checks every new child&apos;s group.</p>
+        <p className="mt-1.5 text-[15px] text-ink-muted">Not sure? Pick your best guess. The club checks every new child&apos;s group.</p>
       </div>
       <Outcome state={state} pending={pending} saved="Added." />
       <button type="submit" className="btn-chunky btn-grass" disabled={pending}>
@@ -170,7 +170,7 @@ export function AddParentForm({ childList: children }: { childList: { id: string
         <fieldset className="flex flex-col gap-2">
           <legend className="field-label">Their children</legend>
           {children.map((c) => (
-            <label key={c.id} className="flex min-h-12 items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 text-[15px] font-bold has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
+            <label key={c.id} className="flex min-h-12 items-center gap-3 rounded-app border border-line bg-paper px-3.5 text-[15px] font-bold has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
               <input type="checkbox" name="child" value={c.id} defaultChecked className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
               {c.firstName}
             </label>

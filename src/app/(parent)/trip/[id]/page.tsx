@@ -40,8 +40,8 @@ export default async function ParentTripPage({ params, searchParams }: PageProps
         {longDay(session.startsAt)}
       </BackHeader>
       <main className="flex flex-col gap-4 px-4 pt-5 pb-4">
-        <section className="rounded-app border-2 border-line bg-paper p-4" aria-labelledby="trip-details">
-          <h2 id="trip-details" className="text-[17px] font-extrabold">
+        <section className="rounded-app border border-line bg-paper p-4" aria-labelledby="trip-details">
+          <h2 id="trip-details" className="text-[18px] font-bold">
             The trip
           </h2>
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[15px]">
@@ -56,9 +56,9 @@ export default async function ParentTripPage({ params, searchParams }: PageProps
         </section>
 
         {children.map((c) => (
-          <section key={c.id} className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4" aria-labelledby={`child-${c.id}`}>
+          <section key={c.id} className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4" aria-labelledby={`child-${c.id}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id={`child-${c.id}`} className="text-[17px] font-extrabold">
+              <h2 id={`child-${c.id}`} className="text-[18px] font-bold">
                 Can {c.firstName} go?
               </h2>
               {c.answer ? (
@@ -88,11 +88,11 @@ function ConsentForm({ sessionId, childId, name, phone, note, answered }: { sess
       <input type="hidden" name="child" value={childId} />
       <fieldset className="flex flex-col gap-2">
         <legend className="sr-only">Can {name} go on this trip?</legend>
-        <label className="flex min-h-12 items-center gap-3 rounded-app border-2 border-line px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
+        <label className="flex min-h-12 items-center gap-3 rounded-app border border-line px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
           <input type="radio" name="consent" value="yes" required defaultChecked={answered === true} className="h-5 w-5 accent-[var(--grass)]" />
           <span className="text-[15px] font-bold">Yes, I give permission for {name} to go</span>
         </label>
-        <label className="flex min-h-12 items-center gap-3 rounded-app border-2 border-line px-3.5 has-[:checked]:border-ink">
+        <label className="flex min-h-12 items-center gap-3 rounded-app border border-line px-3.5 has-[:checked]:border-ink">
           <input type="radio" name="consent" value="no" defaultChecked={answered === false} className="h-5 w-5 accent-[var(--ink)]" />
           <span className="text-[15px] font-bold">No, {name} isn&apos;t going</span>
         </label>

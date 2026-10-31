@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Check } from "lucide-react";
 
 export function Eyebrow({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <p className={`text-label uppercase text-ink-muted ${className}`}>{children}</p>;
+  return <p className={`text-[15px] leading-5 font-bold text-ink-muted ${className}`}>{children}</p>;
 }
 
 type PillTone = "done" | "action" | "gold" | "neutral";
@@ -16,7 +16,7 @@ const pillTone: Record<PillTone, string> = {
 /** Status pill. Always carries a word, never colour alone. */
 export function Pill({ tone, children, icon = false }: { tone: PillTone; children: ReactNode; icon?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-label uppercase ${pillTone[tone]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-pill px-2.5 py-0.5 text-[13px] leading-5 font-bold ${pillTone[tone]}`}>
       {icon && tone === "done" ? <Check aria-hidden size={13} strokeWidth={3} /> : null}
       {children}
     </span>
@@ -25,8 +25,8 @@ export function Pill({ tone, children, icon = false }: { tone: PillTone; childre
 
 export function Card({ children, className = "", tone = "paper" }: { children: ReactNode; className?: string; tone?: "paper" | "gold" | "grass" }) {
   const tones = {
-    paper: "border-2 border-line bg-paper",
-    gold: "border-2 border-crest-gold bg-gold-tint",
+    paper: "border border-line bg-paper",
+    gold: "border border-crest-gold bg-gold-tint",
     grass: "bg-grass-tint",
   };
   return <div className={`rounded-app ${tones[tone]} ${className}`}>{children}</div>;

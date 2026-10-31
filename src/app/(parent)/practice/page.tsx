@@ -28,7 +28,7 @@ export default async function PracticePage({ searchParams }: PageProps<"/practic
         {sheets.map((s) => (
           <Card key={s.id} className="flex flex-col gap-2.5 p-4">
             <div className="flex items-start justify-between gap-2">
-              <h2 className="text-[17px] font-extrabold">{s.title}</h2>
+              <h2 className="text-[18px] font-bold">{s.title}</h2>
               <Pill tone="neutral">{s.ageGroups.length ? s.ageGroups.join(", ") : "All groups"}</Pill>
             </div>
             {s.body ? <StepsText text={s.body} /> : null}

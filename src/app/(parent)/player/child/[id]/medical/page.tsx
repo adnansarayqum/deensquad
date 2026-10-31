@@ -42,12 +42,12 @@ export default async function ChildMedicalPage({ params, searchParams }: PagePro
           </p>
         ) : null}
         <Card className="flex flex-col gap-2 p-4 text-[15px] leading-[22px]">
-          <h2 className="text-base font-extrabold">Who sees this</h2>
+          <h2 className="text-base font-bold">Who sees this</h2>
           <p>
             Only you (and {name}&apos;s other parents in the app), the coaches of the {groupPlural(child.ageGroup)} and the club&apos;s admins. Never other
             parents, and it&apos;s never shown on the register list itself: the coaches tap to read it.
           </p>
-          {medical ? <p className="text-sm text-ink-muted">Last saved {day.format(new Date(medical.updatedAt))}.</p> : null}
+          {medical ? <p className="text-[15px] text-ink-muted">Last saved {day.format(new Date(medical.updatedAt))}.</p> : null}
         </Card>
 
         <Card className="p-4">
@@ -57,13 +57,13 @@ export default async function ChildMedicalPage({ params, searchParams }: PagePro
 
         {medical ? (
           <Card className="flex flex-col gap-3 p-4">
-            <h2 className="text-base font-extrabold">Remove it</h2>
+            <h2 className="text-base font-bold">Remove it</h2>
             <p className="text-[15px] leading-[22px]">This deletes everything above. The coaches won&apos;t see it any more.</p>
             <RemoveMedicalForm child={child} />
           </Card>
         ) : null}
 
-        <p className="px-1 text-sm leading-5 text-ink-muted">
+        <p className="px-1 text-[15px] leading-5 text-ink-muted">
           Tell a coach in person about anything urgent on the day: they may not have read this before the session.
         </p>
       </main>

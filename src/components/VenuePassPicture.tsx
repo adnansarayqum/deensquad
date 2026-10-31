@@ -6,7 +6,7 @@ import type { VenuePassView } from "@/lib/venue-pass/card";
 
 export function VenuePassPicture({ view }: { view: VenuePassView }) {
   return view.kind === "code" ? (
-    <div className="mx-auto w-full max-w-[300px] rounded-app border-2 border-line bg-white p-2">
+    <div className="mx-auto w-full max-w-[300px] rounded-app border border-line bg-white p-2">
       {/* eslint-disable-next-line @next/next/no-img-element -- a small PNG data URL drawn on the server */}
       <img src={view.src} alt="Your sports hub entry QR code" className={QR_IMG_CLASS} />
     </div>
@@ -15,7 +15,7 @@ export function VenuePassPicture({ view }: { view: VenuePassView }) {
     <img
       src={view.src}
       alt="Your sports hub entry code (your screenshot)"
-      className="mx-auto block h-auto max-h-[70vh] w-full max-w-[300px] rounded-app border-2 border-line bg-white object-contain"
+      className="mx-auto block h-auto max-h-[70vh] w-full max-w-[300px] rounded-app border border-line bg-white object-contain"
     />
   );
 }

@@ -22,8 +22,8 @@ export function CalendarLink({ hasLink, count = 0 }: { hasLink: boolean; count?:
       ) : null}
 
       {links ? (
-        <section aria-labelledby="calendar-ready" className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4">
-          <h2 id="calendar-ready" className="text-[17px] font-extrabold">
+        <section aria-labelledby="calendar-ready" className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
+          <h2 id="calendar-ready" className="text-[18px] font-bold">
             Your calendar link
           </h2>
           <p role="status" className="text-[15px] leading-[22px]">
@@ -51,15 +51,15 @@ export function CalendarLink({ hasLink, count = 0 }: { hasLink: boolean; count?:
 
       {(links || hasLink) && !state?.stopped ? (
         <>
-          <form action={run} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
+          <form action={run} className="flex flex-col gap-2 rounded-app border border-line bg-paper p-4">
             <input type="hidden" name="intent" value="another" />
-            <h2 className="text-[17px] font-extrabold">Another phone or calendar</h2>
+            <h2 className="text-[18px] font-bold">Another phone or calendar</h2>
             <p className="text-[15px] leading-[22px]">Makes a new link for it. The calendars you&apos;ve already set up keep getting updates.</p>
             <button type="submit" disabled={pending} className="btn-chunky btn-paper self-start">
               Get a link for another phone
             </button>
           </form>
-          <details className="rounded-app border-2 border-line bg-paper p-4">
+          <details className="rounded-app border border-line bg-paper p-4">
             <summary className="min-h-12 cursor-pointer content-center text-[15px] font-bold">Stop all calendar links</summary>
             <form action={run} className="mt-2 flex flex-col gap-3">
               <input type="hidden" name="intent" value="stop" />

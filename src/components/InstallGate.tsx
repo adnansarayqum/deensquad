@@ -179,7 +179,7 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
         <AppHeader>
           <div className="flex items-center gap-3">
             <Image src="/crest.png" alt="" width={52} height={52} className="rounded-[12px]" priority />
-            <p className="text-label text-floodlight uppercase">The Deen Squad Football Academy</p>
+            <p className="text-[15px] leading-5 font-bold text-floodlight">The Deen Squad Football Academy</p>
           </div>
           <h2 id="install-gate-title" ref={heading} tabIndex={-1} className="font-display text-[44px] leading-[0.95] tracking-[0.02em] shadow-none outline-none">
             Add Deen Squad to your home screen
@@ -245,14 +245,14 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
           )}
 
           {ios ? (
-            <p className="text-[14px] leading-5 text-ink-muted">You&apos;ll sign in once more in the app. We&apos;ll email you a 6-digit code, it takes 10 seconds.</p>
+            <p className="text-[15px] leading-5 text-ink-muted">You&apos;ll sign in once more in the app. We&apos;ll email you a 6-digit code, it takes 10 seconds.</p>
           ) : view.mode === "android-inapp" ? (
-            <p className="text-[14px] leading-5 text-ink-muted">You&apos;ll sign in once more in Chrome. We&apos;ll email you a 6-digit code, it takes 10 seconds.</p>
+            <p className="text-[15px] leading-5 text-ink-muted">You&apos;ll sign in once more in Chrome. We&apos;ll email you a 6-digit code, it takes 10 seconds.</p>
           ) : null}
         </div>
 
         {/* Stays on screen however short the screen is (an iPhone SE with Safari's bars): the steps scroll above it. */}
-        <div className="sticky bottom-0 flex flex-col items-center gap-2 border-t-2 border-line bg-cream px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]">
+        <div className="sticky bottom-0 flex flex-col items-center gap-2 border-t border-line bg-cream px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]">
           {view.mode === "android-prompt" && !installed ? (
             <button type="button" onClick={install} disabled={prompting} className="btn-chunky btn-grass w-full">
               Install the app
@@ -263,7 +263,7 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
               Not now
             </button>
           ) : (
-            <button type="button" onClick={dismiss} className="min-h-12 px-4 text-[14px] text-ink-muted underline underline-offset-2">
+            <button type="button" onClick={dismiss} className="min-h-12 px-4 text-[15px] text-ink-muted underline underline-offset-2">
               Continue in browser
             </button>
           )}
@@ -279,7 +279,7 @@ function Steps({ children }: { children: ReactNode }) {
 
 function Step({ n, icon, extra, children }: { n: number; icon: ReactNode; extra?: ReactNode; children: ReactNode }) {
   return (
-    <li className="flex items-start gap-3 rounded-app border-2 border-line bg-paper p-4">
+    <li className="flex items-start gap-3 rounded-app border border-line bg-paper p-4">
       <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-pill bg-pitch text-[16px] font-bold text-on-pitch">
         {n}
       </span>
@@ -358,7 +358,7 @@ function CopyLink() {
         {state === "copied" ? "Link copied" : "Copy link"}
       </button>
       {state === "manual" ? (
-        <label className="flex flex-col gap-1 text-[14px] text-ink-muted">
+        <label className="flex flex-col gap-1 text-[15px] text-ink-muted">
           Press and hold the link to copy it
           <input ref={field} readOnly value={href} className="field text-[15px]" onFocus={(e) => e.currentTarget.select()} />
         </label>

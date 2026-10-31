@@ -49,3 +49,4 @@ next-env.d.ts
 /.data/
 e2e-output.log
 e2e-tail.txt
+.shots

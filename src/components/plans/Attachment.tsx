@@ -17,7 +17,7 @@ export function Attachment({ file, label, from }: { file: FileRef; label?: strin
     <Link
       href={href}
       onClick={() => markViewerOpened(href)}
-      className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-line bg-paper px-3 py-2 transition-transform active:translate-y-0.5"
+      className="flex min-h-12 items-center gap-3 rounded-xl border border-line bg-paper px-3 py-2 transition-transform active:translate-y-0.5"
     >
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-grass-tint text-grass-text">
         <Icon aria-hidden size={20} />

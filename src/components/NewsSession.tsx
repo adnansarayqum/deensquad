@@ -48,7 +48,7 @@ export function ComingOnNews({ session, family, now }: { session: NewsSession; f
         const record = session.answers[c.id];
         return (
           <div key={c.id} className="flex flex-col gap-2">
-            {kids.length > 1 ? <p className="text-[17px] font-extrabold">{c.firstName}</p> : null}
+            {kids.length > 1 ? <p className="text-[18px] font-bold">{c.firstName}</p> : null}
             <AvailabilityPicker
               sessionId={session.id}
               playerId={c.id}

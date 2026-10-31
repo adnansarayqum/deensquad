@@ -16,7 +16,7 @@ export function Thread({ messages, now }: { messages: MessageView[]; now: Date }
           <p className="flex flex-wrap items-center gap-x-2 px-1 text-[13px] text-ink-muted">
             <span className="font-bold text-ink">{m.mine ? "You" : m.authorName}</span>
             {m.mine ? null : (
-              <span className="rounded-pill border border-line bg-paper px-2 py-0.5 text-label uppercase">{m.authorKind === "staff" ? "Coach" : "Parent"}</span>
+              <span className="rounded-pill border border-line bg-paper px-2 py-0.5 text-[13px] leading-5 font-bold">{m.authorKind === "staff" ? "Coach" : "Parent"}</span>
             )}
             <span>{postedLabel(m.at, now)}</span>
           </p>
@@ -43,9 +43,9 @@ export function QuotedNews({ news, now }: { news: { title: string; body: string;
   const long = news.body.length > 240;
   const meta = [news.postedBy, postedLabel(news.postedAt, now)].filter(Boolean).join(" · ");
   return (
-    <section aria-label="The message this is about" className="flex flex-col gap-1.5 rounded-app border-2 border-line border-l-[6px] border-l-grass bg-paper px-3.5 py-3">
-      <p className="text-label text-ink-muted uppercase">Replying to</p>
-      <h2 className="text-[16px] leading-[22px] font-extrabold">{news.title}</h2>
+    <section aria-label="The message this is about" className="flex flex-col gap-1.5 rounded-app border border-line border-l-[6px] border-l-grass bg-paper px-3.5 py-3">
+      <p className="text-[13px] font-bold text-ink-muted">Replying to</p>
+      <h2 className="text-[16px] leading-[22px] font-bold">{news.title}</h2>
       {long ? (
         <details className="group">
           <summary className="cursor-pointer list-none text-[15px] leading-[22px]">

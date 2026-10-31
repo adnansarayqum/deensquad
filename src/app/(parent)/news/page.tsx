@@ -68,7 +68,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
         {wellbeingChild ? (
           <Link
             href={`/player/wellbeing?child=${wellbeingChild.id}&from=/news`}
-            className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3 text-ink"
+            className="flex items-center gap-3 rounded-app border border-line bg-paper px-3.5 py-3 text-ink"
           >
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="text-[15px] font-bold">How&apos;s {wellbeingChild.firstName} finding football?</span>
@@ -122,11 +122,11 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
                   </Pill>
                   <span className="text-[13px] text-ink-muted">{postedLabel(a.postedAt, now)}</span>
                 </div>
-                <h2 className="text-[19px] leading-[25px] font-bold">{a.title}</h2>
+                <h2 className="text-[20px] leading-[25px] font-bold">{a.title}</h2>
                 <p className="text-[16px] leading-6 whitespace-pre-line">{a.body}</p>
                 <MediaGallery items={a.media} label={a.title} />
                 {outOfDate(a) ? <SessionNow session={a.session!} now={now} /> : null}
-                {a.postedBy ? <p className="text-[14px] text-ink-muted">From {a.postedBy}</p> : null}
+                {a.postedBy ? <p className="text-[15px] text-ink-muted">From {a.postedBy}</p> : null}
                 {a.quickAnswers && a.reaches.length ? (
                   <Answers a={a} family={family} />
                 ) : canAnswerComing(a.session) ? (
@@ -160,9 +160,9 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
               <span id="earlier">Earlier</span>
             </Eyebrow>
             {earlier.map((a) => (
-              <ReadFocus key={a.id} id={a.id} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper px-4 py-3.5">
+              <ReadFocus key={a.id} id={a.id} className="flex flex-col gap-2 rounded-app border border-line bg-paper px-4 py-3.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[14px] text-ink-muted">
+                  <span className="text-[15px] text-ink-muted">
                     {a.topic} · {a.audience === "all" ? "All groups" : a.audience.join(", ")} · {postedLabel(a.postedAt, now)}
                   </span>
                   {outOfDate(a) ? (
@@ -178,7 +178,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
                     </span>
                   ) : null}
                 </div>
-                <h2 className={`text-[17px] leading-[23px] font-bold ${outOfDate(a) ? "text-ink-muted line-through decoration-1" : ""}`}>{a.title}</h2>
+                <h2 className={`text-[18px] leading-[23px] font-bold ${outOfDate(a) ? "text-ink-muted line-through decoration-1" : ""}`}>{a.title}</h2>
                 <p className="text-[16px] leading-6 whitespace-pre-line text-ink-muted">{a.body}</p>
                 <MediaGallery items={a.media} label={a.title} />
                 {outOfDate(a) ? <SessionNow session={a.session!} now={now} /> : null}

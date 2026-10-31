@@ -25,7 +25,7 @@ export function ProgressSummaryView({ firstName, progress, by = false }: { first
           </li>
         ))}
       </ul>
-      <p className="text-[14px] text-ink-muted">
+      <p className="text-[15px] text-ink-muted">
         {ratedLine(progress.count, progress.since)}
         {by && last ? ` · last ${last}${progress.last?.by ? ` by ${progress.last.by}` : ""}` : ""}
       </p>

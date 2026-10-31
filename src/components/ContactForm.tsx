@@ -38,7 +38,7 @@ export function ContactForm({ child, siblings }: { child: Kid; siblings: Kid[] }
         <fieldset className="flex flex-col gap-2">
           <legend className="field-label">Also add for</legend>
           {siblings.map((s) => (
-            <label key={s.id} className="flex min-h-12 items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5">
+            <label key={s.id} className="flex min-h-12 items-center gap-3 rounded-app border border-line bg-paper px-3.5">
               <input type="checkbox" name="child" value={s.id} defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
               <span className="text-base font-bold">{s.firstName}</span>
             </label>

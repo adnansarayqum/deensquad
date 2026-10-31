@@ -19,7 +19,7 @@ export function VideoCard({ video, name, title = "Practice video" }: { video: Yo
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="relative aspect-video w-full overflow-hidden rounded-app border-2 border-line bg-pitch">
+      <div className="relative aspect-video w-full overflow-hidden rounded-app border border-line bg-pitch">
         {playing ? (
           <iframe
             ref={frame}

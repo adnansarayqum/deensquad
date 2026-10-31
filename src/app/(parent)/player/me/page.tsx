@@ -27,9 +27,9 @@ export default async function MyDetailsPage() {
           <MyDetailsForm details={details} />
         </Card>
         <Card className="flex flex-col gap-1 p-4">
-          <h2 className="text-base font-extrabold">Email address</h2>
+          <h2 className="text-base font-bold">Email address</h2>
           <p className="text-[15px] leading-[22px] [overflow-wrap:anywhere]">{details.email ?? user.email}</p>
-          <p className="text-sm leading-5 text-ink-muted">
+          <p className="text-[15px] leading-5 text-ink-muted">
             It&apos;s how you sign in, so it can&apos;t be changed here. To change your email, ask the club
             {email ? (
               <>

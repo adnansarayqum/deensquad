@@ -65,7 +65,7 @@ export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
 
   if (state === "hidden") return null;
   return (
-    <div className="flex items-start gap-3 rounded-app border-2 border-line bg-paper p-4">
+    <div className="flex items-start gap-3 rounded-app border border-line bg-paper p-4">
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gold-tint text-gold-text">
         <BellRing aria-hidden size={22} />
       </span>

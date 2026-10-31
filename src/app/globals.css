@@ -39,9 +39,8 @@
     min-height: 52px;
     padding-inline: 1.25rem;
     border-radius: var(--radius-l);
-    font-weight: 800;
+    font-weight: 700;
     font-size: 16px;
-    letter-spacing: 0.01em;
     transition: transform 150ms ease, box-shadow 150ms ease;
   }
   .btn-chunky:active:not(:disabled) {
@@ -121,7 +120,6 @@
     border-color: var(--grass);
     background: var(--grass-tint);
     color: var(--grass-text);
-    font-weight: 800;
   }
   .choice-chip:has(input:focus-visible) {
     outline: 3px solid var(--focus);

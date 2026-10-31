@@ -13,7 +13,7 @@ import { loadFamilyParents } from "@/lib/parent/profile";
 
 export const metadata: Metadata = { title: "Settings" };
 
-const row = "flex min-h-[52px] items-center justify-between gap-3 border-b-2 border-line px-3 text-[16px] font-bold last:border-b-0";
+const row = "flex min-h-[52px] items-center justify-between gap-3 border-b border-line px-3 text-[16px] font-bold last:border-b-0";
 
 /**
  * Family → Settings (redesign brief, Oct 2026): the account things that used to sit at the foot of Family, so Family
@@ -29,8 +29,8 @@ export default async function SettingsPage() {
     <>
       <BackHeader back="/player" backLabel="Family" title="Settings" />
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">
-        <section aria-labelledby="account" className="flex flex-col rounded-app border-2 border-line bg-paper p-1">
-          <h2 id="account" className="px-3 pt-3 pb-1 text-[17px] font-extrabold">
+        <section aria-labelledby="account" className="flex flex-col rounded-app border border-line bg-paper p-1">
+          <h2 id="account" className="px-3 pt-3 pb-1 text-[18px] font-bold">
             You and your family
           </h2>
           <Link href="/player/me" className={row}>
@@ -61,7 +61,7 @@ export default async function SettingsPage() {
         </section>
 
         <section aria-labelledby="notifications" className="flex flex-col gap-2">
-          <h2 id="notifications" className="text-[17px] font-extrabold">
+          <h2 id="notifications" className="text-[18px] font-bold">
             Notifications
           </h2>
           <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} />
@@ -71,14 +71,14 @@ export default async function SettingsPage() {
         </section>
 
         <section aria-labelledby="appearance" className="flex flex-col gap-2">
-          <h2 id="appearance" className="text-[17px] font-extrabold">
+          <h2 id="appearance" className="text-[18px] font-bold">
             Appearance
           </h2>
           <AppearanceChoice />
         </section>
 
-        <section aria-labelledby="your-data" className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
-          <h2 id="your-data" className="text-[17px] font-extrabold">
+        <section aria-labelledby="your-data" className="flex flex-col gap-2 rounded-app border border-line bg-paper p-4">
+          <h2 id="your-data" className="text-[18px] font-bold">
             Your data
           </h2>
           <p className="text-[15px] leading-[22px]">See everything the app holds about you and your children, or ask the club to delete your account.</p>

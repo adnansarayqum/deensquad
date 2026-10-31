@@ -41,13 +41,13 @@ export default async function BasketPage() {
                         {l.quantity > 1 ? `${l.quantity} × ` : ""}
                         {l.product.name}
                       </span>
-                      <span className="text-sm text-ink-muted">
+                      <span className="text-[15px] text-ink-muted">
                         {[l.childName ? `For ${l.childName}` : null, l.size ? `Size ${l.size}` : null, l.initials ? `Initials ${l.initials}` : null]
                           .filter(Boolean)
                           .join(" · ") || "One size"}
                       </span>
                     </div>
-                    <span className="font-extrabold tabular-nums">{formatPence(l.linePence)}</span>
+                    <span className="font-bold tabular-nums">{formatPence(l.linePence)}</span>
                     <form action={removeFromBasket}>
                       <input type="hidden" name="index" value={l.index} />
                       <button
@@ -66,7 +66,7 @@ export default async function BasketPage() {
               <span className="text-base font-bold">Total</span>
               <span className="font-display text-[34px] leading-none tabular-nums">{formatPence(totalPence)}</span>
             </div>
-            <p className="px-1 text-sm text-ink-muted">The club orders your kit once you&apos;ve paid, and hands it out at Friday training.</p>
+            <p className="px-1 text-[15px] text-ink-muted">The club orders your kit once you&apos;ve paid, and hands it out at Friday training.</p>
             <CheckoutForm options={options} total={formatPence(totalPence)} />
           </>
         )}

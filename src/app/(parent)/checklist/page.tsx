@@ -60,7 +60,7 @@ export default async function ChecklistPage() {
               </span>
             </div>
             {remaining === 0 ? (
-              <p className="text-sm text-on-pitch-muted">All done. {single ? `${who} is` : "Everyone is"} fully set up.</p>
+              <p className="text-[15px] text-on-pitch-muted">All done. {single ? `${who} is` : "Everyone is"} fully set up.</p>
             ) : null}
           </>
         ) : null}
@@ -80,10 +80,10 @@ export default async function ChecklistPage() {
           // A child with nothing left folds to one line, so the screen shows what still needs doing.
           if (heading && todo.length === 0) {
             return (
-              <details key={key} aria-label={label} className="group mt-2 rounded-app border-2 border-line bg-paper">
+              <details key={key} aria-label={label} className="group mt-2 rounded-app border border-line bg-paper">
                 <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-2 [&::-webkit-details-marker]:hidden">
-                  <span className="text-[17px] font-extrabold">{heading}</span>
-                  <span className="flex items-center gap-1.5 text-sm font-bold text-grass-text tabular-nums">
+                  <span className="text-[18px] font-bold">{heading}</span>
+                  <span className="flex items-center gap-1.5 text-[15px] font-bold text-grass-text tabular-nums">
                     <Check aria-hidden size={16} strokeWidth={3} />
                     {steps.done} of {steps.total} done
                     <ChevronRight aria-hidden size={18} className="text-ink-muted transition-transform group-open:rotate-90" />
@@ -96,9 +96,9 @@ export default async function ChecklistPage() {
           return (
             <section key={key} aria-label={label} className="flex flex-col gap-2.5">
               {heading ? (
-                <h2 className="mt-2 flex items-baseline justify-between text-[19px] font-extrabold">
+                <h2 className="mt-2 flex items-baseline justify-between text-[20px] font-bold">
                   {heading}
-                  <span className="text-sm font-bold text-ink-muted tabular-nums">
+                  <span className="text-[15px] font-bold text-ink-muted tabular-nums">
                     {steps.done} of {steps.total} done
                   </span>
                 </h2>
@@ -159,17 +159,17 @@ function TodoRow({ item }: { item: ChecklistItemView }) {
   return (
     <Link
       href={item.href ?? "/checklist"}
-      className="flex items-center gap-3.5 rounded-app border-2 border-line bg-paper p-3.5 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
+      className="flex items-center gap-3.5 rounded-app border border-line bg-paper p-3.5 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
     >
       <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[14px] bg-orange-tint text-kit-orange">
         <Icon aria-hidden size={24} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-base font-bold">{item.title}</span>
-        <span className="text-sm text-ink-muted">{item.detail}</span>
-        {item.note ? <span className="text-sm font-bold">{item.note}</span> : null}
+        <span className="text-[15px] text-ink-muted">{item.detail}</span>
+        {item.note ? <span className="text-[15px] font-bold">{item.note}</span> : null}
       </span>
-      <span className="rounded-xl bg-grass px-3 py-2 text-sm font-extrabold text-on-grass shadow-[0_3px_0_var(--grass-lip)]">{item.actionLabel}</span>
+      <span className="rounded-xl bg-grass px-3 py-2 text-[15px] font-bold text-on-grass shadow-[0_3px_0_var(--grass-lip)]">{item.actionLabel}</span>
     </Link>
   );
 }
@@ -178,7 +178,7 @@ function TodoRow({ item }: { item: ChecklistItemView }) {
 function OptionalRow({ item }: { item: ChecklistItemView }) {
   const Icon = icons[item.icon];
   return (
-    <Link href={item.href ?? "/checklist"} className="flex min-h-12 items-center gap-3.5 rounded-app border-2 border-line bg-paper px-3.5 py-3">
+    <Link href={item.href ?? "/checklist"} className="flex min-h-12 items-center gap-3.5 rounded-app border border-line bg-paper px-3.5 py-3">
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cream text-ink-muted">
         <Icon aria-hidden size={22} />
       </span>
@@ -186,7 +186,7 @@ function OptionalRow({ item }: { item: ChecklistItemView }) {
         <span className="text-[15px] font-bold">{item.title}</span>
         <span className="text-[13px] text-ink-muted">{item.detail}</span>
       </span>
-      <span className="text-sm font-bold text-grass-text">{item.actionLabel}</span>
+      <span className="text-[15px] font-bold text-grass-text">{item.actionLabel}</span>
       <ChevronRight aria-hidden size={18} className="shrink-0 text-ink-muted" />
     </Link>
   );
@@ -196,14 +196,14 @@ function OptionalRow({ item }: { item: ChecklistItemView }) {
 function PartsRow({ item }: { item: ChecklistItemView }) {
   const Icon = icons[item.icon];
   return (
-    <div className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-3.5 shadow-lip-neutral">
+    <div className="flex flex-col gap-3 rounded-app border border-line bg-paper p-3.5 shadow-lip-neutral">
       <div className="flex items-center gap-3.5">
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[14px] bg-orange-tint text-kit-orange">
           <Icon aria-hidden size={24} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="text-base font-bold">{item.title}</span>
-          <span className="text-sm text-ink-muted">{item.detail}</span>
+          <span className="text-[15px] text-ink-muted">{item.detail}</span>
         </span>
       </div>
       <ul className="flex flex-col gap-2">
@@ -212,15 +212,15 @@ function PartsRow({ item }: { item: ChecklistItemView }) {
             <li key={p.childId} className="flex min-h-12 items-center gap-3 rounded-xl bg-grass-tint px-3">
               <Check aria-hidden size={18} strokeWidth={3} className="text-grass-text" />
               <span className="flex-1 text-[15px] font-bold">{p.name}</span>
-              <span className="text-sm font-bold text-grass-text">Signed</span>
+              <span className="text-[15px] font-bold text-grass-text">Signed</span>
             </li>
           ) : (
             <li key={p.childId}>
-              <Link href={p.href} className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-line px-3">
+              <Link href={p.href} className="flex min-h-12 items-center gap-3 rounded-xl border border-line px-3">
                 <span className="flex-1 text-[15px] font-bold">
                   {item.actionLabel} with {p.name}
                 </span>
-                <span className="text-sm font-bold text-kit-orange">To sign</span>
+                <span className="text-[15px] font-bold text-kit-orange">To sign</span>
                 <ChevronRight aria-hidden size={18} className="text-ink-muted" />
               </Link>
             </li>

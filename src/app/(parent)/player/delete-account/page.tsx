@@ -26,7 +26,7 @@ export default async function DeleteAccountPage() {
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">
         {asked ? (
           <Card tone="grass" className="flex flex-col gap-2 p-4">
-            <h2 className="text-[17px] font-extrabold text-grass-text">Request sent</h2>
+            <h2 className="text-[18px] font-bold text-grass-text">Request sent</h2>
             <p role="status" className="text-[15px] leading-[22px]">
               You asked the club to delete your account on {longDay(asked)}. An admin will be in touch before anything is deleted. You can keep using the
               app until then.
@@ -37,7 +37,7 @@ export default async function DeleteAccountPage() {
           </Card>
         ) : (
           <Card className="flex flex-col gap-3 p-4">
-            <h2 className="text-[17px] font-extrabold">Before you ask</h2>
+            <h2 className="text-[18px] font-bold">Before you ask</h2>
             <ul className="flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-[22px]">
               <li>This sends a request to the club&apos;s admins. Nothing is deleted straight away.</li>
               <li>An admin will contact you about {children}&apos;s place at the club and their records, such as attendance and payments.</li>

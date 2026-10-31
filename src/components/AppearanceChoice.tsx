@@ -21,7 +21,7 @@ export function AppearanceChoice() {
     <fieldset className="flex flex-col gap-2">
       <legend className="sr-only">Appearance</legend>
       {CHOICES.map((c) => (
-        <label key={c.value} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 text-[16px] font-bold has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
+        <label key={c.value} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-app border border-line bg-paper px-3.5 text-[16px] font-bold has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
           <input
             type="radio"
             name="appearance"
@@ -36,7 +36,7 @@ export function AppearanceChoice() {
           {c.label}
         </label>
       ))}
-      <p className="text-[14px] text-ink-muted">Kept on this phone only.</p>
+      <p className="text-[15px] text-ink-muted">Kept on this phone only.</p>
     </fieldset>
   );
 }

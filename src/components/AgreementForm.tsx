@@ -6,7 +6,7 @@ import { signAgreement, type AgreementState } from "@/lib/parent/actions";
 
 export function AgreementForm({ childId, childName, parentName }: { childId: string; childName: string; parentName: string }) {
   const [state, action, pending, keep] = useKeptActionState<AgreementState>(signAgreement, {});
-  const box = "flex min-h-12 cursor-pointer items-start gap-3 rounded-app border-2 border-line bg-paper p-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint";
+  const box = "flex min-h-12 cursor-pointer items-start gap-3 rounded-app border border-line bg-paper p-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint";
   return (
     <form action={action} onSubmit={keep} className="flex flex-col gap-3" noValidate>
       <input type="hidden" name="child" value={childId} />

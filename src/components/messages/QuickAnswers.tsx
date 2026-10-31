@@ -54,7 +54,7 @@ function AnswerRow({ announcementId, title, options, row }: { announcementId: st
               aria-pressed={chosen}
               aria-label={answerButtonName(option, row.childName)}
               onClick={() => choose(option)}
-              className={`flex min-h-12 min-w-0 flex-1 basis-24 items-center justify-center rounded-app border-2 px-3 text-center text-base font-extrabold break-words shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none ${
+              className={`flex min-h-12 min-w-0 flex-1 basis-24 items-center justify-center rounded-app border-2 px-3 text-center text-base font-bold break-words shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none ${
                 chosen ? "border-ink bg-cream text-ink" : "border-line bg-paper text-ink"
               }`}
             >
@@ -66,7 +66,7 @@ function AnswerRow({ announcementId, title, options, row }: { announcementId: st
       {failed && !pending ? (
         <TapProblem problem={failed.problem} onRetry={() => choose(failed.value)} />
       ) : (
-        <p className="text-sm text-ink-muted" aria-live="polite">
+        <p className="text-[15px] text-ink-muted" aria-live="polite">
           {pending
             ? "Saving…"
             : optimistic

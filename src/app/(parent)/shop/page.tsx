@@ -35,13 +35,13 @@ export default async function ShopPage() {
               <li key={p.id}>
                 <Link
                   href={`/shop/${p.id}`}
-                  className="flex h-full flex-col overflow-hidden rounded-app border-2 border-line bg-paper shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
+                  className="flex h-full flex-col overflow-hidden rounded-app border border-line bg-paper shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none"
                 >
                   <ProductImage src={p.imageUrl} name={p.name} />
                   <span className="flex flex-1 flex-col gap-0.5 p-3">
                     <span className="text-[15px] leading-5 font-bold">{p.name}</span>
                     <span className="mt-auto flex items-center justify-between gap-1">
-                      <span className="text-[15px] font-extrabold text-grass-text tabular-nums">{formatPence(p.pricePence)}</span>
+                      <span className="text-[15px] font-bold text-grass-text tabular-nums">{formatPence(p.pricePence)}</span>
                       <span className="flex items-center text-[13px] font-bold text-ink-muted">
                         View
                         <ChevronRight aria-hidden size={16} />

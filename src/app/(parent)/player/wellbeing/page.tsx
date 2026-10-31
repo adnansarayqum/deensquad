@@ -26,11 +26,11 @@ export default async function WellbeingPage({ searchParams }: PageProps<"/player
       <BackHeader back={back.href} backLabel={back.label} title={child ? `How's ${child.firstName} doing?` : "Wellbeing check-in"} />
       <main className="flex flex-col gap-4 px-4 pt-5 pb-4">
         {!child ? (
-          <p className="rounded-app border-2 border-line bg-paper p-4 text-[15px]">No players are linked to your email yet.</p>
+          <p className="rounded-app border border-line bg-paper p-4 text-[15px]">No players are linked to your email yet.</p>
         ) : (
           <>
-            <section className="flex flex-col gap-3 rounded-app border-2 border-line bg-paper p-4" aria-labelledby="checkin">
-              <h2 id="checkin" className="text-[17px] font-extrabold">
+            <section className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4" aria-labelledby="checkin">
+              <h2 id="checkin" className="text-[18px] font-bold">
                 How is {child.firstName} finding football at the moment?
               </h2>
               <StatefulForm action={giveCheckinAction} submitLabel="Send to the club" pendingLabel="Sending…">
@@ -40,7 +40,7 @@ export default async function WellbeingPage({ searchParams }: PageProps<"/player
                   {(Object.keys(MOODS) as Mood[]).map((m) => (
                     <label
                       key={m}
-                      className="flex min-h-14 cursor-pointer items-center justify-center rounded-app border-2 border-line bg-cream px-2 text-center text-[15px] font-extrabold has-[:checked]:border-ink has-[:checked]:bg-paper has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-[var(--focus)]"
+                      className="flex min-h-14 cursor-pointer items-center justify-center rounded-app border border-line bg-cream px-2 text-center text-[15px] font-bold has-[:checked]:border-ink has-[:checked]:bg-paper has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-[var(--focus)]"
                     >
                       <input type="radio" name="mood" value={m} required className="sr-only" />
                       {FACES[m]}
@@ -64,8 +64,8 @@ export default async function WellbeingPage({ searchParams }: PageProps<"/player
             </section>
 
             {history.length > 0 ? (
-              <section className="rounded-app border-2 border-line bg-paper p-4" aria-labelledby="earlier">
-                <h2 id="earlier" className="text-[17px] font-extrabold">
+              <section className="rounded-app border border-line bg-paper p-4" aria-labelledby="earlier">
+                <h2 id="earlier" className="text-[18px] font-bold">
                   Earlier check-ins
                 </h2>
                 <ul className="mt-2 flex flex-col">

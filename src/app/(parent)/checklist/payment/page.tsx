@@ -40,7 +40,7 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
             <PoundSterling aria-hidden size={22} />
           </span>
           <div className="flex flex-col gap-0.5">
-            <h2 className="text-base font-extrabold">What it costs</h2>
+            <h2 className="text-base font-bold">What it costs</h2>
             <p className="text-[15px] leading-[22px] whitespace-pre-line">{fee ?? `${feeLine(fee)}.`}</p>
           </div>
         </Card>
@@ -57,7 +57,7 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
         {needed.length === 0 ? null : url ? (
           <>
             <Card className="flex flex-col gap-3 p-4">
-              <h2 className="text-base font-extrabold">What happens</h2>
+              <h2 className="text-base font-bold">What happens</h2>
               <ol className="flex list-decimal flex-col gap-2 pl-5 text-[15px] leading-[22px]">
                 <li>
                   Open TeamFeePay and choose {needed.length > 1 ? "each child's group" : `${needed[0].firstName}'s group`} ({groups}).
@@ -77,16 +77,16 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
               <button type="submit" className="btn-chunky btn-paper w-full">
                 {needed.length > 1 ? "I've set it up" : `I've set it up for ${needed[0].firstName}`}
               </button>
-              {needed.length > 1 ? <p className="text-center text-sm font-bold">Covers {names(needed)}</p> : null}
+              {needed.length > 1 ? <p className="text-center text-[15px] font-bold">Covers {names(needed)}</p> : null}
             </form>
           </>
         ) : (
-          <p className="rounded-app border-2 border-line bg-paper p-3.5 text-[15px] text-ink">The club will tell you how to pay.</p>
+          <p className="rounded-app border border-line bg-paper p-3.5 text-[15px] text-ink">The club will tell you how to pay.</p>
         )}
 
         {canPayg.length > 0 ? (
           <Card className="flex flex-col gap-3 p-4">
-            <h2 className="text-base font-extrabold">Staying on pay as you go?</h2>
+            <h2 className="text-base font-bold">Staying on pay as you go?</h2>
             <p className="text-[15px] leading-[22px]">
               If you&apos;ve agreed with the club to pay for each session instead of the monthly plan, tell us here.
             </p>
@@ -97,14 +97,14 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
               <button type="submit" className="btn-chunky btn-paper w-full">
                 {canPayg.length > 1 ? "We're paying as we go" : `We're paying as we go for ${canPayg[0].firstName}`}
               </button>
-              {canPayg.length > 1 ? <p className="text-center text-sm font-bold">Covers {names(canPayg)}</p> : null}
+              {canPayg.length > 1 ? <p className="text-center text-[15px] font-bold">Covers {names(canPayg)}</p> : null}
             </form>
           </Card>
         ) : null}
 
         {needed.length === 0 && payg.length > 0 && url ? (
           <Card className="flex flex-col gap-3 p-4">
-            <h2 className="text-base font-extrabold">Moving to the monthly plan?</h2>
+            <h2 className="text-base font-bold">Moving to the monthly plan?</h2>
             <p className="text-[15px] leading-[22px]">Set it up on TeamFeePay, then tell the club here.</p>
             <a href={url} target="_blank" rel="noopener noreferrer" className="btn-chunky btn-paper">
               Open TeamFeePay

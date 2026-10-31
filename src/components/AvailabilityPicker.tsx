@@ -61,7 +61,7 @@ export function AvailabilityPicker({
       track("availability_answered", { answer: value });
     });
 
-  const base = `flex ${compact ? "min-h-[64px] flex-row gap-2 text-base" : "min-h-[100px] flex-col gap-1.5 text-[17px]"} min-w-0 flex-1 basis-32 items-center justify-center rounded-app border-2 px-2 text-center font-extrabold transition-transform active:translate-y-1 active:shadow-none`;
+  const base = `flex ${compact ? "min-h-[56px] flex-row gap-2 text-base" : "min-h-[100px] flex-col gap-1.5 text-[18px]"} min-w-0 flex-1 basis-32 items-center justify-center rounded-app border-2 px-2 text-center font-bold transition-transform active:translate-y-1 active:shadow-none`;
   const coming = optimistic === "coming";
   const away = optimistic === "away";
   const icon = compact ? 22 : 30;
@@ -100,7 +100,7 @@ export function AvailabilityPicker({
       {failed && !pending ? (
         <TapProblem problem={failed.problem} onRetry={() => choose(failed.value)} />
       ) : (
-      <p className="text-center text-sm text-ink-muted" aria-live="polite">
+      <p className="text-center text-[15px] text-ink-muted" aria-live="polite">
         {pending
           ? "Saving…"
           : !tapped && answered && optimistic
@@ -144,7 +144,7 @@ function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: stri
 
   if (sent && !editing) {
     return (
-      <div className="flex flex-col gap-1 rounded-app border-2 border-line bg-paper px-3.5 py-3" role="status">
+      <div className="flex flex-col gap-1 rounded-app border border-line bg-paper px-3.5 py-3" role="status">
         <p className="flex items-start gap-2 text-[15px] leading-[22px]">
           <MessageSquare aria-hidden size={18} className="mt-0.5 shrink-0 text-ink-muted" />
           <span className="min-w-0 break-words">
@@ -156,11 +156,11 @@ function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: stri
             type="button"
             onClick={() => setEditing(true)}
             aria-label={`Change the reason for ${childName}`}
-            className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline"
+            className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline"
           >
             Change
           </button>
-          <Link href={thread} className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+          <Link href={thread} className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
             See in Messages
           </Link>
         </div>
@@ -169,7 +169,7 @@ function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: stri
   }
 
   return (
-    <form action={run} onSubmit={keep} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper px-3.5 py-3">
+    <form action={run} onSubmit={keep} className="flex flex-col gap-2 rounded-app border border-line bg-paper px-3.5 py-3">
       <input type="hidden" name="session" value={sessionId} />
       <input type="hidden" name="child" value={playerId} />
       <label htmlFor={id} className="text-[15px] font-bold">
@@ -186,7 +186,7 @@ function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: stri
         className="field text-base"
       />
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3 py-2 text-sm text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3 py-2 text-[15px] text-ink">
           {state.error}
         </p>
       ) : null}
@@ -237,13 +237,13 @@ export function AddToCalendar({ links }: { links: CalendarLinks }) {
           target="_blank"
           rel="noopener"
           aria-label={`Or use Google Calendar on the web: ${links.label}`}
-          className="inline-flex min-h-12 items-center text-sm text-ink-muted underline"
+          className="inline-flex min-h-12 items-center text-[15px] text-ink-muted underline"
           onClick={() => track("calendar_added", { kind: "google" })}
         >
           Or use Google Calendar on the web
         </a>
       ) : null}
-      <Link href="/player/calendar?from=/friday" className="inline-flex min-h-12 items-center text-sm text-ink-muted underline">
+      <Link href="/player/calendar?from=/friday" className="inline-flex min-h-12 items-center text-[15px] text-ink-muted underline">
         Add every session automatically
       </Link>
     </div>

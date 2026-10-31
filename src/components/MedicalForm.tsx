@@ -56,12 +56,12 @@ export function MedicalForm({ child, medical }: { child: { id: string; firstName
             aria-describedby={`medical-${f.name}-hint`}
             className="field min-h-24 py-3 leading-[22px]"
           />
-          <p id={`medical-${f.name}-hint`} className="mt-1.5 text-sm text-ink-muted">
+          <p id={`medical-${f.name}-hint`} className="mt-1.5 text-[15px] text-ink-muted">
             {f.hint(name)}
           </p>
         </div>
       ))}
-      <label className="flex items-start gap-3 rounded-app border-2 border-line bg-cream p-3.5 text-[15px] leading-[22px]">
+      <label className="flex items-start gap-3 rounded-app border border-line bg-cream p-3.5 text-[15px] leading-[22px]">
         <input
           type="checkbox"
           name="consent"

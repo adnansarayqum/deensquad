@@ -22,7 +22,7 @@ export default async function ProgressReportsPage({ searchParams }: PageProps<"/
         {reports.length === 0 ? <Card className="p-4 text-[15px] leading-[22px]">No reports for {child.firstName} yet.</Card> : null}
         {reports.map((r) => (
           <Card key={r.id} className="flex flex-col gap-1.5 p-3.5">
-            <h2 className="text-base font-extrabold">{monthLabel(r.month)}</h2>
+            <h2 className="text-base font-bold">{monthLabel(r.month)}</h2>
             {r.by ? <p className="text-[13px] text-ink-muted">From {r.by}</p> : null}
             <p className="text-[15px] leading-[22px] whitespace-pre-line">{r.body}</p>
           </Card>

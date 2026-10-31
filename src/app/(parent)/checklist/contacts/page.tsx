@@ -61,7 +61,7 @@ export default async function ContactsPage({ searchParams }: PageProps<"/checkli
         ) : null}
 
         <section aria-labelledby="add" className="flex flex-col gap-3">
-          <h2 id="add" className="text-base font-extrabold">
+          <h2 id="add" className="text-base font-bold">
             {contacts.length ? "Add another contact" : "Add a contact"}
           </h2>
           <ContactForm child={{ id: child.id, firstName: child.firstName }} siblings={siblings} />

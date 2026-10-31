@@ -65,7 +65,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/sh
           </p>
         ) : null}
         <OrderTimeline order={order} />
-        <Card className="divide-y-2 divide-line">
+        <Card className="divide-y divide-line">
           {order.items.map((i) => (
             <div key={i.id} className="flex items-center gap-3 p-3.5">
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -73,13 +73,13 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/sh
                   {i.quantity > 1 ? `${i.quantity} × ` : ""}
                   {i.productName}
                 </span>
-                <span className="text-sm text-ink-muted">
+                <span className="text-[15px] text-ink-muted">
                   {[i.childName ? `For ${i.childName}` : null, i.size ? `Size ${i.size}` : null, i.initials ? `Initials ${i.initials}` : null]
                     .filter(Boolean)
                     .join(" · ") || "One size"}
                 </span>
               </div>
-              <span className="font-extrabold tabular-nums">{formatPence(i.linePence)}</span>
+              <span className="font-bold tabular-nums">{formatPence(i.linePence)}</span>
             </div>
           ))}
           <div className="flex items-baseline justify-between p-3.5">
@@ -90,10 +90,10 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/sh
         {order.status === "awaiting_payment" && order.payBy === "bank" ? (
           bank ? (
             <Card tone="gold" className="flex flex-col gap-2 p-4">
-              <h2 className="text-[17px] font-extrabold">Pay by bank transfer</h2>
+              <h2 className="text-[18px] font-bold">Pay by bank transfer</h2>
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[15px]">
                 <dt className="text-ink-muted">Amount</dt>
-                <dd className="font-extrabold tabular-nums">{formatPence(order.totalPence)}</dd>
+                <dd className="font-bold tabular-nums">{formatPence(order.totalPence)}</dd>
                 <dt className="text-ink-muted">Account name</dt>
                 <dd className="font-bold">{bank.accountName}</dd>
                 <dt className="text-ink-muted">Sort code</dt>
@@ -101,9 +101,9 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/sh
                 <dt className="text-ink-muted">Account number</dt>
                 <dd className="font-bold tabular-nums">{bank.accountNumber}</dd>
                 <dt className="text-ink-muted">Reference</dt>
-                <dd className="font-extrabold tracking-[0.04em]">{order.reference}</dd>
+                <dd className="font-bold tracking-[0.04em]">{order.reference}</dd>
               </dl>
-              <p className="text-sm text-ink-muted">Please use the reference so the club can match your payment to this order.</p>
+              <p className="text-[15px] text-ink-muted">Please use the reference so the club can match your payment to this order.</p>
             </Card>
           ) : (
             <Card className="p-4 text-[15px]">The club will send you its bank details. Use the reference {order.reference} when you pay.</Card>
@@ -116,7 +116,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/sh
             <button type="submit" className="btn-chunky btn-paper w-full">
               Pay by bank transfer instead
             </button>
-            <p className="text-sm text-ink-muted">If you already paid by card, we&apos;ll match it and refund any double payment.</p>
+            <p className="text-[15px] text-ink-muted">If you already paid by card, we&apos;ll match it and refund any double payment.</p>
           </form>
         ) : order.status === "awaiting_payment" && order.payBy === "card" && canPayOnline ? (
           <form action={payAgain}>

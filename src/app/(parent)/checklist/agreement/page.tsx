@@ -15,7 +15,7 @@ const date = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", y
 function Section({ heading, points }: { heading: string; points: readonly string[] }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-[17px] font-extrabold">{heading}</h2>
+      <h2 className="text-[18px] font-bold">{heading}</h2>
       <ul className="flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-[22px]">
         {points.map((p) => (
           <li key={p}>{p}</li>
@@ -49,7 +49,7 @@ export default async function AgreementPage({ searchParams }: PageProps<"/checkl
           <Section {...CONTRACT.player} />
           <Section {...CONTRACT.parent} />
           <Section {...CONTRACT.academy} />
-          <p className="text-sm text-ink-muted">
+          <p className="text-[15px] text-ink-muted">
             Signed for the academy by {CONTRACT.academy.signedBy}. {CONTRACT.validity}
           </p>
         </Card>

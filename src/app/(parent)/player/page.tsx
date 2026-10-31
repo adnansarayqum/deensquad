@@ -33,7 +33,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                   key={c.id}
                   href={`/player?child=${c.id}`}
                   aria-current={c.id === child.id ? "page" : undefined}
-                  className={`inline-flex min-h-12 items-center rounded-pill px-4 text-sm font-extrabold ${
+                  className={`inline-flex min-h-12 items-center rounded-pill px-4 text-[15px] font-bold ${
                     c.id === child.id ? "bg-floodlight text-on-gold" : "bg-pitch text-on-pitch"
                   }`}
                 >
@@ -56,14 +56,14 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
               <h1 className="font-display text-[44px] leading-[0.9] tracking-[0.02em]">
                 {child.firstName} {child.lastName[0]}.
               </h1>
-              <p className="text-sm text-on-pitch-muted">
+              <p className="text-[15px] text-on-pitch-muted">
                 {child.shirtNumber ? <span className="sr-only">Shirt number {child.shirtNumber}. </span> : null}
                 {[groupPlural(child.ageGroup), child.position, `since ${new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric" }).format(new Date(child.joinedOn))}`]
                   .filter(Boolean)
                   .join(" · ")}
               </p>
               {stats.streakWeeks >= 2 ? (
-                <span className="inline-flex items-center gap-1.5 self-start rounded-pill bg-floodlight px-3 py-1 text-[13px] font-extrabold text-on-gold">
+                <span className="inline-flex items-center gap-1.5 self-start rounded-pill bg-floodlight px-3 py-1 text-[13px] font-bold text-on-gold">
                   <Flame aria-hidden size={14} fill="currentColor" strokeWidth={0} />
                   {stats.streakWeeks}-week streak
                 </span>
@@ -115,15 +115,15 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
         {/* The child's records first, before achievements (redesign brief, Oct 2026): each row says where it stands. */}
         {child && records ? (
-          <section aria-labelledby="child-records" className="flex flex-col rounded-app border-2 border-line bg-paper p-1">
-            <h2 id="child-records" className="px-3 pt-3 pb-1 text-[17px] font-extrabold">
+          <section aria-labelledby="child-records" className="flex flex-col rounded-app border border-line bg-paper p-1">
+            <h2 id="child-records" className="px-3 pt-3 pb-1 text-[18px] font-bold">
               {child.firstName}&apos;s details
             </h2>
             <DetailRow href={`/player/child/${child.id}`} title="Name, date of birth and photo" pill={child.photoFileId ? { tone: "done", text: "Photo added" } : { tone: "neutral", text: "Optional" }} />
             <DetailRow
               href={`/player/child/${child.id}/medical?from=/player`}
               title="Medical and additional needs"
-              hint={records.medical ? undefined : "Optional, but please tell us about any allergies or medication."}
+              hint={records.medical ? undefined : "Please tell us about any allergies or medication."}
               pill={records.medical ? { tone: "done", text: "Added" } : { tone: "neutral", text: "Optional" }}
             />
             <DetailRow
@@ -144,11 +144,11 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         {child ? (
           <Link
             href={`/player/wellbeing?child=${child.id}`}
-            className="flex min-h-12 items-center justify-between gap-3 rounded-app border-2 border-line bg-paper px-4 py-3 text-[16px] font-bold"
+            className="flex min-h-12 items-center justify-between gap-3 rounded-app border border-line bg-paper px-4 py-3 text-[16px] font-bold"
           >
             <span className="flex flex-col">
               How&apos;s {child.firstName} finding football?
-              <span className="text-[14px] font-normal text-ink-muted">A private check-in with the club</span>
+              <span className="text-[15px] font-normal text-ink-muted">A private check-in with the club</span>
             </span>
             <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
           </Link>
@@ -156,8 +156,8 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
         {child && awards && awards.recent.length > 0 ? (
           <Card className="flex flex-col gap-2 p-3.5">
-            <h2 className="text-base font-extrabold">From the coaches</h2>
-            <ul className="flex flex-col divide-y-2 divide-line">
+            <h2 className="text-base font-bold">From the coaches</h2>
+            <ul className="flex flex-col divide-y divide-line">
               {awards.recent.map((a) => (
                 <li key={a.id} className="flex items-center gap-3 py-2">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-crest-gold text-on-gold">
@@ -181,7 +181,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
         {child && badges.length > 0 ? (
           <Card className="flex flex-col gap-3 p-3.5">
-            <h2 className="text-base font-extrabold">Badges</h2>
+            <h2 className="text-base font-bold">Badges</h2>
             <ul className="grid grid-cols-4 gap-2">
               {badges.map((b) => {
                 const Icon = b.earnedOn ? badgeIcons[b.icon] : Lock;
@@ -217,11 +217,11 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         {child && progress ? (
           // Only while an admin has switched progress on for parents; this child's own ratings and reports, nothing else.
           <Card className="flex flex-col gap-3 p-3.5">
-            <h2 className="text-base font-extrabold">Progress</h2>
+            <h2 className="text-base font-bold">Progress</h2>
             <ProgressSummaryView firstName={child.firstName} progress={progress.summary} />
             {progress.latest ? (
-              <section aria-labelledby="latest-report" className="flex flex-col gap-1.5 border-t-2 border-line pt-3">
-                <h3 id="latest-report" className="text-[15px] font-extrabold">
+              <section aria-labelledby="latest-report" className="flex flex-col gap-1.5 border-t border-line pt-3">
+                <h3 id="latest-report" className="text-[15px] font-bold">
                   Progress report: {monthLabel(progress.latest.month)}
                 </h3>
                 {progress.latest.by ? <p className="text-[13px] text-ink-muted">From {progress.latest.by}</p> : null}
@@ -238,21 +238,21 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
         {note ? (
           <div className="flex items-start gap-3 rounded-app bg-grass-tint px-3.5 py-3">
-            <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-pill bg-pitch text-[13px] font-extrabold text-on-pitch">
+            <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-pill bg-pitch text-[13px] font-bold text-on-pitch">
               {note.initials}
             </span>
             <p className="flex flex-col gap-0.5">
-              <span className="text-sm font-extrabold">Note from {note.from}</span>
-              <span className="text-sm leading-5">{note.text}</span>
+              <span className="text-[15px] font-bold">Note from {note.from}</span>
+              <span className="text-[15px] leading-5">{note.text}</span>
             </p>
           </div>
         ) : null}
 
         {/* Account things live in Settings, so Family stays about the children. */}
-        <Link href="/player/settings" className="flex min-h-[52px] items-center justify-between gap-3 rounded-app border-2 border-line bg-paper px-4 py-3 text-[16px] font-bold">
+        <Link href="/player/settings" className="flex min-h-[52px] items-center justify-between gap-3 rounded-app border border-line bg-paper px-4 py-3 text-[16px] font-bold">
           <span className="flex flex-col">
             Settings
-            <span className="text-[14px] font-normal text-ink-muted">Your details, parents and carers, notifications, your data, sign out</span>
+            <span className="text-[15px] font-normal text-ink-muted">Your details, parents and carers, notifications, your data, sign out</span>
           </span>
           <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
         </Link>
@@ -272,12 +272,12 @@ const PAYMENT_PILL: Record<PaymentState, { tone: "done" | "action" | "neutral" |
 /** A row in the child's details: what it is, where it stands (a pill with a word), and a chevron. */
 function DetailRow({ href, title, hint, pill }: { href: string; title: string; hint?: string; pill: { tone: "done" | "action" | "neutral" | "gold"; text: string } }) {
   return (
-    <Link href={href} className="flex min-h-[52px] flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b-2 border-line px-3 py-2 last:border-b-0">
-      <span className="flex min-w-0 flex-col">
+    <Link href={href} className="flex min-h-[52px] flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line px-3 py-2 last:border-b-0">
+      <span className="flex min-w-0 flex-1 basis-40 flex-col">
         <span className="text-[16px] font-bold">{title}</span>
-        {hint ? <span className="text-[14px] text-ink-muted">{hint}</span> : null}
+        {hint ? <span className="text-[15px] text-ink-muted">{hint}</span> : null}
       </span>
-      <span className="ml-auto flex min-w-0 items-center gap-1">
+      <span className="ml-auto flex shrink-0 items-center gap-1">
         <Pill tone={pill.tone}>{pill.text}</Pill>
         <ChevronRight aria-hidden size={20} className="text-ink-muted" />
       </span>

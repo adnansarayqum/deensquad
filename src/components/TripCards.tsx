@@ -32,7 +32,7 @@ export function TripCards({ trips, from }: { trips: FamilyTrip[]; from: string }
             <ChevronRight aria-hidden size={20} className="shrink-0" />
           </Link>
         ) : (
-          <Link key={t.session.id} href={href} className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3 text-ink">
+          <Link key={t.session.id} href={href} className="flex items-center gap-3 rounded-app border border-line bg-paper px-3.5 py-3 text-ink">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-grass-tint text-grass-text">
               <Bus aria-hidden size={24} />
             </span>

@@ -83,7 +83,7 @@ export default async function FridayPage({ searchParams }: PageProps<"/friday">)
     <>
       {single?.session ? (
         <AppHeader stripes>
-          <p className="text-label text-floodlight uppercase">
+          <p className="text-[15px] leading-5 font-bold text-floodlight">
             {longDay(single.session.startsAt)} · {groupPlural(single.child.ageGroup)}
           </p>
           <h1 className="pr-36 font-display text-[48px] leading-[0.92] tracking-[0.02em] max-[374px]:pr-28">
@@ -93,14 +93,13 @@ export default async function FridayPage({ searchParams }: PageProps<"/friday">)
                 ? `Can ${single.child.firstName} play ${whenWords(single.session.startsAt, now)}?`
                 : `Is ${single.child.firstName} coming ${whenWords(single.session.startsAt, now)}?`}
           </h1>
-          <p className="text-sm text-on-pitch-muted">
+          <p className="text-[15px] text-on-pitch-muted">
             {single.session.squad ? `${single.session.title} · ` : ""}
             {clock(single.session.startsAt)}–{clock(single.session.endsAt)} · {single.session.venue}
           </p>
         </AppHeader>
       ) : (
         <AppHeader stripes>
-          <p className="text-label text-floodlight uppercase">Next sessions</p>
           <h1 className="pr-36 font-display text-[48px] leading-[0.92] tracking-[0.02em] max-[374px]:pr-28">{single ? "Sessions" : "Who's coming?"}</h1>
         </AppHeader>
       )}
@@ -108,7 +107,7 @@ export default async function FridayPage({ searchParams }: PageProps<"/friday">)
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
         <PassCacheWriter user={user.id} passes={cachedPasses(cards)} hub={venuePass?.cache ?? null} />
         {upcoming.length > 0 ? (
-          <nav aria-label="Which sessions" className="grid grid-cols-2 gap-1 rounded-app border-2 border-line bg-paper p-1">
+          <nav aria-label="Which sessions" className="grid grid-cols-2 gap-1 rounded-app border border-line bg-paper p-1">
             {(
               [
                 ["week", "This week", "/friday"],
@@ -200,7 +199,7 @@ export default async function FridayPage({ searchParams }: PageProps<"/friday">)
 
         {latestSheet ? (
           <div className="flex flex-col gap-2">
-            <Link href="/practice" className="flex items-center gap-3 rounded-app border-2 border-line bg-paper px-3.5 py-3 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none">
+            <Link href="/practice" className="flex items-center gap-3 rounded-app border border-line bg-paper px-3.5 py-3 shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-grass-tint text-grass-text">
                 <BookOpen aria-hidden size={22} />
               </span>
@@ -223,7 +222,7 @@ export default async function FridayPage({ searchParams }: PageProps<"/friday">)
         )}
 
         {week.some((w) => w.answer === "coming") ? null : (
-          <Link href="/player/calendar?from=/friday" className="inline-flex min-h-12 items-center self-start text-sm font-bold text-grass-text underline">
+          <Link href="/player/calendar?from=/friday" className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-grass-text underline">
             Add sessions to your calendar
           </Link>
         )}
@@ -252,7 +251,7 @@ function ComingUp({ ahead, answers, family, now }: { ahead: { session: Session; 
                   <span className="text-[13px] font-bold uppercase">{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "Europe/London" }).format(start)}</span>
                 </span>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <h2 className="text-[18px] font-extrabold">
+                  <h2 className="text-[18px] font-bold">
                     {dayHeading(session.startsAt, now)} · {session.title}
                   </h2>
                   <p className="text-[15px] text-ink-muted">
@@ -276,7 +275,7 @@ function ComingUp({ ahead, answers, family, now }: { ahead: { session: Session; 
                 const record = answers.get(answerKey(session.id, c.id));
                 return (
                   <div key={c.id} className="flex flex-col gap-2">
-                    {children.length > 1 || family.children.length > 1 ? <p className="text-[16px] font-extrabold">{c.firstName}</p> : null}
+                    {children.length > 1 || family.children.length > 1 ? <p className="text-[16px] font-bold">{c.firstName}</p> : null}
                     <AvailabilityPicker
                       sessionId={session.id}
                       playerId={c.id}
@@ -318,18 +317,18 @@ function TodaysCodes({ cards, title, venuePass }: { cards: PassCard[]; title: st
       </summary>
       <div className="mx-2 mb-2 flex flex-col items-center gap-1 rounded-app bg-cream px-2 pt-4 text-ink">
         <PassCarousel cards={cards} />
-        <Link href="/pass" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+        <Link href="/pass" className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
           Open full screen
         </Link>
         {/* The parent's own entry code for the sports hub, ready at the same gate. Added and changed on /pass. */}
-        <section aria-labelledby="friday-hub-code" className="flex w-full flex-col items-center gap-2 border-t-2 border-line px-2 pt-3 pb-2">
-          <h2 id="friday-hub-code" className="text-[17px] font-extrabold">
+        <section aria-labelledby="friday-hub-code" className="flex w-full flex-col items-center gap-2 border-t border-line px-2 pt-3 pb-2">
+          <h2 id="friday-hub-code" className="text-[18px] font-bold">
             Your sports hub entry code
           </h2>
           {venuePass ? (
             <VenuePassPicture view={venuePass} />
           ) : (
-            <Link href="/pass" className="inline-flex min-h-12 items-center text-center text-sm font-bold text-grass-text underline">
+            <Link href="/pass" className="inline-flex min-h-12 items-center text-center text-[15px] font-bold text-grass-text underline">
               Add your sports hub entry code
             </Link>
           )}
@@ -365,26 +364,26 @@ function SessionBlock({
   return (
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex flex-col gap-0.5">
-        <h2 className="text-[19px] font-extrabold">
+        <h2 className="text-[20px] font-bold">
           {dayHeading(session.startsAt, now)} · {session.title}
         </h2>
         <div className="flex flex-wrap items-center justify-between gap-x-3">
-          <p className="text-sm text-ink-muted">
+          <p className="text-[15px] text-ink-muted">
             {clock(session.startsAt)}–{clock(session.endsAt)} · {session.venue}
           </p>
           <Directions venue={session.venue} />
         </div>
       </div>
       {!session.squad ? <AllComing sessionId={session.id} kids={rows.filter((w) => !w.checkedInAt && w.answer !== "coming").map((w) => w.child)} /> : null}
-      <ul className="flex flex-col divide-y-2 divide-line">
+      <ul className="flex flex-col divide-y divide-line">
         {rows.map((w) => (
           <li key={w.child.id} className="flex flex-col gap-2 py-3 first:pt-0">
             <div className="flex items-baseline justify-between gap-2">
-              <h3 className="text-[17px] font-extrabold">
+              <h3 className="text-[18px] font-bold">
                 {w.child.firstName} <span className="text-[15px] font-bold text-ink-muted">· {groupPlural(w.child.ageGroup)}</span>
               </h3>
               {showHeadcount(w.counts) ? (
-                <span className="text-[14px] text-ink-muted tabular-nums">
+                <span className="text-[15px] text-ink-muted tabular-nums">
                   {w.counts.coming} of {w.counts.squad} coming
                 </span>
               ) : null}
@@ -422,15 +421,15 @@ function InviteCard({ invite: { child, session, answer, answered: record }, answ
         <Pill tone="gold">Picked for the squad</Pill>
         {answer ? null : <Pill tone="action">Please answer</Pill>}
       </div>
-      <h2 className="text-[19px] leading-[25px] font-extrabold">{question}</h2>
+      <h2 className="text-[20px] leading-[25px] font-bold">{question}</h2>
       <div className="-mt-1.5 flex flex-wrap items-center justify-between gap-x-3">
-        <p className="text-sm text-ink-muted">
+        <p className="text-[15px] text-ink-muted">
           {clock(session.startsAt)}–{clock(session.endsAt)} · {session.venue}
           {session.arriveBy ? ` · arrive ${session.arriveBy}` : ""}
         </p>
         <Directions venue={session.venue} />
       </div>
-      {session.notes ? <p className="-mt-1.5 text-sm whitespace-pre-line">{session.notes}</p> : null}
+      {session.notes ? <p className="-mt-1.5 text-[15px] whitespace-pre-line">{session.notes}</p> : null}
       {session.media?.length ? <MediaGallery items={session.media} label={session.title} /> : null}
       <AvailabilityPicker sessionId={session.id} playerId={child.id} answer={answer} childName={child.firstName} question={question} squad answered={answered} reason={record?.reason ?? null} calendar={calendar} compact />
     </Card>
@@ -491,7 +490,7 @@ function Briefing({ session }: { session: Session }) {
   if (!session.notes && !session.media?.length && briefingRows(session).length === 0) return null;
   return (
     <Card className="flex flex-col gap-2 p-4">
-      <h2 className="text-base font-extrabold">{session.title} briefing</h2>
+      <h2 className="text-base font-bold">{session.title} briefing</h2>
       <BriefingDetails session={session} />
     </Card>
   );
@@ -539,7 +538,7 @@ function Cancelled({ session, now, next }: { session: Session; now: Date; next: 
         <CalendarX aria-hidden size={22} />
       </span>
       <p className="flex min-w-0 flex-col text-[15px] leading-[22px]">
-        <span className="text-[17px] font-extrabold">
+        <span className="text-[18px] font-bold">
           {when === "today" ? "Today's session is cancelled" : when === "tomorrow" ? "Tomorrow's session is cancelled" : `Cancelled: ${session.title}, ${when.replace(/^on /, "")}${groups}`}
         </span>
         {when === "today" || when === "tomorrow" ? (
@@ -573,7 +572,7 @@ function PlanCard({ plan, sessionLabel }: { plan: SessionPlan; sessionLabel?: Se
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-grass-tint text-grass-text">
           <ClipboardList aria-hidden size={20} />
         </span>
-        <h2 className="text-[17px] font-extrabold">
+        <h2 className="text-[18px] font-bold">
           {plan.ageGroup} session plan{sessionLabel ? <span className="font-bold text-ink-muted"> · {shortDay(sessionLabel.startsAt)}</span> : null}
         </h2>
       </div>

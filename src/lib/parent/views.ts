@@ -197,7 +197,7 @@ export function buildChecklist(child: Child, facts: ChecklistFacts): ChecklistIt
     },
     {
       id: "medical",
-      title: "Medical and additional needs (optional)",
+      title: "Medical and additional needs",
       detail: facts.medical?.has(child.id)
         ? `Added. The coaches of ${child.firstName}'s group can see it`
         : `Anything the coaches should know to look after ${child.firstName}`,
@@ -260,7 +260,7 @@ export function buildFamilyChecklist(children: Child[], facts: ChecklistFacts, f
   // The parent's own Bobby Moore Sports Hub entry code, kept beside the children's QR codes: optional, never a step.
   const hub: ChecklistItemView = {
     id: "hub-code",
-    title: "Sports hub entry code (optional)",
+    title: "Sports hub entry code",
     detail: facts.hubCode ? "Saved. It shows with the QR codes for the barrier" : "Your Bobby Moore entry QR, ready at the barrier",
     actionLabel: facts.hubCode ? "Change" : "Add",
     icon: "qr",

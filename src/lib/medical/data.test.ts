@@ -138,7 +138,7 @@ describe("on the parent's side", () => {
     const before = await t.asUser(adnan, (tx) => loadChecklistFacts(tx, ids));
     const musa = family.children.find((c) => c.id === DEV_IDS.musa)!;
     const line = buildChecklist(musa, before).find((i) => i.id === "medical")!;
-    expect(line).toMatchObject({ optional: true, done: false, title: "Medical and additional needs (optional)", href: `/player/child/${DEV_IDS.musa}/medical?from=/checklist` });
+    expect(line).toMatchObject({ optional: true, done: false, title: "Medical and additional needs", href: `/player/child/${DEV_IDS.musa}/medical?from=/checklist` });
     const steps = countSteps(buildChecklist(musa, before));
 
     await t.asUser(adnan, (tx) => setMyChildMedical(tx, DEV_IDS.musa, text(), true));

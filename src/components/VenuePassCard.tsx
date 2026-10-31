@@ -60,14 +60,14 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
           : null;
 
   return (
-    <section aria-labelledby="hub-code" className="flex w-full flex-col gap-3 rounded-app border-2 border-line bg-paper p-4">
-      <h2 id="hub-code" className="text-[17px] font-extrabold">
+    <section aria-labelledby="hub-code" className="flex w-full flex-col gap-3 rounded-app border border-line bg-paper p-4">
+      <h2 id="hub-code" className="text-[18px] font-bold">
         Your sports hub entry code
       </h2>
       {view ? (
         <>
           <VenuePassPicture view={view} />
-          <p className="text-sm leading-5 text-ink-muted">
+          <p className="text-[15px] leading-5 text-ink-muted">
             Only you can see this, not the club or the coaches.{" "}
             {view.kind === "code" || view.offline
               ? "This phone keeps a copy for when there's no signal."
@@ -104,7 +104,7 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
           />
         </label>
         {live ? (
-          <p className="text-sm leading-5 text-ink-muted">Choose the screenshot from your photos. It saves straight away.</p>
+          <p className="text-[15px] leading-5 text-ink-muted">Choose the screenshot from your photos. It saves straight away.</p>
         ) : (
           <button type="submit" className={view ? "btn-chunky btn-paper" : "btn-chunky btn-grass"} disabled={busy}>
             {saving ? "Saving…" : "Save screenshot"}

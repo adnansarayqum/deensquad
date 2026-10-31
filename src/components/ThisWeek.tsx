@@ -26,13 +26,13 @@ export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; wee
   const qrLabel = several ? "Show QR codes" : "Show QR code";
 
   return (
-    <Card className="flex flex-col gap-4 p-4">
+    <Card className="flex flex-col gap-5 p-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 id="this-week" className="text-label text-ink-muted uppercase">
+        <h2 id="this-week" className="text-[20px] leading-7 font-bold">
           This week
         </h2>
         {sessions.length ? (
-          <Link href="/friday" className="inline-flex min-h-12 items-center gap-1 text-[15px] font-bold text-grass-text underline">
+          <Link href="/friday" className="inline-flex min-h-12 items-center gap-1 text-[15px] font-bold text-grass-text">
             Kit and details
             <ChevronRight aria-hidden size={16} />
           </Link>
@@ -61,7 +61,7 @@ export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; wee
         <Link
           href="/pass?from=/news"
           aria-label={`${qrLabel}: ${today[0].session.title} today`}
-          className="flex min-h-12 items-center justify-center gap-2 rounded-app bg-floodlight px-4 text-[16px] font-extrabold text-on-gold transition-transform active:translate-y-0.5"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-app bg-floodlight px-4 text-[16px] font-bold text-on-gold transition-transform active:translate-y-0.5"
         >
           <QrCode aria-hidden size={20} />
           {qrLabel}
@@ -69,11 +69,11 @@ export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; wee
       ) : null}
 
       {stepsLeft > 0 ? (
-        <Link href="/checklist" className="flex items-center gap-3 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 py-3 text-ink transition-transform active:translate-y-1">
+        <Link href="/checklist" className="flex items-center gap-3 rounded-app border border-kit-orange bg-orange-tint px-3.5 py-3 text-ink transition-transform active:translate-y-1">
           <ListChecks aria-hidden size={22} className="shrink-0 text-kit-orange" />
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="text-[16px] font-bold">{stepsLeft === 1 ? "1 thing left to set up" : `${stepsLeft} things left to set up`}</span>
-            <span className="text-[14px]">For {several ? "your children" : family.children[0]?.firstName}: open your To-do list</span>
+            <span className="text-[15px]">For {several ? "your children" : family.children[0]?.firstName}: open your To-do list</span>
           </span>
           <ChevronRight aria-hidden size={20} className="shrink-0" />
         </Link>
@@ -104,28 +104,31 @@ function SessionPart({ session, rows, family, now }: { session: Session; rows: C
   const notYetComing = open.filter((w) => w.answer !== "coming").map((w) => w.child);
   return (
     <section aria-label={`${dayHeading(session.startsAt, now)}, ${session.title}`} className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <h3 className="text-[20px] leading-[26px] font-extrabold">
+      <div className="flex flex-col gap-2 rounded-app bg-cream p-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          <h3 className="text-[18px] leading-6 font-bold">
             {dayHeading(session.startsAt, now)} · {session.title}
           </h3>
           <Pill tone="done">Going ahead</Pill>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-x-3">
-          <p className="text-[15px] text-ink-muted">
-            {clock(session.startsAt)}–{clock(session.endsAt)} · {session.venue}
-            {session.arriveBy ? ` · arrive ${session.arriveBy}` : ""}
+        <div className="flex flex-col">
+          <p className="text-[16px] leading-6 font-bold tabular-nums">
+            {clock(session.startsAt)}–{clock(session.endsAt)}
+            {session.arriveBy ? <span className="font-normal text-ink-muted"> · arrive by {session.arriveBy}</span> : null}
           </p>
-          <Directions venue={session.venue} />
+          <div className="flex flex-wrap items-center justify-between gap-x-3">
+            <p className="min-w-0 text-[15px] leading-[22px] text-ink-muted">{session.venue}</p>
+            <Directions venue={session.venue} />
+          </div>
         </div>
         {session.kit ? (
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="inline-flex items-center gap-1 text-label text-ink-muted uppercase">
+            <span className="inline-flex items-center gap-1 pr-1 text-[13px] font-bold text-ink-muted">
               <Shirt aria-hidden size={14} />
               Bring
             </span>
             {kitItems(session.kit).map((k) => (
-              <span key={k} className="inline-flex min-h-8 items-center gap-1 rounded-pill border border-line bg-cream px-2.5 text-[14px] font-bold">
+              <span key={k} className="inline-flex min-h-8 items-center gap-1 rounded-pill border border-line bg-paper px-2.5 text-[15px] font-medium">
                 {k}
               </span>
             ))}
@@ -134,12 +137,12 @@ function SessionPart({ session, rows, family, now }: { session: Session; rows: C
       </div>
       {/* "All coming" only where it saves taps: two or more children here who haven't said Coming yet. */}
       {!session.squad && notYetComing.length > 1 ? <AllComing sessionId={session.id} kids={notYetComing} /> : null}
-      <ul className="flex flex-col divide-y-2 divide-line">
+      <ul className="flex flex-col divide-y divide-line">
         {rows.map((w) => (
-          <li key={w.child.id} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
+          <li key={w.child.id} className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0">
             {rows.length > 1 || family.children.length > 1 ? (
-              <p className="text-[17px] font-extrabold">
-                {w.child.firstName} <span className="text-[15px] font-bold text-ink-muted">· {groupPlural(w.child.ageGroup)}</span>
+              <p className="text-[16px] font-bold">
+                {w.child.firstName} <span className="font-normal text-ink-muted">{groupPlural(w.child.ageGroup)}</span>
               </p>
             ) : null}
             {w.checkedInAt ? (
