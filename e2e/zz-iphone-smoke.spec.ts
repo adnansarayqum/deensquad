@@ -41,7 +41,7 @@ test("a parent: News, says their child is coming, the attendance QR code and the
 
   await page.goto("/checklist");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  expect(errors, `browser errors in ${browserName}`).toEqual([]);
+  expect(errors, `browser errors in ${browserName}: ${errors.join(" | ")}`).toEqual([]);
   await context.close();
 });
 
@@ -65,6 +65,6 @@ test("staff: the register opens with Mark here and Undo, and the overview and as
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await page.goto("/admin/assistant");
   await expect(page.getByRole("heading", { name: "Assistant", level: 1 })).toBeVisible();
-  expect(errors, `browser errors in ${browserName}`).toEqual([]);
+  expect(errors, `browser errors in ${browserName}: ${errors.join(" | ")}`).toEqual([]);
   await context.close();
 });
