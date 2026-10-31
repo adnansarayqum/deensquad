@@ -1,7 +1,7 @@
 import { ConfirmDelete } from "@/components/admin/ConfirmDelete";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Attachment } from "@/components/plans/Attachment";
 import { VideoField } from "@/components/plans/VideoField";
@@ -23,6 +23,8 @@ export const metadata: Metadata = { title: "Session plan" };
 export default async function PlanPage({ params, searchParams }: PageProps<"/coach/plans/[session]">) {
   const user = await requireStaff();
   const [{ session: id }, { group, copy }] = await Promise.all([params, searchParams]);
+  // A plan link without its group (shared or bookmarked) goes to the plans list rather than "Page not found".
+  if (UUID.test(id) && !isAgeGroup(group)) redirect("/coach/plans");
   if (!UUID.test(id) || !isAgeGroup(group) || !staffGroups(user.staff).includes(group)) notFound();
   const page = await asUser(user.id, async (tx) => {
     const [row] = await tx.query<SessionRow>(`select ${SESSION_COLUMNS} from sessions s where s.id = $1`, [id]);

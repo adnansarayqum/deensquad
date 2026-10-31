@@ -62,16 +62,6 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
       {params.deleted ? <Notice>Deleted.</Notice> : null}
       {bulk ? <Notice tone={params.bulk === "none" || params.bulk === "toomany" ? "action" : "done"}>{bulk}</Notice> : null}
 
-      {/* Folded at every size (the eight-column table needs the whole column), open when there's nothing to list yet. */}
-      {reminder ? (
-        <WeeklyReminderCard
-          setting={reminder.setting}
-          last={reminder.last}
-          notice={params.reminder === "saved" || params.reminder === "invalid" ? params.reminder : undefined}
-        />
-      ) : null}
-      {reminder ? <SessionFeeCard pence={reminder.fee} notice={params.fee === "saved" || params.fee === "invalid" ? params.fee : undefined} /> : null}
-
       <FoldCard id="add-sessions" title="Add sessions" open={upcoming.length === 0}>
         <div className="lg:max-w-3xl">
           <StatefulForm action={addSessions} submitLabel="Add sessions" savedMessage="Sessions added. Parents can answer straight away.">
@@ -108,6 +98,17 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
           </div>
         </details>
       ) : null}
+
+      {/* Settings come after the sessions, so on a phone the next session is near the top (admin UX review, Oct 2026). */}
+      {reminder ? (
+        <WeeklyReminderCard
+          setting={reminder.setting}
+          last={reminder.last}
+          notice={params.reminder === "saved" || params.reminder === "invalid" ? params.reminder : undefined}
+        />
+      ) : null}
+      {reminder ? <SessionFeeCard pence={reminder.fee} notice={params.fee === "saved" || params.fee === "invalid" ? params.fee : undefined} /> : null}
+
     </>
   );
 }
@@ -150,6 +151,12 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
         {s.kind !== "training" ? (
           <Link href={`/admin/sessions/${s.id}/trip`} className={action} aria-label={`Away trip for ${s.title} ${shortDay(s.startsAt)}`}>
             Trip
+          </Link>
+        ) : null}
+        {/* A news post that asks who's coming, with Coming / Not coming buttons for each child (migration 0040). */}
+        {!s.cancelled && !s.picked ? (
+          <Link href={`/admin/news?comingTo=${s.id}#post-message`} className={action} aria-label={`Ask who's coming to ${s.title} ${shortDay(s.startsAt)}`}>
+            Ask who&apos;s coming
           </Link>
         ) : null}
         <Link href={`/admin/sessions/${s.id}/edit`} className={action} aria-label={`Edit ${s.title} ${shortDay(s.startsAt)}`}>

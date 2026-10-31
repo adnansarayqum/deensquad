@@ -325,6 +325,17 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
   const quick = parseQuickAnswers(formData.get("quickAnswer") === "on", formData.getAll("option"));
   if ("error" in quick) return quick;
   const quickAnswers = quick.answers;
+  // "Ask who's coming": a session still to come, not cancelled. Not with a quick answer (one set of buttons per post).
+  const comingRaw = formData.get("comingTo");
+  const comingTo = typeof comingRaw === "string" && comingRaw ? (UUID.test(comingRaw) ? comingRaw : null) : undefined;
+  if (comingTo === null) return { error: "Something went wrong. Reload and try again." };
+  if (comingTo && quickAnswers) return { error: "Choose a quick answer or “Ask who's coming”, not both." };
+  if (comingTo) {
+    const [open] = await asUser(user.id, (tx) =>
+      tx.query(`select 1 from sessions where id = $1 and ends_at > now() and cancelled_at is null`, [comingTo]),
+    );
+    if (!open) return { error: "That session has finished or been cancelled. Choose another one." };
+  }
   if (!squadSession && formData.get("audience") === "children") {
     // The group ticks belong to "Only these groups" (hidden under this choice), so they're ignored here. The children
     // are checked and the message written in one transaction, so a child removed meanwhile can't fail the insert.
@@ -333,7 +344,7 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
       asUser(user.id, async (tx) => {
         const checked = await checkChosenChildren(tx, ids, coachLimit(user.staff));
         if ("error" in checked) return checked;
-        const newsId = await insertNews(tx, { topic: topic as string, title, body, audience: checked.groups, requiresAck, postedBy: user.staff.id, squadSession: null, children: ids, allowReplies, quickAnswers });
+        const newsId = await insertNews(tx, { topic: topic as string, title, body, audience: checked.groups, requiresAck, postedBy: user.staff.id, squadSession: null, children: ids, allowReplies, quickAnswers, comingTo });
         await attach(tx, newsId);
         return { id: newsId };
       }),
@@ -365,7 +376,7 @@ export async function postNews(_prev: FormState, formData: FormData): Promise<Fo
   }
   const inserted = await withMediaProblem(() =>
     asUser(user.id, async (tx) => {
-      const newsId = await insertNews(tx, { topic: topic as string, title, body, audience: everyone ? null : groups, requiresAck, postedBy: user.staff.id, squadSession: squadSession ?? null, children: null, allowReplies, quickAnswers });
+      const newsId = await insertNews(tx, { topic: topic as string, title, body, audience: everyone ? null : groups, requiresAck, postedBy: user.staff.id, squadSession: squadSession ?? null, children: null, allowReplies, quickAnswers, comingTo });
       await attach(tx, newsId);
       return { id: newsId };
     }),
@@ -468,7 +479,6 @@ function sessionFields(formData: FormData, mine: readonly AgeGroup[] | null) {
       groups,
       arriveBy: cleanText(formData.get("arriveBy"), 20),
       kit: cleanText(formData.get("kit"), 120),
-      prayerNote: cleanText(formData.get("prayerNote"), 120),
       notes: cleanBody(formData.get("notes"), 500),
     },
     day,
@@ -504,6 +514,7 @@ export async function updateSession(_prev: FormState, formData: FormData): Promi
   const checked = sessionFields(formData, coachLimit(user.staff));
   if ("error" in checked) return { error: checked.error };
   const edit: SessionEdit = { ...checked.fields, ...checked.times(checked.day) };
+  if (formData.get("notify") !== "on" && formData.get("notify") !== "off") return { error: "Choose whether to tell the families about this change." };
   const tell = formData.get("notify") === "on";
   const media = await formMedia(formData, user.staff.id);
   if ("error" in media) return media;
@@ -622,7 +633,6 @@ export async function bulkEditSessions(_prev: FormState, formData: FormData): Pr
     end,
     arriveBy: text("arriveBy", 20),
     kit: text("kit", 120),
-    prayerNote: text("prayerNote", 120),
     notes: cleanBody(formData.get("notes"), 500) ?? undefined,
     groups,
   };
@@ -677,7 +687,12 @@ export async function addStaff(_prev: FormState, formData: FormData): Promise<Fo
   if (!name) return { error: "Add their name as parents should see it, like Coach Bilal." };
   if (!email) return { error: "Add their email address. It's how they sign in." };
   if (role !== "coach" && role !== "admin") return { error: "Choose coach or admin." };
+  // A coach's groups are chosen on purpose (admin UX review, Oct 2026): ticked groups, or "All groups". Leaving every
+  // box empty used to mean every group without saying so. Stored the same way as before: no groups = every group.
+  // Ticked groups win over All groups (the narrower choice).
   const groups = role === "coach" ? formData.getAll("groups").filter(isAgeGroup) : [];
+  const allGroups = groups.length === 0 && formData.get("allGroups") === "yes";
+  if (role === "coach" && !allGroups && groups.length === 0) return { error: "Tick the groups this coach looks after, or tick All groups." };
   const added = await asUser(user.id, (tx) =>
     tx.query(
       `insert into staff (email, display_name, role, age_groups) values ($1, $2, $3::staff_role, $4::text[]::age_group[])
@@ -690,12 +705,17 @@ export async function addStaff(_prev: FormState, formData: FormData): Promise<Fo
   return { saved: true };
 }
 
-/** Which age groups a coach looks after. None ticked means every group. */
+/**
+ * Which age groups a coach looks after: the ticked groups, or "All groups" (stored as none, as before). Unticking
+ * every box without choosing All groups saves nothing and says so, so a coach is never widened to every group by accident.
+ */
 export async function setStaffGroups(formData: FormData): Promise<void> {
   const user = await requireAdmin();
   const staff = id(formData.get("id"));
   if (!staff) return;
+  // Ticked groups win over All groups (the narrower choice).
   const groups = formData.getAll("groups").filter(isAgeGroup);
+  if (groups.length === 0 && formData.get("allGroups") !== "yes") redirect("/admin/staff?groups=choose");
   await asUser(user.id, (tx) => tx.query(`update staff set age_groups = $2::text[]::age_group[] where id = $1 and role = 'coach'`, [staff, groups]));
   refresh();
 }

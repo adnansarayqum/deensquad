@@ -52,11 +52,12 @@ test("a coach logs an accident from the register; the parents are sent it", asyn
   if (await gateTest.count()) await gateTest.click();
   await page.getByRole("link", { name: "Log an accident or incident" }).click();
   await expect(page.getByRole("heading", { name: "Log an accident or incident" })).toBeVisible();
-  await page.getByLabel("Child").selectOption({ label: "Musa Sample" });
+  await page.getByLabel("Child", { exact: true }).selectOption({ label: "Musa Sample" });
   await page.getByText("Injury", { exact: true }).click();
   await page.getByLabel("What happened").fill("Fell in a tackle and hurt his left knee.");
   await page.getByLabel("What we did").fill("Ice pack, sat out 10 minutes, carried on.");
   await page.screenshot({ path: shot("coach-incident-form"), fullPage: true });
+  await page.getByLabel(/I've checked the child, the time and the words/).check();
   await page.getByRole("button", { name: "Log it and tell the parents" }).click();
   await expect(page).toHaveURL(/\/coach\/incidents\?logged=1$/);
   await expect(page.getByText("Logged. The parents have been sent it in the app, and the admins told.")).toBeVisible();
@@ -81,7 +82,7 @@ test("a new family books a paid trial on the public page; the club sees it", asy
   const response = await page.goto("/trial");
   expect(response?.status()).toBe(200);
   await expect(page.getByRole("heading", { name: "Book a trial session" })).toBeVisible();
-  await expect(page.getByText("A trial session costs £7, paid by card at the gate on the day.")).toBeVisible();
+  await expect(page.getByText("A trial session costs £7, paid by card or cash at the gate on the day.")).toBeVisible();
   await page.getByLabel("First name").first().fill("Idris");
   await page.getByLabel("Last name").first().fill("Newfamily");
   await page.getByLabel("Date of birth").fill("2019-05-04");

@@ -11,7 +11,7 @@ export type TrialGateRow = { id: string; childName: string; ageGroup: string; pa
 
 /**
  * Register → "Trials (n)": children booked on /trial for this session. They aren't in the club yet, so they have no
- * QR code: the coach taps Arrived and, once the card machine says approved, "Paid £7". The parent's number is a tap
+ * QR code: the coach taps Arrived and, once it's paid (card or cash), "Paid £7". The parent's number is a tap
  * away for a no-show.
  */
 export function TrialsOnRegister({ sessionId, trials, fee, open }: { sessionId: string; trials: TrialGateRow[]; fee: string; open: boolean }) {

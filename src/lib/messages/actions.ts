@@ -148,10 +148,17 @@ export async function sendStaffMessage(_prev: MessageFormState, formData: FormDa
 }
 
 /** The staff inbox's "Mark all read": every conversation this person sees with a parent's message they haven't opened. */
-export async function markAllRead(): Promise<void> {
+/**
+ * "Mark all as read". On Needs reply it asks first (a ticked box): reading isn't replying, and those are families
+ * waiting for an answer. On Not coming (reasons that are also on the register) it marks them straight away.
+ */
+export async function markAllRead(formData: FormData): Promise<void> {
   const user = await requireStaff();
+  const absences = formData.get("scope") === "absences";
+  if (!absences && formData.get("confirm") !== "yes") redirect("/admin/messages?markall=confirm");
   await asUser(user.id, async (tx) => {
-    for (const row of await loadInbox(tx, { unreadOnly: true, limit: 500 })) await markRead(tx, row.id);
+    const rows = absences ? (await loadInbox(tx, { absences: true, limit: 500 })).filter((r) => r.unread) : await loadInbox(tx, { unreadOnly: true, limit: 500 });
+    for (const row of rows) await markRead(tx, row.id);
   });
   refresh();
 }

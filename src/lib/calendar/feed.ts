@@ -25,22 +25,60 @@ export function tokenFromFile(file: string): string | null {
   return m ? m[1] : null;
 }
 
-/** Makes (or replaces) the signed-in parent's token and returns it. Run as the parent (asUser). */
+/** Makes the signed-in parent's first link (or replaces it) and returns it. Run as the parent (asUser). */
 export async function setMyCalendarToken(tx: Queryable): Promise<string> {
   const token = newCalendarToken();
   await tx.query(`select set_calendar_token($1)`, [hashCalendarToken(token)]);
   return token;
 }
 
-/** When the signed-in parent's calendar link was made, or null if they haven't one. */
-export async function loadMyCalendarLink(tx: Queryable): Promise<Date | null> {
-  const [row] = await tx.query<{ at: Date | null }>(`select calendar_token_created_at as at from guardians where id = my_guardian_id()`);
-  return row?.at ?? null;
+/** The most links a parent can have at once (migration 0041), one per phone or calendar app. */
+export const MAX_CALENDAR_LINKS = 5;
+
+/**
+ * Another link for another phone, leaving the parent's other links working (migration 0041). Returns null when they
+ * already have the most allowed. Run as the parent.
+ */
+export async function addMyCalendarLink(tx: Queryable): Promise<string | null> {
+  const token = newCalendarToken();
+  try {
+    await tx.savepoint((sp) => sp.query(`select add_calendar_link($1)`, [hashCalendarToken(token)]));
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("too many links")) return null;
+    throw e;
+  }
+  return token;
 }
 
-/** The parent a token belongs to. Run with the system connection (no one is signed in). */
+/** Ends every calendar link the signed-in parent has made. */
+export async function stopMyCalendarLinks(tx: Queryable): Promise<void> {
+  await tx.query(`select stop_calendar_links()`);
+}
+
+/** How many calendar links the signed-in parent has, and when the first was made (null: none). */
+export async function loadMyCalendarLinks(tx: Queryable): Promise<{ count: number; first: Date | null }> {
+  const [row] = await tx.query<{ count: number; first: Date | null }>(
+    `select (select count(*)::int from guardian_calendar_links where guardian_id = my_guardian_id())
+          + (select count(*)::int from guardians where id = my_guardian_id() and calendar_token_hash is not null) as count,
+       least((select calendar_token_created_at from guardians where id = my_guardian_id()),
+             (select min(created_at) from guardian_calendar_links where guardian_id = my_guardian_id())) as first`,
+  );
+  return { count: row?.count ?? 0, first: row?.first ?? null };
+}
+
+/** When the signed-in parent's first calendar link was made, or null if they haven't one. */
+export async function loadMyCalendarLink(tx: Queryable): Promise<Date | null> {
+  return (await loadMyCalendarLinks(tx)).first;
+}
+
+/** The parent a token belongs to (any of their links). Run with the system connection (no one is signed in). */
 export async function guardianForToken(tx: Queryable, token: string): Promise<string | null> {
-  const [row] = await tx.query<{ id: string }>(`select id from guardians where calendar_token_hash = $1`, [hashCalendarToken(token)]);
+  const hash = hashCalendarToken(token);
+  const [row] = await tx.query<{ id: string }>(
+    `select id from guardians where calendar_token_hash = $1
+     union all select guardian_id from guardian_calendar_links where token_hash = $1 limit 1`,
+    [hash],
+  );
   return row?.id ?? null;
 }
 

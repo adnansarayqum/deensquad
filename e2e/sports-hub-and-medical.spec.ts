@@ -257,6 +257,7 @@ test("medical and additional needs: saved by the parent with consent; the U7 coa
     await editStaff(admin, "Coach Hamza");
     const after = admin.getByRole("form", { name: "Coach Hamza's groups" });
     await after.getByLabel("U7").uncheck();
+    await after.getByLabel("All groups").check();
     await after.getByRole("button", { name: "Save groups" }).click();
     await expect(after.getByLabel("U7")).not.toBeChecked();
     await adminContext.close();

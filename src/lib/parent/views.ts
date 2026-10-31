@@ -35,7 +35,7 @@ export function cancelledBefore(child: Child, sessions: Session[], next: Session
 }
 
 /** "Can Yusuf play in Autumn Cup on Sat 17 Oct?" for a squad session; "Is Yusuf coming?" otherwise. */
-export function availabilityQuestion(name: string, session: Session, day: string): string {
+export function availabilityQuestion(name: string, session: Pick<Session, "title" | "squad">, day: string): string {
   return session.squad ? `Can ${name} play in ${session.title} on ${day}?` : `Is ${name} coming? ${day}`;
 }
 
@@ -275,7 +275,8 @@ export function buildFamilyChecklist(children: Child[], facts: ChecklistFacts, f
   const unsigned = children.filter((c) => !agreed.has(c.id));
   const contract: ChecklistItemView = {
     id: "agreement",
-    title: "Club contract",
+    // The section counts the contract once per child, so the row says so ("3 of 3 done" over two rows read as a mistake).
+    title: several ? `Club contract (${children.length} children)` : "Club contract",
     detail: several
       ? unsigned.length === 0
         ? `Signed for ${joinNames(children.map((c) => c.firstName))} this season`

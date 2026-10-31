@@ -99,7 +99,11 @@ test("an unknown email gets the same screen and no email", async ({ page }) => {
 test("news: a parent of two acknowledges the kit message", async ({ page }) => {
   await signIn(page, "adnan@example.com");
   await expect(page.getByRole("heading", { name: "Club news" })).toBeVisible();
-  await expect(page.getByText("Are Yusuf and Musa coming?")).toBeVisible();
+  // This week, first on News: training, and both children's answers right there with one "All coming".
+  const week = page.getByRole("heading", { name: "This week" }).locator("xpath=../..");
+  await expect(week.getByText("Going ahead")).toBeVisible();
+  await expect(week.getByRole("button", { name: "All coming: Yusuf and Musa are coming" })).toBeVisible();
+  await expect(week.getByRole("button", { name: "Yusuf is coming", exact: true })).toBeVisible();
   await expect(page.getByRole("main").getByText("1 unread")).toBeVisible();
   await page.screenshot({ path: shot("news"), fullPage: true });
 
@@ -190,8 +194,10 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
   await yusuf.getByRole("button", { name: "Yusuf is coming" }).click();
   await expect(page.getByText("Saved. Coach can see Yusuf is coming.")).toBeVisible();
 
+  // News's This week card shows the same answers, ready to change there too.
   await page.getByRole("link", { name: "News" }).click();
-  await expect(page.getByText(/Yusuf coming · Musa away/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Yusuf is coming", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Not coming: Musa isn't coming", exact: true })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("to-do: contacts copied to a sibling, consent and payments", async ({ page }) => {
@@ -203,7 +209,7 @@ test("to-do: contacts copied to a sibling, consent and payments", async ({ page 
   await expect(family.getByText("£30 a month per child, paid by direct debit through TeamFeePay")).toBeVisible();
   await page.screenshot({ path: shot("checklist"), fullPage: true });
 
-  const musa = page.getByRole("region", { name: "Musa's checklist" });
+  const musa = page.getByRole("region", { name: "Musa's to-do" });
   await musa.getByRole("link", { name: /Emergency contacts/ }).click();
   await page.getByLabel("Name").fill("Grandad Yusuf");
   await page.getByLabel("Phone number").fill("07700900321");
@@ -284,15 +290,15 @@ test("coach: register marks a player here; parents can't open it", async ({ page
   await expect(page.getByRole("heading", { name: "Register", exact: true })).toBeVisible();
   await expect(page.getByText(/^Register test · /)).toBeVisible();
   await expect(page.getByText(/You can mark children here on the day/)).toHaveCount(0);
-  await expect(page.getByText("0 of 16 expected")).toBeVisible();
+  await expect(page.getByText(/^0 here · \d+ said coming · \d+ in the group$/)).toBeVisible();
   await page.getByRole("button", { name: "Mark Yusuf S. here" }).click();
   await expect(page.getByText("Yusuf S. checked in")).toBeVisible();
-  await expect(page.getByText("1 of 16 expected")).toBeVisible();
+  await expect(page.getByText(/^1 here · \d+ said coming · \d+ in the group$/)).toBeVisible();
   await page.getByRole("button", { name: "Mark Adam F. here" }).click();
   const here = page.getByRole("region", { name: /^Here/ });
   await expect(here.getByRole("heading", { name: "Here (2)" })).toBeVisible();
   await expect(here.getByText("Adam F.")).toBeVisible();
-  await expect(page.getByText("2 of 16 expected")).toBeVisible();
+  await expect(page.getByText(/^2 here · \d+ said coming · \d+ in the group$/)).toBeVisible();
   await page.screenshot({ path: shot("coach"), fullPage: true });
   await page.emulateMedia({ colorScheme: "dark" });
   await page.screenshot({ path: shot("coach-dark"), fullPage: true });
@@ -311,12 +317,13 @@ test("coach: register marks a player here; parents can't open it", async ({ page
   await undoAdam.click();
   await expect(here.getByRole("heading", { name: "Here (1)" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Mark Adam F. here" })).toBeEnabled();
-  await expect(page.getByText("1 of 16 expected")).toBeVisible();
+  await expect(page.getByText(/^1 here · \d+ said coming · \d+ in the group$/)).toBeVisible();
 
   // Moved to tomorrow, the register is closed for Undo too: Yusuf's check-in stays as it is until the day.
   const setDate = async (date: string) => {
     await page.goto(`/admin/sessions/${session}/edit`);
     await page.getByLabel("Date", { exact: true }).fill(date);
+    await page.getByLabel(/^No, it's a small fix/).check();
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
     await page.goto(`/coach?session=${session}&group=U10`);
@@ -555,7 +562,7 @@ test("sign-up: a new parent registers their child, proves their email and lands 
   await page.getByLabel("6-digit code").fill(latestCode("hana@example.com"));
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/checklist$/);
-  await expect(page.getByRole("heading", { name: "Ilyas's checklist" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ilyas's to-do" })).toBeVisible();
   const mails = readFileSync(OUTBOX, "utf8");
   expect(mails).toContain("New family signed up: Hana Rahman");
 
@@ -1174,6 +1181,7 @@ test("session changes: an admin edits a session, cancels it with a reason and te
   await expect(admin.getByRole("heading", { name: "Edit U12 extra" })).toBeVisible();
   await admin.getByLabel("Venue").fill("Valentines Park");
   await admin.getByLabel(/Notes for parents/).fill("Meet at the side gate");
+  await admin.getByLabel(/^No, it's a small fix/).check();
   await admin.getByRole("button", { name: "Save changes" }).click();
   await expect(admin.getByText("Saved.", { exact: true })).toBeVisible();
   await expect(admin.getByLabel("Venue")).toHaveValue("Valentines Park");
@@ -1191,7 +1199,7 @@ test("session changes: an admin edits a session, cancels it with a reason and te
   await expect(admin.getByLabel(/Tell the families now/)).toBeChecked();
   await admin.getByLabel(/Reason/).fill("Pitch waterlogged");
   await admin.screenshot({ path: shot("admin-session-cancel"), fullPage: true });
-  await admin.getByRole("button", { name: "Cancel session" }).click();
+  await admin.getByRole("button", { name: "Cancel this session" }).click();
   await expect(admin.getByText("Cancelled. The families have been told.")).toBeVisible();
   await expect(admin.getByText("Reason: Pitch waterlogged").first()).toBeVisible();
 

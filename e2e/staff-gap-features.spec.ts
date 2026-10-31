@@ -20,7 +20,7 @@ test("an admin records a coach's DBS; the coach drops off 'Checks to sort'", asy
   await expect(card).toBeVisible();
   await card.getByRole("link", { name: /Coach Hamza/ }).click();
   await expect(page.getByRole("heading", { name: "Coach Hamza", level: 1 })).toBeVisible();
-  await expect(page.getByText("No DBS check")).toBeVisible();
+  await expect(page.getByText("No DBS recorded")).toBeVisible();
   await page.getByLabel("What it is").selectOption("dbs");
   await page.getByLabel(/^Runs out/).fill("2029-03-01");
   await page.getByLabel(/^Certificate number/).fill("001234567890");

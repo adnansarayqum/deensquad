@@ -23,7 +23,7 @@ export default async function TrialPage({ searchParams }: PageProps<"/trial">) {
         <div className="flex items-start gap-3 rounded-app border-2 border-grass bg-grass-tint p-4 text-ink">
           <CircleCheck aria-hidden size={24} className="mt-0.5 shrink-0 text-grass-text" />
           <p className="text-[15px] leading-[22px]">
-            See you there. Pay the session fee by card at the gate, and tell the coach you&apos;re here for a trial. If the email doesn&apos;t arrive, check
+            See you there. Pay the session fee by card or cash at the gate, and tell the coach you&apos;re here for a trial. If the email doesn&apos;t arrive, check
             your junk folder.
           </p>
         </div>

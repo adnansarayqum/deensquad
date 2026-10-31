@@ -86,7 +86,7 @@ export function TrialForm({ groups, sessions, fee, privacyHref }: { groups: { va
       </div>
 
       <p className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] leading-[22px] text-ink">
-        A trial session costs <b>{fee}</b>, paid by card at the gate on the day.
+        A trial session costs <b>{fee}</b>, paid by card or cash at the gate on the day.
       </p>
       <label className="flex min-h-12 items-start gap-3 text-[15px]">
         <input type="checkbox" name="privacy" value="yes" required className="mt-1 h-5 w-5 shrink-0 accent-[var(--grass)]" />

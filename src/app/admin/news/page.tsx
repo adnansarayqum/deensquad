@@ -14,31 +14,48 @@ import { WritingHelp } from "@/components/writing/WritingHelp";
 import { aiConfigured } from "@/lib/ai/claude";
 import { coachLimit, isGroupCoach, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
-import { postedLabel } from "@/lib/dates";
+import { clock, postedLabel, shortDay } from "@/lib/dates";
+import { iso } from "@/lib/db/types";
 
 export const metadata: Metadata = { title: "News" };
 
-export default async function AdminNewsPage() {
+export default async function AdminNewsPage({ searchParams }: PageProps<"/admin/news">) {
   const user = await requireStaff();
+  const askAbout = (await searchParams).comingTo;
+  const comingTo = typeof askAbout === "string" ? askAbout : "";
   const limited = isGroupCoach(user.staff);
   const myGroups = staffGroups(user.staff);
   const mine = coachLimit(user.staff);
-  const { news, children } = await asUser(user.id, async (tx) => ({ news: await loadNewsList(tx, 50, mine), children: await loadNewsChildren(tx, mine) }));
+  const { news, children, sessions } = await asUser(user.id, async (tx) => ({
+    news: await loadNewsList(tx, 50, mine),
+    children: await loadNewsChildren(tx, mine),
+    // Sessions in the next three weeks that "Ask who's coming" can be about (a group coach's own groups).
+    sessions: await tx.query<{ id: string; title: string; starts_at: Date; age_groups: string[] }>(
+      `select id, title, starts_at, age_groups::text[] as age_groups from sessions
+       where ends_at > now() and starts_at < now() + interval '21 days' and cancelled_at is null
+         and ($1::text[] is null or age_groups && $1::text[]::age_group[])
+       order by starts_at limit 12`,
+      [mine ? [...mine] : null],
+    ),
+  }));
   const now = new Date();
+  // From a session's "Ask who's coming": the post starts written, ready to check and send.
+  const asked = sessions.find((s) => s.id === comingTo);
+  const askTitle = asked ? `Who's coming to ${asked.title.toLowerCase() === "training" ? "training" : asked.title} on ${shortDay(iso(asked.starts_at))}?` : undefined;
 
   return (
     <>
       <PageHeader title="News" subtitle="Post a message and see who has read it." />
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        <FoldCard id="post-message" title="Post a message" open={news.length === 0}>
+        <FoldCard id="post-message" title="Post a message" open={news.length === 0 || Boolean(comingTo)}>
           <NewsComposeForm action={postNews}>
             <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
               <div>
                 <label htmlFor="topic" className="field-label">
                   Topic
                 </label>
-                <select id="topic" name="topic" className="field" defaultValue="General">
+                <select id="topic" name="topic" className="field" defaultValue={asked ? "Training" : "General"}>
                   {TOPICS.map((t) => (
                     <option key={t}>{t}</option>
                   ))}
@@ -48,21 +65,27 @@ export default async function AdminNewsPage() {
                 <label htmlFor="title" className="field-label">
                   Headline
                 </label>
-                <input id="title" name="title" maxLength={120} className="field" placeholder="New away kit: sizes needed by Friday" />
+                <input id="title" name="title" maxLength={120} className="field" placeholder="New away kit: sizes needed by Friday" defaultValue={askTitle} />
               </div>
             </div>
             <div>
               <label htmlFor="body" className="field-label">
                 Message
               </label>
-              <textarea id="body" name="body" rows={5} maxLength={4000} className="field" />
+              <textarea id="body" name="body" rows={5} maxLength={4000} className="field" defaultValue={asked ? "Please tap Coming or Not coming for each of your children." : undefined} />
               <div className="mt-2">
                 <WritingHelp bodyId="body" titleId="title" kind="news" ai={aiConfigured()} />
               </div>
             </div>
             <MediaPicker hint={PHOTO_CONSENT_HINT} />
             <NewsAudience limited={limited} myGroups={myGroups} list={children} />
-            <NewsReplyOptions />
+            <NewsReplyOptions
+              comingTo={comingTo}
+              sessions={sessions.map((s) => ({
+                id: s.id,
+                label: `${shortDay(iso(s.starts_at))} · ${s.title} · ${clock(iso(s.starts_at))} · ${s.age_groups.join(", ")}`,
+              }))}
+            />
             <label className="flex min-h-11 items-center gap-3 text-[15px]">
               <input type="checkbox" name="requiresAck" defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
               <span>

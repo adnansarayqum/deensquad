@@ -98,12 +98,6 @@ export default async function BulkEdit({ searchParams }: PageProps<"/admin/sessi
                 </label>
                 <input id="kit" name="kit" placeholder="Keep as it is" maxLength={120} className="field" />
               </div>
-              <div>
-                <label htmlFor="prayerNote" className="field-label">
-                  Prayer
-                </label>
-                <input id="prayerNote" name="prayerNote" placeholder="Keep as it is" maxLength={120} className="field" />
-              </div>
             </div>
             <div>
               <label htmlFor="notes" className="field-label">

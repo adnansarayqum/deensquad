@@ -62,14 +62,16 @@ export type NewNews = {
   allowReplies?: boolean;
   /** "Ask for a quick answer": 2 to 4 options (checked with parseQuickAnswers), one answer per child. */
   quickAnswers?: readonly string[] | null;
+  /** "Ask who's coming" (migration 0040): the session parents answer Coming / Not coming for, on the post itself. */
+  comingTo?: string | null;
 };
 
 /** Writes the message (and its chosen children, in the same transaction). Returns its id. */
 export async function insertNews(tx: Queryable, n: NewNews): Promise<string> {
   const chosen = n.children && n.children.length ? [...new Set(n.children)] : null;
   const [row] = await tx.query<{ id: string }>(
-    `insert into announcements (topic, title, body, audience, requires_ack, posted_by, squad_session_id, to_children, allow_replies, quick_answers)
-     values ($1, $2, $3, $4::text[]::age_group[], $5, $6, $7, $8, $9, $10::text[]) returning id`,
+    `insert into announcements (topic, title, body, audience, requires_ack, posted_by, squad_session_id, to_children, allow_replies, quick_answers, session_id, session_notice)
+     values ($1, $2, $3, $4::text[]::age_group[], $5, $6, $7, $8, $9, $10::text[], $11, case when $11::uuid is null then null else 'attendance' end) returning id`,
     [
       n.topic,
       n.title,
@@ -81,6 +83,7 @@ export async function insertNews(tx: Queryable, n: NewNews): Promise<string> {
       chosen !== null,
       Boolean(n.allowReplies),
       n.quickAnswers && n.quickAnswers.length ? [...n.quickAnswers] : null,
+      n.comingTo ?? null,
     ],
   );
   if (chosen) {

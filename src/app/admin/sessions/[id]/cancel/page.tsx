@@ -44,10 +44,11 @@ export default async function CancelSessionPage({ params }: PageProps<"/admin/se
           </span>
         </label>
         <div className="flex flex-wrap items-center gap-3">
-          <button type="submit" className="btn-chunky btn-grass">
-            {restore ? "Put it back on" : "Cancel session"}
+          {/* Cancelling is outlined in orange and "Keep it on" is the green, safe choice (admin UX review, Oct 2026). */}
+          <button type="submit" className={`btn-chunky ${restore ? "btn-grass" : "btn-warning"}`}>
+            {restore ? "Put it back on" : "Cancel this session"}
           </button>
-          <Link href="/admin/sessions" className="btn-chunky btn-paper">
+          <Link href="/admin/sessions" className={`btn-chunky ${restore ? "btn-paper" : "btn-grass"}`}>
             {restore ? "Leave it cancelled" : "Keep it on"}
           </Link>
         </div>

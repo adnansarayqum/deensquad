@@ -42,7 +42,6 @@ export type BulkEditPatch = {
   end?: { hour: number; minute: number };
   arriveBy?: string;
   kit?: string;
-  prayerNote?: string;
   notes?: string;
   /** Only when "Change groups" was ticked. */
   groups?: AgeGroup[];
@@ -67,7 +66,6 @@ export function applyPatch(s: AdminSession, p: BulkEditPatch): SessionEdit {
     end: p.end ? atClock(s.endsAt, p.end) : new Date(s.endsAt),
     arriveBy: p.arriveBy ?? s.arriveBy,
     kit: p.kit ?? s.kit,
-    prayerNote: p.prayerNote ?? s.prayerNote,
     notes: p.notes ?? s.notes,
   };
 }

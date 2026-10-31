@@ -436,7 +436,7 @@ export function trialBookedEmail(opts: {
     "",
     `${childFirstName}'s trial session with Deen Squad Football Academy is booked: ${session}, ${when}${venue ? `, at ${venue}` : ""}.`,
     "",
-    `The trial costs ${fee}, paid by card at the gate on the day. Tell the coach at the gate you're here for ${childFirstName}'s trial.`,
+    `The trial costs ${fee}, paid by card or cash at the gate on the day. Tell the coach at the gate you're here for ${childFirstName}'s trial.`,
     "",
     "If you can't make it, reply to this email and let the club know.",
   ];
@@ -444,7 +444,7 @@ export function trialBookedEmail(opts: {
     appUrl,
     `<p style="margin:0">Assalamu alaikum ${escape(parentFirstName)},</p>
 <p><b>${escape(childFirstName)}'s trial session</b> with Deen Squad Football Academy is booked: ${escape(session)}, ${escape(when)}${venue ? `, at ${escape(venue)}` : ""}.</p>
-<p>The trial costs ${escape(fee)}, paid by card at the gate on the day. Tell the coach at the gate you're here for ${escape(childFirstName)}'s trial.</p>
+<p>The trial costs ${escape(fee)}, paid by card or cash at the gate on the day. Tell the coach at the gate you're here for ${escape(childFirstName)}'s trial.</p>
 <p>If you can't make it, reply to this email and let the club know.</p>`,
   );
   return { to, subject, text: lines.join("\n"), html };

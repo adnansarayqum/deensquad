@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { StepsText } from "@/components/StepsText";
 import { staffNameForParents } from "@/lib/greeting";
 import { backTarget } from "@/lib/parent/tabs";
 import { BackHeader } from "@/components/BackHeader";
@@ -30,7 +31,7 @@ export default async function PracticePage({ searchParams }: PageProps<"/practic
               <h2 className="text-[17px] font-extrabold">{s.title}</h2>
               <Pill tone="neutral">{s.ageGroups.length ? s.ageGroups.join(", ") : "All groups"}</Pill>
             </div>
-            {s.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{s.body}</p> : null}
+            {s.body ? <StepsText text={s.body} /> : null}
             {s.file ? <Attachment file={s.file} label={attachmentTitle("sheet", s.file)} from="/practice" /> : null}
             {s.video ? <VideoCard video={s.video} name={s.title} /> : null}
             <p className="text-[13px] text-ink-muted">{[staffNameForParents(s.from), day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</p>

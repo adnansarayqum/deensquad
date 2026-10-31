@@ -2,6 +2,8 @@ import "server-only";
 import { iso } from "../db/types";
 
 import { cache } from "react";
+import { cookies } from "next/headers";
+import { CHILD_COOKIE } from "./child-cookie";
 import { requireParent } from "../auth/session";
 import { loadAwards } from "../awards/data";
 import { loadPlans, loadPracticeSheets } from "../plans/data";
@@ -116,6 +118,16 @@ async function loadNewsWithAnswers(tx: Queryable, family: Family) {
       )
     : [];
   const replied = new Map(replies.map((r) => [r.announcement_id, { at: iso(r.at), conversation: r.conversation }]));
+  // Coming / Not coming already given for the sessions "Who's coming?" posts ask about.
+  const asked = news.flatMap((n) => (n.session?.notice === "attendance" ? [n.session.id] : []));
+  const coming = await loadAnswers(tx, [...new Set(asked)], childIds);
+  for (const n of news) {
+    if (n.session?.notice !== "attendance") continue;
+    for (const c of n.session.children) {
+      const record = coming.get(answerKey(n.session.id, c));
+      if (record) n.session.answers[c] = record;
+    }
+  }
   return news.map((n) => ({ ...n, answers: answers.get(n.id) ?? {}, replied: replied.get(n.id) ?? null }));
 }
 
@@ -127,7 +139,7 @@ export async function getMessagesPage() {
 }
 
 /**
- * To-do steps the parent can still do themselves, for the "Finish setting up" card on News (where every sign-in
+ * To-do steps the parent can still do themselves, for the "things left to set up" line in This week on News (where every sign-in
  * lands). The payment step counts only when there's a link to set it up; otherwise the club tells them how.
  */
 function stepsLeft(family: Family, facts: Awaited<ReturnType<typeof loadChecklistFacts>>): number {
@@ -228,7 +240,9 @@ async function getStats(userId: string, child: Child, now: Date) {
 }
 
 export async function getPlayerPage(childParam: unknown) {
-  const { family, child, userId } = await getChild(childParam);
+  // No child in the address (the Family tab): the child shown last time, if it's still one of this family's.
+  const remembered = childParam ? childParam : (await cookies()).get(CHILD_COOKIE)?.value;
+  const { family, child, userId } = await getChild(remembered);
   if (!child) return { family, child: null, stats: null, badges: [], note: null, awards: null, progress: null };
   const now = new Date();
   const [{ facts, ...stats }, awards, progress] = await Promise.all([

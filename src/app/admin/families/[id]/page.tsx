@@ -85,6 +85,17 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
 
       <Section title="Payment" aside={<Pill tone={child.payment === "active" ? "done" : child.payment === "self_reported" ? "gold" : child.payment === "pay_as_you_go" ? "neutral" : "action"}>{paymentLabel[child.payment]}</Pill>}>
         <p className="text-sm text-ink-muted">Set this after checking TeamFeePay. Pay as you go: the family pays for each session.</p>
+        {/* Where the status came from and how old it is (admin UX review, Oct 2026): it's the app's record, not TeamFeePay live. */}
+        {child.paymentChangedAt ? (
+          <p className="text-[14px] text-ink-muted">
+            {child.paymentSyncedAt && Math.abs(new Date(child.paymentSyncedAt).getTime() - new Date(child.paymentChangedAt).getTime()) < 60_000
+              ? `From a TeamFeePay file on ${shortDay(child.paymentSyncedAt)}.`
+              : `Last changed ${shortDay(child.paymentChangedAt)}${child.payment === "self_reported" ? " by the parent" : ""}.`}
+            {child.paymentSyncedAt && Math.abs(new Date(child.paymentSyncedAt).getTime() - new Date(child.paymentChangedAt).getTime()) >= 60_000
+              ? ` Last TeamFeePay file: ${shortDay(child.paymentSyncedAt)}.`
+              : ""}
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           {(["active", "pay_as_you_go", "missing", "overdue"] as const).map((state) => (
             <form key={state} action={setPayment}>

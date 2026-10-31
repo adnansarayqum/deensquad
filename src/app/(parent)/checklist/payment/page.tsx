@@ -44,7 +44,7 @@ export default async function PaymentPage() {
         </Card>
 
         {active.length > 0 ? <Status>Monthly plan active for {names(active)}.</Status> : null}
-        {payg.length > 0 ? <Status>Paying as you go for {names(payg)}. You pay for each session.</Status> : null}
+        {payg.length > 0 ? <Status>Paying as you go for {names(payg)}. You pay for each session at the gate, by card or cash.</Status> : null}
         {reported.length > 0 ? <Status>You&apos;ve told the club it&apos;s set up for {names(reported)}. The club will confirm.</Status> : null}
         {overdue.length > 0 ? (
           <p className="rounded-app bg-orange-tint p-3.5 text-[15px] text-ink">

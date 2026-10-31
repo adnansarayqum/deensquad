@@ -165,8 +165,9 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
           <h2 id="register-group" className="font-display text-[28px] leading-none text-ink">
             {all ? "All groups" : groupPlural(group)}
           </h2>
+          {/* Here, said coming and the group, each named (admin UX review, Oct 2026: "0 of 21 expected" read as replies). */}
           <p className="text-sm text-ink-muted">
-            <span className="font-display text-[26px] text-ink tabular-nums">{s.here.length}</span> of {s.expectedTotal} expected
+            <span className="font-display text-[26px] text-ink tabular-nums">{s.here.length}</span> here · {s.saidComing} said coming · {s.groupTotal} in the group
           </p>
         </div>
         <Progress value={s.here.length} max={Math.max(1, s.expectedTotal)} label={`${s.here.length} of ${s.expectedTotal} here`} className="w-full" />

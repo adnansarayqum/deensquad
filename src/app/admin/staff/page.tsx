@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { ClearancePill } from "@/components/admin/ClearancePill";
-import { FoldCard, PageHeader, Section } from "@/components/admin/bits";
+import { FoldCard, Notice, PageHeader, Section } from "@/components/admin/bits";
 import { StatefulForm } from "@/components/admin/StatefulForm";
 import { Pill } from "@/components/ui";
 import { addStaff, removeStaff, setStaffGroups, setStaffRole } from "@/lib/admin/actions";
@@ -16,8 +16,9 @@ import { loadAllStaffChecks } from "@/lib/staff-checks/data";
 
 export const metadata: Metadata = { title: "Staff" };
 
-export default async function StaffPage() {
+export default async function StaffPage({ searchParams }: PageProps<"/admin/staff">) {
   const user = await requireAdmin();
+  const chooseGroups = (await searchParams).groups === "choose";
   const [staff, allChecks] = await asUser(user.id, async (tx) => [await loadStaff(tx), await loadAllStaffChecks(tx)] as const);
   const today = londonIsoDay(new Date());
   const cleared = new Map(staff.map((s) => [s.id, clearance(allChecks.filter((c) => c.staffId === s.id), today)]));
@@ -36,7 +37,7 @@ export default async function StaffPage() {
   // Never the last admin and never your own role (or removal).
   const changeable = (s: StaffRow) => s.id !== user.staff.id && !(s.role === "admin" && admins <= 1);
 
-  const roleHint = (s: StaffRow) => (s.role === "admin" ? "They'll coach every group until you tick theirs." : "Admins see every group and run the shop.");
+  const roleHint = (s: StaffRow) => (s.role === "admin" ? "They'll coach every group (All groups) until you tick theirs." : "Admins see every group and run the shop.");
   // `compact`: the table's one-line rows (a text link, the hint in the footnote under the table); the phone cards keep the button and the sentence.
   const roleForm = (s: StaffRow, compact = false): ReactNode =>
     changeable(s) ? (
@@ -94,7 +95,9 @@ export default async function StaffPage() {
 
   return (
     <>
-      <PageHeader title="Staff" subtitle="Coaches see the groups ticked against them; none ticked means every group. Admins see everything." />
+      <PageHeader title="Staff" subtitle="Coaches see only the groups ticked against them, or every group when All groups is ticked. Admins see everything.">
+        {chooseGroups ? <Notice tone="action">Nothing saved. Tick the coach&apos;s groups, or tick All groups if they coach everyone.</Notice> : null}
+      </PageHeader>
 
       <Section title={needing.length ? `Checks to sort (${needing.length})` : "DBS and certificates"}>
         <div id="checks" className="-mt-2 scroll-mt-4" />
@@ -144,10 +147,10 @@ export default async function StaffPage() {
           </fieldset>
           <fieldset className="flex flex-col gap-2">
             <legend className="field-label">
-              Coach&apos;s groups <span className="font-normal text-ink-muted">(none ticked means every group)</span>
+              Coach&apos;s groups <span className="font-normal text-ink-muted">(they see only these children, medical notes included)</span>
             </legend>
             <div className="flex flex-wrap gap-2">
-              <GroupBoxes selected={[]} />
+              <GroupBoxes selected={[]} fresh />
             </div>
           </fieldset>
         </StatefulForm>
@@ -252,11 +255,25 @@ export default async function StaffPage() {
   );
 }
 
-function GroupBoxes({ selected, small = false }: { selected: AgeGroup[]; /** The staff table's one-line rows: smaller chips. */ small?: boolean }) {
-  return AGE_GROUPS.map((g) => (
-    <label key={g} className={`flex items-center rounded-pill border-2 border-line bg-paper has-[:checked]:border-grass has-[:checked]:bg-grass-tint ${small ? "min-h-9 gap-1 px-1.5" : "min-h-11 gap-2 px-3.5"}`}>
-      <input type="checkbox" name="groups" value={g} defaultChecked={selected.includes(g)} className={`accent-[var(--grass)] ${small ? "h-3.5 w-3.5" : "h-4 w-4"}`} />
-      <span className="text-sm font-extrabold">{g}</span>
-    </label>
-  ));
+/**
+ * A coach's groups, plus an explicit "All groups" (stored as no groups, the same as before). A new coach starts with
+ * nothing ticked, so the form asks for a choice; an existing coach with no groups shows All groups ticked.
+ */
+function GroupBoxes({ selected, small = false, fresh = false }: { selected: AgeGroup[]; /** The staff table's one-line rows: smaller chips. */ small?: boolean; fresh?: boolean }) {
+  const chip = `flex items-center rounded-pill border-2 border-line bg-paper has-[:checked]:border-grass has-[:checked]:bg-grass-tint ${small ? "min-h-9 gap-1 px-1.5" : "min-h-11 gap-2 px-3.5"}`;
+  const box = `accent-[var(--grass)] ${small ? "h-3.5 w-3.5" : "h-4 w-4"}`;
+  return (
+    <>
+      {AGE_GROUPS.map((g) => (
+        <label key={g} className={chip}>
+          <input type="checkbox" name="groups" value={g} defaultChecked={selected.includes(g)} className={box} />
+          <span className="text-sm font-extrabold">{g}</span>
+        </label>
+      ))}
+      <label className={chip}>
+        <input type="checkbox" name="allGroups" value="yes" defaultChecked={!fresh && selected.length === 0} className={box} />
+        <span className="text-sm font-extrabold">All groups</span>
+      </label>
+    </>
+  );
 }

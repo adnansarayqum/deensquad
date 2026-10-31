@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
+import { StepsText } from "@/components/StepsText";
 import { staffNameForParents } from "@/lib/greeting";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { TripCards } from "@/components/TripCards";
-import { BookOpen, CalendarX, ChevronDown, ChevronRight, ClipboardList, Clock, ExternalLink, Info, MapPin, MoonStar, QrCode, Shirt } from "lucide-react";
+import { BookOpen, CalendarX, ChevronDown, ChevronRight, ClipboardList, Clock, Info, MapPin, MoonStar, QrCode, Shirt } from "lucide-react";
 import { AddToCalendar, AvailabilityPicker, type CalendarLinks } from "@/components/AvailabilityPicker";
+import { AllComing } from "@/components/AllComing";
 import { CheckedIn } from "@/components/CheckedIn";
+import { Directions } from "@/components/Directions";
 import { PassCacheWriter } from "@/components/PassCacheWriter";
 import { PassCarousel } from "@/components/PassCarousel";
 import { Attachment } from "@/components/plans/Attachment";
@@ -19,7 +22,7 @@ import { attachmentTitle } from "@/lib/files";
 import { groupPlural, type Session } from "@/lib/domain";
 import type { SquadCounts } from "@/lib/parent/data";
 import { getFamily, getFridayPage } from "@/lib/parent/load";
-import { answeredLine, availabilityQuestion, directionsUrl, sessionsToday, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
+import { answeredLine, availabilityQuestion, sessionsToday, type ChildWeek, type SquadInvite } from "@/lib/parent/views";
 import { cachedPasses, passCards, type PassCard } from "@/lib/pass/cards";
 import type { SessionPlan } from "@/lib/plans/data";
 import type { VenuePassView } from "@/lib/venue-pass/card";
@@ -302,6 +305,7 @@ function SessionBlock({
           <Directions venue={session.venue} />
         </div>
       </div>
+      {!session.squad ? <AllComing sessionId={session.id} kids={rows.filter((w) => !w.checkedInAt && w.answer !== "coming").map((w) => w.child)} /> : null}
       <ul className="flex flex-col divide-y-2 divide-line">
         {rows.map((w) => (
           <li key={w.child.id} className="flex flex-col gap-2 py-3 first:pt-0">
@@ -363,32 +367,12 @@ function InviteCard({ invite: { child, session, answer, answered: record }, answ
   );
 }
 
-/** "Directions" to a session's venue: a Google Maps search, opened outside the app. Nothing while the venue isn't known. */
-function Directions({ venue }: { venue: string }) {
-  const url = directionsUrl(venue);
-  if (!url) return null;
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener"
-      aria-label={`Directions to ${venue}`}
-      className="inline-flex min-h-12 shrink-0 items-center gap-1.5 text-[15px] font-bold text-grass-text underline"
-    >
-      Directions
-      <ExternalLink aria-hidden size={16} />
-    </a>
-  );
-}
-
 type BriefingRow = { icon: typeof Clock; text: string; extra?: ReactNode };
 
 function briefingRows(session: Session): BriefingRow[] {
   const rows: (BriefingRow | null)[] = [
     session.venue ? { icon: MapPin, text: session.venue, extra: <Directions venue={session.venue} /> } : null,
-    session.arriveBy || session.prayerNote
-      ? { icon: Clock, text: [session.arriveBy ? `Arrive ${session.arriveBy}` : null, session.prayerNote].filter(Boolean).join(" · ") }
-      : null,
+    session.arriveBy ? { icon: Clock, text: `Arrive ${session.arriveBy}` } : null,
     session.kit ? { icon: Shirt, text: session.kit } : null,
   ];
   return rows.filter((r): r is BriefingRow => r !== null);
@@ -515,7 +499,7 @@ function PlanCard({ plan, sessionLabel }: { plan: SessionPlan; sessionLabel?: Se
           {plan.ageGroup} session plan{sessionLabel ? <span className="font-bold text-ink-muted"> · {shortDay(sessionLabel.startsAt)}</span> : null}
         </h2>
       </div>
-      {plan.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{plan.body}</p> : null}
+      {plan.body ? <StepsText text={plan.body} /> : null}
       {plan.file ? <Attachment file={plan.file} label={attachmentTitle("plan", plan.file)} from="/friday" /> : null}
       {plan.video ? <VideoCard video={plan.video} name={`${plan.ageGroup} session plan`} title="Session plan video" /> : null}
       {plan.from ? <p className="text-[13px] text-ink-muted">From {staffNameForParents(plan.from)}</p> : null}

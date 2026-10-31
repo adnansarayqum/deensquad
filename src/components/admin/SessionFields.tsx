@@ -10,7 +10,7 @@ export function londonTimeInput(iso: string): string {
   return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso));
 }
 
-type Defaults = Partial<Pick<Session, "title" | "kind" | "venue" | "arriveBy" | "kit" | "prayerNote" | "notes">> & {
+type Defaults = Partial<Pick<Session, "title" | "kind" | "venue" | "arriveBy" | "kit" | "notes">> & {
   date: string;
   start: string;
   end: string;
@@ -98,12 +98,6 @@ export function SessionFields({ defaults, groups, repeat = false }: { defaults: 
             Kit
           </label>
           <input id="kit" name="kit" defaultValue={defaults.kit ?? ""} placeholder="Green top, shin pads, water" maxLength={120} className="field" />
-        </div>
-        <div>
-          <label htmlFor="prayerNote" className="field-label">
-            Prayer
-          </label>
-          <input id="prayerNote" name="prayerNote" defaultValue={defaults.prayerNote ?? ""} placeholder="Prayer break in the session" maxLength={120} className="field" />
         </div>
       </div>
       <div>

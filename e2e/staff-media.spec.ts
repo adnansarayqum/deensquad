@@ -130,6 +130,7 @@ test("a photo-only message from staff, and a photo on a session the parent sees 
   await page.goto(`/admin/sessions/${sessionId}/edit`);
   await page.getByLabel("Add photos or videos").setInputFiles(photo);
   await expect(page.locator('input[type="hidden"][name="media"]')).toHaveCount(1, { timeout: 30_000 });
+  await page.getByLabel(/^No, it's a small fix/).check();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText(/^Saved\./)).toBeVisible();
 

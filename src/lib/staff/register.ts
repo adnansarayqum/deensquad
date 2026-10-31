@@ -196,7 +196,8 @@ export async function loadRegister(
 export function summarise(view: RegisterView) {
   const here = view.rows.filter((r) => r.checkedInAt).sort((a, b) => b.checkedInAt!.localeCompare(a.checkedInAt!));
   const away = view.rows.filter((r) => !r.checkedInAt && r.answer === "away");
-  const notHere = view.rows.filter((r) => !r.checkedInAt && r.answer !== "away");
+  // Still to arrive: those whose parent said Coming first (admin UX review, Oct 2026), then the rest, each in the list's order.
+  const notHere = view.rows.filter((r) => !r.checkedInAt && r.answer !== "away").sort((a, b) => Number(b.answer === "coming") - Number(a.answer === "coming"));
   return {
     here,
     /** The last one in, at the top with its Undo (one card, so the list still to arrive stays on the first screen). */
@@ -205,5 +206,8 @@ export function summarise(view: RegisterView) {
     notHere,
     away,
     expectedTotal: view.rows.length - away.length,
+    /** Parents' Coming answers (here or not), and everyone in the group: shown apart from "here" so neither reads as the other. */
+    saidComing: view.rows.filter((r) => r.answer === "coming").length,
+    groupTotal: view.rows.length,
   };
 }

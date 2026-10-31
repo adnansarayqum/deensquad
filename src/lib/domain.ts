@@ -61,7 +61,6 @@ export type Session = {
   ageGroups: AgeGroup[];
   arriveBy: string | null;
   kit: string | null;
-  prayerNote: string | null;
   /** Notes for parents (travel, where to meet). */
   notes: string | null;
   cancelled: boolean;

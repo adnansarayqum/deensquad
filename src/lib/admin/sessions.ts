@@ -91,7 +91,6 @@ export type NewSessions = {
   times: { start: Date; end: Date }[];
   arriveBy: string | null;
   kit: string | null;
-  prayerNote: string | null;
   notes: string | null;
 };
 
@@ -106,11 +105,11 @@ export async function addSessionRun(tx: Queryable, run: NewSessions): Promise<{ 
   const skipped: Date[] = [];
   for (const { start, end } of run.times) {
     const rows = await tx.query(
-      `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups, arrive_by, kit, prayer_note, notes)
-       select $1::session_kind, $2, $3, $4, $5, $6::text[]::age_group[], $7, $8, $9, $10
+      `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups, arrive_by, kit, notes)
+       select $1::session_kind, $2, $3, $4, $5, $6::text[]::age_group[], $7, $8, $9
        where not exists (select 1 from sessions s where s.starts_at = $3 and s.age_groups && $6::text[]::age_group[])
        returning id`,
-      [run.kind, run.title, start, end, run.venue, groups, run.arriveBy, run.kit, run.prayerNote, run.notes],
+      [run.kind, run.title, start, end, run.venue, groups, run.arriveBy, run.kit, run.notes],
     );
     (rows.length ? added : skipped).push(start);
   }
@@ -141,7 +140,6 @@ export type SessionEdit = {
   end: Date;
   arriveBy: string | null;
   kit: string | null;
-  prayerNote: string | null;
   notes: string | null;
 };
 
@@ -159,9 +157,9 @@ export async function editSession(tx: Queryable, id: string, edit: SessionEdit, 
   const groups = AGE_GROUPS.filter((g) => edit.groups.includes(g));
   await tx.query(
     `update sessions set kind = $2::session_kind, title = $3, starts_at = $4, ends_at = $5, venue = $6, age_groups = $7::text[]::age_group[],
-       arrive_by = $8, kit = $9, prayer_note = $10, notes = $11
+       arrive_by = $8, kit = $9, notes = $10
      where id = $1`,
-    [id, edit.kind, edit.title, edit.start, edit.end, edit.venue, groups, edit.arriveBy, edit.kit, edit.prayerNote, edit.notes],
+    [id, edit.kind, edit.title, edit.start, edit.end, edit.venue, groups, edit.arriveBy, edit.kit, edit.notes],
   );
   const removed = await tx.query<{ player_id: string }>(
     `delete from session_squads q using players p
@@ -218,8 +216,8 @@ export async function postSessionNotice(tx: Queryable, id: string, kind: Session
             body: [`New details: ${when}`, s.arrive_by ? `Arrive by ${s.arrive_by}` : null, s.notes],
           };
   const [row] = await tx.query<{ id: string }>(
-    `insert into announcements (topic, title, body, audience, requires_ack, urgent, posted_by, squad_session_id)
-     values ($1, $2, $3, $4::text[]::age_group[], true, true, $5, $6) returning id`,
+    `insert into announcements (topic, title, body, audience, requires_ack, urgent, posted_by, squad_session_id, session_id, session_notice)
+     values ($1, $2, $3, $4::text[]::age_group[], true, true, $5, $6, $7, $8) returning id`,
     [
       s.kind === "training" ? "Training" : "Matches",
       notice.title.slice(0, 120),
@@ -227,7 +225,16 @@ export async function postSessionNotice(tx: Queryable, id: string, kind: Session
       s.age_groups,
       staffId,
       s.picked > 0 ? id : null,
+      id,
+      kind,
     ],
+  );
+  // The earlier notices about this session are out of date now: they stop asking to be read (and stop being chased),
+  // and parents see them marked out of date under the latest one.
+  await tx.query(
+    `update announcements set requires_ack = false
+     where session_id = $1 and session_notice in ('cancelled', 'restored', 'changed') and id <> $2 and requires_ack`,
+    [id, row.id],
   );
   return row.id;
 }

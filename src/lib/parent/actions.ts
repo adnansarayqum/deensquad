@@ -53,6 +53,24 @@ export async function setAvailability(sessionId: string, playerId: string, answe
   return saved ? {} : { error: "That didn't save. This session has finished or changed, so it can't be answered now." };
 }
 
+/**
+ * "All coming" on a session with several of the family's children: one tap answers Coming for each of them, the
+ * same way as tapping each child's button (`saveAnswer` checks each child and the session).
+ */
+export async function setAllComing(sessionId: string, playerIds: string[]): Promise<TapResult> {
+  const user = await requireParent();
+  if (!UUID.test(sessionId) || !Array.isArray(playerIds) || playerIds.length === 0 || playerIds.length > 10 || !playerIds.every((id) => UUID.test(id))) {
+    return { error: "That didn't save. Reload the page and try again." };
+  }
+  const saved = await asUser(user.id, async (tx) => {
+    let n = 0;
+    for (const id of playerIds) if (await saveAnswer(tx, sessionId, id, "coming")) n++;
+    return n;
+  });
+  refresh();
+  return saved === playerIds.length ? {} : { error: "That didn't save for everyone. This session has finished or changed, so check each child below." };
+}
+
 export type AwayReasonState = { error?: string; sent?: string; conversation?: string };
 
 /**
@@ -347,7 +365,7 @@ export type AddParentState = { error?: string; saved?: boolean; message?: string
 /** The database's refusals from `add_my_co_parent` (migration 0029), as the parent reads them. */
 function coParentRefusal(error: unknown): string | null {
   const message = error instanceof Error ? error.message : "";
-  if (message.includes("own email")) return "That's your own email. Add the other parent's email.";
+  if (message.includes("own email")) return "That's your own email. Add the other parent or carer's email.";
   if (message.includes("too many parents")) return "A child can have up to 4 parents in the app. Ask the club to change who's on the account.";
   if (message.includes("too many today")) return "You've added a lot of parents today. Try again tomorrow, or ask the club.";
   if (message.includes("invalid email")) return "Check the email address.";

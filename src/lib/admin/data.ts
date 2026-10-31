@@ -172,6 +172,8 @@ export type ChildDetail = {
   joinedOn: string;
   photoConsent: boolean | null;
   payment: PaymentState;
+  paymentChangedAt: string | null;
+  paymentSyncedAt: string | null;
   attended: number;
   /** The child's last 3 sessions all have no check-in for them (NEEDS.missing3). */
   missedLast3: boolean;
@@ -199,6 +201,8 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
     joined_on: string;
     photo_consent: boolean | null;
     payment: PaymentState;
+    payment_updated_at: Date | null;
+    payment_synced_at: Date | null;
     attended: number;
     missed_last_3: boolean;
     last_here: Date | null;
@@ -208,7 +212,7 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
   }>(
     `select p.id, p.first_name, p.last_name, p.date_of_birth::text as date_of_birth, p.age_group::text as age_group, p.shirt_number,
        p.position, p.joined_on::text as joined_on, p.photo_consent, p.updated_by_parent_at,
-       p.photo_file_id, p.photo_updated_at, coalesce(ps.state, 'missing')::text as payment,
+       p.photo_file_id, p.photo_updated_at, coalesce(ps.state, 'missing')::text as payment, ps.updated_at as payment_updated_at, ps.synced_at as payment_synced_at,
        (select count(*) from attendance a where a.player_id = p.id)::int as attended,
        ${MISSED_LAST_3} as missed_last_3,
        (select max(ls.starts_at) from attendance la join sessions ls on ls.id = la.session_id where la.player_id = p.id and ls.starts_at >= ${SEASON_START_SQL}) as last_here
@@ -253,6 +257,9 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
     joinedOn: p.joined_on,
     photoConsent: p.photo_consent,
     payment: p.payment,
+    /** When the payment status last changed, and when it last came from a TeamFeePay file (null: never). */
+    paymentChangedAt: p.payment_updated_at ? iso(p.payment_updated_at) : null,
+    paymentSyncedAt: p.payment_synced_at ? iso(p.payment_synced_at) : null,
     attended: p.attended,
     missedLast3: p.missed_last_3,
     lastHereThisSeason: p.last_here ? iso(p.last_here) : null,

@@ -27,9 +27,9 @@ function message(order: Order, query: Record<string, string | string[] | undefin
     return { tone: "action", text: "We haven't had your payment yet. If you've just paid, reload this page in a moment." };
   if (order.status === "awaiting_payment") return { tone: "action", text: "This order hasn't been paid yet." };
   if (order.status === "paid" && (query.return || query.paid))
-    return { tone: "done", text: "Thank you, you've paid. We'll email you when it's ready to pick up on a Friday." };
+    return { tone: "done", text: "Thank you, you've paid. It's usually ready about a week after you pay. We'll email you when it's ready to pick up on a Friday." };
   if (order.status === "paid" || order.status === "ordered")
-    return { tone: "done", text: "Paid. We'll email you when it's ready to pick up on a Friday." };
+    return { tone: "done", text: "Paid. It's usually ready about a week after you pay. We'll email you when it's ready to pick up on a Friday." };
   if (order.status === "ready") return { tone: "action", text: "Ready to pick up. Ask a coach at Friday's session." };
   return null;
 }

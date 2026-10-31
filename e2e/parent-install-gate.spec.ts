@@ -337,6 +337,8 @@ test("a parent who is also on the staff never gets the gate", async ({ browser }
   await unfold(admin, "add-staff");
   await admin.getByLabel("Name parents see").fill("Coach Idris");
   await admin.getByLabel("Email", { exact: true }).fill("parent5@example.com");
+  // A coach's groups are chosen on purpose: here, all of them.
+  await admin.getByLabel("All groups").first().check();
   await admin.getByRole("button", { name: "Add", exact: true }).click();
   await expect(admin.getByText("Added. They can sign in with that email straight away.")).toBeVisible();
   await adminContext.close();

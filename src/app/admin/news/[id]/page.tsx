@@ -68,6 +68,13 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
         <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
         <MediaGallery items={media} label={news.title} />
         {news.requiresAck ? <ReadBar read={news.readCount} total={news.audienceCount} groupsOnly={news.groupsOnly} /> : <p className="text-sm text-ink-muted">No read receipts asked for.</p>}
+        {/* The three numbers that make up the total, side by side (admin UX review, Oct 2026: 50 read, 39 to remind and 8
+            whose partner read it looked like a mismatch when the 8 were only at the foot of the list). */}
+        {news.requiresAck && unread.length ? (
+          <p className="text-sm text-ink-muted">
+            {news.readCount} read · {chase.length} still to read{covered.length ? ` · ${covered.length} whose child's other parent has read it` : ""}
+          </p>
+        ) : null}
       </Section>
 
       {tally ? (

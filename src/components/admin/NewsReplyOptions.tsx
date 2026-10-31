@@ -1,11 +1,14 @@
 import { QUICK_DEFAULTS, QUICK_LENGTH } from "@/lib/messages/quick-answers";
 
+/** A session staff can ask about: "Fri 6 Nov · Training · 6:30pm · U7, U10". */
+export type ComingToOption = { id: string; label: string };
+
 /**
  * Under "Who is it for?" on the post form: let parents reply to you, and ask for a quick answer (2 to 4 options,
  * starting Yes / No). The option boxes show only while "Ask for a quick answer" is ticked, by CSS, so the form works
  * without JavaScript.
  */
-export function NewsReplyOptions() {
+export function NewsReplyOptions({ sessions = [], comingTo = "" }: { sessions?: ComingToOption[]; /** Preselected from a session's "Ask who's coming". */ comingTo?: string }) {
   return (
     <fieldset className="group/qa flex flex-col gap-2">
       <legend className="field-label">Answers from parents</legend>
@@ -34,6 +37,22 @@ export function NewsReplyOptions() {
           ))}
         </div>
       </div>
+      {sessions.length ? (
+        <div className="flex flex-col gap-1">
+          <label htmlFor="comingTo" className="text-[15px]">
+            <b>Ask who&apos;s coming</b>: parents tap Coming or Not coming for each child on the post, and the answer goes
+            on the register
+          </label>
+          <select id="comingTo" name="comingTo" className="field" defaultValue={sessions.some((s) => s.id === comingTo) ? comingTo : ""}>
+            <option value="">No, not about a session</option>
+            {sessions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
     </fieldset>
   );
 }

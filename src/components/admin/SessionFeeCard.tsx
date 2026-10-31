@@ -14,7 +14,7 @@ export function SessionFeeCard({ pence, notice }: { pence: number; notice?: "sav
         {notice === "invalid" ? <Notice tone="action">Type the fee in pounds, like 7 or 7.50.</Notice> : null}
         <p className="text-[15px] leading-[22px]">
           Pay-as-you-go families, children with no payment plan yet and trial children pay this at the gate. On the register the coach taps
-          &ldquo;Paid {poundsText(pence)}&rdquo; once the card machine says approved, and the total for the session shows under the lists.
+          &ldquo;Paid {poundsText(pence)}&rdquo; once it&apos;s paid (card on the machine, or cash), and the total for the session shows under the lists.
         </p>
         <form action={saveSessionFee} className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">

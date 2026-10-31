@@ -23,7 +23,6 @@ const session = (id: string, groups: Child["ageGroup"][], cancelled = false): Se
   ageGroups: groups,
   arriveBy: null,
   kit: null,
-  prayerNote: null,
   notes: null,
   cancelled,
   cancelReason: null,

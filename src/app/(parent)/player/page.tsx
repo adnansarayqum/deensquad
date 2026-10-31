@@ -7,6 +7,7 @@ import { asUser } from "@/lib/db";
 import { BADGE_RULES, groupPlural, type Badge } from "@/lib/domain";
 import { loadFamilyParents } from "@/lib/parent/profile";
 import { getFamily, getPlayerPage } from "@/lib/parent/load";
+import { RememberChild } from "@/components/RememberChild";
 import { DownloadMyData } from "@/components/DownloadMyData";
 import { SignOutForm } from "@/components/SignOutForm";
 import { StaffSwitch } from "@/components/StaffSwitch";
@@ -26,6 +27,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
   return (
     <>
+      {child ? <RememberChild id={child.id} /> : null}
       {child && stats ? (
         <header className="relative overflow-hidden rounded-b-[24px] bg-pitch-deep px-4 pt-[max(env(safe-area-inset-top),20px)] pb-5 text-on-pitch">
           <div aria-hidden className="stripes-v absolute inset-0 opacity-60" />
@@ -253,7 +255,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
             </Link>
             {family.children.length > 0 ? (
               <Link href="/player/add-parent" className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
-                {parents.some((p) => !p.you) ? "Add another parent" : "Add the other parent"}
+                {parents.some((p) => !p.you) ? "Add another parent or carer" : "Add a parent or carer"}
               </Link>
             ) : null}
           </div>

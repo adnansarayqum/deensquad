@@ -72,7 +72,7 @@ export default async function TrialsPage({ searchParams }: PageProps<"/admin/tri
       <section className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
         <h2 className="text-[17px] font-extrabold">Booking page</h2>
         <p className="text-[15px] leading-[22px]">
-          Share this link on the club&apos;s Instagram, WhatsApp or website. Families pick a session for their child&apos;s group and pay the session fee by card
+          Share this link on the club&apos;s Instagram, WhatsApp or website. Families pick a session for their child&apos;s group and pay the session fee by card or cash
           at the gate. The child shows on that session&apos;s register under Trials.
         </p>
         <Link href="/trial" className="font-bold break-all text-grass-text underline">

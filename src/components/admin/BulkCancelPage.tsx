@@ -46,10 +46,10 @@ export async function BulkCancelPage({ restore, ids: raw }: { restore: boolean; 
             </span>
           </label>
           <div className="flex flex-wrap items-center gap-3">
-            <button type="submit" className="btn-chunky btn-grass">
+            <button type="submit" className={`btn-chunky ${restore ? "btn-grass" : "btn-warning"}`}>
               {restore ? `Put ${count(todo.length)} back on` : `Cancel ${count(todo.length)}`}
             </button>
-            <Link href="/admin/sessions" className="btn-chunky btn-paper">
+            <Link href="/admin/sessions" className={`btn-chunky ${restore ? "btn-paper" : "btn-grass"}`}>
               {restore ? "Leave them cancelled" : "Keep them on"}
             </Link>
           </div>

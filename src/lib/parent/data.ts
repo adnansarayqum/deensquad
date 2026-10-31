@@ -45,7 +45,7 @@ const toChild = (r: ChildRow): Child => ({
 });
 
 export const SESSION_COLUMNS = `s.id, s.kind::text as kind, s.title, s.starts_at, s.ends_at, s.venue, s.age_groups::text[] as age_groups,
-  s.arrive_by, s.kit, s.prayer_note, s.notes, s.cancelled_at is not null as cancelled, s.cancel_reason`;
+  s.arrive_by, s.kit, s.notes, s.cancelled_at is not null as cancelled, s.cancel_reason`;
 
 export type SessionRow = {
   id: string;
@@ -57,7 +57,6 @@ export type SessionRow = {
   age_groups: AgeGroup[];
   arrive_by: string | null;
   kit: string | null;
-  prayer_note: string | null;
   notes: string | null;
   cancelled: boolean;
   cancel_reason: string | null;
@@ -73,7 +72,6 @@ export const toSession = (r: SessionRow): Session => ({
   ageGroups: r.age_groups,
   arriveBy: r.arrive_by,
   kit: r.kit,
-  prayerNote: r.prayer_note,
   notes: r.notes,
   cancelled: r.cancelled,
   cancelReason: r.cancelled ? r.cancel_reason : null,
@@ -108,6 +106,27 @@ export type AnnouncementView = Announcement & {
   replied?: { at: string; conversation: string } | null;
   /** Photos and videos on it (migration 0038). */
   media: MediaItem[];
+  /** A session notice or a "Who's coming?" post (migration 0040): the session and what it says now. */
+  session: NewsSession | null;
+};
+
+export type NewsSession = {
+  id: string;
+  notice: "cancelled" | "restored" | "changed" | "attendance";
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  venue: string;
+  squad: boolean;
+  /** What the session is now, from the session itself (not from any post). */
+  cancelled: boolean;
+  finished: boolean;
+  /** No newer cancelled / back on / changed notice about the same session. */
+  latest: boolean;
+  /** The family's children the session is for (a "Who's coming?" post asks about these). */
+  children: string[];
+  /** Their answers so far, by child id. */
+  answers: Record<string, AnswerRecord>;
 };
 
 /**
@@ -135,15 +154,32 @@ export async function loadNews(tx: Queryable, family: Family, limit = 50): Promi
     allow_replies: boolean;
     quick_answers: string[] | null;
     reaches: string[] | null;
+    session_id: string | null;
+    session_notice: NewsSession["notice"] | null;
+    s_title: string | null;
+    s_starts_at: Date | null;
+    s_ends_at: Date | null;
+    s_venue: string | null;
+    s_squad: boolean | null;
+    s_cancelled: boolean | null;
+    s_finished: boolean | null;
+    s_latest: boolean | null;
+    s_children: string[] | null;
   }>(
     `select a.id, a.topic, a.title, a.body, a.audience::text[] as audience, a.requires_ack, a.posted_at, sn.display_name as posted_by,
        exists (select 1 from announcement_reads r where r.announcement_id = a.id and r.guardian_id = $1) as read,
        a.allow_replies, a.quick_answers,
        case when a.allow_replies or a.quick_answers is not null then
          (select array_agg(p.id::text order by p.date_of_birth nulls last, p.first_name) from players p where p.id = any ($4::uuid[]) and ${newsReaches("a", "p")})
-       end as reaches
+       end as reaches,
+       a.session_id, a.session_notice, s.title as s_title, s.starts_at as s_starts_at, s.ends_at as s_ends_at, s.venue as s_venue,
+       is_squad_session(s.id) as s_squad, s.cancelled_at is not null as s_cancelled, s.ends_at <= now() as s_finished,
+       not exists (select 1 from announcements b where b.session_id = a.session_id and b.session_notice in ('cancelled', 'restored', 'changed')
+         and b.posted_at > a.posted_at) as s_latest,
+       (select array_agg(p.id::text order by p.date_of_birth nulls last, p.first_name) from players p where p.id = any ($4::uuid[]) and ${sessionIsFor("s", "p")}) as s_children
      from announcements a
      left join staff_names sn on sn.id = a.posted_by
+     left join sessions s on s.id = a.session_id
      where ${familyNews("$2", "$4")}
      order by a.posted_at desc
      limit $3`,
@@ -165,6 +201,23 @@ export async function loadNews(tx: Queryable, family: Family, limit = 50): Promi
     reaches: r.reaches ?? [],
     answers: {},
     media: media.get(r.id) ?? [],
+    session:
+      r.session_id && r.session_notice && r.s_starts_at && r.s_ends_at
+        ? {
+            id: r.session_id,
+            notice: r.session_notice,
+            title: r.s_title ?? "",
+            startsAt: iso(r.s_starts_at),
+            endsAt: iso(r.s_ends_at),
+            venue: r.s_venue ?? "",
+            squad: Boolean(r.s_squad),
+            cancelled: Boolean(r.s_cancelled),
+            finished: Boolean(r.s_finished),
+            latest: Boolean(r.s_latest),
+            children: r.s_children ?? [],
+            answers: {},
+          }
+        : null,
   }));
 }
 
@@ -280,7 +333,15 @@ export async function saveAnswer(tx: Queryable, sessionId: string, playerId: str
      returning player_id`,
     [sessionId, playerId, answer],
   );
-  return rows.length > 0;
+  if (rows.length === 0) return false;
+  // Answering is reading: a "Who's coming?" post about this session stops asking (and being chased).
+  await tx.query(
+    `insert into announcement_reads (announcement_id, guardian_id)
+     select a.id, my_guardian_id() from announcements a where a.session_id = $1 and a.session_notice = 'attendance'
+     on conflict do nothing`,
+    [sessionId],
+  );
+  return true;
 }
 
 /** The longest reason a parent can give for a child not coming. */

@@ -9,11 +9,16 @@ import { ChartHover, type Tip } from "./ChartHover";
 // the club's meanings (grass = done/coming/read, neutral greys for the rest; kit-orange only on "Needs you"), and
 // every chart has its numbers in words beside it or a table, so nothing depends on colour alone.
 
-/** done = grass (coming, active); neutral = ink-muted; strong = ink (e.g. overdue: still needs telling apart); rest = the empty track. */
-export type SegmentTone = "done" | "neutral" | "strong" | "rest";
+/**
+ * done = grass (coming, active); other = chart-1 blue, a second "fine" state beside done (pay as you go next to
+ * monthly plans: two greens side by side couldn't be told apart); neutral = ink-muted; strong = ink (e.g. overdue:
+ * still needs telling apart); rest = the empty track.
+ */
+export type SegmentTone = "done" | "other" | "neutral" | "strong" | "rest";
 
 const fill: Record<Exclude<SegmentTone, "rest">, string> = {
   done: "bg-grass",
+  other: "bg-[var(--chart-1)]",
   neutral: "bg-ink-muted",
   strong: "bg-ink",
 };

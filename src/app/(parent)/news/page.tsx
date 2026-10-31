@@ -2,18 +2,19 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { TripCards } from "@/components/TripCards";
-import { Check, ChevronRight, ListChecks, MessageCircle, QrCode, Reply } from "lucide-react";
+import { Check, ChevronRight, MessageCircle, Reply } from "lucide-react";
 import { AcknowledgeButton } from "@/components/AcknowledgeButton";
 import { QuickAnswers } from "@/components/messages/QuickAnswers";
 import { NotificationsCard } from "@/components/NotificationsCard";
 import { ReadFocus } from "@/components/ReadFocus";
 import { StaffSwitch } from "@/components/StaffSwitch";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
-import { clock, dayHeading, postedLabel, shortDay } from "@/lib/dates";
+import { postedLabel } from "@/lib/dates";
 import { getNewsPage } from "@/lib/parent/load";
 import type { AnnouncementView, Family } from "@/lib/parent/data";
 import { MediaGallery } from "@/components/media/MediaGallery";
-import { sessionsToday, weekSummary } from "@/lib/parent/views";
+import { ThisWeek } from "@/components/ThisWeek";
+import { ComingOnNews, SessionNow, canAnswerComing } from "@/components/NewsSession";
 import { groupsPlural } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Club news" };
@@ -23,12 +24,6 @@ export default async function NewsPage() {
   const now = new Date();
   const unread = news.filter((a) => !a.read);
   const earlier = news.filter((a) => a.read);
-  const soonest = week
-    .flatMap((w) => (w.session ? [w.session] : []))
-    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
-  // On a session day the app still opens on News: the first thing on it is the way to the QR code.
-  const today = sessionsToday(week, now).sort((a, b) => a.session.startsAt.localeCompare(b.session.startsAt))[0];
-  const qrLabel = family.children.length > 1 ? "Show QR codes" : "Show QR code";
 
   return (
     <>
@@ -43,41 +38,11 @@ export default async function NewsPage() {
             </div>
           </div>
         </div>
-        {soonest ? (
-          <div className="flex flex-col gap-1 rounded-app bg-pitch-deep">
-            <Link href="/friday" className="flex items-center gap-3 px-3.5 py-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-floodlight font-display text-[22px] leading-none text-on-gold">
-                {shortDay(soonest.startsAt).slice(0, 3).toUpperCase()}
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                {/* The day in words ("Next Friday, 30 Oct"), so next week's session is never read as today's. */}
-                <span className="text-[15px] font-bold">
-                  {soonest.cancelled ? `${soonest.title} cancelled` : `${dayHeading(soonest.startsAt, now)} · ${clock(soonest.startsAt)}`}
-                </span>
-                {soonest.cancelled ? null : <span className="text-[14px] font-bold text-floodlight">{weekSummary(week)}</span>}
-                <span className="text-[13px] text-on-pitch-muted">
-                  {soonest.cancelled ? soonest.venue : `${soonest.title} · ${soonest.venue}`}
-                  {soonest.arriveBy && !soonest.cancelled ? ` · arrive ${soonest.arriveBy}` : ""}
-                </span>
-              </span>
-              <ChevronRight aria-hidden size={20} className="shrink-0 text-on-pitch-muted" />
-            </Link>
-            {/* On a session day the app still opens on News: the way to the QR codes sits with the session itself. */}
-            {today ? (
-              <Link
-                href="/pass?from=/news"
-                aria-label={`${qrLabel}: ${today.session.title} today`}
-                className="mx-3.5 mb-3.5 flex min-h-12 items-center justify-center gap-2 rounded-app bg-floodlight px-4 text-[15px] font-extrabold text-on-gold transition-transform active:translate-y-0.5"
-              >
-                <QrCode aria-hidden size={20} />
-                {qrLabel}
-              </Link>
-            ) : null}
-          </div>
-        ) : null}
       </AppHeader>
 
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
+        {/* Is training on, when, and each child's answer: the first thing on the screen every parent lands on. */}
+        <ThisWeek family={family} week={week} stepsLeft={stepsLeft} now={now} />
         {unreadMessages > 0 ? (
           <Link
             href="/messages?from=/news"
@@ -95,25 +60,6 @@ export default async function NewsPage() {
           </Link>
         ) : null}
         <TripCards trips={trips.filter((t) => t.children.some((c) => !c.answer))} from="/news" />
-        {stepsLeft > 0 ? (
-          <Link
-            href="/checklist"
-            className="flex items-center gap-3 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 py-3 text-ink transition-transform active:translate-y-1"
-          >
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-kit-orange text-on-orange">
-              <ListChecks aria-hidden size={24} />
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[15px] font-bold">
-                Finish setting up {family.children.length === 1 ? family.children[0].firstName : "your children"}
-              </span>
-              <span className="text-[13px]">
-                {stepsLeft === 1 ? "1 step left" : `${stepsLeft} steps left`} · contacts, photos and the club contract
-              </span>
-            </span>
-            <ChevronRight aria-hidden size={20} className="shrink-0" />
-          </Link>
-        ) : null}
         {wellbeingChild ? (
           <Link
             href={`/player/wellbeing?child=${wellbeingChild.id}&from=/news`}
@@ -149,10 +95,18 @@ export default async function NewsPage() {
                   <span className="text-[13px] text-ink-muted">{postedLabel(a.postedAt, now)}</span>
                 </div>
                 <h2 className="text-[19px] leading-[25px] font-bold">{a.title}</h2>
-                <p className="text-[15px] leading-[22px] whitespace-pre-line">{a.body}</p>
+                <p className="text-[16px] leading-6 whitespace-pre-line">{a.body}</p>
                 <MediaGallery items={a.media} label={a.title} />
-                {a.postedBy ? <p className="text-[13px] text-ink-muted">From {a.postedBy}</p> : null}
-                {a.quickAnswers && a.reaches.length ? <Answers a={a} family={family} /> : <AcknowledgeButton announcementId={a.id} title={a.title} />}
+                {outOfDate(a) ? <SessionNow session={a.session!} now={now} /> : null}
+                {a.postedBy ? <p className="text-[14px] text-ink-muted">From {a.postedBy}</p> : null}
+                {a.quickAnswers && a.reaches.length ? (
+                  <Answers a={a} family={family} />
+                ) : canAnswerComing(a.session) ? (
+                  // Answering Coming / Not coming here is the same answer as on Sessions, and counts as read.
+                  <ComingOnNews session={a.session} family={family} now={now} />
+                ) : (
+                  <AcknowledgeButton announcementId={a.id} title={a.title} />
+                )}
                 <ReplyLink a={a} />
               </Card>
             ))}
@@ -178,10 +132,15 @@ export default async function NewsPage() {
             {earlier.map((a) => (
               <ReadFocus key={a.id} id={a.id} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper px-4 py-3.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[13px] text-ink-muted">
+                  <span className="text-[14px] text-ink-muted">
                     {a.topic} · {a.audience === "all" ? "All groups" : a.audience.join(", ")} · {postedLabel(a.postedAt, now)}
                   </span>
-                  {a.requiresAck ? (
+                  {outOfDate(a) ? (
+                    // A newer cancelled / back on / changed notice about the same session: this one no longer applies.
+                    <span className="shrink-0 whitespace-nowrap">
+                      <Pill tone="neutral">Out of date</Pill>
+                    </span>
+                  ) : a.requiresAck ? (
                     // Quiet once done: the unread messages above are the ones that stand out.
                     <span className="inline-flex shrink-0 items-center gap-1 text-[13px] font-bold text-ink-muted">
                       <Check aria-hidden size={14} strokeWidth={3} />
@@ -189,10 +148,11 @@ export default async function NewsPage() {
                     </span>
                   ) : null}
                 </div>
-                <h2 className="text-base leading-[22px] font-bold">{a.title}</h2>
-                <p className="text-[14px] leading-5 whitespace-pre-line text-ink-muted">{a.body}</p>
+                <h2 className={`text-[17px] leading-[23px] font-bold ${outOfDate(a) ? "text-ink-muted line-through decoration-1" : ""}`}>{a.title}</h2>
+                <p className="text-[16px] leading-6 whitespace-pre-line text-ink-muted">{a.body}</p>
                 <MediaGallery items={a.media} label={a.title} />
-                {a.quickAnswers && a.reaches.length ? <Answers a={a} family={family} /> : null}
+                {outOfDate(a) ? <SessionNow session={a.session!} now={now} /> : null}
+                {a.quickAnswers && a.reaches.length ? <Answers a={a} family={family} /> : canAnswerComing(a.session) ? <ComingOnNews session={a.session} family={family} now={now} /> : null}
                 <ReplyLink a={a} />
               </ReadFocus>
             ))}
@@ -202,6 +162,9 @@ export default async function NewsPage() {
     </>
   );
 }
+
+/** A session notice with a newer notice about the same session after it. */
+const outOfDate = (a: AnnouncementView) => Boolean(a.session && a.session.notice !== "attendance" && !a.session.latest);
 
 /** The quick-answer buttons for each of the family's children the message reaches (one child: plain "Yes"/"No"). */
 function Answers({ a, family }: { a: AnnouncementView; family: Family }) {

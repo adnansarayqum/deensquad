@@ -205,7 +205,7 @@ test("privacy notice lists WhatsApp, the nightly backups and the rights parents 
   await expect(page.getByText("Twilio")).toHaveCount(0);
 });
 
-test("calendar: a parent gets a private link, the feed has their children's sessions, and a reset stops the old link", async ({ browser, playwright }) => {
+test("calendar: a parent gets a private link, a second phone gets its own without breaking the first, and Stop all ends both", async ({ browser, playwright }) => {
   test.skip(!existsSync(YOUR_DATA_PARENT_STATE), "needs the sign-up test above");
   const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
   const page = await context.newPage();
@@ -219,7 +219,7 @@ test("calendar: a parent gets a private link, the feed has their children's sess
   const feed = await page.getByLabel("Link for other calendar apps").inputValue();
   expect(feed).toBe((await subscribe.getAttribute("href"))!.replace("webcal://", "http://"));
   await expect(page.getByRole("link", { name: "Google Calendar" })).toHaveAttribute("href", `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(feed.replace("http://", "webcal://"))}`);
-  for (const target of [subscribe, page.getByRole("link", { name: "Google Calendar" }), page.getByRole("button", { name: "Copy link" }), page.getByRole("button", { name: "Reset link" })]) {
+  for (const target of [subscribe, page.getByRole("link", { name: "Google Calendar" }), page.getByRole("button", { name: "Copy link" }), page.getByRole("button", { name: "Get a link for another phone" })]) {
     expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   }
   await page.screenshot({ path: shot("parent-calendar-link") });
@@ -234,14 +234,24 @@ test("calendar: a parent gets a private link, the feed has their children's sess
   expect(ics).toMatch(/SUMMARY:.*\(Layla/);
   expect(ics).not.toContain("Haddad");
 
-  // Back later, the link isn't shown again; a reset makes a new one and the old one stops working.
+  // Back later, the link isn't shown again. Another phone gets its own link, and the first one keeps working.
   await page.reload();
-  await expect(page.getByText("Your calendar link is set up. Reset it to see it again.")).toBeVisible();
-  await page.getByRole("button", { name: "Reset link" }).click();
+  await expect(page.getByText(/Your calendar link is set up\. To add your sessions to another phone/)).toBeVisible();
+  await page.getByRole("button", { name: "Get a link for another phone" }).click();
   const fresh = await page.getByLabel("Link for other calendar apps").inputValue();
   expect(fresh).not.toBe(feed);
-  expect((await api.get(feed)).status()).toBe(404);
+  expect((await api.get(feed)).status()).toBe(200);
   expect((await api.get(fresh)).status()).toBe(200);
+
+  // Stop all (for a lost phone) needs the tick, then ends both.
+  await page.reload();
+  await expect(page.getByText(/set up on 2 phones or apps/)).toBeVisible();
+  await page.getByText("Stop all calendar links").click();
+  await page.getByLabel("Yes, stop every calendar link").check();
+  await page.getByRole("button", { name: "Stop all links" }).click();
+  await expect(page.getByText(/Every calendar link has stopped/)).toBeVisible();
+  expect((await api.get(feed)).status()).toBe(404);
+  expect((await api.get(fresh)).status()).toBe(404);
   await api.dispose();
   await context.close();
 });

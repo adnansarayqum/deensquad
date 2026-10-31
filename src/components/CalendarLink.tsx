@@ -9,7 +9,7 @@ import { makeCalendarLink } from "@/lib/calendar/actions";
  * the action's result and is shown once (only its hash is stored). Copy link needs JavaScript; the link is also in a
  * read-only box to copy by hand.
  */
-export function CalendarLink({ hasLink }: { hasLink: boolean }) {
+export function CalendarLink({ hasLink, count = 0 }: { hasLink: boolean; count?: number }) {
   const [state, run, pending] = useActionState(makeCalendarLink, null);
   const links = state?.links;
 
@@ -38,20 +38,47 @@ export function CalendarLink({ hasLink }: { hasLink: boolean }) {
           </a>
           <CopyLink href={links.https} />
         </section>
+      ) : state?.stopped ? (
+        <p role="status" className="text-[15px] leading-[22px]">
+          Every calendar link has stopped. Your calendars keep the sessions they had but won&apos;t get new ones or changes.
+        </p>
       ) : hasLink ? (
-        <p className="text-[15px] leading-[22px]">Your calendar link is set up. Reset it to see it again.</p>
+        <p className="text-[15px] leading-[22px]">
+          Your calendar link is set up{count > 1 ? ` on ${count} phones or apps` : ""}. To add your sessions to another phone, get a link for it below. The
+          others keep working.
+        </p>
       ) : null}
 
-      {links || hasLink ? (
-        <form action={run} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
-          <h2 className="text-[17px] font-extrabold">Reset link</h2>
-          <p className="text-[15px] leading-[22px]">Makes a new link. Anyone using the old link stops getting updates.</p>
-          <button type="submit" disabled={pending} className="btn-chunky btn-paper self-start">
-            Reset link
-          </button>
-        </form>
+      {(links || hasLink) && !state?.stopped ? (
+        <>
+          <form action={run} className="flex flex-col gap-2 rounded-app border-2 border-line bg-paper p-4">
+            <input type="hidden" name="intent" value="another" />
+            <h2 className="text-[17px] font-extrabold">Another phone or calendar</h2>
+            <p className="text-[15px] leading-[22px]">Makes a new link for it. The calendars you&apos;ve already set up keep getting updates.</p>
+            <button type="submit" disabled={pending} className="btn-chunky btn-paper self-start">
+              Get a link for another phone
+            </button>
+          </form>
+          <details className="rounded-app border-2 border-line bg-paper p-4">
+            <summary className="min-h-12 cursor-pointer content-center text-[15px] font-bold">Stop all calendar links</summary>
+            <form action={run} className="mt-2 flex flex-col gap-3">
+              <input type="hidden" name="intent" value="stop" />
+              <p className="text-[15px] leading-[22px]">
+                For a lost phone, or a link you shared by mistake. Every calendar using a link from here stops getting your children&apos;s sessions.
+              </p>
+              <label className="flex min-h-12 items-center gap-3 text-[15px]">
+                <input type="checkbox" name="confirm" value="yes" className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+                Yes, stop every calendar link
+              </label>
+              <button type="submit" disabled={pending} className="btn-chunky btn-paper self-start">
+                Stop all links
+              </button>
+            </form>
+          </details>
+        </>
       ) : (
         <form action={run}>
+          <input type="hidden" name="intent" value="first" />
           <button type="submit" disabled={pending} className="btn-chunky btn-grass w-full">
             Get my calendar link
           </button>

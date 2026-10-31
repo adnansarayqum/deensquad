@@ -48,14 +48,16 @@ jobs:
         run: |
           set -o pipefail
           npx playwright test 2>&1 | tee e2e-output.log
-      # The end of the output as an annotation, so a failure can be read from the run's summary page and through the
+      # The failures as annotations, so they can be read from the run's summary page and through the
       # GitHub API (the raw log and uploaded files live on a storage host that not every tool can reach).
       - if: failure()
         shell: bash
         run: |
           [ -f e2e-output.log ] || exit 0
-          grep -vE '^\s*$' e2e-output.log | tail -n 80 | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' > e2e-tail.txt
-          echo "::error title=End-to-end output (last 80 lines)::$(cat e2e-tail.txt)"
+          note() { head -c 3500 | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}'; }
+          # Annotations are cut at a few KB, so: the failed tests, their first error lines, and the totals.
+          echo "::error title=Failed end-to-end tests::$(grep -E '✘|^ +[0-9]+ (failed|flaky|passed|skipped|did not run)' e2e-output.log | note)"
+          echo "::error title=End-to-end errors::$(grep -E -A3 '^ +(Error|TimeoutError|expect\()' e2e-output.log | note)"
       - if: failure()
         uses: actions/upload-artifact@v4
         with:

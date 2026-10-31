@@ -278,7 +278,9 @@ export type InboxRow = {
 
 /**
  * The staff inbox: conversations this member of staff covers or that are addressed to them, newest first.
- * `unreadOnly`: only those with a parent's message they haven't read. `about`: replies to one club message.
+ * `unreadOnly` ("Needs reply"): a parent's message they haven't read, leaving out "Not coming" reasons (those are
+ * listed under `absences` and show on the register; admin UX review, Oct 2026: they were most of the unread count).
+ * `about`: replies to one club message.
  */
 export async function loadInbox(
   tx: Queryable,
@@ -307,7 +309,8 @@ export async function loadInbox(
          exists (
            select 1 from conversation_messages pm where pm.conversation_id = c.id and pm.author_kind = 'parent'
              and pm.created_at > coalesce((select r.last_read_at from conversation_reads r where r.conversation_id = c.id and r.user_id = auth.uid()), '-infinity')
-         ) as unread
+         ) as unread,
+         c.session_id is not null as absence
        from conversations c
        join players p on p.id = c.player_id
        left join announcements a on a.id = c.announcement_id
@@ -317,7 +320,7 @@ export async function loadInbox(
        ) m on true
        where ${STAFF_SEES} and ($1::uuid is null or c.announcement_id = $1) and (not $4 or c.session_id is not null)
      ) x
-     where not $2 or x.unread
+     where not $2 or (x.unread and not x.absence)
      order by x.last_message_at desc
      limit $3`,
     [opts.about ?? null, Boolean(opts.unreadOnly), opts.limit ?? 200, Boolean(opts.absences)],
@@ -334,15 +337,19 @@ export async function loadInbox(
   }));
 }
 
-/** How many conversations in this member of staff's inbox have a parent's message they haven't read (the nav badge). */
-export async function loadStaffUnread(tx: Queryable): Promise<number> {
+/**
+ * The nav badge: conversations in this member of staff's inbox with a parent's message they haven't read, leaving out
+ * "Not coming" reasons (`absences: true` counts only those, for the Not coming tab).
+ */
+export async function loadStaffUnread(tx: Queryable, opts: { absences?: boolean } = {}): Promise<number> {
   const [{ n }] = await tx.query<{ n: number }>(
     `select count(*)::int as n from conversations c
-     where ${STAFF_SEES}
+     where ${STAFF_SEES} and (c.session_id is not null) = $1
        and exists (
          select 1 from conversation_messages pm where pm.conversation_id = c.id and pm.author_kind = 'parent'
            and pm.created_at > coalesce((select r.last_read_at from conversation_reads r where r.conversation_id = c.id and r.user_id = auth.uid()), '-infinity')
        )`,
+    [Boolean(opts.absences)],
   );
   return n;
 }

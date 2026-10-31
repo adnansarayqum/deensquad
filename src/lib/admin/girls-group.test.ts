@@ -50,7 +50,6 @@ beforeAll(async () => {
       times: [{ start: new Date("2026-10-09T16:00:00Z"), end: new Date("2026-10-09T17:00:00Z") }],
       arriveBy: null,
       kit: null,
-      prayerNote: null,
       notes: null,
     }),
   );

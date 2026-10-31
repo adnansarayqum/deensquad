@@ -106,7 +106,6 @@ describe("adding a weekly run", () => {
     times,
     arriveBy: null,
     kit: null,
-    prayerNote: null,
     notes: null,
   });
   const dayMonth = (d: Date) => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short" }).format(d);
@@ -152,7 +151,6 @@ describe("editing a session", () => {
     end: addDays(coming.end, 15),
     arriveBy: "9:30am",
     kit: "Full kit",
-    prayerNote: null,
     notes: "Park on Ripple Road. Bring a packed lunch.",
     ...overrides,
   });

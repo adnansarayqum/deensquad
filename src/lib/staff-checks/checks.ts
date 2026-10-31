@@ -61,7 +61,7 @@ export function expiryText(c: Pick<StaffCheck, "expiresOn">, today: string): str
 export type StaffClearance = {
   /** "ok": every required check there and none run out. */
   state: "ok" | "due" | "expired" | "missing";
-  /** Short words for the pill and the overview: "No DBS check", "DBS ran out", "First aid runs out soon". */
+  /** Short words for the pill and the overview: "No DBS recorded" (nothing in the app, which isn't the same as no check), "DBS ran out", "First aid runs out soon". */
   words: string;
   missing: CheckKind[];
   expired: StaffCheck[];
@@ -76,7 +76,7 @@ export function clearance(checks: StaffCheck[], today: string): StaffClearance {
   // A required kind that's only there as an expired check counts as run out, not missing.
   const reallyMissing = missing.filter((k) => !expired.some((c) => c.kind === k));
   const short = (c: StaffCheck) => (c.kind === "dbs" ? "DBS" : checkName(c));
-  if (reallyMissing.length) return { state: "missing", words: `No ${reallyMissing.map((k) => (k === "dbs" ? "DBS check" : CHECK_KINDS[k].toLowerCase())).join(" or ")}`, missing: reallyMissing, expired, due };
+  if (reallyMissing.length) return { state: "missing", words: `No ${reallyMissing.map((k) => (k === "dbs" ? "DBS" : CHECK_KINDS[k].toLowerCase())).join(" or ")} recorded`, missing: reallyMissing, expired, due };
   if (expired.length) return { state: "expired", words: `${short(expired[0])} ran out${expired.length > 1 ? ` (+${expired.length - 1} more)` : ""}`, missing: [], expired, due };
   if (due.length) return { state: "due", words: `${short(due[0])} runs out soon${due.length > 1 ? ` (+${due.length - 1} more)` : ""}`, missing: [], expired, due };
   return { state: "ok", words: "Checks up to date", missing: [], expired, due };

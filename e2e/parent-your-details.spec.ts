@@ -129,7 +129,7 @@ test("a parent adds the other parent: they're emailed a link, sign in and see th
   const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
   const page = await context.newPage();
   await page.goto("/player");
-  const link = page.getByRole("region", { name: "Your family" }).getByRole("link", { name: "Add the other parent" });
+  const link = page.getByRole("region", { name: "Your family" }).getByRole("link", { name: "Add a parent or carer" });
   expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   await link.click();
   await expect(page).toHaveURL(/\/player\/add-parent$/);
@@ -143,7 +143,7 @@ test("a parent adds the other parent: they're emailed a link, sign in and see th
   await page.getByLabel("Last name").fill("Haddad");
   await page.getByLabel("Email address").fill("Maryam.Haddad@example.com");
   await page.getByRole("button", { name: "Add parent" }).click();
-  await expect(page.locator("main").getByRole("alert")).toHaveText("That's your own email. Add the other parent's email.");
+  await expect(page.locator("main").getByRole("alert")).toHaveText("That's your own email. Add the other parent or carer's email.");
   await expect(page.getByLabel("First name")).toHaveValue("Yasir");
 
   const before = readFileSync(OUTBOX, "utf8").trim().split("\n").length;
@@ -209,7 +209,7 @@ test("a family staying on pay as you go says so on the payment step; it's done, 
 
   // The step is done; moving to the monthly plan later is still offered.
   await page.goto("/checklist/payment");
-  await expect(page.getByText("Paying as you go for Layla, Omar and Zaid. You pay for each session.")).toBeVisible();
+  await expect(page.getByText("Paying as you go for Layla, Omar and Zaid. You pay for each session at the gate, by card or cash.")).toBeVisible();
   await expect(page.getByRole("button", { name: "We're paying as we go" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "I've set up the monthly plan" })).toBeVisible();
   await context.close();

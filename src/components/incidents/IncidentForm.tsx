@@ -70,6 +70,11 @@ export function IncidentForm({ childList: children, childId, sessionId, sessionL
         The child&apos;s parents get this in the app straight away, from you, and can reply. The club&apos;s admins are told too. It&apos;s kept as a
         club record and can&apos;t be changed afterwards.
       </p>
+      {/* A last check before it goes, since it can't be changed afterwards (admin UX review, Oct 2026). */}
+      <label className="flex min-h-12 items-start gap-3 text-[15px] leading-[22px]">
+        <input type="checkbox" name="checked" value="yes" required className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--grass)]" />
+        <span>I&apos;ve checked the child, the time and the words. Send it to their parents.</span>
+      </label>
       {state.error ? (
         <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
           {state.error}

@@ -80,7 +80,7 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
     return (
       <>
         <BackHeader back="/news" backLabel="Club news" title={`Reply to ${to}`}>
-          About {chosen.child.firstName}: “{chosen.target.title}”. Your reply goes to {to}; {chosen.child.firstName}&apos;s coaches and the club&apos;s admins can read it too. Other parents never see it.
+          About {chosen.child.firstName}: “{chosen.target.title}”. Your reply goes to {to}. Who can read it: {chosen.child.firstName}&apos;s parents and carers on the app (so your partner too), {chosen.child.firstName}&apos;s coaches and the club&apos;s admins. Other families never see it.
         </BackHeader>
         <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
           <Card className="p-4">
@@ -96,7 +96,7 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
   return (
     <>
       <BackHeader back="/messages" backLabel="Messages" title="Message the coaches">
-        Your child&apos;s coaches and the club&apos;s admins see it. Other parents never do.
+        Who can read it: your child&apos;s parents and carers on the app (so your partner too), their coaches and the club&apos;s admins. Other families never see it.
       </BackHeader>
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
         <Card className="p-4">

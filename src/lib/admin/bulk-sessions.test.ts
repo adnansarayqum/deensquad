@@ -102,7 +102,7 @@ describe("bulk edit", () => {
   });
 
   it("lays the patch over a session (pure)", () => {
-    const s = { ...({} as import("./data").AdminSession), title: "Training", kind: "training" as const, venue: "Hub", ageGroups: ["U7" as const], startsAt: "2026-10-09T17:30:00.000Z", endsAt: "2026-10-09T19:00:00.000Z", arriveBy: null, kit: "Boots", prayerNote: null, notes: null };
+    const s = { ...({} as import("./data").AdminSession), title: "Training", kind: "training" as const, venue: "Hub", ageGroups: ["U7" as const], startsAt: "2026-10-09T17:30:00.000Z", endsAt: "2026-10-09T19:00:00.000Z", arriveBy: null, kit: "Boots", notes: null };
     const edit = applyPatch(s, { venue: "Park", end: { hour: 20, minute: 30 } });
     expect(edit).toMatchObject({ title: "Training", venue: "Park", kit: "Boots", groups: ["U7"] });
     expect(edit.start.toISOString()).toBe("2026-10-09T17:30:00.000Z");

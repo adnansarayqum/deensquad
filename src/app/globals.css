@@ -59,6 +59,14 @@
     border: 2px solid var(--line);
     box-shadow: var(--lip-neutral);
   }
+  /* A button that undoes or cancels something for families (Cancel this session): outlined in kit-orange, never the
+     green of a go-ahead. Ink text, so it passes contrast in both themes. */
+  .btn-warning {
+    background: var(--paper);
+    color: var(--ink);
+    border: 2px solid var(--kit-orange);
+    box-shadow: var(--lip-neutral);
+  }
   .btn-chunky:disabled {
     background: var(--line);
     color: var(--ink-muted);

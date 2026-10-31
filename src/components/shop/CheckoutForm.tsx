@@ -5,7 +5,7 @@ import { checkout, type CheckoutState } from "@/lib/shop/actions";
 
 const LABELS = {
   card: { title: "Card", detail: "Pay now on SumUp's secure page" },
-  bank: { title: "Bank transfer", detail: "We'll show you the club's bank details" },
+  bank: { title: "Bank transfer", detail: "Straight after ordering you'll see the club's bank details and your own reference" },
 } as const;
 
 /** Choose card or bank transfer, then place the order. */
@@ -39,6 +39,8 @@ export function CheckoutForm({ options, total }: { options: ("card" | "bank")[];
           </label>
         ))}
       </fieldset>
+      {/* The owner's figure: kit is ready about a week after it's paid for, handed out at Friday training. */}
+      <p className="text-[15px] leading-[22px] text-ink-muted">Kit is usually ready about a week after you pay. We&apos;ll email you, and you collect it at Friday training.</p>
       {state.error ? (
         <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
           {state.error}

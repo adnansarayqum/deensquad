@@ -23,6 +23,7 @@ export function AvailabilityPicker({
   answered,
   reason = null,
   calendar,
+  quiet = false,
 }: {
   sessionId: string;
   playerId: string;
@@ -39,6 +40,8 @@ export function AvailabilityPicker({
   reason?: string | null;
   /** "Add to calendar" links for this session, shown under a Coming (or "Yes, can play") answer. */
   calendar?: CalendarLinks;
+  /** No "Tap once…" hint before an answer (on News, where the card already asks the question). */
+  quiet?: boolean;
 }) {
   const [optimistic, setOptimistic] = useOptimistic(answer);
   // "Saved…" is only for the person who just tapped here; anyone else (another parent sharing the child, or this
@@ -110,7 +113,9 @@ export function AvailabilityPicker({
               ? squad
                 ? `Saved. The coach knows ${childName} can't play, so they can ask a reserve.`
                 : `Saved. Coach knows ${childName} isn't coming.`
-              : `Tap once. ${childName}'s coach sees it straight away.`}
+              : quiet
+                ? null
+                : `Tap once. ${childName}'s coach sees it straight away.`}
       </p>
       )}
       {coming && calendar && !failed ? <AddToCalendar links={calendar} /> : null}

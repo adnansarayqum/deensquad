@@ -38,7 +38,6 @@ export async function applyDraft(tx: Queryable, id: string, staffId: string): Pr
       times: p.times.map((t) => ({ start: new Date(t.start), end: new Date(t.end) })),
       arriveBy: p.arriveBy,
       kit: p.kit,
-      prayerNote: null,
       notes: p.notes,
     });
     return done(addedSentence(result), "/admin/sessions");

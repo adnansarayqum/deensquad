@@ -258,7 +258,14 @@ function Tiles({ d, next }: { d: Dashboard; next: NextSessionSummary | null }) {
           value={d.attendance.seasonPct === null ? "–" : `${d.attendance.seasonPct}%`}
           of={d.attendance.seasonPct === null ? "no register yet" : undefined}
         >
-          <Sparkline values={spark} />
+          {/* A trend line needs a few points: under 4 sessions it says how many instead (admin UX review, Oct 2026). */}
+          {spark.length >= 4 ? (
+            <Sparkline values={spark} />
+          ) : d.attendance.seasonPct !== null ? (
+            <span className="text-[13px] text-ink-muted">
+              From {spark.length} {spark.length === 1 ? "session" : "sessions"} so far
+            </span>
+          ) : null}
         </StatTile>
       </li>
     </ul>
@@ -351,7 +358,7 @@ function FamiliesSection({ d }: { d: Dashboard }) {
         hideZero
         segments={[
           { label: "active", value: p.active, tone: "done", href: "/admin/families" },
-          { label: "pay as you go", value: p.pay_as_you_go, tone: "done", href: "/admin/families?need=payg" },
+          { label: "pay as you go", value: p.pay_as_you_go, tone: "other", href: "/admin/families?need=payg" },
           { label: "to check", value: p.self_reported, tone: "neutral", href: "/admin/families?need=check" },
           { label: "overdue", value: p.overdue, tone: "strong", href: "/admin/families?need=overdue" },
           { label: "no plan yet", value: p.missing, tone: "rest", href: "/admin/families?need=missing" },

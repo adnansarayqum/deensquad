@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { buildFamilyExport } from "../parent/export";
-import { allowFeed, allowLookupFrom, FEED_LIMIT, MISS_LIMIT, recordMiss, windowCounter, guardianForToken, hashCalendarToken, loadFeedSessions, loadMyCalendarLink, resetFeedLimit, setMyCalendarToken, tokenFromFile } from "./feed";
+import { allowFeed, allowLookupFrom, FEED_LIMIT, MISS_LIMIT, recordMiss, windowCounter, guardianForToken, hashCalendarToken, loadFeedSessions, loadMyCalendarLink, loadMyCalendarLinks, addMyCalendarLink, stopMyCalendarLinks, MAX_CALENDAR_LINKS, resetFeedLimit, setMyCalendarToken, tokenFromFile } from "./feed";
 
 const now = new Date("2026-10-07T12:00:00Z");
 const day = (n: number, hour = 17) => new Date(Date.UTC(2026, 9, 7 + n, hour, 30));
@@ -79,6 +79,21 @@ describe("family calendar feed", () => {
     expect(data.you?.calendarLink).not.toBeNull();
     expect(JSON.stringify(data)).not.toContain(second);
     expect(JSON.stringify(data)).not.toContain(hashCalendarToken(second));
+  });
+
+  it("gives another phone its own link without stopping the first, up to 5, and Stop all ends every one", async () => {
+    const first = await t.asUser(parentUser, setMyCalendarToken);
+    const extra: string[] = [];
+    for (let i = 1; i < MAX_CALENDAR_LINKS; i++) extra.push((await t.asUser(parentUser, addMyCalendarLink))!);
+    expect(await t.asUser(parentUser, addMyCalendarLink)).toBeNull();
+    expect((await t.asUser(parentUser, loadMyCalendarLinks)).count).toBe(MAX_CALENDAR_LINKS);
+    for (const token of [first, ...extra]) expect(await t.asSystem((tx) => guardianForToken(tx, token))).toBe(ids.amina);
+    // Only hashes are kept, and another parent can't see them.
+    const other = await t.signIn("stranger2@example.com");
+    expect(await t.asUser(other, (tx) => tx.query(`select * from guardian_calendar_links`))).toEqual([]);
+    await t.asUser(parentUser, stopMyCalendarLinks);
+    for (const token of [first, ...extra]) expect(await t.asSystem((tx) => guardianForToken(tx, token))).toBeNull();
+    expect(await t.asUser(parentUser, loadMyCalendarLinks)).toEqual({ count: 0, first: null });
   });
 
   it("can't be set by someone who isn't a parent, or set directly", async () => {

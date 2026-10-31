@@ -7,7 +7,7 @@ import { asUser } from "@/lib/db";
 import { getFamily } from "@/lib/parent/load";
 import { loadFamilyParents, type FamilyParent } from "@/lib/parent/profile";
 
-export const metadata: Metadata = { title: "Add the other parent" };
+export const metadata: Metadata = { title: "Add a parent or carer" };
 
 const names = (list: string[]) => (list.length <= 1 ? (list[0] ?? "") : `${list.slice(0, -1).join(", ")} and ${list.at(-1)}`);
 
@@ -26,7 +26,7 @@ export default async function AddParentPage() {
 
   return (
     <>
-      <BackHeader back="/player" backLabel="Family" title="Add the other parent">
+      <BackHeader back="/player" backLabel="Family" title="Add a parent or carer">
         Add your child&apos;s other parent or carer. They get their own sign-in and see the same as you: news, Friday answers, messages and
         progress.
       </BackHeader>

@@ -34,6 +34,17 @@ export async function saveIncident(_prev: IncidentFormState, formData: FormData)
   if (!actionTaken) return { error: "Say what you did about it (first aid, called the parent, rested)." };
   const session = formData.get("session");
   const sessionId = typeof session === "string" && UUID.test(session) ? session : null;
+  if (formData.get("checked") !== "yes") return { error: "Tick the box to say you've checked it. It goes to the parents straight away and can't be changed." };
+  if (sessionId) {
+    // Opened from a session's register: the time has to be on that session's day (London), or it's the wrong session.
+    const [s] = await asUser(user.id, (tx) =>
+      tx.query<{ same: boolean; title: string }>(
+        `select (starts_at at time zone 'Europe/London')::date = ($2::timestamptz at time zone 'Europe/London')::date as same, title from sessions where id = $1`,
+        [sessionId, happenedAt],
+      ),
+    );
+    if (s && !s.same) return { error: `That time isn't on the day of ${s.title}. Check when it happened.` };
+  }
 
   const result = await asUser(user.id, (tx) =>
     logIncident(tx, { playerId: child, sessionId, kind, happenedAt, whatHappened, actionTaken, staff: { id: user.staff.id, displayName: user.staff.displayName } }, coachLimit(user.staff)),

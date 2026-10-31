@@ -83,8 +83,8 @@ export async function seedDev(tx: Queryable, now = new Date()): Promise<void> {
     const d = londonDate(start);
     sessionIds.push(
       (await one(
-        `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups, arrive_by, kit, prayer_note)
-         values ('training', 'Training', $1, $2, 'Bobby Moore Sports Hub', '{U6,U7,U10,U12,U15}', '6:20pm', 'Green top · shin pads · water bottle', 'Prayer break in the session')
+        `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups, arrive_by, kit)
+         values ('training', 'Training', $1, $2, 'Bobby Moore Sports Hub', '{U6,U7,U10,U12,U15}', '6:20pm', 'Green top · shin pads · water bottle')
          returning id`,
         [londonTime(d.year, d.month, d.day, 18, 30), londonTime(d.year, d.month, d.day, 20, 0)],
       ))!,

@@ -14,7 +14,7 @@ describe("staff checks", () => {
   });
 
   it("sums up a person: no DBS, DBS run out, something running out, or up to date", () => {
-    expect(clearance([], TODAY)).toMatchObject({ state: "missing", words: "No DBS check" });
+    expect(clearance([], TODAY)).toMatchObject({ state: "missing", words: "No DBS recorded" });
     expect(clearance([check({ kind: "first_aid" })], TODAY)).toMatchObject({ state: "missing" });
     expect(clearance([check({ expiresOn: "2026-01-01" })], TODAY)).toMatchObject({ state: "expired", words: "DBS ran out" });
     expect(clearance([check({}), check({ id: "f", kind: "first_aid", expiresOn: "2026-11-30" })], TODAY)).toMatchObject({ state: "due", words: "First aid runs out soon" });

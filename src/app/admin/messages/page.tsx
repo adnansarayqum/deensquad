@@ -8,7 +8,7 @@ import { requireStaff } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { postedLabel } from "@/lib/dates";
 import { markAllRead } from "@/lib/messages/actions";
-import { loadInbox, type InboxRow } from "@/lib/messages/data";
+import { loadStaffUnread, loadInbox, type InboxRow } from "@/lib/messages/data";
 
 export const metadata: Metadata = { title: "Messages" };
 
@@ -23,11 +23,12 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
   const about = typeof params.about === "string" && UUID.test(params.about) ? params.about : null;
   const absences = params.show === "absences" && !about;
   const all = params.show === "all" || absences || Boolean(about);
-  const [rows, newsTitle] = await asUser(user.id, async (tx) => {
+  const [rows, newsTitle, newAbsences] = await asUser(user.id, async (tx) => {
     const list = await loadInbox(tx, { unreadOnly: !all, about, absences });
     const [news] = about ? await tx.query<{ title: string }>(`select title from announcements where id = $1`, [about]) : [];
-    return [list, news?.title ?? null] as const;
+    return [list, news?.title ?? null, await loadStaffUnread(tx, { absences: true })] as const;
   });
+  const confirming = params.markall === "confirm";
   const now = new Date();
   const tab = (active: boolean) => `btn-chunky btn-small ${active ? "btn-grass" : "btn-paper"}`;
   const who = (r: InboxRow) => (r.parents.length ? r.parents.join(", ") : "No parent linked");
@@ -45,13 +46,13 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
       >
         <nav aria-label="Show" className="flex flex-wrap gap-2">
           <Link href="/admin/messages" aria-current={!all ? "page" : undefined} className={tab(!all)}>
-            Unread
+            Needs reply
           </Link>
           <Link href="/admin/messages?show=all" aria-current={all && !about && !absences ? "page" : undefined} className={tab(all && !about && !absences)}>
             All
           </Link>
           <Link href="/admin/messages?show=absences" aria-current={absences ? "page" : undefined} className={tab(absences)}>
-            Not coming
+            {newAbsences ? `Not coming (${newAbsences} new)` : "Not coming"}
           </Link>
           <Link href="/admin/messages/new" className="btn-chunky btn-small btn-paper ml-auto">
             <PenLine aria-hidden size={16} />
@@ -59,9 +60,26 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
           </Link>
         </nav>
         {!all && rows.length > 1 ? (
+          // Reading isn't replying: these families are waiting for an answer, so it asks first.
+          <details open={confirming} className="rounded-app border-2 border-line bg-paper px-3.5 py-1">
+            <summary className="min-h-12 cursor-pointer content-center text-[15px] font-bold text-grass-text underline">Mark all {rows.length} as read</summary>
+            <form action={markAllRead} className="flex flex-col gap-2 pb-3">
+              <input type="hidden" name="scope" value="reply" />
+              <label className="flex min-h-12 items-center gap-3 text-[15px]">
+                <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+                Yes, mark these {rows.length} conversations as read. Nobody has replied to them yet.
+              </label>
+              <button type="submit" className="btn-chunky btn-paper btn-small self-start">
+                Mark as read
+              </button>
+            </form>
+          </details>
+        ) : null}
+        {absences && newAbsences > 0 ? (
           <form action={markAllRead}>
+            <input type="hidden" name="scope" value="absences" />
             <button type="submit" className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
-              Mark all {rows.length} as read
+              Mark the {newAbsences} new {newAbsences === 1 ? "reason" : "reasons"} as read
             </button>
           </form>
         ) : null}
@@ -71,7 +89,7 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
 
       {rows.length === 0 ? (
         <p className="rounded-app border-2 border-line bg-paper p-4 text-[15px] text-ink-muted">
-          {all ? "No conversations yet." : "Nothing unread. "}
+          {all ? "No conversations yet." : "Nothing waiting for a reply. "}
           {all ? null : (
             <Link href="/admin/messages?show=all" className="font-bold text-grass-text underline">
               See all conversations

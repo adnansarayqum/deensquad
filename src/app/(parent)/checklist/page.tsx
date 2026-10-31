@@ -37,18 +37,19 @@ export default async function ChecklistPage() {
   // Optional lines (medical needs, the sports hub code) are gathered at the end under their own heading.
   const required = (items: ChecklistItemView[]) => items.filter((i) => !i.optional).sort((a, b) => STEP_ORDER[a.id] - STEP_ORDER[b.id]);
   const sections = single
-    ? [{ key: single.child.id, label: `${single.child.firstName}'s checklist`, heading: null, items: required([...familyItems, ...single.items]) }]
+    ? [{ key: single.child.id, label: `${single.child.firstName}'s to-do`, heading: null, items: required([...familyItems, ...single.items]) }]
     : [
         ...(familyItems.length ? [{ key: "family", label: "Whole family", heading: "Whole family", items: required(familyItems) }] : []),
-        ...groups.map(({ child, items }) => ({ key: child.id, label: `${child.firstName}'s checklist`, heading: child.firstName, items: required(items) })),
+        ...groups.map(({ child, items }) => ({ key: child.id, label: `${child.firstName}'s to-do`, heading: child.firstName, items: required(items) })),
       ];
   const optionalItems = [...familyItems, ...groups.flatMap((g) => g.items)].filter((i) => i.optional);
 
   return (
     <>
       <AppHeader>
-        <h1 className="font-display text-[40px] leading-[0.95] tracking-[0.02em]">
-          {single ? `${single.child.firstName}'s checklist` : "Your checklist"}
+        {/* Named like its tab, and kept clear of the QR codes and Messages buttons in the top corner. */}
+        <h1 className="pr-36 font-display text-[40px] leading-[0.95] tracking-[0.02em] max-[374px]:pr-28">
+          {single ? `${single.child.firstName}'s to-do` : "To-do"}
         </h1>
         {total > 0 ? (
           <>

@@ -86,11 +86,11 @@ export const MISSED_LAST_3 = `(p.id in ${MISSED_LAST_3_IDS})`;
 export const NEEDS = {
   contacts: { label: "No emergency contact", where: `not exists (select 1 from emergency_contacts ec where ec.player_id = p.id and not ${CONTACT_IS_PARENT})` },
   consent: { label: "No photo answer", where: `p.photo_consent is null` },
-  payment: { label: "No payment plan", where: `${paymentState} in ('missing', 'overdue')` },
+  payment: { label: "No payment plan (or overdue)", where: `${paymentState} in ('missing', 'overdue')` },
   contract: { label: "Contract not signed", where: `not exists (select 1 from agreements ag where ag.player_id = p.id and ag.document = ${contract})` },
   invite: { label: "Not invited", where: `not ${parentIn} and not ${parentInvited}` },
   signin: { label: "Invited, not signed in", where: `not ${parentIn} and ${parentInvited}` },
-  missing: { label: "No payment plan set up", where: `${paymentState} = 'missing'` },
+  missing: { label: "No payment plan yet (not overdue)", where: `${paymentState} = 'missing'` },
   overdue: { label: "Payment overdue", where: `${paymentState} = 'overdue'` },
   check: { label: "Payment to check", where: `${paymentState} = 'self_reported'` },
   payg: { label: "Pay as you go", where: `${paymentState} = 'pay_as_you_go'` },
