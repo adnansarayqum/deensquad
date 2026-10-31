@@ -153,7 +153,11 @@ export function AssistantChat() {
   const end = useRef<HTMLDivElement>(null);
 
   useEffect(() => () => rec.current?.stop(), []);
-  useEffect(() => end.current?.scrollIntoView({ block: "end" }), [entries, busy]);
+  // In braces: newer Chrome returns a Promise from scrollIntoView, and an effect that returns anything but a cleanup
+  // function crashes React when it next runs ("i is not a function", the assistant's first answer on 31 Oct 2026).
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "end" });
+  }, [entries, busy]);
 
   const ask = async (question: string) => {
     const q = question.trim();
