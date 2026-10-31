@@ -5,7 +5,7 @@ import { qrDataUrl } from "../qr-picture";
 import { passToken } from "./token";
 
 /** Each child's attendance QR code: its text (also kept on the phone for no signal) and the picture /pass shows (a PNG data URL, see qr-picture.ts). */
-export type PassCard = { id: string; firstName: string; ageGroup: string; token: string; src: string };
+export type PassCard = { id: string; firstName: string; ageGroup: string; token: string; src: string; photoFileId: string | null };
 
 export function passCards(children: Child[]): Promise<PassCard[]> {
   return Promise.all(
@@ -17,6 +17,7 @@ export function passCards(children: Child[]): Promise<PassCard[]> {
         ageGroup: c.ageGroup,
         token,
         src: await qrDataUrl(token),
+        photoFileId: c.photoFileId ?? null,
       };
     }),
   );

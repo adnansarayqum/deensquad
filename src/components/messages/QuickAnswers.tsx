@@ -4,6 +4,7 @@ import { useOptimistic, useState, useTransition } from "react";
 import { answerNews } from "@/lib/messages/actions";
 import { answerButtonName } from "@/lib/messages/quick-answers";
 import { tapAction, TapProblem, type Problem } from "@/components/TapProblem";
+import { saved } from "@/lib/feedback/feedback";
 
 export type QuickAnswerRow = {
   childId: string;
@@ -40,6 +41,7 @@ function AnswerRow({ announcementId, title, options, row }: { announcementId: st
       setOptimistic(value);
       const problem = await tapAction(() => answerNews(announcementId, row.childId, value));
       if (problem) setFailed({ problem, value });
+      else saved(row.childName ? `Saved: ${value} for ${row.childName}` : `Saved: ${value}`);
     });
   return (
     <div className="flex flex-col gap-2">

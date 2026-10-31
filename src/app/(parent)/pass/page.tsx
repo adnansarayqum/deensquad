@@ -5,6 +5,7 @@ import { BackHeader } from "@/components/BackHeader";
 import { CheckedIn } from "@/components/CheckedIn";
 import { PassCacheWriter } from "@/components/PassCacheWriter";
 import { PassCarousel } from "@/components/PassCarousel";
+import { KeepAwake } from "@/components/KeepAwake";
 import { VenuePassCard } from "@/components/VenuePassCard";
 import { getPassPage } from "@/lib/parent/load";
 import { cachedPasses, passCards } from "@/lib/pass/cards";
@@ -37,10 +38,11 @@ export default async function PassPage({ searchParams }: PageProps<"/pass">) {
                 ))}
               </div>
             ) : null}
+            <KeepAwake />
             <PassCarousel cards={cards} />
             <p className="flex items-start gap-2 text-[15px] leading-5 text-ink-muted">
               <Sun aria-hidden size={18} className="mt-0.5 shrink-0" />
-              Turn your screen brightness up at the gate. The codes work with no signal too.
+              Turn your screen brightness up at the gate. The screen stays on here, and the codes work with no signal too.
             </p>
           </>
         )}

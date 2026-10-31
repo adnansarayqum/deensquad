@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { CheckCheck } from "lucide-react";
 import { track } from "@/lib/analytics";
+import { saved } from "@/lib/feedback/feedback";
 import { setAllComing } from "@/lib/parent/actions";
 import { tapAction, TapProblem, type Problem } from "./TapProblem";
 
@@ -24,6 +25,7 @@ export function AllComing({ sessionId, kids }: { sessionId: string; kids: { id: 
       const p = await tapAction(() => setAllComing(sessionId, kids.map((c) => c.id)));
       if (p) return setProblem(p);
       track("availability_answered", { answer: "coming" });
+      saved(`Saved: ${who} are coming`);
     });
   return (
     <div className="flex flex-col gap-2">

@@ -14,9 +14,12 @@
         --pitch: #1f3d27;
         --on-pitch: #fff4e3;
         --on-pitch-muted: #c9d8cc;
-        --cream: #fff4e3;
+        --pitch-deep: #0f1d14;
+        --floodlight: #f2c14e;
+        --on-gold: #1d1503;
+        --cream: #f7f4ee;
         --paper: #ffffff;
-        --line: #e6dac4;
+        --line: #ebe5d9;
         --ink: #13201a;
         --ink-muted: #56625a;
         --kit-orange: #b04a17;
@@ -52,10 +55,7 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
-        padding: max(env(safe-area-inset-top), 20px) 16px 18px;
-        background: var(--pitch);
-        color: var(--on-pitch);
-        border-radius: 0 0 24px 24px;
+        padding: max(env(safe-area-inset-top), 20px) 16px 8px;
       }
       h1 {
         margin: 0;
@@ -65,7 +65,6 @@
       .status {
         margin: 0;
         padding: 10px 12px;
-        border: 2px solid var(--kit-orange);
         border-radius: 14px;
         background: var(--orange-tint);
         color: var(--ink);
@@ -75,12 +74,12 @@
         align-self: flex-start;
         min-height: 48px;
         padding: 0 18px;
-        border: 2px solid var(--line);
+        border: 1px solid var(--line);
         border-radius: 14px;
         background: var(--paper);
         color: var(--ink);
         font: inherit;
-        font-weight: 800;
+        font-weight: 700;
       }
       main {
         display: flex;
@@ -96,12 +95,23 @@
         width: 100%;
         align-items: center;
       }
+      /* Each child's code as a wallet-style pass, like /pass: the club's dark card, the name, the code on white. */
       .code {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
         width: 100%;
+        max-width: 340px;
+        padding: 18px 12px 12px;
+        border-radius: 24px;
+        background: var(--pitch-deep);
+        color: var(--on-pitch);
+      }
+      .code:has(h2.small) {
+        background: var(--paper);
+        color: var(--ink);
+        box-shadow: 0 0 0 1px var(--line);
       }
       h2 {
         margin: 0;
@@ -112,7 +122,6 @@
         width: 100%;
         max-width: 300px;
         padding: 8px;
-        border: 2px solid var(--line);
         border-radius: 18px;
         background: #ffffff;
       }

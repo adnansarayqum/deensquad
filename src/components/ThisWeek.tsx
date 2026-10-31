@@ -4,6 +4,7 @@ import { AllComing } from "./AllComing";
 import { AvailabilityPicker } from "./AvailabilityPicker";
 import { CheckedIn } from "./CheckedIn";
 import { Directions } from "./Directions";
+import { EmptyState } from "./EmptyState";
 import { Card, Pill } from "./ui";
 import { clock, dayHeading, shortDay } from "@/lib/dates";
 import { groupPlural, type Session } from "@/lib/domain";
@@ -55,7 +56,7 @@ export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; wee
       {sessions.map((s) => (
         <SessionPart key={s.id} session={s} rows={week.filter((w) => w.session?.id === s.id)} family={family} now={now} />
       ))}
-      {sessions.length === 0 ? <p className="px-4 pb-4 text-[16px] text-ink-muted">No sessions coming up yet. They&apos;ll show here as soon as the club adds them.</p> : null}
+      {sessions.length === 0 ? <EmptyState>No sessions coming up yet. They&apos;ll show here as soon as the club adds them.</EmptyState> : null}
 
       {today.length ? (
         <div className="border-t border-line px-4 py-3">

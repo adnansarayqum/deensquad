@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/EmptyState";
 import type { Metadata } from "next";
 import { staffNameForParents } from "@/lib/greeting";
 import { backTarget } from "@/lib/parent/tabs";
@@ -32,7 +33,9 @@ export default async function MessagesPage({ searchParams }: PageProps<"/message
           <Card className="p-4 text-[15px] leading-[22px]">No players are linked to your email yet. Ask the club to add your child.</Card>
         )}
         {conversations.length === 0 && family.children.length ? (
-          <Card className="p-4 text-[15px] leading-[22px] text-ink-muted">No messages yet.</Card>
+          <Card>
+            <EmptyState>No messages yet. Messages between you and the coaches will show here.</EmptyState>
+          </Card>
         ) : null}
         {conversations.length ? (
           <ul aria-label="Conversations" className="flex flex-col gap-2.5">

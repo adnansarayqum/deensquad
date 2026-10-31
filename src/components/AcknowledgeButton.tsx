@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { track } from "@/lib/analytics";
+import { saved } from "@/lib/feedback/feedback";
 import { acknowledgeAnnouncement } from "@/lib/parent/actions";
 import { markJustRead } from "./ReadFocus";
 import { tapAction, TapProblem, type Problem } from "./TapProblem";
@@ -20,6 +21,7 @@ export function AcknowledgeButton({ announcementId, title }: { announcementId: s
         return setProblem(failed);
       }
       track("news_acknowledged");
+      saved("Marked as read");
     });
   return (
     <>

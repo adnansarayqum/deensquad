@@ -41,35 +41,49 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
               ))}
             </nav>
           ) : null}
-          {/* The player card: the one dark, striped surface on the screen, like a squad card. */}
-          <div className={`relative flex items-end gap-4 overflow-hidden rounded-[22px] bg-pitch-deep px-4 pt-5 pb-4 text-on-pitch ${family.children.length > 1 ? "" : "mt-16 max-[374px]:mt-14"}`}>
+          {/* The player card: the one dark, striped surface on the screen, like a squad card: who, then this season. */}
+          <div className={`relative flex flex-col overflow-hidden rounded-[24px] bg-pitch-deep text-on-pitch shadow-card ${family.children.length > 1 ? "" : "mt-16 max-[374px]:mt-14"}`}>
             <div aria-hidden className="stripes-v absolute inset-0 opacity-60" />
-            {child.shirtNumber !== null ? (
-              <span aria-hidden className="relative font-display text-[120px] leading-[0.78] text-floodlight">
-                {child.shirtNumber}
-              </span>
-            ) : child.photoFileId ? (
-              // The photo the parent added for the coaches; their own child, so it's theirs to see.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={`/api/files/${child.photoFileId}`} alt="" width={64} height={64} className="relative mb-1.5 h-16 w-16 shrink-0 rounded-pill object-cover" />
-            ) : null}
-            <div className="relative flex min-w-0 flex-col gap-1.5 pb-1.5">
-              <h1 className="font-display text-[40px] leading-[0.9] tracking-[0.02em]">
-                {child.firstName} {child.lastName[0]}.
-              </h1>
-              <p className="text-[15px] text-on-pitch-muted">
-                {child.shirtNumber ? <span className="sr-only">Shirt number {child.shirtNumber}. </span> : null}
-                {[groupPlural(child.ageGroup), child.position, `since ${new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric" }).format(new Date(child.joinedOn))}`]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-              {stats.streakWeeks >= 2 ? (
-                <span className="inline-flex items-center gap-1.5 self-start rounded-pill bg-floodlight px-3 py-1 text-[13px] font-bold text-on-gold">
-                  <Flame aria-hidden size={14} fill="currentColor" strokeWidth={0} />
-                  {stats.streakWeeks}-week streak
+            <div className="relative flex items-end gap-4 px-4 pt-5 pb-4">
+              {child.shirtNumber !== null ? (
+                <span aria-hidden className="font-display text-[110px] leading-[0.78] text-floodlight">
+                  {child.shirtNumber}
                 </span>
               ) : null}
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5 pb-1">
+                <h1 className="font-display text-[40px] leading-[0.9] tracking-[0.02em]">
+                  {child.firstName} {child.lastName[0]}.
+                </h1>
+                <p className="text-[15px] text-on-pitch-muted">
+                  {child.shirtNumber ? <span className="sr-only">Shirt number {child.shirtNumber}. </span> : null}
+                  {[groupPlural(child.ageGroup), child.position, `since ${new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric" }).format(new Date(child.joinedOn))}`]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+                {stats.streakWeeks >= 2 ? (
+                  <span className="inline-flex items-center gap-1.5 self-start rounded-pill bg-floodlight px-3 py-1 text-[13px] font-bold text-on-gold">
+                    <Flame aria-hidden size={14} fill="currentColor" strokeWidth={0} />
+                    {stats.streakWeeks}-week streak
+                  </span>
+                ) : null}
+              </div>
+              {child.photoFileId ? (
+                // The photo the parent added for the coaches; their own child, so it's theirs to see.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`/api/files/${child.photoFileId}`} alt="" width={72} height={72} className="mb-1 h-[72px] w-[72px] shrink-0 self-start rounded-pill border-2 border-on-pitch/30 object-cover" />
+              ) : null}
             </div>
+            {/* This season at a glance, on the card itself. */}
+            {stats.attendancePct === null ? (
+              <p className="relative border-t border-on-pitch/15 px-4 py-3 text-[14px] text-on-pitch-muted">{child.firstName}&apos;s season starts after their first session.</p>
+            ) : (
+              <dl className="relative grid grid-cols-4 divide-x divide-on-pitch/15 border-t border-on-pitch/15 bg-pitch-deep/60">
+                <SeasonStat label={stats.sessions === 1 ? "session" : "sessions"} value={String(stats.sessions)} />
+                <SeasonStat label="attended" value={`${stats.attendancePct}%`} />
+                <SeasonStat label={(awards?.totals.points ?? 0) === 1 ? "point" : "points"} value={String(awards?.totals.points ?? 0)} gold />
+                <SeasonStat label={(awards?.totals.stars ?? 0) === 1 ? "star" : "stars"} value={String(awards?.totals.stars ?? 0)} gold />
+              </dl>
+            )}
           </div>
         </header>
       ) : (
@@ -93,25 +107,6 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
           <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
             {child.firstName} is now on your account. The club has been told and will check their group.
           </p>
-        ) : null}
-
-        {child && stats ? (
-          stats.attendancePct === null ? (
-            <Card className="p-4 text-[15px] leading-[22px]">{child.firstName}&apos;s stats start after their first session.</Card>
-          ) : (
-            <dl className="grid grid-cols-2 gap-2.5">
-              <Card className="flex flex-col-reverse items-center p-2.5">
-                <dt className="text-[13px] font-bold text-ink-muted">{stats.sessions === 1 ? "session" : "sessions"}</dt>
-                <dd className="font-display text-[40px] leading-none text-ink tabular-nums">{stats.sessions}</dd>
-              </Card>
-              <Card className="flex flex-col-reverse items-center p-2.5">
-                <dt className="text-[13px] font-bold text-ink-muted">attendance</dt>
-                <dd className="font-display text-[40px] leading-none text-ink tabular-nums">{stats.attendancePct}%</dd>
-              </Card>
-              <ScoreTile label={(awards?.totals.points ?? 0) === 1 ? "point" : "points"} value={awards?.totals.points ?? 0} />
-              <ScoreTile label={(awards?.totals.stars ?? 0) === 1 ? "star" : "stars"} value={awards?.totals.stars ?? 0} />
-            </dl>
-          )
         ) : null}
 
         {/* The child's records first, before achievements (redesign brief, Oct 2026): each row says where it stands. */}
@@ -182,7 +177,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
         {child && badges.length > 0 ? (
           <Card className="flex flex-col gap-3 p-3.5">
-            <h2 className="text-base font-bold">Badges</h2>
+            <h2 className="text-[18px] font-bold">Badges</h2>
             <ul className="grid grid-cols-4 gap-2">
               {badges.map((b) => {
                 const Icon = b.earnedOn ? badgeIcons[b.icon] : Lock;
@@ -190,7 +185,9 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                   <li key={b.id} className="flex flex-col items-center gap-2 text-center">
                     <span
                       className={`grid h-[58px] w-[58px] place-items-center rounded-pill ${
-                        b.earnedOn ? "bg-crest-gold text-on-gold" : "bg-line text-ink-muted shadow-[0_4px_0_#d3c5aa]"
+                        b.earnedOn
+                          ? "bg-crest-gold text-on-gold ring-4 ring-gold-tint shadow-card"
+                          : "border-2 border-dashed border-line bg-fill text-ink-muted"
                       }`}
                     >
                       <Icon aria-hidden size={26} />
@@ -218,7 +215,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         {child && progress ? (
           // Only while an admin has switched progress on for parents; this child's own ratings and reports, nothing else.
           <Card className="flex flex-col gap-3 p-3.5">
-            <h2 className="text-base font-bold">Progress</h2>
+            <h2 className="text-[18px] font-bold">Progress</h2>
             <ProgressSummaryView firstName={child.firstName} progress={progress.summary} />
             {progress.latest ? (
               <section aria-labelledby="latest-report" className="flex flex-col gap-1.5 border-t border-line pt-3">
@@ -286,12 +283,12 @@ function DetailRow({ href, title, hint, pill }: { href: string; title: string; h
   );
 }
 
-/** Points or stars: neutral at 0, so an empty tile doesn't read as a warning; gold once there's something. */
-function ScoreTile({ label, value }: { label: string; value: number }) {
+/** One figure in the player card's season strip. Points and stars are gold once there's something. */
+function SeasonStat({ label, value, gold = false }: { label: string; value: string; gold?: boolean }) {
   return (
-    <Card tone={value > 0 ? "gold" : undefined} className="flex flex-col-reverse items-center p-2.5">
-      <dt className={`text-[13px] font-bold ${value > 0 ? "text-gold-text" : "text-ink-muted"}`}>{label}</dt>
-      <dd className={`font-display text-[40px] leading-none tabular-nums ${value > 0 ? "text-gold-text" : "text-ink"}`}>{value}</dd>
-    </Card>
+    <div className="flex min-w-0 flex-col-reverse items-center px-1 py-2.5">
+      <dt className="max-w-full truncate text-[13px] font-bold text-on-pitch-muted">{label}</dt>
+      <dd className={`font-display text-[30px] leading-none tabular-nums ${gold && value !== "0" ? "text-floodlight" : "text-on-pitch"}`}>{value}</dd>
+    </div>
   );
 }

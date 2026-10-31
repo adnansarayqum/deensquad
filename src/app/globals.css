@@ -132,6 +132,27 @@
   }
 }
 
+/* A tick that pops in once when an answer is chosen or a note saves. */
+@keyframes pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.animate-pop {
+  animation: pop 280ms cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+/* Placeholders while a screen loads: a slow shimmer on the fill colour. */
+@keyframes shimmer {
+  0% { opacity: 0.55; }
+  50% { opacity: 1; }
+  100% { opacity: 0.55; }
+}
+.skeleton {
+  background: var(--fill);
+  border-radius: 10px;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

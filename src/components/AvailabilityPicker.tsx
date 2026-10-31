@@ -5,6 +5,7 @@ import { CalendarPlus, Check, MessageSquare, X } from "lucide-react";
 import Link from "next/link";
 import type { Availability } from "@/lib/domain";
 import { track } from "@/lib/analytics";
+import { saved } from "@/lib/feedback/feedback";
 import { sendAwayReason, setAvailability, type AwayReasonState } from "@/lib/parent/actions";
 import { useKeptActionState } from "./submitKeepingInput";
 import { tapAction, TapProblem, type Problem } from "./TapProblem";
@@ -59,6 +60,7 @@ export function AvailabilityPicker({
       const problem = await tapAction(() => setAvailability(sessionId, playerId, value));
       if (problem) return setFailed({ problem, value });
       track("availability_answered", { answer: value });
+      saved(value === "coming" ? (squad ? `Saved: ${childName} can play` : `Saved: ${childName} is coming`) : squad ? `Saved: ${childName} can't play` : `Saved: ${childName} isn't coming`);
     });
 
   const coming = optimistic === "coming";
@@ -71,7 +73,7 @@ export function AvailabilityPicker({
   // Several children on one screen: a segmented switch per child (one track, the chosen side lifted onto white), so
   // an answer reads as a setting, not as a big button still to press. One child: two large cards, as before.
   const seg = (on: boolean, tone: "grass" | "ink") =>
-    `flex min-h-12 min-w-0 flex-1 basis-28 items-center justify-center gap-1.5 rounded-[11px] px-2 text-[15px] font-bold transition-colors ${
+    `flex min-h-12 min-w-0 flex-1 basis-28 items-center justify-center gap-1.5 rounded-[11px] px-2 text-[15px] font-bold transition-[background-color,color,box-shadow] duration-200 ${
       on ? `bg-paper shadow-card ${tone === "grass" ? "text-grass-text" : "text-ink"}` : "text-ink-muted"
     }`;
   const card = (on: boolean, tone: "grass" | "ink") =>
@@ -91,7 +93,7 @@ export function AvailabilityPicker({
           onClick={() => choose("coming")}
           className={compact ? seg(coming, "grass") : card(coming, "grass")}
         >
-          <Check aria-hidden size={icon} strokeWidth={3} />
+          <Check aria-hidden size={icon} strokeWidth={3} key={coming ? "on" : "off"} className={coming ? "animate-pop" : undefined} />
           {squad ? "Yes" : "Coming"}
         </button>
         <button
@@ -101,14 +103,15 @@ export function AvailabilityPicker({
           onClick={() => choose("away")}
           className={compact ? seg(away, "ink") : card(away, "ink")}
         >
-          <X aria-hidden size={icon} strokeWidth={3} />
+          <X aria-hidden size={icon} strokeWidth={3} key={away ? "on" : "off"} className={away ? "animate-pop" : undefined} />
           {squad ? "No" : "Not coming"}
         </button>
       </div>
+      {/* After a tap on Home the "Saved" note above the tab bar says it, so the line below is for screen readers only there. */}
       {failed && !pending ? (
         <TapProblem problem={failed.problem} onRetry={() => choose(failed.value)} />
       ) : (
-      <p className={`text-[14px] text-ink-muted empty:hidden ${compact ? "" : "text-center"}`} aria-live="polite">
+      <p className={`text-[14px] text-ink-muted empty:hidden ${compact ? "" : "text-center"} ${quiet && tapped && !pending ? "sr-only" : ""}`} aria-live="polite">
         {pending
           ? "Saving…"
           : !tapped && answered && optimistic
