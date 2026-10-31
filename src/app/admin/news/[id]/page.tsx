@@ -125,8 +125,12 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
                 Send a reminder now
               </button>
               <p className="text-sm text-ink-muted">
-                An app notification to {withDevices === chase.length ? (chase.length === 1 ? "this parent" : `all ${chase.length}`) : `the ${withDevices} of ${chase.length} with notifications on`}.
-                {withDevices < chase.length ? " The others get the automatic email." : ""} At most once an hour, never 9pm to 8am.
+                {withDevices === 0
+                  ? "An app notification to anyone here with notifications on (none yet). Everyone else gets the automatic email."
+                  : withDevices === chase.length
+                    ? `An app notification to ${chase.length === 1 ? "this parent" : `all ${chase.length}`}.`
+                    : `An app notification to the ${withDevices} of ${chase.length} with notifications on. The others get the automatic email.`}{" "}
+                At most once an hour, never 9pm to 8am.
                 {nudged ? ` Last sent ${postedLabel(nudged.at, new Date())} to ${nudged.count}.` : ""}
               </p>
             </form>
