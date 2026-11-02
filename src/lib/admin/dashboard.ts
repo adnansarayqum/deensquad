@@ -84,6 +84,8 @@ export type Dashboard = {
   families: {
     parents: number;
     signedIn: number;
+    /** Parents on the app with app notifications on (a phone or browser that allowed them). */
+    notificationsOn: number;
     invited: number;
     notInvited: number;
     /** Children with a parent invited but none signed in (NEEDS.signin: the Families list "Needs you" links to). */
@@ -241,6 +243,7 @@ export async function loadDashboard(
          (select count(*)::int from mine p where ${NEEDS.missing3.where}) as "missedLast3",
          (select count(*)::int from parents) as parents,
          (select count(*)::int from parents where auth_user_id is not null) as "signedIn",
+         (select count(*)::int from parents where auth_user_id is not null and guardian_notifications_on(id)) as "notificationsOn",
          (select count(*)::int from parents where auth_user_id is null and invited_at is not null) as invited,
          (select count(*)::int from parents where auth_user_id is null and invited_at is null) as "notInvited",
          (select count(*)::int from mine p where ${NEEDS.signin.where}) as "childrenAwaitingSignIn",
@@ -314,6 +317,7 @@ export async function loadDashboard(
     families: {
       parents: f.parents,
       signedIn: f.signedIn,
+      notificationsOn: f.notificationsOn,
       invited: f.invited,
       notInvited: f.notInvited,
       childrenAwaitingSignIn: f.childrenAwaitingSignIn,

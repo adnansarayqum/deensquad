@@ -95,6 +95,11 @@ export const NEEDS = {
   check: { label: "Payment to check", where: `${paymentState} = 'self_reported'` },
   payg: { label: "Pay as you go", where: `${paymentState} = 'pay_as_you_go'` },
   missing3: { label: "Missed the last 3 sessions", where: MISSED_LAST_3 },
+  // A parent is on the app but no parent of the child has app notifications on, so pushes don't reach the family.
+  notifoff: {
+    label: "Notifications off",
+    where: `${parentIn} and not exists (select 1 from player_guardians npg where npg.player_id = p.id and guardian_notifications_on(npg.guardian_id))`,
+  },
   // Children with a parent who's behind on news (see behindOnNews); `within` is the list's groups.
   unread: {
     label: "Parent hasn't read 2+ messages",

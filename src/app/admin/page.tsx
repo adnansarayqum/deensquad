@@ -237,6 +237,7 @@ function Tiles({ d, next }: { d: Dashboard; next: NextSessionSummary | null }) {
           of={notYet === 0 ? "every parent" : `${notYet} not yet`}
         >
           <Bar thin label="Parents" segments={[{ label: "on the app", value: f.signedIn, tone: "done" }, { label: "not yet", value: notYet, tone: "rest" }]} />
+          {f.signedIn > 0 ? <span className="mt-1.5 block text-[13px] text-ink-muted">{f.notificationsOn} with notifications on</span> : null}
         </StatTile>
       </li>
       <li className="flex">

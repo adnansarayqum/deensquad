@@ -119,7 +119,11 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                 <span className="text-sm text-ink-muted">{[g.email, g.phone].filter(Boolean).join(" · ")}</span>
                 {g.otherChildren.length ? <span className="text-sm text-ink-muted">Also parent of {g.otherChildren.join(", ")}</span> : null}
               </div>
-              {g.inApp ? <Pill tone="done">Signed in</Pill> : g.invited ? <Pill tone="gold">Invited</Pill> : <Pill tone="neutral">Not invited</Pill>}
+              <span className="flex flex-wrap gap-1.5">
+                {g.inApp ? <Pill tone="done">Signed in</Pill> : g.invited ? <Pill tone="gold">Invited</Pill> : <Pill tone="neutral">Not invited</Pill>}
+                {/* Whether app notifications reach this parent: on a phone or browser they allowed them on. */}
+                {g.inApp ? <Pill tone="neutral">{g.notifications ? "Notifications on" : "Notifications off"}</Pill> : null}
+              </span>
             </div>
             {isAdmin ? (
               <div className="flex flex-wrap gap-2">

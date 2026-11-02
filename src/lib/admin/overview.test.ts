@@ -25,7 +25,7 @@ function dashboard(over: Partial<Dashboard> = {}): Dashboard {
       sessions: [],
       missedLast3: 15,
     },
-    families: { parents: 21, signedIn: 0, invited: 0, notInvited: 21, childrenAwaitingSignIn: 0, todo: { contacts: 20, payment: 20, contract: 21, consent: 20 } },
+    families: { parents: 21, signedIn: 0, notificationsOn: 0, invited: 0, notInvited: 21, childrenAwaitingSignIn: 0, todo: { contacts: 20, payment: 20, contract: 21, consent: 20 } },
     payments: { active: 1, self_reported: 0, pay_as_you_go: 0, missing: 20, overdue: 0 },
     shop: { awaitingPayment: 0, toOrder: 0, ordered: 0, ready: 0, orders: 0, monthPence: 0, seasonPence: 0 },
     news: { recent: [], reminders: { app: 0, email: 0, sms: 0, whatsapp: 0, gate: 0 }, behind: 20 },
@@ -101,7 +101,7 @@ describe("overview: Needs you", () => {
   it("is empty when nothing needs doing (no shop for a coach)", () => {
     const d = dashboard({
       attendance: { ...dashboard().attendance, missedLast3: 0, next: [] },
-      families: { parents: 2, signedIn: 2, invited: 0, notInvited: 0, childrenAwaitingSignIn: 0, todo: { contacts: 0, payment: 0, contract: 0, consent: 0 } },
+      families: { parents: 2, signedIn: 2, notificationsOn: 0, invited: 0, notInvited: 0, childrenAwaitingSignIn: 0, todo: { contacts: 0, payment: 0, contract: 0, consent: 0 } },
       payments: { active: 2, self_reported: 0, pay_as_you_go: 0, missing: 0, overdue: 0 },
       shop: null,
       news: { recent: [], reminders: { app: 0, email: 0, sms: 0, whatsapp: 0, gate: 0 }, behind: 0 },

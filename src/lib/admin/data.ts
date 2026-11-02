@@ -34,7 +34,7 @@ export async function loadOverview(tx: Queryable): Promise<Overview> {
   return row;
 }
 
-export type FamilyGuardian = { id: string; name: string; email: string | null; phone: string | null; inApp: boolean; invited: boolean };
+export type FamilyGuardian = { id: string; name: string; email: string | null; phone: string | null; inApp: boolean; invited: boolean; notifications?: boolean };
 
 export type FamilyRow = {
   id: string;
@@ -229,9 +229,11 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
       phone: string | null;
       in_app: boolean;
       invited: boolean;
+      notifications: boolean;
       other_children: string[] | null;
     }>(
       `select g.id, g.first_name, g.last_name, g.email, g.phone, g.auth_user_id is not null as in_app, g.invited_at is not null as invited,
+         guardian_notifications_on(g.id) as notifications,
          (select array_agg(o.first_name order by o.first_name) from player_guardians og join players o on o.id = og.player_id
           where og.guardian_id = g.id and o.id <> $1) as other_children
        from guardians g join player_guardians pg on pg.guardian_id = g.id where pg.player_id = $1 order by g.first_name`,
@@ -274,6 +276,7 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
       phone: g.phone,
       inApp: g.in_app,
       invited: g.invited,
+      notifications: g.notifications,
       otherChildren: g.other_children ?? [],
     })),
     contacts,

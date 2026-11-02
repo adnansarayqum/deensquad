@@ -215,7 +215,7 @@ describe("admin overview numbers", () => {
     expect(d.attendance.season.every((g) => g.held === 0 && g.averagePct === null)).toBe(true);
     expect(d.attendance.sessions).toEqual([]);
     expect(d.attendance.seasonPct).toBeNull();
-    expect(d.families).toEqual({ parents: 0, signedIn: 0, invited: 0, notInvited: 0, childrenAwaitingSignIn: 0, todo: { contacts: 0, payment: 0, contract: 0, consent: 0 } });
+    expect(d.families).toEqual({ parents: 0, signedIn: 0, notificationsOn: 0, invited: 0, notInvited: 0, childrenAwaitingSignIn: 0, todo: { contacts: 0, payment: 0, contract: 0, consent: 0 } });
     expect(d.shop).toEqual({ awaitingPayment: 0, toOrder: 0, ordered: 0, ready: 0, orders: 0, monthPence: 0, seasonPence: 0 });
     expect(d.news).toEqual({ recent: [], reminders: { app: 0, email: 0, sms: 0, whatsapp: 0, gate: 0 }, behind: 0 });
     expect(JSON.stringify(d)).not.toMatch(/NaN|Infinity/);
