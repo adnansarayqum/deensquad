@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BellRing } from "lucide-react";
+import { BellOff, BellRing } from "lucide-react";
 import { savePushSubscription } from "@/lib/chase/actions";
 import { blockedNotificationHelp } from "@/lib/notification-help";
 
@@ -64,16 +64,20 @@ export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
   }
 
   if (state === "hidden") return null;
+  // Off is something to act on (the owner's request: say so where it can't be missed), so it uses the action colour;
+  // once on, it says so quietly in green.
+  const off = state !== "done";
   return (
-    <div className="flex items-start gap-3 rounded-app bg-paper shadow-card p-4">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gold-tint text-gold-text">
-        <BellRing aria-hidden size={22} />
+    <div role={off ? "region" : "status"} aria-label={off ? "Notifications are off" : undefined} className={`flex items-start gap-3 rounded-app p-4 ${off ? "bg-orange-tint text-ink" : "bg-paper shadow-card"}`}>
+      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${off ? "bg-kit-orange text-on-orange" : "bg-grass-tint text-grass-text"}`}>
+        {off ? <BellOff aria-hidden size={22} /> : <BellRing aria-hidden size={22} />}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
         {state === "ios-install" ? (
           <p className="text-[15px] leading-[22px]">
-            <b>Get a notification when the club posts.</b> On iPhone, add this app to your home screen first: tap Share, then Add to Home
-            Screen, then open it from there.
+            <b className="block text-[16px]">Your notifications are off</b>
+            You&apos;ll miss cancelled sessions and messages from the coaches. On iPhone, add this app to your Home Screen first: tap Share,
+            then Add to Home Screen, then open it from there and tap Turn on notifications.
           </p>
         ) : state === "done" ? (
           <p className="text-[15px] font-bold text-grass-text">Notifications are on. You&apos;ll hear from the club straight away.</p>
@@ -82,7 +86,8 @@ export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
         ) : (
           <>
             <p className="text-[15px] leading-[22px]">
-              <b>Get a notification when the club posts.</b>
+              <b className="block text-[16px]">Your notifications are off</b>
+              You&apos;ll miss cancelled sessions and messages from the coaches.
             </p>
             <button type="button" onClick={enable} disabled={state === "working"} className="btn-chunky btn-grass btn-small self-start">
               {state === "working" ? "Turning on…" : "Turn on notifications"}
@@ -100,7 +105,8 @@ function BlockedSteps() {
   const help = blockedNotificationHelp(navigator.userAgent, standalone);
   return (
     <p className="text-[15px] leading-[22px]">
-      <b>Notifications are blocked on this phone</b>, so club news only shows when you open the app. {help.steps}
+      <b className="block text-[16px]">Your notifications are off</b>
+      They&apos;re blocked on this phone, so you&apos;ll miss cancelled sessions and messages from the coaches. {help.steps}
     </p>
   );
 }

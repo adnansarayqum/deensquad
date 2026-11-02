@@ -93,6 +93,12 @@ export function needsYou(d: Dashboard, now: Date, { canInvite }: { canInvite: bo
       href: "/admin/families?need=missing3",
     },
     { key: "unread", count: d.news.behind, text: plural(d.news.behind, "parent behind on news", "parents behind on news"), href: "/admin/families?need=unread" },
+    {
+      key: "notifoff",
+      count: Math.max(0, f.signedIn - f.notificationsOn),
+      text: plural(Math.max(0, f.signedIn - f.notificationsOn), "parent has notifications off", "parents have notifications off"),
+      href: "/admin/notifications?show=off",
+    },
     { key: "missing", count: d.payments.missing, text: plural(d.payments.missing, "child without a payment plan", "children without a payment plan"), href: "/admin/families?need=missing" },
     {
       key: "signin",

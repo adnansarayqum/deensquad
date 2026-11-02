@@ -519,3 +519,44 @@ export function wellbeingAlertEmail(opts: { to: string; childFirstName: string; 
   const html = layout(appUrl, `<p style="margin:0">${escape(line)}</p>\n${link ? button(link, "Open wellbeing check-ins") : ""}`);
   return { to, subject, text, html };
 }
+
+/**
+ * How to turn on app notifications (sent by an admin to parents on the app with them off). Steps for iPhone and
+ * Android, as the app's own help says; the link opens Home, where the "Turn on notifications" button is.
+ */
+export function notificationHelpEmail(opts: { to: string; firstName: string; link: string; appUrl: string | null }): Email {
+  const { to, firstName, link, appUrl } = opts;
+  const subject = "Turn on Deen Squad notifications so you don't miss club news";
+  const iphone = [
+    "Open Safari and go to the app (the button below).",
+    "Tap Share, then Add to Home Screen, then Add.",
+    "Open Deen Squad from your Home Screen (not Safari) and tap Turn on notifications, then Allow.",
+  ];
+  const android = ["Open the app (the button below) in Chrome.", "Tap Turn on notifications near the top of Home, then Allow."];
+  const text = [
+    `Assalamu alaikum ${firstName},`,
+    "",
+    "Notifications are off for you in the Deen Squad app, so you can miss cancelled sessions, kit news and messages from the coaches. It takes a minute to turn them on.",
+    "",
+    "iPhone:",
+    ...iphone.map((s, i) => `${i + 1}. ${s}`),
+    "",
+    "Android:",
+    ...android.map((s, i) => `${i + 1}. ${s}`),
+    "",
+    `Open the app: ${link}`,
+    "",
+    "If your phone says notifications are blocked, the app shows where to switch them back on.",
+  ].join("\n");
+  const list = (steps: string[]) => `<ol style="margin:8px 0 0;padding-left:22px">${steps.map((s) => `<li>${escape(s)}</li>`).join("")}</ol>`;
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">Assalamu alaikum ${escape(firstName)},</p>
+<p>Notifications are off for you in the Deen Squad app, so you can miss cancelled sessions, kit news and messages from the coaches. It takes a minute to turn them on.</p>
+<p style="margin:16px 0 0"><b>iPhone</b></p>${list(iphone)}
+<p style="margin:16px 0 0"><b>Android</b></p>${list(android)}
+${button(link, "Open the app")}
+<p style="color:#56625a;margin-bottom:0">If your phone says notifications are blocked, the app shows where to switch them back on.</p>`,
+  );
+  return { to, subject, text, html };
+}

@@ -49,6 +49,8 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
         {/* Is training on, when, and each child's answer: the first thing on the screen every parent lands on. */}
         <ThisWeek family={family} week={week} stepsLeft={stepsLeft} now={now} />
+        {/* Straight after This week: with notifications off a parent misses cancellations and messages. */}
+        <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} />
         {unreadMessages > 0 ? (
           <Link
             href="/messages?from=/news"
@@ -78,7 +80,6 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
             <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
           </Link>
         ) : null}
-        <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} />
         {news.length > 3 ? (
           <nav aria-label="Show club news" className="flex flex-wrap gap-2">
             {(

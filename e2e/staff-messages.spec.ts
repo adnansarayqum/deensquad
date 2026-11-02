@@ -40,6 +40,11 @@ test("the admin asks one family for a quick answer and lets them reply", async (
   await expect(page.getByRole("heading", { name: /^Not read yet \(\d+\)$/ })).toBeVisible();
   await page.getByRole("button", { name: new RegExp(`^Send a reminder now to the \\d+ parents? who haven't read ${HEADLINE}`) }).click();
   await expect(page.getByText("App notifications aren't set up yet.")).toBeVisible();
+  // Who has notifications on and off, each with their children; the overview's bar opens these lists.
+  await page.goto("/admin/notifications?show=not-in");
+  await expect(page.getByRole("heading", { name: "App notifications" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Off \(\d+\)$/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Yunus V/ }).first()).toBeVisible();
   await admin.close();
 });
 

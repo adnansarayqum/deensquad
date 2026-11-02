@@ -101,7 +101,7 @@ describe("overview: Needs you", () => {
   it("is empty when nothing needs doing (no shop for a coach)", () => {
     const d = dashboard({
       attendance: { ...dashboard().attendance, missedLast3: 0, next: [] },
-      families: { parents: 2, signedIn: 2, notificationsOn: 0, invited: 0, notInvited: 0, childrenAwaitingSignIn: 0, todo: { contacts: 0, payment: 0, contract: 0, consent: 0 } },
+      families: { parents: 2, signedIn: 2, notificationsOn: 2, invited: 0, notInvited: 0, childrenAwaitingSignIn: 0, todo: { contacts: 0, payment: 0, contract: 0, consent: 0 } },
       payments: { active: 2, self_reported: 0, pay_as_you_go: 0, missing: 0, overdue: 0 },
       shop: null,
       news: { recent: [], reminders: { app: 0, email: 0, sms: 0, whatsapp: 0, gate: 0 }, behind: 0 },

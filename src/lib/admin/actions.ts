@@ -30,6 +30,7 @@ import { TOPICS } from "./topics";
 import { checkChosenChildren, insertNews } from "./news";
 import { loadNewsDetail } from "./data";
 import { nudgeUnread } from "./nudge";
+import { loadNotificationParents, sendNotificationHelp } from "./notifications";
 import { parseQuickAnswers } from "../messages/quick-answers";
 import { attachOrThrow, formMedia, withMediaProblem } from "../media/attach";
 import type { Queryable } from "../db/types";
@@ -460,6 +461,20 @@ export async function remindUnreadNow(formData: FormData): Promise<void> {
   const result = await asSystem((tx) => nudgeUnread(tx, { newsId: news, title: detail.news.title, guardianIds: targets }));
   const query = result.ok ? `nudged=${result.reached}&missed=${result.noDevice}` : `nudge=${result.reason}`;
   redirect(`/admin/news/${news}?${query}#not-read`);
+}
+
+/**
+ * Emails every parent on the "Notifications off" list the steps to turn them on (admins only; asks first with a
+ * ticked box). Parents emailed in the last week are skipped.
+ */
+export async function emailNotificationHelp(formData: FormData): Promise<void> {
+  const user = await requireAdmin();
+  if (formData.get("confirm") !== "yes") redirect("/admin/notifications?show=off&help=confirm#help");
+  const base = (await inviteBase()) ?? appUrl();
+  if (!base) redirect("/admin/notifications?show=off&help=nourl");
+  const { off } = await asUser(user.id, (tx) => loadNotificationParents(tx, null));
+  const r = await asSystem((tx) => sendNotificationHelp(tx, { guardianIds: off.map((p) => p.id), baseUrl: base }));
+  redirect(`/admin/notifications?show=off&emailed=${r.sent}&failed=${r.failed}&skipped=${r.skipped}`);
 }
 
 // Sessions --------------------------------------------------------------------

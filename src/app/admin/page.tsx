@@ -365,6 +365,17 @@ function FamiliesSection({ d }: { d: Dashboard }) {
           { label: "no plan yet", value: p.missing, tone: "rest", href: "/admin/families?need=missing" },
         ]}
       />
+      {/* Who app reminders reach (the owner's request): each part opens the parents behind it. */}
+      <SubLabel>App notifications (parents)</SubLabel>
+      <StackedBar
+        label="App notifications"
+        hideZero
+        segments={[
+          { label: "on", value: d.families.notificationsOn, tone: "done", href: "/admin/notifications?show=on" },
+          { label: "off", value: Math.max(0, d.families.signedIn - d.families.notificationsOn), tone: "strong", href: "/admin/notifications?show=off" },
+          { label: "not on the app yet", value: d.families.parents - d.families.signedIn, tone: "rest", href: "/admin/notifications?show=not-in" },
+        ]}
+      />
     </Section>
   );
 }
