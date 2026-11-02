@@ -862,9 +862,20 @@ test("writing help, downloads and badges: AI tidies a draft, an admin downloads 
 
   await page.goto("/coach/awards?group=U10");
   await page.getByRole("link", { name: /Yusuf Sample/ }).click();
-  await page.getByRole("button", { name: "Award On time ×5" }).click();
-  await expect(page.getByRole("button", { name: "Take back On time ×5" })).toBeVisible();
+  await page.getByRole("button", { name: "Award Great teamwork" }).click();
+  await expect(page.getByRole("button", { name: "Take back Great teamwork" })).toBeVisible();
+  // The register's badges are the admins' to give, here and on Rewards; First goal is retired.
+  await expect(page.getByRole("button", { name: "Award On time ×5" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Award First goal" })).toHaveCount(0);
   await page.screenshot({ path: shot("badges"), fullPage: true });
+  await page.goto("/coach/awards");
+  await page.getByRole("link", { name: "Rewards", exact: true }).click();
+  await expect(page.getByRole("heading", { name: /^Reached 20 points \(\d+\)$/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^10 sessions \(\d+\)$/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^On time ×5 \(\d+\)$/ })).toBeVisible();
+  // U15 has no points, stars or badges.
+  await page.goto("/coach/awards?group=U15");
+  await expect(page.getByText("The U15s don't have points, stars or badges.", { exact: false })).toBeVisible();
   await page.context().storageState({ path: ADMIN_STATE });
 
   await switchUser(page);

@@ -1,6 +1,7 @@
 import { londonIsoDay } from "../staff-checks/checks";
 import { countStaffNeedingChecks } from "../staff-checks/data";
 import { countOpenCheckins } from "../wellbeing/data";
+import { countToReward } from "../awards/milestones";
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
 import { londonDate, londonTime } from "../dates";
@@ -97,6 +98,8 @@ export type Dashboard = {
   staffChecks: number | null;
   /** Admins only: wellbeing check-ins ("not great" or with a note) not yet followed up. */
   wellbeing: number | null;
+  /** Admins only: children who reached the reward points and haven't had their reward yet. */
+  rewards?: number | null;
   /** Admins only (the shop is theirs to run); null for coaches. */
   shop: {
     awaitingPayment: number;
@@ -325,6 +328,7 @@ export async function loadDashboard(
     },
     staffChecks: withShop ? await countStaffNeedingChecks(tx, londonIsoDay(now)) : null,
     wellbeing: withShop ? await countOpenCheckins(tx) : null,
+    rewards: withShop ? await countToReward(tx) : null,
     payments: { active: f.pay_active, self_reported: f.pay_self_reported, pay_as_you_go: f.pay_pay_as_you_go, missing: f.pay_missing, overdue: f.pay_overdue },
     shop: s
       ? {

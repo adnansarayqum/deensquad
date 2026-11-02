@@ -514,7 +514,9 @@ export async function loadPlayerFacts(tx: Queryable, child: Child, now: Date): P
     tx.query<{ id: string; name: string; icon: Badge["icon"]; earned_on: string | null }>(
       `select b.id, b.name, b.icon, pb.earned_on::text as earned_on
        from badges b left join player_badges pb on pb.badge_id = b.id and pb.player_id = $1
-       order by pb.earned_on nulls last, b.name`,
+       -- a retired badge (First goal) shows only to children who have it
+       where not b.retired or pb.player_id is not null
+       order by pb.earned_on nulls last, b.sort, b.name`,
       [child.id],
     ),
     tx.query<{ body: string; created_at: Date; author: string | null }>(

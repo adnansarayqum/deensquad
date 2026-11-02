@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/admin/bits";
 import { loadSquadAwards } from "@/lib/awards/data";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
-import { groupPlural, isAgeGroup } from "@/lib/domain";
+import { REWARD_POINTS, groupPlural, hasAwards, isAgeGroup } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Points and stars" };
 
@@ -17,6 +17,9 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
   const asked = (await searchParams).group;
   const group = isAgeGroup(asked) && groups.includes(asked) ? asked : groups[0];
   const squad = await asUser(user.id, (tx) => loadSquadAwards(tx, group));
+  // U15 has no points, stars or badges (the owner's decision): the list still opens each child's notes and reports.
+  const awarded = hasAwards(group);
+  const isAdmin = user.staff.role === "admin";
 
   return (
     <>
@@ -24,9 +27,16 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
         title="Points and stars"
         subtitle="Tap a player to give points, a star or a note for their parents."
         actions={
-          <Link href="/coach/ratings" className="btn-chunky btn-paper btn-small">
-            Rate players
-          </Link>
+          <>
+            {isAdmin ? (
+              <Link href="/coach/awards/rewards" className="btn-chunky btn-paper btn-small">
+                Rewards
+              </Link>
+            ) : null}
+            <Link href="/coach/ratings" className="btn-chunky btn-paper btn-small">
+              Rate players
+            </Link>
+          </>
         }
       >
         {groups.length > 1 ? (
@@ -47,12 +57,13 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
       <section aria-label={groupPlural(group)} className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
         <h2 className="flex flex-wrap items-baseline justify-between gap-2 text-[18px] font-bold">
           {groupPlural(group)}
-          {squad.length ? (
+          {squad.length && awarded ? (
             <span className="text-[13px] font-bold text-ink-muted tabular-nums">
               {squad.reduce((n, p) => n + p.points, 0)} points · {squad.reduce((n, p) => n + p.stars, 0)} stars in all
             </span>
           ) : null}
         </h2>
+        {!awarded ? <p className="text-[15px] text-ink-muted">The {groupPlural(group)} don&apos;t have points, stars or badges. Tap a player for notes, ratings and reports.</p> : null}
         {squad.length === 0 ? <p className="text-[15px] text-ink-muted">No players in the {groupPlural(group)} yet.</p> : null}
         {squad.length ? (
           <ul className="grid gap-2 lg:grid-cols-2">
@@ -66,12 +77,15 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
                     <span className="text-[15px] font-bold">
                       {p.firstName} {p.lastName}
                     </span>
-                    <span className="text-[13px] text-ink-muted">
-                      {p.points} {p.points === 1 ? "point" : "points"}
-                      {p.lastAt ? ` · last given ${lastGiven.format(new Date(p.lastAt))}` : ""}
-                    </span>
+                    {awarded ? (
+                      <span className="text-[13px] text-ink-muted">
+                        {p.points} {p.points === 1 ? "point" : "points"}
+                        {p.points >= REWARD_POINTS ? " · reward earned" : ""}
+                        {p.lastAt ? ` · last given ${lastGiven.format(new Date(p.lastAt))}` : ""}
+                      </span>
+                    ) : null}
                   </span>
-                  {p.stars > 0 ? (
+                  {awarded && p.stars > 0 ? (
                     <span className="inline-flex items-center gap-1 rounded-pill bg-gold-tint px-2.5 py-1 text-sm font-bold text-gold-text">
                       <Star aria-hidden size={14} fill="currentColor" strokeWidth={0} />
                       {p.stars}

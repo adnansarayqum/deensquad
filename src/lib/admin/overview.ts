@@ -1,5 +1,5 @@
 import { londonDate, shortDay } from "../dates";
-import type { AgeGroup } from "../domain";
+import { REWARD_POINTS, type AgeGroup } from "../domain";
 import type { Dashboard, NextSessionGroup } from "./dashboard";
 
 // Pure view builders for the admin overview (/admin): what goes on the "Needs you" list, the headline tiles and the
@@ -82,6 +82,7 @@ export function needsYou(d: Dashboard, now: Date, { canInvite }: { canInvite: bo
     },
     { key: "overdue", count: d.payments.overdue, text: plural(d.payments.overdue, "payment overdue", "payments overdue"), href: "/admin/families?need=overdue" },
     { key: "wellbeing", count: d.wellbeing ?? 0, text: plural(d.wellbeing ?? 0, "wellbeing check-in to look at", "wellbeing check-ins to look at"), href: "/admin/wellbeing" },
+    { key: "rewards", count: d.rewards ?? 0, text: plural(d.rewards ?? 0, `child reached ${REWARD_POINTS} points: reward due`, `children reached ${REWARD_POINTS} points: rewards due`), href: "/coach/awards/rewards#to-reward" },
     { key: "staff", count: d.staffChecks ?? 0, text: plural(d.staffChecks ?? 0, "member of staff has a DBS or certificate to record", "staff have a DBS or certificate to record"), href: "/admin/staff#checks" },
     { key: "check", count: d.payments.self_reported, text: plural(d.payments.self_reported, "payment plan to check", "payment plans to check"), href: "/admin/families?need=check" },
     { key: "shop", count: d.shop?.toOrder ?? 0, text: plural(d.shop?.toOrder ?? 0, "paid kit order to place", "paid kit orders to place"), href: "/admin/shop" },

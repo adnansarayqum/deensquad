@@ -15,7 +15,7 @@ import { loadParentConversations, loadParentUnreadMessages } from "../messages/d
 import { londonIsoDate } from "../dates";
 import { loadProgress, loadReports } from "../progress/data";
 import { progressForParents } from "../settings";
-import type { Child, Session } from "../domain";
+import { hasAwards, type Child, type Session } from "../domain";
 import {
   answerKey,
   familyGroups,
@@ -271,9 +271,11 @@ export async function getPlayerPage(childParam: unknown) {
   const { family, child, userId } = await getChild(remembered);
   if (!child) return { family, child: null, stats: null, badges: [], note: null, awards: null, progress: null, records: null };
   const now = new Date();
+  // Some groups have no points, stars or badges (U15, the owner's decision): nothing to load or show.
+  const awarded = hasAwards(child.ageGroup);
   const [{ facts, ...stats }, awards, progress, records] = await Promise.all([
     getStats(userId, child, now),
-    asUser(userId, (tx) => loadAwards(tx, child.id)),
+    awarded ? asUser(userId, (tx) => loadAwards(tx, child.id)) : null,
     asUser(userId, (tx) => loadChildProgress(tx, child.id, now)),
     // The child's records for the details list (contacts, medical, payment), as the To-do reads them.
     asUser(userId, (tx) => loadChecklistFacts(tx, [child.id])),
@@ -282,7 +284,7 @@ export async function getPlayerPage(childParam: unknown) {
     family,
     child,
     stats,
-    badges: facts.badges,
+    badges: awarded ? facts.badges : [],
     note: facts.note,
     awards,
     progress,

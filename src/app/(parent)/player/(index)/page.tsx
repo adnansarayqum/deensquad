@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Clock, Flame, Lock, Star, Target, Trophy } from "lucide-react";
+import { ChevronRight, Flame, Lock, Star } from "lucide-react";
+import { badgeIcon } from "@/components/badgeIcons";
 import { Card, Pill, TITLE } from "@/components/ui";
-import { BADGE_RULES, groupPlural, type Badge, type PaymentState } from "@/lib/domain";
+import { BADGE_RULES, REWARD_POINTS, groupPlural, type PaymentState } from "@/lib/domain";
 import { getPlayerPage } from "@/lib/parent/load";
 import { RememberChild } from "@/components/RememberChild";
 import { StaffSwitch } from "@/components/StaffSwitch";
@@ -10,8 +11,6 @@ import { ProgressSummaryView } from "@/components/progress/ProgressSummary";
 import { monthLabel } from "@/lib/progress/ratings";
 
 export const metadata: Metadata = { title: "Family" };
-
-const badgeIcons: Record<Badge["icon"], typeof Star> = { star: Star, clock: Clock, trophy: Trophy, flame: Flame, target: Target };
 
 export default async function PlayerPage({ searchParams }: PageProps<"/player">) {
   const flags = await searchParams;
@@ -77,13 +76,24 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
             {stats.attendancePct === null ? (
               <p className="relative border-t border-on-pitch/15 px-4 py-3 text-[14px] text-on-pitch-muted">{child.firstName}&apos;s season starts after their first session.</p>
             ) : (
-              <dl className="relative grid grid-cols-4 divide-x divide-on-pitch/15 border-t border-on-pitch/15 bg-pitch-deep/60">
+              <dl className={`relative grid ${awards ? "grid-cols-4" : "grid-cols-2"} divide-x divide-on-pitch/15 border-t border-on-pitch/15 bg-pitch-deep/60`}>
                 <SeasonStat label={stats.sessions === 1 ? "session" : "sessions"} value={String(stats.sessions)} />
                 <SeasonStat label="attended" value={`${stats.attendancePct}%`} />
-                <SeasonStat label={(awards?.totals.points ?? 0) === 1 ? "point" : "points"} value={String(awards?.totals.points ?? 0)} gold />
-                <SeasonStat label={(awards?.totals.stars ?? 0) === 1 ? "star" : "stars"} value={String(awards?.totals.stars ?? 0)} gold />
+                {/* No points or stars for some groups (U15). */}
+                {awards ? (
+                  <>
+                    <SeasonStat label={awards.totals.points === 1 ? "point" : "points"} value={String(awards.totals.points)} gold />
+                    <SeasonStat label={awards.totals.stars === 1 ? "star" : "stars"} value={String(awards.totals.stars)} gold />
+                  </>
+                ) : null}
               </dl>
             )}
+            {/* The club rewards a child on reaching 20 points (the owner's own reward), so say how close they are. */}
+            {awards && awards.totals.points > 0 && awards.totals.points < REWARD_POINTS ? (
+              <p className="relative border-t border-on-pitch/15 px-4 py-2.5 text-[14px] text-on-pitch-muted">
+                {REWARD_POINTS - awards.totals.points} more {REWARD_POINTS - awards.totals.points === 1 ? "point" : "points"} to a reward from the club
+              </p>
+            ) : null}
           </div>
         </header>
       ) : (
@@ -180,7 +190,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
             <h2 className="text-[18px] font-bold">Badges</h2>
             <ul className="grid grid-cols-4 gap-2">
               {badges.map((b) => {
-                const Icon = b.earnedOn ? badgeIcons[b.icon] : Lock;
+                const Icon = b.earnedOn ? badgeIcon(b.icon) : Lock;
                 return (
                   <li key={b.id} className="flex flex-col items-center gap-2 text-center">
                     <span

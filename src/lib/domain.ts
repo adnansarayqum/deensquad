@@ -94,16 +94,30 @@ export type ChecklistItemId = "registered" | "emergency-contacts" | "payment-pla
 
 /** One line under each badge on the player screen, so families know how it's earned. */
 export const BADGE_RULES: Record<string, string> = {
-  "first-goal": "Score your first goal in a match.",
-  "on-time-5": "Arrive on time for 5 sessions.",
   "good-adab": "Given by a coach for good manners.",
+  "great-teamwork": "Given by a coach for playing for the team.",
+  "great-goal": "Given by a coach for a great goal.",
+  "great-listening": "Given by a coach for listening and using what they're taught.",
+  "gave-salam": "Given by a coach for giving salam to a coach or another child.",
   "ten-sessions": "Come to 10 sessions.",
+  "on-time-5": "Arrive on time for 5 sessions.",
+  "first-goal": "Score your first goal in a match.",
 };
+
+/**
+ * Groups with no points, stars or badges (the owner's decision, Nov 2026: too young-feeling for the older boys).
+ * Their progress ratings, reports and coach notes stay.
+ */
+export const NO_AWARDS_GROUPS: readonly string[] = ["U15"];
+export const hasAwards = (group: string) => !NO_AWARDS_GROUPS.includes(group);
+
+/** A child gets a reward from the club on reaching this many points. */
+export const REWARD_POINTS = 20;
 
 export type Badge = {
   id: string;
   name: string;
-  icon: "star" | "clock" | "trophy" | "flame" | "target";
+  icon: "star" | "clock" | "trophy" | "flame" | "target" | "users" | "goal" | "ear" | "hand";
   earnedOn?: string; // ISO date; missing = not earned yet
 };
 

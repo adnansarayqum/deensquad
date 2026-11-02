@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Clock, Flame, Star, Target, Trophy } from "lucide-react";
+import { Star } from "lucide-react";
+import { badgeIcon } from "@/components/badgeIcons";
 import { PageHeader, Section } from "@/components/admin/bits";
 import { Card } from "@/components/ui";
 import { AwardForm, NoteForm } from "@/components/awards/AwardForm";
@@ -10,7 +11,7 @@ import { loadAwards } from "@/lib/awards/data";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
 import { UUID } from "@/lib/auth/tokens";
 import { asUser } from "@/lib/db";
-import { groupPlural } from "@/lib/domain";
+import { REWARD_POINTS, groupPlural, hasAwards } from "@/lib/domain";
 import { londonIsoDate } from "@/lib/dates";
 import { ProgressReportForm } from "@/components/progress/ProgressReportForm";
 import { ProgressSummaryView } from "@/components/progress/ProgressSummary";
@@ -20,8 +21,6 @@ import { progressForParents } from "@/lib/settings";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "Points and stars" };
-
-const badgeIcons: Record<string, typeof Star> = { star: Star, clock: Clock, trophy: Trophy, flame: Flame, target: Target };
 
 const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
 
@@ -37,10 +36,14 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
       `select id, first_name, last_name, age_group::text as age_group from players where id = $1 and age_group::text = any ($2::text[])`,
       [id, staffGroups(user.staff)],
     );
-    const badges = await tx.query<{ id: string; name: string; icon: string; earned_on: string | null }>(
-      `select b.id, b.name, b.icon, pb.earned_on::text as earned_on from badges b
-       left join player_badges pb on pb.badge_id = b.id and pb.player_id = $1 order by b.name`,
-      [id],
+    // Coaches see the badges they give; admins also the register's (10 sessions, On time ×5). A retired badge only
+    // where the child has it.
+    const badges = await tx.query<{ id: string; name: string; icon: string; earned_on: string | null; given_by: string }>(
+      `select b.id, b.name, b.icon, pb.earned_on::text as earned_on, b.given_by from badges b
+       left join player_badges pb on pb.badge_id = b.id and pb.player_id = $1
+       where (not b.retired or pb.player_id is not null) and (b.given_by = 'coach' or $2)
+       order by b.sort, b.name`,
+      [id, user.staff.role === "admin"],
     );
     if (!player) return null;
     const [awards, progress, report, shown] = await Promise.all([loadAwards(tx, id, 10), loadProgress(tx, id, today), loadReport(tx, id, month), progressForParents(tx)]);
@@ -49,19 +52,29 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
   if (!page) notFound();
   const { player, totals, recent, badges, progress, report, shown } = page;
   const isAdmin = user.staff.role === "admin";
+  // U15 has no points, stars or badges (the owner's decision); progress, reports and notes stay.
+  const awarded = hasAwards(player.age_group);
 
   return (
     <div className="flex flex-col gap-4 lg:max-w-3xl">
       <PageHeader
         back={{ href: `/coach/awards?group=${player.age_group}`, label: "Points and stars" }}
         title={`${player.first_name} ${player.last_name}`}
-        subtitle={`${groupPlural(player.age_group)} · ${totals.points} ${totals.points === 1 ? "point" : "points"} · ${totals.stars} ${totals.stars === 1 ? "star" : "stars"}`}
+        subtitle={
+          awarded
+            ? `${groupPlural(player.age_group)} · ${totals.points} ${totals.points === 1 ? "point" : "points"} · ${totals.stars} ${totals.stars === 1 ? "star" : "stars"}${totals.points >= REWARD_POINTS ? " · reward earned" : ""}`
+            : groupPlural(player.age_group)
+        }
       />
-      <Card className="p-4">
-        <AwardForm playerId={player.id} firstName={player.first_name} />
-      </Card>
+      {awarded ? (
+        <Card className="p-4">
+          <AwardForm playerId={player.id} firstName={player.first_name} />
+        </Card>
+      ) : (
+        <p className="text-[15px] text-ink-muted">The {groupPlural(player.age_group)} don&apos;t have points, stars or badges. Rate them and write notes and reports here.</p>
+      )}
 
-      {recent.length > 0 ? (
+      {awarded && recent.length > 0 ? (
         <Section title="Given so far">
           <ul className="flex flex-col gap-2">
             {recent.map((a) => (
@@ -93,12 +106,12 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
         </Section>
       ) : null}
 
-      {badges.length > 0 ? (
+      {awarded && badges.length > 0 ? (
           <Card className="flex flex-col gap-3 p-4">
             <h2 className="text-[18px] font-bold">Badges</h2>
             <ul className="flex flex-col gap-2">
               {badges.map((b) => {
-                const Icon = badgeIcons[b.icon] ?? Star;
+                const Icon = badgeIcon(b.icon);
                 return (
                   <li key={b.id} className="flex items-center gap-3">
                     <span
@@ -108,7 +121,9 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="text-[15px] font-bold">{b.name}</span>
-                      <span className="text-[13px] text-ink-muted">{b.earned_on ? `Awarded ${day.format(new Date(b.earned_on))}` : "Not yet"}</span>
+                      <span className="text-[13px] text-ink-muted">
+                        {b.earned_on ? `Awarded ${day.format(new Date(b.earned_on))}` : b.given_by === "admin" ? "Not yet · from the register" : "Not yet"}
+                      </span>
                     </span>
                     <form action={setBadge}>
                       <input type="hidden" name="player" value={player.id} />

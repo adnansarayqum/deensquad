@@ -1,7 +1,12 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { requireStaff, staffGroups } from "../auth/session";
+import { after } from "next/server";
+import { requireAdmin, requireStaff, staffGroups } from "../auth/session";
+import { enqueue } from "../background";
+import { NO_AWARDS_GROUPS } from "../domain";
+import { markRewarded } from "./milestones";
+import { runPointsMilestones } from "./milestones-run";
 import { UUID } from "../auth/tokens";
 import { asUser } from "../db";
 import type { Queryable } from "../db/types";
@@ -12,6 +17,16 @@ export type AwardState = { error?: string; saved?: boolean };
 /** Coaches can only award children in their own groups; admins anyone. */
 async function canAward(tx: Queryable, playerId: string, groups: string[]): Promise<boolean> {
   const rows = await tx.query(`select 1 from players where id = $1 and age_group::text = any ($2::text[])`, [playerId, groups]);
+  return rows.length > 0;
+}
+
+/** Points, stars and badges: never for the groups without them (U15, the owner's decision). */
+async function canGivePoints(tx: Queryable, playerId: string, groups: string[]): Promise<boolean> {
+  const rows = await tx.query(`select 1 from players where id = $1 and age_group::text = any ($2::text[]) and age_group::text <> all ($3::text[])`, [
+    playerId,
+    groups,
+    [...NO_AWARDS_GROUPS],
+  ]);
   return rows.length > 0;
 }
 
@@ -26,6 +41,7 @@ export async function giveAward(_prev: AwardState, formData: FormData): Promise<
   if (!star && points === 0) return { error: "Choose points or a star." };
   const error = await asUser(user.id, async (tx) => {
     if (!(await canAward(tx, player, staffGroups(user.staff)))) return "You can give points and stars to your own groups only.";
+    if (!(await canGivePoints(tx, player, staffGroups(user.staff)))) return "The U15s don't have points or stars.";
     await tx.query(`insert into player_awards (player_id, stars, points, reason, awarded_by) values ($1, $2, $3, $4, $5)`, [
       player,
       star ? 1 : 0,
@@ -36,6 +52,8 @@ export async function giveAward(_prev: AwardState, formData: FormData): Promise<
     return null;
   });
   if (error) return { error };
+  // 20 points: the admins and the parents are told (the reward is the owner's), after the response has gone.
+  if (points > 0) after(() => enqueue("points reward", () => runPointsMilestones().then(() => undefined)));
   refresh();
   return { saved: true };
 }
@@ -67,7 +85,10 @@ export async function writeCoachNote(_prev: AwardState, formData: FormData): Pro
   return { saved: true };
 }
 
-/** Gives (or takes back) one of the club's badges. Coaches for their own groups, admins anyone. */
+/**
+ * Gives (or takes back) one of the club's badges. Coaches for their own groups, and only the badges coaches give;
+ * the register's badges (10 sessions, On time ×5) are the admins'. Never a retired badge, never for U15.
+ */
 export async function setBadge(formData: FormData): Promise<void> {
   const user = await requireStaff();
   const player = formData.get("player");
@@ -75,9 +96,20 @@ export async function setBadge(formData: FormData): Promise<void> {
   const give = formData.get("give") === "yes";
   if (typeof player !== "string" || !UUID.test(player) || typeof badge !== "string" || !/^[a-z0-9-]{1,40}$/.test(badge)) return;
   await asUser(user.id, async (tx) => {
-    if (!(await canAward(tx, player, staffGroups(user.staff)))) return;
+    if (!(await canGivePoints(tx, player, staffGroups(user.staff)))) return;
+    const [b] = await tx.query<{ given_by: string; retired: boolean }>(`select given_by, retired from badges where id = $1`, [badge]);
+    if (!b || (give && b.retired) || (b.given_by === "admin" && user.staff.role !== "admin")) return;
     if (give) await tx.query(`insert into player_badges (player_id, badge_id) values ($1, $2) on conflict do nothing`, [player, badge]);
     else await tx.query(`delete from player_badges where player_id = $1 and badge_id = $2`, [player, badge]);
   });
+  refresh();
+}
+
+/** Admin → Rewards: "Reward given" (or Undo) for a child who reached the reward points. */
+export async function setRewardGiven(formData: FormData): Promise<void> {
+  const user = await requireAdmin();
+  const player = formData.get("player");
+  if (typeof player !== "string" || !UUID.test(player)) return;
+  await asUser(user.id, (tx) => markRewarded(tx, player, user.staff.id, formData.get("given") !== "no"));
   refresh();
 }
