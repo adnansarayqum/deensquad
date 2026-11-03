@@ -21,10 +21,13 @@ describe("error alerts", () => {
     expect(await sendErrorAlert({ message: "boom", path: "/shop/basket?x=secret", kind: "render" }, t)).toBe(true);
     expect(await sendErrorAlert({ message: "again", path: "/news", kind: "render" }, t + 60_000)).toBe(false);
     expect(await sendErrorAlert({ message: "later", path: "/news", kind: "render" }, t + 31 * 60_000)).toBe(true);
-    expect(sent.map((s) => s.subject)).toEqual(["Deen Squad app error: /shop/basket", "Deen Squad app error: /news"]);
+    // Reports from phones keep their own window: they never hold back a server alert, and vice versa.
+    expect(await sendErrorAlert({ message: "phone", path: "/news", kind: "browser" }, t + 32 * 60_000, "browser")).toBe(true);
+    expect(await sendErrorAlert({ message: "phone again", path: "/news", kind: "browser" }, t + 33 * 60_000, "browser")).toBe(false);
+    expect(await sendErrorAlert({ message: "server", path: "/news", kind: "render" }, t + 62 * 60_000)).toBe(true);
     // An alert that Resend refused isn't reported as sent.
     failing = true;
-    expect(await sendErrorAlert({ message: "lost", path: "/news", kind: "render" }, t + 62 * 60_000)).toBe(false);
+    expect(await sendErrorAlert({ message: "lost", path: "/news", kind: "render" }, t + 93 * 60_000)).toBe(false);
     vi.unstubAllEnvs();
   });
 

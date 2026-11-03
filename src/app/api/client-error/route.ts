@@ -4,7 +4,7 @@ import { windowCounter } from "@/lib/calendar/feed";
 import { isNoise, readReport } from "@/lib/observability/client-errors";
 
 // Errors from people's phones (ClientErrorReporter): logged and emailed like the server's own (sendErrorAlert: at most
-// one email every 30 minutes, path and message only). Signed-in people only, 20 reports an hour each, so nobody can
+// one email every 30 minutes, path and message only, in a window of their own so they never hold back a server alert). Signed-in people only, 20 reports an hour each, so nobody can
 // use it to send the club emails.
 const perPerson = windowCounter(20);
 
@@ -15,6 +15,6 @@ export async function POST(request: Request) {
   if (!report || isNoise(report.message) || !perPerson.hit(user.id)) return new Response(null, { status: 204 });
   const who = user.staff ? user.staff.role : "parent";
   console.error(`[client-error] ${who} on ${report.path}: ${report.message}`);
-  await sendErrorAlert({ message: report.message, path: report.path, kind: `browser (${who}'s phone)` });
+  await sendErrorAlert({ message: report.message, path: report.path, kind: `browser (${who}'s phone)` }, Date.now(), "browser");
   return new Response(null, { status: 204 });
 }

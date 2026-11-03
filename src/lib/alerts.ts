@@ -10,8 +10,10 @@ import { emailConfigured, sendEmails } from "./email/send";
 // no query strings, form data or personal details. Crashes and failed deploys are already emailed by Railway.
 
 const QUIET_MS = 30 * 60_000;
-let lastSent = 0;
-let suppressed = 0;
+// Server errors and browser reports keep separate windows, so reports from phones (which any signed-in person can
+// send) can never hold back the email about a real server failure.
+type Channel = "server" | "browser";
+const windows: Record<Channel, { lastSent: number; suppressed: number }> = { server: { lastSent: 0, suppressed: 0 }, browser: { lastSent: 0, suppressed: 0 } };
 
 function recipients(): string[] {
   const configured = (process.env.ALERT_EMAIL ?? "").split(",").map((e) => e.trim()).filter((e) => e.includes("@"));
@@ -20,19 +22,24 @@ function recipients(): string[] {
 
 export { isClientDisconnect, isMalformedActionBody };
 
-export async function sendErrorAlert(error: { name?: string; message: string; digest?: string; path: string; kind: string }, now = Date.now()): Promise<boolean> {
+export async function sendErrorAlert(
+  error: { name?: string; message: string; digest?: string; path: string; kind: string },
+  now = Date.now(),
+  channel: Channel = "server",
+): Promise<boolean> {
+  const w = windows[channel];
   if (process.env.NODE_ENV !== "production" || !emailConfigured()) return false;
   if (isClientDisconnect(error.message)) return false;
   if (isMalformedActionBody(error, error.kind.split(" ")[0])) return false;
-  if (now - lastSent < QUIET_MS) {
-    suppressed++;
+  if (now - w.lastSent < QUIET_MS) {
+    w.suppressed++;
     return false;
   }
   const to = recipients();
   if (to.length === 0) return false;
-  const others = suppressed;
-  lastSent = now;
-  suppressed = 0;
+  const others = w.suppressed;
+  w.lastSent = now;
+  w.suppressed = 0;
   const path = error.path.split("?")[0].slice(0, 200);
   const text = [
     `Something went wrong on the Deen Squad app.`,

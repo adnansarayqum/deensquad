@@ -209,6 +209,8 @@ for (const colorScheme of ["light", "dark"] as const) {
 
 test("on a short screen (iPhone SE in Safari) the way past is on screen without scrolling, in every variant", async ({ browser }) => {
   test.skip(!existsSync(PARENT_STATE), "run with the first gate test: needs its sign-in");
+  // Six phone set-ups, each signed in and photographed: about 30 s on a two-core machine, so it gets the longer timeout.
+  test.slow();
 
   const variants: { name: string; options: BrowserContextOptions; android?: "manual" | "prompt" }[] = [
     { name: "ios", options: IPHONE },
