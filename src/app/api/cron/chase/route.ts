@@ -8,6 +8,7 @@ import { sendErrorAlert } from "@/lib/alerts";
 import { runMediaCleanup } from "@/lib/media/run";
 import { runMessageNotices } from "@/lib/messages/run";
 import { asSystem } from "@/lib/db";
+import { recordHeartbeat } from "@/lib/cron-heartbeat";
 import { runPlanNotifications } from "@/lib/plans/run";
 import { runAttendanceReminder } from "@/lib/reminders/run";
 import { localiseProductImages } from "@/lib/shop/images";
@@ -51,6 +52,8 @@ export async function POST(request: Request) {
     });
     const result = { ...chase, plans: await runPlanNotifications(), messages: await runMessageNotices(), attendanceReminder: await runAttendanceReminder(), summary: await runMonthlySummary(), trials: await runTrialFollowUps(), staffChecks: await runStaffCheckReminders(), wellbeing: await runWellbeingAlerts(), pointsReward: await runPointsMilestones(), media: await runMediaCleanup(), sessionsPurged: await purgeSessions() };
     console.info("[chase]", JSON.stringify(result));
+    // Read by the watchdog and the admins' overview: a cron that stops being called says so.
+    await asSystem((tx) => recordHeartbeat(tx, new Date())).catch((error: unknown) => console.error("[chase] heartbeat:", error instanceof Error ? error.message : error));
     after(() => enqueue("shop photo copy", () => localiseProductImages()));
     return Response.json(result);
   } catch (error) {

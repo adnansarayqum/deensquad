@@ -82,3 +82,14 @@ export async function sendScannerWarning(sessionId: string, title: string, manua
   if (sent.length === 0) warnedSessions.delete(sessionId);
   return sent.length > 0;
 }
+
+/**
+ * A background or hourly job that failed: logged, and the club's alert address is emailed (at most one a half hour,
+ * like any server error), so a job that keeps failing — reminders, notifications, the summary — never fails quietly.
+ * Never throws.
+ */
+export function reportJobFailure(job: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[${job}] failed:`, message);
+  void sendErrorAlert({ message: `${job} failed: ${message}`, path: `job: ${job}`, kind: "background job" }).catch(() => undefined);
+}

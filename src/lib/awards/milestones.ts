@@ -54,7 +54,8 @@ async function tell(
     const got = await senders.push(tx, new Map(byPush.map((p) => [p.userId!, message])));
     for (const p of byPush) if (got.has(p.userId!)) reached.add(p.key);
   }
-  const byEmail = people.filter((p) => !reached.has(p.key) && !(p.userId && withPush.has(p.userId)) && p.email);
+  // An email for everyone the app notification didn't reach (no device, or it failed on every device).
+  const byEmail = people.filter((p) => !reached.has(p.key) && p.email);
   if (senders.email && senders.appUrl && byEmail.length) {
     const emails = byEmail.map((p) => ({ person: p, email: email(p, `${senders.appUrl}${message.url}`) }));
     const report = await senders.email(emails.map((e) => e.email));

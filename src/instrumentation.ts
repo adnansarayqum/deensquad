@@ -8,6 +8,8 @@ export async function register() {
   setTimeout(() => {
     import("./lib/shop/images").then((m) => m.localiseProductImages()).catch(() => {});
   }, 5_000);
+  // Emails the alert address if the hourly cron stops being called (src/lib/cron-watchdog.ts).
+  import("./lib/cron-watchdog").then((m) => m.startCronWatchdog()).catch(() => {});
   // Error reports to Sentry, only when SENTRY_DSN is set in production (src/lib/observability).
   const dsn = sentryServerDsn();
   if (dsn) {

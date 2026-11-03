@@ -6,6 +6,7 @@ import { UndoCheckInButton } from "@/components/CheckInButton";
 import { ChildAvatar } from "@/components/ChildAvatar";
 import { PassScanner } from "@/components/PassScanner";
 import { RegisterAutoRefresh } from "@/components/RegisterAutoRefresh";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { FlagPills, PayingPill, RegisterLists, type GateRow } from "@/components/RegisterLists";
 import { Progress } from "@/components/ui";
 import { requireStaff, staffGroups } from "@/lib/auth/session";
@@ -86,6 +87,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
   return (
     <>
       {open ? <RegisterAutoRefresh /> : null}
+      <PullToRefresh />
       {/* Scan sits beside the title and the clock on the session line, so the lists start higher on a phone at the gate. */}
       <PageHeader title="Register" actions={<PassScanner disabled={!open} disabledReason={open ? undefined : registerClosedMessage(session.startsAt, now)} className="" />}>
         <div className="-mt-1 flex items-center justify-between gap-3">

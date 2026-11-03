@@ -34,6 +34,18 @@ export async function tapAction(run: () => Promise<Refusal>): Promise<Problem | 
 
 export const TAP_TIMEOUT_MS = 10_000;
 
+export const SIGNED_OUT = "You've been signed out. Reload and sign in again.";
+
+/** True when a route's answer is really the sign-in page (fetch followed the proxy's redirect). */
+export function signedOutAnswer(res: Response): boolean {
+  if (!res.redirected) return false;
+  try {
+    return new URL(res.url).pathname.startsWith("/sign-in");
+  } catch {
+    return true;
+  }
+}
+
 /**
  * A tap sent to a route (not a Server Action, which Next queues one at a time with no time limit, so one stuck tap
  * would hold up every other): JSON in, `{ error? }` out, given up after 10 s. Signed out comes back as a refusal.
@@ -43,8 +55,11 @@ export async function tapRoute(url: string, body: unknown): Promise<Problem | nu
   const timer = setTimeout(() => abort.abort(), TAP_TIMEOUT_MS);
   try {
     const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: abort.signal });
+    // Signed out: a 401, or the proxy's redirect to the sign-in page (fetch follows it and gets that page's HTML,
+    // which must never count as saved).
+    if (res.status === 401 || signedOutAnswer(res)) return { kind: "refused", message: SIGNED_OUT };
+    if (!(res.headers.get("content-type") ?? "").includes("application/json")) return { kind: "offline" };
     const answer = (await res.json().catch(() => ({}))) as { error?: unknown };
-    if (res.status === 401) return { kind: "refused", message: "You've been signed out. Reload and sign in again." };
     if (!res.ok && typeof answer.error !== "string") return { kind: "offline" };
     return typeof answer.error === "string" ? { kind: "refused", message: answer.error } : null;
   } catch {

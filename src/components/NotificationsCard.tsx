@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { BellOff, BellRing } from "lucide-react";
-import { savePushSubscription } from "@/lib/chase/actions";
 import { blockedNotificationHelp } from "@/lib/notification-help";
 
 type State = "hidden" | "offer" | "ios-install" | "working" | "blocked" | "done";
@@ -13,6 +12,33 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(new ArrayBuffer(raw.length));
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
   return out;
+}
+
+/** Sends the subscription to /api/push-subscription; true once the club has it. Gives up after 10 s. */
+async function saveSubscription(sub: PushSubscription): Promise<boolean> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 10_000);
+  try {
+    const res = await fetch("/api/push-subscription", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sub.toJSON()),
+      signal: abort.signal,
+    });
+    if (res.redirected || !res.ok) return false;
+    const body = (await res.json().catch(() => null)) as { ok?: boolean } | null;
+    return body?.ok === true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Waits for a browser step that can hang (permission prompts, push services); null once it's taken too long. */
+function within<T>(ms: number, work: Promise<T>): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([work, new Promise<null>((resolve) => (timer = setTimeout(() => resolve(null), ms)))]).finally(() => clearTimeout(timer));
 }
 
 /** Offers notifications once, then keeps this device's subscription up to date. */
@@ -36,8 +62,8 @@ export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
         // Keep the saved subscription fresh (it can change, or belong to whoever signed in last).
         const sub = existing ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) }));
         // Only hidden once the club has the subscription: if saving failed, offer the button again.
-        const saved = await savePushSubscription(sub.toJSON() as never).catch(() => null);
-        if (!cancelled) setState(saved?.ok ? "hidden" : "offer");
+        const saved = await saveSubscription(sub);
+        if (!cancelled) setState(saved ? "hidden" : "offer");
       } else if (!cancelled) {
         // Blocked on this phone: say where to switch them back on, or the parent never hears from the club.
         setState(Notification.permission === "denied" ? "blocked" : "offer");
@@ -54,9 +80,10 @@ export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") return setState("blocked");
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
-      const { ok } = await savePushSubscription(sub.toJSON() as never);
+      // A service worker or push service that never answers would leave "Turning on…" for ever: offer it again.
+      const reg = await within(15_000, navigator.serviceWorker.ready);
+      const sub = reg ? await within(15_000, reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) })) : null;
+      const ok = sub ? await saveSubscription(sub) : false;
       setState(ok ? "done" : "offer");
     } catch {
       setState("offer");

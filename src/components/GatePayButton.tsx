@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PoundSterling } from "lucide-react";
-import { recordGatePayment, undoGatePaymentAction } from "@/lib/staff/actions";
-import { tapAction, tapRoute, TapProblem, type Problem } from "./TapProblem";
+import { refreshIfReachable } from "@/lib/client/register-refresh";
+import { tapRoute, TapProblem, type Problem } from "./TapProblem";
 
 // "Paid £7" for a child who pays at the gate (pay as you go, or no plan yet), or a trial child: one tap once the card
 // machine says approved. Then a grass "Paid £7" with Undo for a tap by mistake. Like Mark here, a tap that doesn't
@@ -34,21 +34,28 @@ export function GatePayButton({
   const [pending, startTransition] = useTransition();
   const [problem, setProblem] = useState<Problem | null>(null);
   const router = useRouter();
+  // What the coach just saved, shown at once; the register's refresh (when it can run) brings the rest up to date.
+  const [shownPaid, setShownPaid] = useState<string | null>(paid);
+  // A refresh that brings a newer answer (another coach's tap) wins over the one shown.
+  const [lastPaid, setLastPaid] = useState(paid);
+  if (paid !== lastPaid) {
+    setLastPaid(paid);
+    setShownPaid(paid);
+  }
   const run = (undo: boolean) =>
     startTransition(async () => {
       setProblem(null);
-      // A child's payment goes to its own route (so a stuck tap never holds up the others); a trial's is an action
-      // that gives up after 10 s.
-      if (kind === "child") {
-        const p = await tapRoute("/api/coach/payment", { session: sessionId, child: id, undo });
-        setProblem(p);
-        if (!p) router.refresh();
-        return;
+      // A route for a child and a trial alike, so one tap stuck on a weak signal never holds up the others.
+      const p = await tapRoute("/api/coach/payment", { session: sessionId, ...(kind === "trial" ? { trial: id } : { child: id }), undo });
+      setProblem(p);
+      if (!p) {
+        setShownPaid(undo ? null : fee);
+        void refreshIfReachable(() => router.refresh());
       }
-      setProblem(await tapAction(() => (undo ? undoGatePaymentAction(sessionId, id, kind) : recordGatePayment(sessionId, id, kind))));
     });
 
-  if (paid) {
+  if (shownPaid) {
+    const paid = shownPaid;
     // A small line under the child's name (not beside the check-in's Undo, so the two Undos are never side by side).
     return (
       <span className="flex flex-wrap items-center gap-x-3 gap-y-1">

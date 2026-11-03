@@ -47,3 +47,28 @@ export function useKeptActionState<S extends { error?: string }>(action: (state:
   };
   return [state, run, serverPending || caughtPending, keep] as const;
 }
+
+/** What a picture upload says when its request never came back. */
+export const NOT_SAVED = "That didn't save. Check your signal and try again.";
+
+/**
+ * `useActionState` for a form whose script builds its own FormData (a photo shrunk first, a code read from a
+ * screenshot). Without JavaScript the form posts `run` as before; with it, `send(formData)` calls the action itself
+ * and a failed request shows `failed` in the form instead of the error page. Next's redirects still go through.
+ */
+export function useSentAction<S extends { error?: string }>(action: (state: S, formData: FormData) => Promise<S>, initial: S, failed = NOT_SAVED) {
+  const [serverState, run, serverPending] = useActionState<S, FormData>(action, initial as Awaited<S>);
+  const [caught, setCaught] = useState<S | null>(null);
+  const [caughtPending, start] = useTransition();
+  const state = caught ?? serverState;
+  const send = (formData: FormData) =>
+    start(async () => {
+      try {
+        setCaught(await action(state, formData));
+      } catch (error) {
+        unstable_rethrow(error);
+        setCaught({ ...state, error: failed });
+      }
+    });
+  return [state, run, serverPending || caughtPending, send] as const;
+}

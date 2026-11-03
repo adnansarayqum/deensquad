@@ -3,6 +3,7 @@ import { asSystem } from "../db";
 import { canSendEmail, sendEmails } from "../email/send";
 import { wellbeingAlertEmail } from "../email/templates";
 import { checkinForAlert, markAlerted } from "./data";
+import { reportJobFailure } from "@/lib/alerts";
 
 /**
  * Emails every admin about check-ins that need a look ("not great" or with a note) and haven't been alerted: right
@@ -37,7 +38,7 @@ export async function runWellbeingAlerts(): Promise<{ alerted: number }> {
     }
     return { alerted };
   } catch (error) {
-    console.error("[wellbeing] alert failed:", error instanceof Error ? error.message : error);
+    reportJobFailure("wellbeing alerts", error);
     return { alerted: 0 };
   }
 }

@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { Phone } from "lucide-react";
-import { markTrialArrived } from "@/lib/trials/actions";
+import { useRouter } from "next/navigation";
+import { refreshIfReachable } from "@/lib/client/register-refresh";
 import { GatePayButton } from "../GatePayButton";
-import { tapAction, TapProblem, type Problem } from "../TapProblem";
+import { tapRoute, TapProblem, type Problem } from "../TapProblem";
 import { Pill } from "../ui";
 
 export type TrialGateRow = { id: string; childName: string; ageGroup: string; parentName: string; phone: string | null; arrived: boolean; paid: string | null };
@@ -54,13 +55,27 @@ export function TrialsOnRegister({ sessionId, trials, fee, open }: { sessionId: 
   );
 }
 
-function ArrivedButton({ sessionId, trialId, name, arrived, disabled }: { sessionId: string; trialId: string; name: string; arrived: boolean; disabled: boolean }) {
+function ArrivedButton({ sessionId, trialId, name, arrived: saved, disabled }: { sessionId: string; trialId: string; name: string; arrived: boolean; disabled: boolean }) {
   const [pending, startTransition] = useTransition();
   const [problem, setProblem] = useState<Problem | null>(null);
+  // What the coach just saved, shown at once; the register's refresh (when it can run) brings the rest up to date.
+  const [arrived, setArrived] = useState(saved);
+  const [lastSaved, setLastSaved] = useState(saved);
+  if (saved !== lastSaved) {
+    setLastSaved(saved);
+    setArrived(saved);
+  }
+  const router = useRouter();
   const run = () =>
     startTransition(async () => {
       setProblem(null);
-      setProblem(await tapAction(() => markTrialArrived(sessionId, trialId, !arrived)));
+      // A route, like Mark here: a tap stuck on a weak signal never holds up the rest of the register.
+      const p = await tapRoute("/api/coach/trial", { session: sessionId, trial: trialId, arrived: !arrived });
+      setProblem(p);
+      if (!p) {
+        setArrived(!arrived);
+        void refreshIfReachable(() => router.refresh());
+      }
     });
   return (
     <>

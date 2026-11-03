@@ -1,4 +1,5 @@
 import "server-only";
+import { reportJobFailure } from "@/lib/alerts";
 
 import { pushConfigured, pushToEach } from "../chase/senders";
 import { appUrl } from "../config";
@@ -20,7 +21,7 @@ export async function runAttendanceReminder(now = new Date()): Promise<ReminderR
   try {
     return await asSystem((tx) => sendAttendanceReminders(tx, now, liveSenders()));
   } catch (error) {
-    console.error("[attendance reminder] failed:", error instanceof Error ? error.message : error);
+    reportJobFailure("attendance reminder", error);
     return { due: false, push: 0, email: 0 };
   }
 }

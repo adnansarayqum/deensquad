@@ -1,4 +1,5 @@
 import "server-only";
+import { reportJobFailure } from "@/lib/alerts";
 
 import { pushConfigured, pushToUsers } from "../chase/senders";
 import { appUrl } from "../config";
@@ -23,7 +24,7 @@ export async function runMessageNotices(opts: { conversationId?: string; now?: D
   try {
     return await asSystem((tx) => notifyMessages(tx, opts.now ?? new Date(), liveSenders(), opts.conversationId ?? null));
   } catch (error) {
-    console.error("[messages] notify failed:", error instanceof Error ? error.message : error);
+    reportJobFailure("message notices", error);
     return { quiet: false, push: 0, email: 0 };
   }
 }

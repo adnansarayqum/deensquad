@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportJobFailure } from "./alerts";
+
 // Work started after a response (notifying parents of a post, a plan or a practice sheet) runs one task at a time in
 // this server process, so several posts in a row don't open several database transactions and push runs at once.
 // The hourly cron route doesn't use this queue.
@@ -15,7 +17,7 @@ export function enqueue(label: string, fn: () => Promise<unknown>): Promise<void
     try {
       await fn();
     } catch (error) {
-      console.error(`[background] ${label} failed:`, error instanceof Error ? error.message : error);
+      reportJobFailure(`background: ${label}`, error);
     }
   });
   tail = run;

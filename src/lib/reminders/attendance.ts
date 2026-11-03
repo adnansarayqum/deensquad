@@ -185,7 +185,9 @@ export async function sendAttendanceReminders(tx: Queryable, now: Date, senders:
     for (const t of byPush) if (reached.has(t.userId!)) told.push({ target: t, channel: "app" });
   }
 
-  const byEmail = due.filter((t) => !(t.userId && withPush.has(t.userId)) && t.email);
+  // An email for everyone the app notification didn't reach (no device, or it failed on every device).
+  const pushedTo = new Set(told.map((t) => t.target));
+  const byEmail = due.filter((t) => !pushedTo.has(t) && t.email);
   if (senders.email && senders.appUrl && byEmail.length) {
     const link = `${senders.appUrl}/friday`;
     const emails = byEmail.map((t) => {

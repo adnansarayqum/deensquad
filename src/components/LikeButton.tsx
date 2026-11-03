@@ -1,25 +1,42 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { Heart } from "lucide-react";
 import { buzz } from "@/lib/feedback/feedback";
 import { toggleLike } from "@/lib/parent/actions";
 import { tapAction, TapProblem, type Problem } from "./TapProblem";
+import { LIKE_EVENT } from "./DoubleTapLike";
 
 /** A heart under a news post: tap to like, tap again to take it back. The count is everyone's; who liked it is for staff. */
 export function LikeButton({ announcementId, title, liked, likes }: { announcementId: string; title: string; liked: boolean; likes: number }) {
   const [state, setState] = useOptimistic({ liked, likes });
   const [pending, startTransition] = useTransition();
   const [problem, setProblem] = useState<Problem | null>(null);
-  const toggle = () =>
+  // Sends the state wanted (not "toggle"), so Try again after a lost answer can't undo the like it already saved.
+  const set = (next: boolean) =>
     startTransition(async () => {
       setProblem(null);
-      const next = !state.liked;
-      setState({ liked: next, likes: Math.max(0, state.likes + (next ? 1 : -1)) });
+      setState({ liked: next, likes: Math.max(0, likes + (next === liked ? 0 : next ? 1 : -1)) });
       if (next) buzz();
-      const failed = await tapAction(() => toggleLike(announcementId));
-      if (failed) setProblem(failed);
+      const failed = await tapAction(() => toggleLike(announcementId, next));
+      if (failed) {
+        setProblem(failed);
+        wanted.current = next;
+      }
     });
+  const wanted = useRef(!liked);
+  const toggle = () => set(!state.liked);
+  const retry = () => set(wanted.current);
+  // A double tap on the post (DoubleTapLike) likes it; it never takes a like back.
+  // Subscribed afresh each render, so it sees the heart as it is now.
+  const shownLiked = state.liked;
+  useEffect(() => {
+    const onLike = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === announcementId && !shownLiked) set(true);
+    };
+    window.addEventListener(LIKE_EVENT, onLike);
+    return () => window.removeEventListener(LIKE_EVENT, onLike);
+  });
   const count = state.likes;
   return (
     <div className="flex flex-col gap-1">
@@ -35,7 +52,7 @@ export function LikeButton({ announcementId, title, liked, likes }: { announceme
         <Heart aria-hidden size={22} fill={state.liked ? "currentColor" : "none"} key={state.liked ? "on" : "off"} className={state.liked ? "animate-pop" : undefined} />
         <span className="tabular-nums">{count ? count : "Like"}</span>
       </button>
-      {problem ? <TapProblem problem={problem} onRetry={toggle} retrying={pending} /> : null}
+      {problem ? <TapProblem problem={problem} onRetry={retry} retrying={pending} /> : null}
     </div>
   );
 }

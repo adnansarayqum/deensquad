@@ -43,12 +43,18 @@ export async function acknowledgeAnnouncement(announcementId: string): Promise<T
 }
 
 /** A heart on a news post: tap to like, tap again to take it back. Returns whether it's now liked. */
-export async function toggleLike(announcementId: string): Promise<TapResult & { liked?: boolean }> {
+/** Likes (or, with `want` false, unlikes) a post. Sets the state rather than flipping it, so a retry is safe. */
+export async function toggleLike(announcementId: string, want?: boolean): Promise<TapResult & { liked?: boolean }> {
   const user = await requireParent();
-  if (!UUID.test(announcementId)) return { error: "That didn't save. Reload the page and try again." };
+  if (!UUID.test(announcementId) || (want !== undefined && typeof want !== "boolean")) return { error: "That didn't save. Reload the page and try again." };
   const liked = await asUser(user.id, async (tx) => {
-    const gone = await tx.query(`delete from announcement_likes where announcement_id = $1 and guardian_id = my_guardian_id() returning 1`, [announcementId]);
-    if (gone.length) return false;
+    const has = (await tx.query(`select 1 from announcement_likes where announcement_id = $1 and guardian_id = my_guardian_id()`, [announcementId])).length > 0;
+    const next = want ?? !has;
+    if (!next) {
+      if (has) await tx.query(`delete from announcement_likes where announcement_id = $1 and guardian_id = my_guardian_id()`, [announcementId]);
+      return false;
+    }
+    if (has) return true;
     // Only a post this parent can read (row level security on announcements decides).
     const can = await tx.query(`select 1 from announcements where id = $1`, [announcementId]);
     if (!can.length) return null;

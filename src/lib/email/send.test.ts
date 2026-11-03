@@ -22,6 +22,23 @@ describe("sendEmails", () => {
     expect(report.failed).toEqual(all.slice(100));
   });
 
+  it("sends a refused batch one at a time, so one bad address fails alone", async () => {
+    vi.stubEnv("RESEND_API_KEY", "test");
+    const fetch = vi.fn(async (url: string, init: RequestInit) => {
+      if (url.endsWith("/batch")) return new Response("invalid to", { status: 422 });
+      const body = JSON.parse(String(init.body)) as { to: string[] };
+      return new Response("{}", { status: body.to[0] === "p1@example.com" ? 422 : 200 });
+    });
+    vi.stubGlobal("fetch", fetch);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const all = emails(3);
+    const report = await sendEmails(all);
+    expect(fetch).toHaveBeenCalledTimes(4);
+    expect(report.sent.map((e) => e.to)).toEqual(["p0@example.com", "p2@example.com"]);
+    expect(report.failed.map((e) => e.to)).toEqual(["p1@example.com"]);
+  });
+
   it("waits and tries again when Resend says too many requests, up to twice", async () => {
     vi.stubEnv("RESEND_API_KEY", "test");
     const limited = () => new Response("rate limited", { status: 429, headers: { "retry-after": "0.01" } });

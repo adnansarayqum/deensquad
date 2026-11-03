@@ -24,7 +24,7 @@ export default async function ParentLayout({ children }: { children: ReactNode }
       <InstallGate isStaff={shell.isStaff} />
       <RegisterServiceWorker />
       <Toaster />
-      <TabBar unread={shell.unread} />
+      <TabBar unread={shell.unread} todo={shell.todo} photo={shell.photo} />
     </div>
   );
 }

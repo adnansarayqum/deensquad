@@ -5,6 +5,8 @@ import { TripCards } from "@/components/TripCards";
 import { Check, ChevronRight, MessageCircle, Reply } from "lucide-react";
 import { AcknowledgeButton } from "@/components/AcknowledgeButton";
 import { LikeButton } from "@/components/LikeButton";
+import { DoubleTapLike } from "@/components/DoubleTapLike";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { QuickAnswers } from "@/components/messages/QuickAnswers";
 import { NotificationsCard } from "@/components/NotificationsCard";
 import { ReadFocus } from "@/components/ReadFocus";
@@ -34,6 +36,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
 
   return (
     <>
+      <PullToRefresh />
       <AppHeader>
         <StaffSwitch />
         <div className="flex items-center justify-between gap-3">
@@ -118,29 +121,31 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
               <span className="rounded-pill bg-kit-orange px-2.5 py-0.5 text-[13px] font-bold text-on-orange">{unread.length} unread</span>
             </div>
             {unread.map((a) => (
-              <Card key={a.id} tone="gold" className="flex flex-col gap-3 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <Pill tone="action">
-                    {a.topic}
-                    {a.audience === "all" ? "" : ` · ${groupsPlural(a.audience)}`}
-                  </Pill>
-                  <span className="text-[13px] text-ink-muted">{postedLabel(a.postedAt, now)}</span>
-                </div>
-                <h2 className="text-[20px] leading-[25px] font-bold">{a.title}</h2>
-                <p className="text-[16px] leading-6 whitespace-pre-line">{a.body}</p>
-                <MediaGallery items={a.media} label={a.title} />
-                {outOfDate(a) ? <SessionNow session={a.session!} now={now} /> : null}
-                {a.postedBy ? <p className="text-[15px] text-ink-muted">From {a.postedBy}</p> : null}
-                {a.quickAnswers && a.reaches.length ? (
-                  <Answers a={a} family={family} />
-                ) : canAnswerComing(a.session) ? (
-                  // Answering Coming / Not coming here is the same answer as on Sessions, and counts as read.
-                  <ComingOnNews session={a.session} family={family} now={now} />
-                ) : (
-                  <AcknowledgeButton announcementId={a.id} title={a.title} />
-                )}
+              <DoubleTapLike key={a.id} id={a.id}>
+                <Card tone="gold" className="flex flex-col gap-3 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <Pill tone="action">
+                      {a.topic}
+                      {a.audience === "all" ? "" : ` · ${groupsPlural(a.audience)}`}
+                    </Pill>
+                    <span className="text-[13px] text-ink-muted">{postedLabel(a.postedAt, now)}</span>
+                  </div>
+                  <h2 className="text-[20px] leading-[25px] font-bold">{a.title}</h2>
+                  <p className="text-[16px] leading-6 whitespace-pre-line">{a.body}</p>
+                  <MediaGallery items={a.media} label={a.title} />
+                  {outOfDate(a) ? <SessionNow session={a.session!} now={now} /> : null}
+                  {a.postedBy ? <p className="text-[15px] text-ink-muted">From {a.postedBy}</p> : null}
+                  {a.quickAnswers && a.reaches.length ? (
+                    <Answers a={a} family={family} />
+                  ) : canAnswerComing(a.session) ? (
+                    // Answering Coming / Not coming here is the same answer as on Sessions, and counts as read.
+                    <ComingOnNews session={a.session} family={family} now={now} />
+                  ) : (
+                    <AcknowledgeButton announcementId={a.id} title={a.title} />
+                  )}
                 <PostFoot a={a} />
-              </Card>
+                </Card>
+              </DoubleTapLike>
             ))}
           </section>
         ) : (
@@ -164,31 +169,33 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
               <span id="earlier">Earlier</span>
             </Eyebrow>
             {earlier.map((a) => (
-              <ReadFocus key={a.id} id={a.id} className="flex flex-col gap-2 rounded-app bg-paper shadow-card px-4 py-3.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[15px] text-ink-muted">
-                    {a.topic} · {a.audience === "all" ? "All groups" : a.audience.join(", ")} · {postedLabel(a.postedAt, now)}
-                  </span>
-                  {outOfDate(a) ? (
-                    // A newer cancelled / back on / changed notice about the same session: this one no longer applies.
-                    <span className="shrink-0 whitespace-nowrap">
-                      <Pill tone="neutral">Out of date</Pill>
+              <DoubleTapLike key={a.id} id={a.id}>
+                <ReadFocus id={a.id} className="flex flex-col gap-2 rounded-app bg-paper shadow-card px-4 py-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[15px] text-ink-muted">
+                      {a.topic} · {a.audience === "all" ? "All groups" : a.audience.join(", ")} · {postedLabel(a.postedAt, now)}
                     </span>
-                  ) : a.requiresAck ? (
-                    // Quiet once done: the unread messages above are the ones that stand out.
-                    <span className="inline-flex shrink-0 items-center gap-1 text-[13px] font-bold text-ink-muted">
-                      <Check aria-hidden size={14} strokeWidth={3} />
-                      Read
-                    </span>
-                  ) : null}
-                </div>
-                <h2 className={`text-[18px] leading-[23px] font-bold ${outOfDate(a) ? "text-ink-muted line-through decoration-1" : ""}`}>{a.title}</h2>
-                <p className="text-[16px] leading-6 whitespace-pre-line text-ink-muted">{a.body}</p>
-                <MediaGallery items={a.media} label={a.title} />
-                {outOfDate(a) ? <SessionNow session={a.session!} now={now} /> : null}
-                {a.quickAnswers && a.reaches.length ? <Answers a={a} family={family} /> : canAnswerComing(a.session) ? <ComingOnNews session={a.session} family={family} now={now} /> : null}
+                    {outOfDate(a) ? (
+                      // A newer cancelled / back on / changed notice about the same session: this one no longer applies.
+                      <span className="shrink-0 whitespace-nowrap">
+                        <Pill tone="neutral">Out of date</Pill>
+                      </span>
+                    ) : a.requiresAck ? (
+                      // Quiet once done: the unread messages above are the ones that stand out.
+                      <span className="inline-flex shrink-0 items-center gap-1 text-[13px] font-bold text-ink-muted">
+                        <Check aria-hidden size={14} strokeWidth={3} />
+                        Read
+                      </span>
+                    ) : null}
+                  </div>
+                  <h2 className={`text-[18px] leading-[23px] font-bold ${outOfDate(a) ? "text-ink-muted line-through decoration-1" : ""}`}>{a.title}</h2>
+                  <p className="text-[16px] leading-6 whitespace-pre-line text-ink-muted">{a.body}</p>
+                  <MediaGallery items={a.media} label={a.title} />
+                  {outOfDate(a) ? <SessionNow session={a.session!} now={now} /> : null}
+                  {a.quickAnswers && a.reaches.length ? <Answers a={a} family={family} /> : canAnswerComing(a.session) ? <ComingOnNews session={a.session} family={family} now={now} /> : null}
                 <PostFoot a={a} />
-              </ReadFocus>
+                </ReadFocus>
+              </DoubleTapLike>
             ))}
           </section>
         ) : null}

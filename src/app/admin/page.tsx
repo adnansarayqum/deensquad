@@ -1,3 +1,4 @@
+import { lastHeartbeat, staleHeartbeat } from "@/lib/cron-heartbeat";
 import { Download, MessageCircleQuestion } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -38,12 +39,15 @@ const CHANNEL_LABEL: Record<Channel, [string, string]> = {
   gate: ["flag at the gate", "flags at the gate"],
 };
 
+const cronWhen = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Europe/London" });
+
 export default async function AdminHome() {
   const user = await requireStaff();
   const isAdmin = user.staff.role === "admin";
   const limit = coachLimit(user.staff);
   const now = new Date();
   const d = await asUser(user.id, (tx) => loadDashboard(tx, { now, limit, withShop: isAdmin, withRequests: isAdmin }));
+  const cronStale = isAdmin && process.env.CRON_SECRET ? staleHeartbeat(await asUser(user.id, (tx) => lastHeartbeat(tx)), now) : null;
   const empty = d.players === 0;
   const next = nextSessionSummary(d, now);
 
@@ -64,6 +68,13 @@ export default async function AdminHome() {
         <Notice tone="action">
           Email isn&apos;t set up yet, so parents can&apos;t get sign-in codes or invites. Add <b>RESEND_API_KEY</b> and <b>EMAIL_FROM</b> to the
           app&apos;s variables in Railway.
+        </Notice>
+      ) : null}
+
+      {cronStale ? (
+        <Notice tone="action">
+          The hourly reminders last ran {cronWhen.format(cronStale)}, so reminders and notifications aren&apos;t going out. Check the
+          <b> chase-ladder</b> cron in Railway.
         </Notice>
       ) : null}
 

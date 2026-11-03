@@ -58,6 +58,45 @@ export function requestKey(group: Email[]): string | null {
 const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /**
+ * One request to Resend for up to 100 emails: "sent", "refused" (a 400 or 422: something in it Resend won't take) or
+ * "failed" (timeout, no answer, any other error). Never throws.
+ */
+async function post(key: string, group: Email[]): Promise<"sent" | "refused" | "failed"> {
+  const chunk = group.map((e) => ({ from: fromAddress(), to: [e.to], subject: e.subject, text: e.text, html: e.html }));
+  const idempotency = requestKey(group);
+  try {
+    let res: Response;
+    for (let attempt = 0; ; attempt++) {
+      res = await fetch(chunk.length === 1 ? "https://api.resend.com/emails" : "https://api.resend.com/emails/batch", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...(idempotency ? { "Idempotency-Key": idempotency } : {}) },
+        body: JSON.stringify(chunk.length === 1 ? chunk[0] : chunk),
+        signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+      });
+      // A 429 wasn't taken, so trying again (with the same idempotency key) can't send twice.
+      if (res.status !== 429 || attempt >= RATE_LIMIT_RETRIES) break;
+      const wait = Number(res.headers.get("retry-after"));
+      await pause(Number.isFinite(wait) && wait > 0 ? Math.min(wait, 3) * 1000 : 1000);
+    }
+    // A 409 for a keyed request is Resend saying it has already had that key (an earlier try that timed out here, or
+    // one still in flight, possibly with a fresh sign-in link in it): that email has gone, so it counts as sent.
+    if (idempotency && res.status === 409) {
+      console.warn(`[email] ${group.length} already sent under this idempotency key; not sent again.`);
+      return "sent";
+    }
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      console.error(`[email] ${group.length} not sent: Resend refused the email (${res.status}): ${detail.slice(0, 300)}`);
+      return res.status === 400 || res.status === 422 ? "refused" : "failed";
+    }
+    return "sent";
+  } catch (error) {
+    console.error(`[email] ${group.length} not sent:`, reason(error));
+    return "failed";
+  }
+}
+
+/**
  * Sends each email and reports which went. Resend takes up to 100 per request, so a big send
  * is several requests: if one fails, the others still count as sent and only its emails are in `failed`.
  */
@@ -68,38 +107,15 @@ export async function sendEmails(emails: Email[]): Promise<EmailReport> {
   if (key) {
     for (let i = 0; i < emails.length; i += 100) {
       const group = emails.slice(i, i + 100);
-      const chunk = group.map((e) => ({ from: fromAddress(), to: [e.to], subject: e.subject, text: e.text, html: e.html }));
-      const idempotency = requestKey(group);
-      try {
-        let res: Response;
-        for (let attempt = 0; ; attempt++) {
-          res = await fetch(chunk.length === 1 ? "https://api.resend.com/emails" : "https://api.resend.com/emails/batch", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...(idempotency ? { "Idempotency-Key": idempotency } : {}) },
-            body: JSON.stringify(chunk.length === 1 ? chunk[0] : chunk),
-            signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
-          });
-          // A 429 wasn't taken, so trying again (with the same idempotency key) can't send twice.
-          if (res.status !== 429 || attempt >= RATE_LIMIT_RETRIES) break;
-          const wait = Number(res.headers.get("retry-after"));
-          await pause(Number.isFinite(wait) && wait > 0 ? Math.min(wait, 3) * 1000 : 1000);
-        }
-        // A 409 for a keyed request is Resend saying it has already had that key (an earlier try that timed out here, or
-        // one still in flight, possibly with a fresh sign-in link in it): that email has gone, so it counts as sent.
-        if (idempotency && res.status === 409) {
-          console.warn(`[email] ${group.length} already sent under this idempotency key; not sent again.`);
-          report.sent.push(...group);
-          continue;
-        }
-        if (!res.ok) {
-          const detail = await res.text().catch(() => "");
-          throw new Error(`Resend refused the email (${res.status}): ${detail.slice(0, 300)}`);
-        }
-        report.sent.push(...group);
-      } catch (error) {
-        console.error(`[email] ${group.length} not sent:`, reason(error));
-        report.failed.push(...group);
+      const result = await post(key, group);
+      // Resend refuses a whole batch for one address it won't take: send that batch's emails one by one, so only the
+      // bad one fails (each with its own idempotency key, if it has one).
+      if (result === "refused" && group.length > 1) {
+        console.warn(`[email] batch of ${group.length} refused; sending one at a time.`);
+        for (const e of group) ((await post(key, [e])) === "sent" ? report.sent : report.failed).push(e);
+        continue;
       }
+      (result === "sent" ? report.sent : report.failed).push(...group);
     }
     return report;
   }

@@ -182,6 +182,10 @@ describe("email helpers", () => {
   it("normalises and masks addresses", () => {
     expect(normaliseEmail("  Adnan@Example.COM ")).toBe("adnan@example.com");
     expect(normaliseEmail("not an email")).toBeNull();
+    // Addresses Resend refuses (which would fail a whole batch) are refused here too.
+    for (const bad of ["sara@gmail..com", "sara@gmail.c", ".sara@gmail.com", "sara.@gmail.com", "sara@-gmail.com", "sa ra@gmail.com", "sara@gmail,com"])
+      expect(normaliseEmail(bad), bad).toBeNull();
+    expect(normaliseEmail("sara.o'neil+club@mail.co.uk")).toBe("sara.o'neil+club@mail.co.uk");
     expect(maskEmail("adnan@example.com")).toBe("a•••@example.com");
   });
 });

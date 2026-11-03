@@ -1,9 +1,10 @@
 "use client";
 
-import { startTransition, useActionState, useState, useSyncExternalStore, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { removeChildPhoto, saveChildPhoto, type PhotoFormState } from "@/lib/parent/actions";
 import { MAX_FILE_BYTES, photoTooBig } from "@/lib/files";
 import { shrinkPhoto } from "@/lib/photo-resize";
+import { useSentAction } from "./submitKeepingInput";
 import { ChildAvatar } from "./ChildAvatar";
 
 // Player → a child's details → "Photo for the coaches". Plain forms posting server actions, so they work before the
@@ -13,8 +14,8 @@ import { ChildAvatar } from "./ChildAvatar";
 const noSubscribe = () => () => {};
 
 export function ChildPhotoForm({ child }: { child: { id: string; firstName: string; lastName: string; photoId: string | null } }) {
-  const [saved, save, saving] = useActionState<PhotoFormState, FormData>(saveChildPhoto, {});
-  const [removed, remove, removing] = useActionState<PhotoFormState, FormData>(removeChildPhoto, {});
+  const [saved, save, saving, sendSave] = useSentAction<PhotoFormState>(saveChildPhoto, {});
+  const [removed, remove, removing, sendRemove] = useSentAction<PhotoFormState>(removeChildPhoto, {});
   const [problem, setProblem] = useState<string | null>(null);
   const [preparing, setPreparing] = useState(false);
   // Which form was used last, so its message shows (not an older one from the other).
@@ -32,7 +33,8 @@ export function ChildPhotoForm({ child }: { child: { id: string; firstName: stri
     if (!(file instanceof File) || file.size === 0) return setProblem("Choose a photo first.");
     setProblem(null);
     setPreparing(true);
-    const small = await shrinkPhoto(file);
+    // A photo the browser can't shrink goes as taken (the server shrinks it), never left on "Preparing…".
+    const small = await shrinkPhoto(file).catch(() => null);
     setPreparing(false);
     if (small) {
       data.set("photo", new File([small], "photo.jpg", { type: "image/jpeg" }));
@@ -40,7 +42,7 @@ export function ChildPhotoForm({ child }: { child: { id: string; firstName: stri
     } else if (file.size > MAX_FILE_BYTES) {
       return setProblem(photoTooBig(file.size));
     }
-    startTransition(() => save(data));
+    sendSave(data);
   };
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -92,7 +94,7 @@ export function ChildPhotoForm({ child }: { child: { id: string; firstName: stri
             const data = new FormData(e.currentTarget);
             setWhich("remove");
             setProblem(null);
-            startTransition(() => remove(data));
+            sendRemove(data);
           }}
         >
           <input type="hidden" name="child" value={child.id} />

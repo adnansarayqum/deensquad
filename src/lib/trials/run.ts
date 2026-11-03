@@ -4,6 +4,7 @@ import { asSystem } from "../db";
 import { canSendEmail, sendEmails } from "../email/send";
 import { trialFollowUpEmail } from "../email/templates";
 import { anonymiseOldTrials, dueFollowUps, markFollowUpSent } from "./data";
+import { reportJobFailure } from "@/lib/alerts";
 
 /**
  * Hourly (the cron): emails families whose child came to a trial a link to join (never in quiet hours; marked only
@@ -32,7 +33,7 @@ export async function runTrialFollowUps(now = new Date()): Promise<{ sent: numbe
       }
     }
   } catch (error) {
-    console.error("[trials] follow-up failed:", error instanceof Error ? error.message : error);
+    reportJobFailure("trial follow-ups", error);
   }
   return { sent, anonymised };
 }

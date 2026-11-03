@@ -53,10 +53,22 @@ export const getFamily = cache(async () => {
 export const getShell = cache(async () => {
   const { user, family } = await getFamily();
   const ids = family.children.map((c) => c.id);
-  const [unread, messages, sessionToday] = family.children.length
-    ? await asUser(user.id, (tx) => Promise.all([loadUnreadCount(tx, family), loadParentUnreadMessages(tx, ids), hasSessionToday(tx, ids, new Date())]))
-    : [0, 0, false];
-  return { unread, messages, sessionToday, hasChildren: ids.length > 0, childNames: family.children.map((c) => c.firstName), isStaff: Boolean(user.staff) };
+  // Sequential on one transaction (never parallel queries on one connection).
+  const [unread, messages, sessionToday, facts] = family.children.length
+    ? await asUser(user.id, async (tx) => [await loadUnreadCount(tx, family), await loadParentUnreadMessages(tx, ids), await hasSessionToday(tx, ids, new Date()), await loadChecklistFacts(tx, ids)] as const)
+    : ([0, 0, false, null] as const);
+  // The Family tab shows the first child's photo, when a parent has added one, as a profile tab does in most apps.
+  const photo = family.children.find((c) => c.photoFileId)?.photoFileId ?? null;
+  return {
+    unread,
+    messages,
+    sessionToday,
+    todo: facts ? stepsLeft(family, facts) : 0,
+    photo,
+    hasChildren: ids.length > 0,
+    childNames: family.children.map((c) => c.firstName),
+    isStaff: Boolean(user.staff),
+  };
 });
 
 async function loadWeek(userId: string, family: Family, now: Date) {

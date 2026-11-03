@@ -2,6 +2,7 @@ import "server-only";
 import { asSystem } from "../db";
 import { deleteMediaRow, orphanedMedia } from "./data";
 import { mediaStore } from "./store";
+import { reportJobFailure } from "@/lib/alerts";
 
 /**
  * Hourly: removes uploads attached to nothing for a day (a post never sent, a picture taken off a session, or the news,
@@ -22,11 +23,11 @@ export async function runMediaCleanup(now = new Date()): Promise<{ removed: numb
         removed++;
       } catch (error) {
         failed++;
-        console.error("[media] cleanup failed:", error instanceof Error ? error.message : error);
+        reportJobFailure("media cleanup", error);
       }
     }
   } catch (error) {
-    console.error("[media] cleanup failed:", error instanceof Error ? error.message : error);
+    reportJobFailure("media cleanup", error);
   }
   return { removed, failed };
 }

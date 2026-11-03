@@ -1,3 +1,4 @@
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { AwaitingApproval } from "@/components/AwaitingApproval";
 import type { Metadata } from "next";
 import { StepsText } from "@/components/StepsText";
@@ -82,6 +83,7 @@ export default async function FridayPage({ searchParams }: PageProps<"/friday">)
 
   return (
     <>
+      <PullToRefresh />
       {single?.session ? (
         <AppHeader stripes>
           <p className="text-[15px] leading-5 font-bold text-gold-text">

@@ -128,6 +128,7 @@ export async function notifyMessages(tx: Queryable, now: Date, senders: NoticeSe
   if (due.length === 0) return result;
   const withPush = senders.push ? await senders.pushUsers(tx) : new Set<string>();
   const told: Recipient[] = [];
+  const pushed = new Set<Recipient>();
 
   for (const r of due.filter((d) => d.userId && withPush.has(d.userId))) {
     const reached = await senders.push!(tx, [r.userId!], {
@@ -136,10 +137,15 @@ export async function notifyMessages(tx: Queryable, now: Date, senders: NoticeSe
       body: "Open the app to read it.",
       url: threadPath(r),
     });
-    if (reached.has(r.userId!)) told.push(r);
+    if (reached.has(r.userId!)) {
+      told.push(r);
+      pushed.add(r);
+    }
   }
 
-  const byEmail = due.filter((d) => !(d.userId && withPush.has(d.userId)) && d.email);
+  // An email for everyone the app notification didn't reach: no device, or every device failed (a phone that
+  // stopped taking them, a push service that timed out), so nobody misses a message because their phone broke.
+  const byEmail = due.filter((d) => !pushed.has(d) && d.email);
   if (senders.email && senders.appUrl && byEmail.length) {
     const emails = byEmail.map((r) => ({
       r,
@@ -157,7 +163,7 @@ export async function notifyMessages(tx: Queryable, now: Date, senders: NoticeSe
       [r.conversationId, r.recipientId, now],
     );
   }
-  result.push = told.filter((r) => r.userId && withPush.has(r.userId)).length;
+  result.push = pushed.size;
   result.email = told.length - result.push;
   return result;
 }

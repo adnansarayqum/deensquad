@@ -5,6 +5,7 @@ import { canSendEmail, sendEmails } from "../email/send";
 import { staffCheckEmail } from "../email/templates";
 import { checkName, dayText, londonIsoDay } from "./checks";
 import { dueCheckReminders, markCheckReminded } from "./data";
+import { reportJobFailure } from "@/lib/alerts";
 
 /**
  * Hourly (the cron): for each check running out within 60 days (or already run out) that hasn't had its email, emails
@@ -45,7 +46,7 @@ export async function runStaffCheckReminders(now = new Date()): Promise<{ checks
     await asSystem((tx) => markCheckReminded(tx, done, now));
     return { checks: done.length, sent };
   } catch (error) {
-    console.error("[staff checks] reminder failed:", error instanceof Error ? error.message : error);
+    reportJobFailure("staff check reminders", error);
     return { checks: 0, sent: 0 };
   }
 }

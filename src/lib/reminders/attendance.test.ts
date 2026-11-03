@@ -172,12 +172,12 @@ describe("who gets it", () => {
     await t.asSystem((tx) => tx.query(`delete from availability where session_id = $1 and player_id = $2`, [id.fri, id.musa]));
   });
 
-  it("a failed push isn't logged, so the next run that day tries again", async () => {
+  it("a failed push falls back to an email, so the parent still hears", async () => {
     const sent = fresh();
-    expect(await run(WED_BST_1707, senders(sent, { pushFails: true }))).toMatchObject({ push: 0, email: 2 });
-    expect((await logged()).some((r) => r.guardian_id === id.adnan)).toBe(false);
-    const retry = fresh();
-    expect(await run(new Date("2026-10-14T17:07:00Z"), senders(retry))).toMatchObject({ push: 1, email: 0 });
+    expect(await run(WED_BST_1707, senders(sent, { pushFails: true }))).toMatchObject({ push: 0, email: 3 });
+    expect(sent.email.map((e) => e.to)).toContain("adnan@x.test");
+    expect((await logged()).some((r) => r.guardian_id === id.adnan)).toBe(true);
+    await t.asSystem((tx) => tx.query(`delete from attendance_reminders`));
   });
 
   it("without push, everyone with an email gets one", async () => {

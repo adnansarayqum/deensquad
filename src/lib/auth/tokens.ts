@@ -25,7 +25,9 @@ export function sameHash(a: string, b: string): boolean {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-const EMAIL = /^[^\s@<>(),;:"]+@[^\s@<>(),;:"]+\.[^\s@<>(),;:"]+$/;
+// What Resend accepts: a plain local part (no leading, trailing or double dots) and a domain of letters, digits and
+// hyphens ending in a 2+ letter TLD. One address it refuses would otherwise fail a whole batch of 100.
+const EMAIL = /^(?!\.)(?!.*\.\.)[a-z0-9.!#$%&'*+/=?^_`{|}~-]+(?<!\.)@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
 
 /** Lower-cased, trimmed email, or null if it doesn't look like one. */
 export function normaliseEmail(input: unknown): string | null {

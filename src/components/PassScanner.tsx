@@ -7,6 +7,7 @@ import type { ScanResult } from "@/lib/staff/checkin";
 import { ChildAvatar } from "./ChildAvatar";
 import { FLAG_WORDS, PAYING_WORDS } from "@/lib/staff/flags";
 import { poundsText } from "@/lib/settings";
+import { refreshIfReachable, setScannerOpen } from "@/lib/client/register-refresh";
 
 const reasonText = {
   not_a_pass: "That isn't a Deen Squad attendance QR code.",
@@ -78,6 +79,7 @@ export function PassScanner({
     setError(null);
     setResult(null);
     setOpen(true);
+    setScannerOpen(true);
     history.pushState({ scanner: 1 }, "");
     pushed.current = true;
   };
@@ -91,10 +93,12 @@ export function PassScanner({
 
   useEffect(() => {
     if (!open) {
+      setScannerOpen(false);
       if (wasOpen.current) {
         opener.current?.focus();
-        // The register under the scanner picks up everyone just checked in (scans don't refresh it one by one).
-        router.refresh();
+        // The register under the scanner picks up everyone just checked in (scans don't refresh it one by one),
+        // only once the server answers: a refresh that fails reloads the whole page into the phone's offline page.
+        void refreshIfReachable(() => router.refresh());
       }
       return;
     }
@@ -374,10 +378,17 @@ function ScannerPay({ child: c, sessionId }: { child: Extract<ScanResult, { ok: 
         body: JSON.stringify({ session: sessionId, child: c.id }),
         signal: abort.signal,
       });
-      const body = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok || body.error) {
+      // Signed out comes back as a 401 or, through the proxy, the sign-in page: never counted as paid.
+      if (res.status === 401 || res.redirected) {
         setState("failed");
-        setMessage(res.status === 401 ? "You've been signed out. Close this and sign in again." : (body.error ?? "That didn't save. Check your signal and try again."));
+        setMessage("You've been signed out. Close this and sign in again.");
+        return;
+      }
+      const json = (res.headers.get("content-type") ?? "").includes("application/json");
+      const body = (json ? await res.json().catch(() => null) : null) as { error?: string; ok?: boolean } | null;
+      if (!res.ok || !body || body.error) {
+        setState("failed");
+        setMessage(body?.error ?? "That didn't save. Check your signal and try again.");
         return;
       }
       setPaid(c.feePence);

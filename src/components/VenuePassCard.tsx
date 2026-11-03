@@ -1,6 +1,7 @@
 "use client";
 
-import { startTransition, useActionState, useState, useSyncExternalStore, type FormEvent } from "react";
+import { useSentAction } from "./submitKeepingInput";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { MAX_FILE_BYTES } from "@/lib/files";
 import { removeVenuePass, saveVenuePass, type VenuePassState } from "@/lib/venue-pass/actions";
 import type { VenuePassView } from "@/lib/venue-pass/card";
@@ -17,8 +18,8 @@ import { VenuePassPicture } from "./VenuePassPicture";
 const noSubscribe = () => () => {};
 
 export function VenuePassCard({ view }: { view: VenuePassView | null }) {
-  const [saved, save, saving] = useActionState<VenuePassState, FormData>(saveVenuePass, {});
-  const [removed, remove, removing] = useActionState<VenuePassState, FormData>(removeVenuePass, {});
+  const [saved, save, saving, sendSave] = useSentAction<VenuePassState>(saveVenuePass, {});
+  const [removed, remove, removing, sendRemove] = useSentAction<VenuePassState>(removeVenuePass, {});
   const [problem, setProblem] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
   // Which form was used last, so its message shows (not an older one from the other).
@@ -35,14 +36,15 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
     if (!(file instanceof File) || file.size === 0) return setProblem("Choose a screenshot first.");
     setProblem(null);
     setReading(true);
-    const result = await readScreenshot(file);
+    // A picture the browser can't read goes as it is (the server reads it too), never left on "Reading…".
+    const result = await readScreenshot(file).catch(() => null);
     setReading(false);
     const data = new FormData();
     if (result && "text" in result) data.set("code", result.text);
     else if (result) data.set("screenshot", new File([result.image], "screenshot.png", { type: "image/png" }));
     else if (file.size > MAX_FILE_BYTES) return setProblem("That picture is too big. The limit is 8 MB. Try a screenshot.");
     else data.set("screenshot", file);
-    startTransition(() => save(data));
+    sendSave(data);
   };
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -119,7 +121,7 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
             const data = new FormData(e.currentTarget);
             setWhich("remove");
             setProblem(null);
-            startTransition(() => remove(data));
+            sendRemove(data);
           }}
         >
           <button type="submit" className="btn-chunky btn-paper w-full" disabled={busy} aria-label="Remove your sports hub entry code">

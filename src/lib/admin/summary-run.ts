@@ -1,4 +1,5 @@
 import "server-only";
+import { reportJobFailure } from "@/lib/alerts";
 
 import { appUrl } from "../config";
 import { asSystem } from "../db";
@@ -10,7 +11,7 @@ export async function runMonthlySummary(now = new Date()): Promise<SummaryRunRes
   try {
     return await sendMonthlySummary({ system: asSystem, send: sendEmails, appUrl: appUrl(), env: process.env }, now);
   } catch (error) {
-    console.error("[summary] failed:", error instanceof Error ? error.message : error);
+    reportJobFailure("monthly summary", error);
     return { error: "failed" };
   }
 }

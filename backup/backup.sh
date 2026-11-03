@@ -12,6 +12,11 @@
 # optional KEEP_DAYS, RESEND_API_KEY, EMAIL_FROM, ALERT_EMAIL / ADMIN_EMAILS.
 set -eu
 export PGOPTIONS="-c client_min_messages=warning"
+# A server that never answers fails the run (and sends the alert) instead of hanging until Railway's next run.
+export PGCONNECT_TIMEOUT=30
+# Time limits, in seconds, for each long step (busybox timeout; a killed step exits non-zero, which alerts).
+DUMP_LIMIT="${DUMP_LIMIT:-1800}"
+STEP_LIMIT="${STEP_LIMIT:-900}"
 
 KEEP_DAYS="${KEEP_DAYS:-30}"
 PREFIX="postgres"
@@ -52,7 +57,7 @@ trap on_exit EXIT
 export AWS_ACCESS_KEY_ID="${ACCESS_KEY_ID:?ACCESS_KEY_ID is not set}"
 export AWS_SECRET_ACCESS_KEY="${SECRET_ACCESS_KEY:?SECRET_ACCESS_KEY is not set}"
 export AWS_DEFAULT_REGION="${REGION:-auto}"
-s3() { aws --endpoint-url "$ENDPOINT" s3 "$@"; }
+s3() { timeout "$STEP_LIMIT" aws --cli-connect-timeout 30 --cli-read-timeout 120 --endpoint-url "$ENDPOINT" s3 "$@"; }
 
 # The scratch database's URL: the live URL with its database name swapped.
 CHECK_URL="$(echo "$DATABASE_URL" | sed -E "s#/[^/?]*(\\?.*)?\$#/$CHECK_DB\\1#")"
@@ -61,7 +66,7 @@ case "$CHECK_URL" in *"/$CHECK_DB"*) ;; *) STEP="building the restore-check URL"
 
 STEP="pg_dump"
 log "dumping the database"
-pg_dump --format=custom --compress=9 --file="$FILE" "$DATABASE_URL"
+timeout "$DUMP_LIMIT" pg_dump --format=custom --compress=9 --file="$FILE" "$DATABASE_URL"
 pg_restore --list "$FILE" > /dev/null
 SIZE="$(wc -c < "$FILE" | tr -d ' ')"
 log "dump ok: $SIZE bytes"
@@ -73,7 +78,7 @@ log "uploaded s3://$BUCKET/$PREFIX/deensquad-$STAMP.dump"
 STEP="restore check"
 log "restoring into $CHECK_DB"
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -qc "drop database if exists $CHECK_DB" -c "create database $CHECK_DB"
-pg_restore --exit-on-error --no-owner --dbname="$CHECK_URL" "$FILE"
+timeout "$DUMP_LIMIT" pg_restore --exit-on-error --no-owner --dbname="$CHECK_URL" "$FILE"
 
 TABLES="$(psql "$DATABASE_URL" -Atc "select format('%I.%I', schemaname, tablename) from pg_tables where schemaname in ('public','auth') order by 1")"
 live_total=0; restored_total=0; empty=""

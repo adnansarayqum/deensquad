@@ -1,4 +1,5 @@
 import "server-only";
+import { reportJobFailure } from "@/lib/alerts";
 
 import { pushConfigured, pushToEach } from "../chase/senders";
 import { appUrl } from "../config";
@@ -20,7 +21,7 @@ export async function runPointsMilestones(now = new Date()): Promise<{ reached: 
   try {
     return await asSystem((tx) => sendMilestoneNotices(tx, now, liveSenders()));
   } catch (error) {
-    console.error("[points reward] failed:", error instanceof Error ? error.message : error);
+    reportJobFailure("points reward", error);
     return { reached: 0, admins: 0, parents: 0 };
   }
 }
