@@ -108,7 +108,8 @@ export async function loadFeedSessions(tx: Queryable, guardianId: string, now: D
        s.cancelled_at is not null as cancelled, s.cancel_reason,
        array_agg(distinct p.first_name::text order by p.first_name::text)::text[] as children
      from sessions s
-     join players p on ${sessionIsFor("s", "p")}
+     -- approved children only (migration 0047): sessions stay hidden from a family the club hasn't approved yet
+     join players p on p.approved_at is not null and ${sessionIsFor("s", "p")}
      join player_guardians pg on pg.player_id = p.id and pg.guardian_id = $1
      where s.starts_at >= $2 and s.starts_at <= $3
      group by s.id

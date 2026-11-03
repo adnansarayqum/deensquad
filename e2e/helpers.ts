@@ -95,3 +95,11 @@ export async function editStaff(page: Page, name: string) {
   // The open attribute is "" when open (falsy), so test for it being there at all.
   if ((await summary.isVisible()) && (await summary.locator("xpath=..").getAttribute("open")) === null) await summary.click();
 }
+
+/** Admin: approve a child a parent added (migration 0047), found by name on Families' "Waiting for approval" list. */
+export async function approveChild(page: Page, fullName: string) {
+  await page.goto(`/admin/families?need=approve&q=${encodeURIComponent(fullName)}`);
+  await page.getByRole("link", { name: fullName }).filter({ visible: true }).first().click();
+  await page.getByRole("button", { name: `Approve ${fullName}` }).click();
+  await expect(page.getByText(/is approved\. Their family can now see/)).toBeVisible();
+}

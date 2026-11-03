@@ -47,6 +47,8 @@ export type Child = {
   photoConsent: boolean | null;
   /** The photo the parent added for the coaches (only while photo consent is yes). */
   photoFileId?: string | null;
+  /** Added by a parent and not approved by the club yet (migration 0047): the group's news and sessions are hidden. */
+  awaitingApproval?: boolean;
 };
 
 export type SessionKind = "training" | "match" | "tournament";

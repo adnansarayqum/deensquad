@@ -59,7 +59,8 @@ export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date,
     `select a.id as announcement_id, a.title, a.body, g.id as guardian_id, g.auth_user_id as user_id, g.first_name, g.email, g.phone,
        array_agg(distinct p.first_name order by p.first_name) as children
      from announcements a
-     join players p on ${newsReaches("a", "p")}
+     -- a child still waiting for the club's approval (migration 0047) doesn't bring their parents in: they can't read it
+     join players p on p.approved_at is not null and ${newsReaches("a", "p")}
      join player_guardians pg on pg.player_id = p.id
      join guardians g on g.id = pg.guardian_id
      where a.requires_ack

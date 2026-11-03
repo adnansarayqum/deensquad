@@ -12,7 +12,7 @@ async function parentsOf(tx: Queryable, groups: string[] | null, sessionId: stri
   const rows = await tx.query<{ user_id: string }>(
     `select distinct g.auth_user_id as user_id
      from guardians g join player_guardians pg on pg.guardian_id = g.id join players p on p.id = pg.player_id
-     where g.auth_user_id is not null and ($1::text[] is null or p.age_group::text = any ($1::text[]))
+     where g.auth_user_id is not null and p.approved_at is not null and ($1::text[] is null or p.age_group::text = any ($1::text[]))
        and ($2::uuid is null or squad_allows($2::uuid, p.id))`,
     [groups, sessionId],
   );

@@ -89,7 +89,8 @@ export async function applyRegistration(tx: Queryable, email: string, reg: Regis
     if (have.has(key(c.firstName, c.lastName))) continue;
     have.add(key(c.firstName, c.lastName));
     const [{ id }] = await tx.query<{ id: string }>(
-      `insert into players (first_name, last_name, date_of_birth, age_group) values ($1, $2, $3::date, $4::age_group) returning id`,
+      // Waits for an admin to approve them before the family sees the group's news and sessions (migration 0047).
+      `insert into players (first_name, last_name, date_of_birth, age_group, approved_at) values ($1, $2, $3::date, $4::age_group, null) returning id`,
       [c.firstName, c.lastName, c.dateOfBirth, c.ageGroup],
     );
     await tx.query(`insert into player_guardians (player_id, guardian_id) values ($1, $2)`, [id, guardian.id]);

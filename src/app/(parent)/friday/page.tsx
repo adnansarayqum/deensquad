@@ -1,3 +1,4 @@
+import { AwaitingApproval } from "@/components/AwaitingApproval";
 import type { Metadata } from "next";
 import { StepsText } from "@/components/StepsText";
 import { staffNameForParents } from "@/lib/greeting";
@@ -106,6 +107,7 @@ export default async function FridayPage({ searchParams }: PageProps<"/friday">)
 
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
         <PassCacheWriter user={user.id} passes={cachedPasses(cards)} hub={venuePass?.cache ?? null} />
+        <AwaitingApproval>{family.children}</AwaitingApproval>
         {upcoming.length > 0 ? (
           <nav aria-label="Which sessions" className="grid grid-cols-2 gap-1 rounded-[16px] bg-fill p-1">
             {(

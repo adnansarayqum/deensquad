@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { devices, expect, test } from "@playwright/test";
-import { ADMIN_STATE, OUTBOX, YOUR_DATA_PARENT_STATE, newContext, shot } from "./helpers";
+import { ADMIN_STATE, OUTBOX, YOUR_DATA_PARENT_STATE, approveChild, newContext, shot } from "./helpers";
 
 // A parent keeps their own details and their children's up to date, and adds a child, from the Player screen
 // (Player → Your family). Uses the family that signed itself up in parent-your-data.spec.ts (Maryam Haddad: Layla
@@ -99,22 +99,22 @@ test("a parent adds a child in U10: on Player, on Friday, on the admin's Familie
   await page.getByLabel("Group").selectOption("U10");
   await page.getByRole("button", { name: "Add child" }).click();
   await expect(page).toHaveURL(/\/player\?child=[0-9a-f-]{36}&added=1$/);
-  await expect(page.locator("main").getByRole("status").filter({ hasText: "Omar" })).toHaveText("Omar is now on your account. The club has been told and will check their group.");
+  await expect(page.locator("main").getByRole("status").filter({ hasText: "Omar" })).toHaveText("Omar is now on your account. The club will check the details and approve Omar, then you'll see their group's news and sessions.");
   await expect(page.getByRole("heading", { name: "Omar H." })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Choose a child" }).getByRole("link", { name: "Omar" })).toBeVisible();
 
-  // Friday asks about him with the U10s.
+  // He waits for the club's approval before Sessions asks about him.
   await page.goto("/friday");
-  await expect(page.getByRole("group", { name: /Is Omar coming/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The club is checking Omar's details" })).toBeVisible();
 
   const mails = readFileSync(OUTBOX, "utf8")
     .trim()
     .split("\n")
     .slice(before)
     .map((l) => JSON.parse(l) as { to: string; subject: string; text: string });
-  const told = mails.filter((m) => m.subject === "New child added by Maryam Haddad: Omar (U10)");
+  const told = mails.filter((m) => m.subject === "New child to approve: Omar (U10), added by Maryam Haddad");
   expect(told.map((m) => m.to)).toEqual(["admin@deensquad.test"]);
-  expect(told[0].text).toContain("check the group is right");
+  expect(told[0].text).toContain("check the group is right and approve Omar");
   await context.close();
 
   test.skip(!existsSync(ADMIN_STATE), "run with parent-app.spec.ts: needs its saved admin sign-in");
@@ -122,7 +122,15 @@ test("a parent adds a child in U10: on Player, on Friday, on the admin's Familie
   const admin = await adminContext.newPage();
   await admin.goto("/admin/families?group=U10&q=Omar");
   await expect(admin.getByText("Omar Haddad").filter({ visible: true })).toBeVisible();
+  await approveChild(admin, "Omar Haddad");
   await adminContext.close();
+
+  // Approved: Friday asks about him with the U10s.
+  const after = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
+  const friday = await after.newPage();
+  await friday.goto("/friday");
+  await expect(friday.getByRole("group", { name: /Is Omar coming/ })).toBeVisible();
+  await after.close();
 });
 
 test("a parent adds the other parent: they're emailed a link, sign in and see the same children; the club is told", async ({ browser }) => {
@@ -151,7 +159,7 @@ test("a parent adds the other parent: they're emailed a link, sign in and see th
   await page.getByLabel("Email address").fill("yasir.haddad@example.com");
   await page.getByRole("checkbox", { name: "Omar" }).uncheck();
   await page.getByRole("button", { name: "Add parent" }).click();
-  await expect(page.locator("main").getByRole("status")).toHaveText("Yasir has been added to Layla and Zaid. We're emailing them a link to sign in.");
+  await expect(page.locator("main").getByRole("status")).toHaveText("Thanks. Yasir is listed below as invited, and will see Layla and Zaid once they're set up in the app.");
   await expect(now.getByText("Yasir Haddad")).toBeVisible();
   await page.screenshot({ path: shot("player-add-parent"), fullPage: true });
 

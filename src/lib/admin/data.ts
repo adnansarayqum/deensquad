@@ -47,6 +47,8 @@ export type FamilyRow = {
   consent: boolean | null;
   contacts: number;
   agreed: boolean;
+  /** Added by a parent and not approved yet (migration 0047). */
+  awaitingApproval: boolean;
   guardians: FamilyGuardian[];
 };
 
@@ -128,10 +130,11 @@ export async function loadFamilies(
     photo_consent: boolean | null;
     contacts: number;
     agreed: boolean;
+    awaiting_approval: boolean;
     guardians: FamilyGuardian[] | string;
   }>(
     `select p.id, p.first_name, p.last_name, p.age_group::text as age_group, p.shirt_number, fg.payment::text as payment, fg.in_app,
-       p.photo_consent, fg.emergency_contacts as contacts,
+       p.photo_consent, fg.emergency_contacts as contacts, p.approved_at is null as awaiting_approval,
        exists (select 1 from agreements ag where ag.player_id = p.id and ag.document = $1) as agreed,
        coalesce(json_agg(json_build_object(
          'id', g.id, 'name', g.first_name || ' ' || g.last_name, 'email', g.email, 'phone', g.phone,
@@ -157,6 +160,7 @@ export async function loadFamilies(
     consent: r.photo_consent,
     contacts: r.contacts,
     agreed: r.agreed,
+    awaitingApproval: r.awaiting_approval,
     guardians: typeof r.guardians === "string" ? (JSON.parse(r.guardians) as FamilyGuardian[]) : r.guardians,
   }));
 }
@@ -183,6 +187,8 @@ export type ChildDetail = {
   changedByParentAt: string | null;
   /** The photo a parent added for the coaches (migration 0023), and when. */
   photo: { id: string; addedAt: string | null } | null;
+  /** Added by a parent and not approved yet (migration 0047): the family can't see the group's news or sessions. */
+  awaitingApproval: boolean;
   guardians: (FamilyGuardian & { firstName: string; lastName: string; otherChildren: string[] })[];
   contacts: { id: string; name: string; phone: string; relationship: string | null }[];
   /** This season's club contract (CONTRACT.id): who agreed it and when, or null if nobody has yet. */
@@ -209,9 +215,10 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
     updated_by_parent_at: Date | null;
     photo_file_id: string | null;
     photo_updated_at: Date | null;
+    awaiting_approval: boolean;
   }>(
     `select p.id, p.first_name, p.last_name, p.date_of_birth::text as date_of_birth, p.age_group::text as age_group, p.shirt_number,
-       p.position, p.joined_on::text as joined_on, p.photo_consent, p.updated_by_parent_at,
+       p.position, p.joined_on::text as joined_on, p.photo_consent, p.updated_by_parent_at, p.approved_at is null as awaiting_approval,
        p.photo_file_id, p.photo_updated_at, coalesce(ps.state, 'missing')::text as payment, ps.updated_at as payment_updated_at, ps.synced_at as payment_synced_at,
        (select count(*) from attendance a where a.player_id = p.id)::int as attended,
        ${MISSED_LAST_3} as missed_last_3,
@@ -267,6 +274,7 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
     lastHereThisSeason: p.last_here ? iso(p.last_here) : null,
     changedByParentAt: p.updated_by_parent_at ? iso(p.updated_by_parent_at) : null,
     photo: p.photo_file_id ? { id: p.photo_file_id, addedAt: p.photo_updated_at ? iso(p.photo_updated_at) : null } : null,
+    awaitingApproval: p.awaiting_approval,
     guardians: guardians.map((g) => ({
       id: g.id,
       name: `${g.first_name} ${g.last_name}`,
@@ -313,11 +321,11 @@ const newsColumns = (groups: string) => `a.id, a.topic, a.title, a.body, a.audie
     from announcement_players ap join players p on p.id = ap.player_id
     where ap.announcement_id = a.id and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))), '{}')::text[] end as chosen,
   (select count(distinct pg.guardian_id)::int from player_guardians pg join players p on p.id = pg.player_id
-    where ${newsReaches()} and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))) as audience_count,
+    where p.approved_at is not null and ${newsReaches()} and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))) as audience_count,
   -- parents who've read it and still have a child it reaches (a squad message follows the squad as it changes)
   (select count(distinct r.guardian_id)::int from announcement_reads r
     join player_guardians pg on pg.guardian_id = r.guardian_id join players p on p.id = pg.player_id
-    where r.announcement_id = a.id and ${newsReaches()} and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))) as read_count`;
+    where r.announcement_id = a.id and p.approved_at is not null and ${newsReaches()} and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))) as read_count`;
 
 type NewsDbRow = {
   id: string;
@@ -424,7 +432,8 @@ export async function loadNewsDetail(
      join player_guardians pg on pg.guardian_id = g.id
      join players p on p.id = pg.player_id
      join announcements a on a.id = $1
-     where ${newsReaches()}
+     -- not a family still waiting for approval (migration 0047): they can't read it, so it doesn't reach them
+     where p.approved_at is not null and ${newsReaches()}
        and ($2::text[] is null or p.age_group::text = any ($2::text[]))
        and not exists (select 1 from announcement_reads r where r.announcement_id = $1 and r.guardian_id = g.id)
      group by g.id

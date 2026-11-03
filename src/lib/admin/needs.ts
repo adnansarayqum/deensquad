@@ -84,6 +84,8 @@ export const MISSED_LAST_3_IDS = `(
 export const MISSED_LAST_3 = `(p.id in ${MISSED_LAST_3_IDS})`;
 
 export const NEEDS = {
+  // Added by a parent (sign-up or Add a child) and not approved yet: the family can't see the group's news or sessions.
+  approve: { label: "Waiting for approval", where: `p.approved_at is null` },
   contacts: { label: "No emergency contact", where: `not exists (select 1 from emergency_contacts ec where ec.player_id = p.id and not ${CONTACT_IS_PARENT})` },
   consent: { label: "No photo answer", where: `p.photo_consent is null` },
   payment: { label: "No payment plan (or overdue)", where: `${paymentState} in ('missing', 'overdue')` },

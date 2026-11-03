@@ -123,13 +123,15 @@ ${link ? button(link, "See orders") : ""}`,
 
 export function newFamilyEmail(opts: { to: string; parentName: string; parentEmail: string; children: string[]; link: string | null; appUrl: string | null }): Email {
   const { to, parentName, parentEmail, children, link, appUrl } = opts;
-  const subject = `New family signed up: ${parentName}`;
-  const text = [`${parentName} (${parentEmail}) has signed up in the app.`, "", ...children.map((c) => `- ${c}`), ...(link ? ["", `See families: ${link}`] : [])].join("\n");
+  const subject = `New family to approve: ${parentName}`;
+  const approve = "They won't see any club news, sessions or photos until you approve the children in the app.";
+  const text = [`${parentName} (${parentEmail}) has signed up in the app.`, "", ...children.map((c) => `- ${c}`), "", approve, ...(link ? ["", `Approve them: ${link}`] : [])].join("\n");
   const html = layout(
     appUrl,
     `<p style="margin:0"><b>${escape(parentName)}</b> (${escape(parentEmail)}) has signed up in the app.</p>
 <ul style="padding-left:20px">${children.map((c) => `<li>${escape(c)}</li>`).join("")}</ul>
-${link ? button(link, "See families") : ""}`,
+<p>${escape(approve)}</p>
+${link ? button(link, "Approve them") : ""}`,
   );
   return { to, subject, text, html };
 }
@@ -137,18 +139,15 @@ ${link ? button(link, "See families") : ""}`,
 /** A parent added a child from the Player screen. The club checks the group and links any other parent. */
 export function newChildEmail(opts: { to: string; parentName: string; childName: string; group: string; link: string | null; appUrl: string | null }): Email {
   const { to, parentName, childName, group, link, appUrl } = opts;
-  const subject = `New child added by ${parentName}: ${childName} (${group})`;
-  const lines = [
-    `${parentName} has added ${childName} (${group}) to their account in the app.`,
-    "",
-    "Please check the group is right, and link any other parent to the child on Families.",
-  ];
-  const text = [...lines, ...(link ? ["", `See families: ${link}`] : [])].join("\n");
+  const subject = `New child to approve: ${childName} (${group}), added by ${parentName}`;
+  const ask = `Please check the group is right and approve ${childName}. Until then the family doesn't see the ${group} news, sessions or photos.`;
+  const lines = [`${parentName} has added ${childName} (${group}) to their account in the app.`, "", ask];
+  const text = [...lines, ...(link ? ["", `Approve: ${link}`] : [])].join("\n");
   const html = layout(
     appUrl,
     `<p style="margin:0"><b>${escape(parentName)}</b> has added <b>${escape(childName)}</b> (${escape(group)}) to their account in the app.</p>
-<p>Please check the group is right, and link any other parent to the child on Families.</p>
-${link ? button(link, "See families") : ""}`,
+<p>${escape(ask)}</p>
+${link ? button(link, "Approve") : ""}`,
   );
   return { to, subject, text, html };
 }
@@ -581,5 +580,29 @@ export function pointsRewardAdminEmail(opts: { to: string; child: string; group:
   const line = `${child} (${group}) has reached ${points} points. Their parents have been told the club will give a reward. Tick it off on Rewards once it's given.`;
   const text = [line, "", `Open Rewards: ${link}`].join("\n");
   const html = layout(appUrl, `<p style="margin:0">${escape(line)}</p>\n${button(link, "Open Rewards")}`);
+  return { to, subject, text, html };
+}
+
+/** To a child's parents once an admin has approved the child: the group's news and sessions are now in the app. */
+export function childApprovedEmail(opts: { to: string; firstName: string; childFirstName: string; group: string; link: string; appUrl: string | null }): Email {
+  const { to, firstName, childFirstName, group, link, appUrl } = opts;
+  const subject = `${childFirstName} is all set in the Deen Squad app`;
+  const lines = [`Assalamu alaikum ${firstName},`, `The club has checked ${childFirstName}'s details. You can now see the ${group} news and sessions in the app.`];
+  const text = [...lines.flatMap((l) => [l, ""]), `Open the app: ${link}`].join("\n");
+  const html = layout(appUrl, `${lines.map((l) => `<p style="margin:0 0 12px">${escape(l)}</p>`).join("\n")}\n${button(link, "Open the app")}`);
+  return { to, subject, text, html };
+}
+
+/** To each admin when a parent asked to add someone whose email the club already has (they weren't linked). */
+export function coParentRequestEmail(opts: { to: string; addedBy: string; parentName: string; email: string; children: string[]; link: string; appUrl: string | null }): Email {
+  const { to, addedBy, parentName, email, children, link, appUrl } = opts;
+  const list = children.length === 1 ? children[0] : `${children.slice(0, -1).join(", ")} and ${children.at(-1)}`;
+  const subject = `Check a parent link: ${addedBy} asked to add ${parentName}`;
+  const lines = [
+    `${addedBy} asked to add ${parentName} (${email}) as a parent or carer of ${list}.`,
+    "That email already belongs to a parent in the app, so they haven't been linked. If it's right, add them on the child's page with that email. If not, there's nothing to do.",
+  ];
+  const text = [...lines.flatMap((l) => [l, ""]), `Open the child's page: ${link}`].join("\n");
+  const html = layout(appUrl, `${lines.map((l) => `<p style="margin:0 0 12px">${escape(l)}</p>`).join("\n")}\n${button(link, "Open the child's page")}`);
   return { to, subject, text, html };
 }

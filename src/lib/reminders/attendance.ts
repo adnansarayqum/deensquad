@@ -114,7 +114,8 @@ export async function dueReminders(tx: Queryable, now: Date): Promise<ReminderTa
        select distinct on (p.id) p.id as player_id, p.first_name, s.id as session_id, s.title, s.starts_at, s.venue,
          is_squad_session(s.id) as squad
        from players p
-       join sessions s on s.cancelled_at is null and s.starts_at > $1 and s.starts_at < $1::timestamptz + interval '7 days'
+       -- not for a child still waiting for the club's approval (migration 0047): the family can't see sessions yet
+       join sessions s on p.approved_at is not null and s.cancelled_at is null and s.starts_at > $1 and s.starts_at < $1::timestamptz + interval '7 days'
          and ${sessionIsFor("s", "p")}
        order by p.id, s.starts_at, s.id
      )

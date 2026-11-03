@@ -138,10 +138,32 @@ export async function loadFamilyParents(tx: Queryable): Promise<FamilyParent[]> 
      group by g.id
      order by (g.id = my_guardian_id()) desc, g.first_name`,
   );
-  return rows.map((r) => ({ id: r.id, firstName: r.first_name, lastName: r.last_name, you: r.you, signedIn: r.signed_in, invited: r.invited, children: r.children }));
+  const parents = rows.map((r) => ({ id: r.id, firstName: r.first_name, lastName: r.last_name, you: r.you, signedIn: r.signed_in, invited: r.invited, children: r.children }));
+  // Someone the caller asked to add whose email the club already has waits for the club (migration 0047). Listed as
+  // invited, under the name the caller typed, so the page reads the same whether or not the email was in the app.
+  const requests = await tx.query<{ first_name: string; last_name: string; players: string[]; created_at: Date }>(
+    `select first_name, last_name, players::text[] as players, created_at from my_co_parent_requests()`,
+  );
+  if (requests.length === 0) return parents;
+  const kids = await tx.query<{ id: string; first_name: string }>(
+    `select id, first_name from players where id in (select my_player_ids()) order by date_of_birth nulls last, first_name`,
+  );
+  const named = (ids: string[]) => kids.filter((k) => ids.includes(k.id)).map((k) => k.first_name);
+  return [
+    ...parents,
+    ...requests.map((r, i) => ({
+      id: `request-${i}`,
+      firstName: r.first_name,
+      lastName: r.last_name,
+      you: false,
+      signedIn: false,
+      invited: true,
+      children: named(r.players),
+    })),
+  ];
 }
 
-export type CoParentResult = { guardianId: string; created: boolean; linked: number };
+export type CoParentResult = { guardianId: string; created: boolean; linked: number; pending: boolean };
 
 /**
  * Links the other parent to some of the caller's own children (`add_my_co_parent`, migration 0029): found by email or
@@ -152,9 +174,9 @@ export async function addMyCoParent(
   tx: Queryable,
   parent: { firstName: string; lastName: string; email: string; phone: string | null; children: string[] },
 ): Promise<CoParentResult> {
-  const [row] = await tx.query<{ guardian_id: string; created: boolean; linked: number }>(
-    `select guardian_id, created, linked::int as linked from add_my_co_parent($1, $2, $3, $4, $5::uuid[])`,
+  const [row] = await tx.query<{ guardian_id: string; created: boolean; linked: number; pending: boolean }>(
+    `select guardian_id, created, linked::int as linked, pending from add_my_co_parent($1, $2, $3, $4, $5::uuid[])`,
     [parent.firstName, parent.lastName, parent.email, parent.phone, parent.children],
   );
-  return { guardianId: row.guardian_id, created: row.created, linked: row.linked };
+  return { guardianId: row.guardian_id, created: row.created, linked: row.linked, pending: row.pending };
 }

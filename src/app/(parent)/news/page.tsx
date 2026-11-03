@@ -15,6 +15,7 @@ import { getNewsPage } from "@/lib/parent/load";
 import type { AnnouncementView, Family } from "@/lib/parent/data";
 import { MediaGallery } from "@/components/media/MediaGallery";
 import { ThisWeek } from "@/components/ThisWeek";
+import { AwaitingApproval } from "@/components/AwaitingApproval";
 import { ComingOnNews, SessionNow, canAnswerComing } from "@/components/NewsSession";
 import { groupsPlural } from "@/lib/domain";
 
@@ -48,6 +49,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
 
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
         {/* Is training on, when, and each child's answer: the first thing on the screen every parent lands on. */}
+        <AwaitingApproval>{family.children}</AwaitingApproval>
         <ThisWeek family={family} week={week} stepsLeft={stepsLeft} now={now} />
         {/* Straight after This week: with notifications off a parent misses cancellations and messages. */}
         <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} />

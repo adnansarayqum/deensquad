@@ -572,7 +572,11 @@ test("sign-up: a new parent registers their child, proves their email and lands 
   await expect(page).toHaveURL(/\/checklist$/);
   await expect(page.getByRole("heading", { name: "Ilyas's to-do" })).toBeVisible();
   const mails = readFileSync(OUTBOX, "utf8");
-  expect(mails).toContain("New family signed up: Hana Rahman");
+  expect(mails).toContain("New family to approve: Hana Rahman");
+  // Until the club approves Ilyas, the family's Home says why there's no U10 news or sessions yet.
+  await page.goto("/news");
+  await expect(page.getByRole("heading", { name: "The club is checking Ilyas's details" })).toBeVisible();
+  await page.goto("/checklist");
 
   await page.getByRole("link", { name: /Club contract/ }).click();
   await expect(page.getByRole("heading", { name: "Player responsibilities" })).toBeVisible();

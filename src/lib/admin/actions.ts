@@ -26,6 +26,7 @@ import { runChase } from "../chase/run";
 import { sendInvites } from "./invites";
 import { deleteLeftoverAccounts, removeChildRecord, unlinkGuardianRecord } from "./remove";
 import { closeDeletionRequest } from "../data-requests";
+import { approve, tellParentsApproved } from "./approval";
 import { TOPICS } from "./topics";
 import { checkChosenChildren, insertNews } from "./news";
 import { loadNewsDetail } from "./data";
@@ -257,6 +258,8 @@ export async function saveGuardian(_prev: FormState, formData: FormData): Promis
           phone,
         ]);
     await tx.query(`insert into player_guardians (player_id, guardian_id) values ($1, $2) on conflict do nothing`, [child, g.id]);
+    // A parent's request to add this person to this child is done (migration 0047).
+    await tx.query(`update co_parent_requests set handled_at = now() where guardian_id = $1 and $2 = any (players) and handled_at is null`, [g.id, child]);
     return null;
   });
   if (result) return { error: result };
@@ -272,6 +275,16 @@ export async function unlinkGuardian(formData: FormData): Promise<void> {
   const removed = await asUser(user.id, (tx) => unlinkGuardianRecord(tx, child, guardian));
   await asSystem((tx) => deleteLeftoverAccounts(tx, removed));
   redirect(withQuery(familyChildHref(child, familiesFilterFromForm(formData, AGE_GROUPS)), "unlinked=1"));
+}
+
+/** Approve a child a parent added (migration 0047): their family can then see the group's news and sessions. */
+export async function approveChild(formData: FormData): Promise<void> {
+  const user = await requireAdmin();
+  const child = id(formData.get("child"));
+  if (!child) return;
+  const done = await asUser(user.id, (tx) => approve(tx, child, user.staff.id));
+  if (done) after(() => enqueue("child approved", () => tellParentsApproved(child)));
+  redirect(withQuery(familyChildHref(child, familiesFilterFromForm(formData, AGE_GROUPS)), "approved=1"));
 }
 
 export async function removeChild(formData: FormData): Promise<void> {

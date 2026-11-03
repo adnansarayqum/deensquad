@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { devices, expect, test, type Page } from "@playwright/test";
-import { ADMIN_STATE, OUTBOX, YOUR_DATA_PARENT_STATE, latestCode, newContext, shot } from "./helpers";
+import { ADMIN_STATE, OUTBOX, YOUR_DATA_PARENT_STATE, approveChild, latestCode, newContext, shot } from "./helpers";
 
 // A parent's own data (Player → Your data: download, ask to be deleted) and the accessibility repairs a parent meets:
 // the QR codes by keyboard, and Friday at 200% zoom. A new family signs itself up with two children (its own address,
@@ -35,8 +35,25 @@ test("a family with two children signs up", async ({ browser }) => {
   await page.getByLabel("6-digit code").fill(latestCode(EMAIL));
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/checklist$/);
+  // Until the club approves them, Home says so (and shows no group news or sessions).
+  await page.goto("/news");
+  await expect(page.getByRole("heading", { name: "The club is checking Layla and Zaid's details" })).toBeVisible();
   await context.storageState({ path: YOUR_DATA_PARENT_STATE });
   await context.close();
+});
+
+test("the club approves the family's children", async ({ browser }) => {
+  test.skip(!existsSync(ADMIN_STATE) || !existsSync(YOUR_DATA_PARENT_STATE), "run with parent-app.spec.ts: needs its saved admin sign-in");
+  const admin = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
+  const page = await admin.newPage();
+  await approveChild(page, "Layla Haddad");
+  await approveChild(page, "Zaid Haddad");
+  await admin.close();
+  const parent = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
+  const home = await parent.newPage();
+  await home.goto("/news");
+  await expect(home.getByRole("heading", { name: /The club is checking/ })).toHaveCount(0);
+  await parent.close();
 });
 
 test("QR codes: every child can be reached by keyboard, and the screen says whose code is showing", async ({ browser }) => {

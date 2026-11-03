@@ -100,6 +100,8 @@ export type Dashboard = {
   wellbeing: number | null;
   /** Admins only: children who reached the reward points and haven't had their reward yet. */
   rewards?: number | null;
+  /** Admins only: children added by a parent and waiting for approval (NEEDS.approve). */
+  toApprove?: number | null;
   /** Admins only (the shop is theirs to run); null for coaches. */
   shop: {
     awaitingPayment: number;
@@ -244,6 +246,7 @@ export async function loadDashboard(
          (select count(*)::int from mine) as players,
          (select count(*)::int from mine where joined_on >= date_trunc('month', $2::timestamptz at time zone 'Europe/London')::date) as "joinedThisMonth",
          (select count(*)::int from mine p where ${NEEDS.missing3.where}) as "missedLast3",
+         (select count(*)::int from mine p where ${NEEDS.approve.where}) as "toApprove",
          (select count(*)::int from parents) as parents,
          (select count(*)::int from parents where auth_user_id is not null) as "signedIn",
          (select count(*)::int from parents where auth_user_id is not null and guardian_notifications_on(id)) as "notificationsOn",
@@ -329,6 +332,7 @@ export async function loadDashboard(
     staffChecks: withShop ? await countStaffNeedingChecks(tx, londonIsoDay(now)) : null,
     wellbeing: withShop ? await countOpenCheckins(tx) : null,
     rewards: withShop ? await countToReward(tx) : null,
+    toApprove: withShop ? f.toApprove : null,
     payments: { active: f.pay_active, self_reported: f.pay_self_reported, pay_as_you_go: f.pay_pay_as_you_go, missing: f.pay_missing, overdue: f.pay_overdue },
     shop: s
       ? {

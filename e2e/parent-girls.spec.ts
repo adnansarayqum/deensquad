@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { devices, expect, test } from "@playwright/test";
-import { ADMIN_STATE, GIRLS_PARENT_STATE, latestCode, newContext, shot, unfold } from "./helpers";
+import { ADMIN_STATE, GIRLS_PARENT_STATE, approveChild, latestCode, newContext, shot, unfold } from "./helpers";
 
 // The Girls group (the owner's decision): a family signs up with a daughter in Girls, the admin adds a Girls
 // session, her Friday shows it and its register lists her. Runs after parent-app.spec.ts (files run in name
@@ -45,6 +45,8 @@ test("the admin adds a Girls session; it's on her Friday and its register lists 
   test.skip(!existsSync(ADMIN_STATE) || !existsSync(GIRLS_PARENT_STATE), "run with the earlier tests: needs their saved sign-in");
   const admin = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
   const page = await admin.newPage();
+  // A family that signed itself up waits for the club's approval before it sees the group's sessions.
+  await approveChild(page, "Amina Rahman");
   await page.goto("/admin/sessions");
   await unfold(page, "add-sessions");
   await page.getByLabel("Title").fill(TITLE);

@@ -10,7 +10,7 @@ import { ChildAvatar } from "@/components/ChildAvatar";
 import { MedicalDetails } from "@/components/admin/MedicalDetails";
 import { INCIDENT_KINDS, loadIncidents } from "@/lib/incidents/data";
 import { clock, shortDay } from "@/lib/dates";
-import { removeChild, resendInvite, saveGuardian, setPayment, unlinkGuardian, updateChild } from "@/lib/admin/actions";
+import { approveChild, removeChild, resendInvite, saveGuardian, setPayment, unlinkGuardian, updateChild } from "@/lib/admin/actions";
 import { loadChild } from "@/lib/admin/data";
 import { familiesFilter, familiesHref } from "@/lib/admin/families-link";
 import { UUID } from "@/lib/auth/tokens";
@@ -82,6 +82,27 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
         <Notice tone="action">The invite wasn&apos;t sent: the app doesn&apos;t know its web address. Set APP_URL in Railway, then try again.</Notice>
       ) : null}
       {flags.unlinked ? <Notice>Parent unlinked.</Notice> : null}
+      {flags.approved ? <Notice>{child.firstName} is approved. Their family can now see the {groupPlural(child.ageGroup)} news and sessions.</Notice> : null}
+
+      {child.awaitingApproval ? (
+        <Section title="Waiting for approval" id="approve">
+          <p className="text-[15px]">
+            A parent added {child.firstName} in the app. Until you approve {child.firstName}, the family sees no club news, sessions, plans or photos for the{" "}
+            {groupPlural(child.ageGroup)}. Check you know the family and the group is right.
+          </p>
+          {isAdmin ? (
+            <form action={approveChild}>
+              <input type="hidden" name="child" value={child.id} />
+              <FamiliesFilterFields filter={filter} />
+              <button type="submit" className="btn-chunky btn-grass" aria-label={`Approve ${child.firstName} ${child.lastName}`}>
+                Approve {child.firstName}
+              </button>
+            </form>
+          ) : (
+            <p className="text-[14px] text-ink-muted">An admin approves new children.</p>
+          )}
+        </Section>
+      ) : null}
 
       <Section title="Payment" aside={<Pill tone={child.payment === "active" ? "done" : child.payment === "self_reported" ? "gold" : child.payment === "pay_as_you_go" ? "neutral" : "action"}>{paymentLabel[child.payment]}</Pill>}>
         <p className="text-sm text-ink-muted">Set this after checking TeamFeePay. Pay as you go: the family pays for each session.</p>

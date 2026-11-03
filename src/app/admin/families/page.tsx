@@ -198,6 +198,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
                       </span>
                       <span className="truncate text-[13px] text-ink-muted">{parents || "No parent linked"}</span>
                       <span className="flex flex-wrap gap-1.5">
+                        {f.awaitingApproval ? <Pill tone="action">Waiting for approval</Pill> : null}
                         {status === "in" ? null : status === "invited" ? <Pill tone="gold">Invited, not signed in</Pill> : <Pill tone="neutral">Not invited</Pill>}
                         {f.payment === "missing" || f.payment === "overdue" ? (
                           <Pill tone="action">{f.payment === "overdue" ? "Payment overdue" : "No payment plan"}</Pill>
@@ -259,6 +260,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
                         <Link href={familyChildHref(f.id, filter)} className="flex min-h-12 items-center font-bold underline decoration-line underline-offset-4">
                           {tidyName(`${f.firstName} ${f.lastName}`)}
                         </Link>
+                        {f.awaitingApproval ? <Pill tone="action">Waiting for approval</Pill> : null}
                       </th>
                       <td className="px-3 tabular-nums">{f.ageGroup}</td>
                       <td className="max-w-56 px-3 text-ink-muted">{f.guardians.map((g) => tidyName(g.name)).join(", ") || "No parent linked"}</td>

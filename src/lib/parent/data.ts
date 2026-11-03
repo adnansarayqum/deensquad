@@ -18,7 +18,7 @@ import type { AgeGroup, Announcement, Availability, Badge, Child, CoachNote, Pay
 export type Family = { guardian: { id: string; firstName: string }; children: Child[] };
 
 const CHILD_COLUMNS = `p.id, p.first_name, p.last_name, p.shirt_number, p.age_group::text as age_group, p.position,
-  p.joined_on::text as joined_on, p.photo_consent, p.photo_file_id`;
+  p.joined_on::text as joined_on, p.photo_consent, p.photo_file_id, p.approved_at is null as awaiting_approval`;
 
 type ChildRow = {
   id: string;
@@ -30,6 +30,7 @@ type ChildRow = {
   joined_on: string;
   photo_consent: boolean | null;
   photo_file_id: string | null;
+  awaiting_approval: boolean;
 };
 
 const toChild = (r: ChildRow): Child => ({
@@ -42,6 +43,7 @@ const toChild = (r: ChildRow): Child => ({
   joinedOn: r.joined_on,
   photoConsent: r.photo_consent,
   photoFileId: r.photo_file_id,
+  awaitingApproval: r.awaiting_approval,
 });
 
 export const SESSION_COLUMNS = `s.id, s.kind::text as kind, s.title, s.starts_at, s.ends_at, s.venue, s.age_groups::text[] as age_groups,

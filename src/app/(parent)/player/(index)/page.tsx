@@ -115,7 +115,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
         {justAdded ? (
           <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
-            {child.firstName} is now on your account. The club has been told and will check their group.
+            {child.firstName} is now on your account. The club will check the details and approve {child.firstName}, then you&apos;ll see their group&apos;s news and sessions.
           </p>
         ) : null}
 

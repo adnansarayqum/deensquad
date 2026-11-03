@@ -122,7 +122,7 @@ async function tellClub(email: string, registered: Registered | undefined) {
           parentName: registered.parentName,
           parentEmail: email,
           children: registered.added.map((c) => `${c.firstName} ${c.lastName} (${c.ageGroup})`),
-          link: base ? `${base}/admin/families` : null,
+          link: base ? `${base}/admin/families?need=approve` : null,
           appUrl: base,
         }),
       ),

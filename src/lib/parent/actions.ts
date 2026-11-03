@@ -8,7 +8,7 @@ import { UUID } from "../auth/tokens";
 import { asSystem, asUser } from "../db";
 import { deletionRequestRecipients, requestAccountDeletion } from "../data-requests";
 import { canSendEmail, sendEmails } from "../email/send";
-import { deletionRequestEmail, newChildEmail } from "../email/templates";
+import { coParentRequestEmail, deletionRequestEmail, newChildEmail } from "../email/templates";
 import { CONTRACT } from "../documents/contract";
 import { isAgeGroup, type Availability } from "../domain";
 import { cleanPhone, cleanText } from "../validate";
@@ -370,7 +370,7 @@ async function tellClubAboutChild(userId: string, childName: string, group: stri
     if (!parentName || admins.length === 0) return;
     const base = await baseUrl();
     const { failed } = await sendEmails(
-      admins.map((a) => newChildEmail({ to: a.email, parentName, childName, group, link: base ? `${base}/admin/families` : null, appUrl: base })),
+      admins.map((a) => newChildEmail({ to: a.email, parentName, childName, group, link: base ? `${base}/admin/families?need=approve` : null, appUrl: base })),
     );
     if (failed.length) console.error(`[add child] club email not sent to ${failed.length} admin(s).`);
   } catch (error) {
@@ -430,17 +430,34 @@ export async function addParent(_prev: AddParentState, formData: FormData): Prom
   if ("error" in outcome) return { error: outcome.error };
   const { result, names, me } = outcome;
   const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
-  if (result.linked === 0) return { error: `${firstName} is already a parent of ${list} in the app.` };
+  if (!result.pending && result.linked === 0) return { error: `${firstName} is already a parent of ${list} in the app.` };
 
   const base = await baseUrl();
-  if (canSendEmail()) {
+  if (result.pending) {
+    // The email belongs to a parent from another family: not linked; the admins check and link them (migration 0047).
+    after(() => enqueue("add parent request", () => tellClubAboutRequest({ addedBy: me, firstName, lastName, email, children: [...new Set(children)], names, baseUrl: base })));
+  } else if (canSendEmail()) {
     after(() => enqueue("add parent invite", () => sendCoParentInvite({ guardianId: result.guardianId, addedBy: me, children: names, baseUrl: base })));
   }
   refresh();
-  return {
-    saved: true,
-    message: canSendEmail()
-      ? `${firstName} has been added to ${list}. We're emailing them a link to sign in.`
-      : `${firstName} has been added to ${list}. They can sign in with ${email}.`,
-  };
+  // The same words either way, so the page never says whether an email is already in the app.
+  return { saved: true, message: `Thanks. ${firstName} is listed below as invited, and will see ${list} once they're set up in the app.` };
+}
+
+/** Emails the admins about a parent the caller asked to add whose email the club already has. Never throws. */
+async function tellClubAboutRequest(opts: { addedBy: string; firstName: string; lastName: string; email: string; children: string[]; names: string[]; baseUrl: string | null }) {
+  try {
+    if (!canSendEmail() || !opts.baseUrl) return;
+    const admins = await asSystem((tx) => tx.query<{ email: string }>(`select email from staff where role = 'admin'`));
+    if (admins.length === 0) return;
+    const link = `${opts.baseUrl}/admin/families/${opts.children[0]}`;
+    const { failed } = await sendEmails(
+      admins.map((a) =>
+        coParentRequestEmail({ to: a.email, addedBy: opts.addedBy, parentName: `${opts.firstName} ${opts.lastName}`, email: opts.email, children: opts.names, link, appUrl: opts.baseUrl }),
+      ),
+    );
+    if (failed.length) console.error(`[add parent] request email not sent to ${failed.length} admin(s).`);
+  } catch (error) {
+    console.error("[add parent] request email failed:", error instanceof Error ? error.message : error);
+  }
 }

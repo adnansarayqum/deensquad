@@ -90,4 +90,22 @@ describe("add_my_co_parent", () => {
     for (const [i, email] of ["c1.sample@example.com", "c2.sample@example.com", "c3.sample@example.com"].entries()) await add(adnan, email, [kids[i]]);
     await expect(add(adnan, "c4.sample@example.com", [kids[3]])).rejects.toThrow(/too many today/);
   });
+
+  it("never links a parent from another family by their email: the request waits for the club, and the page reads the same (migration 0047)", async () => {
+    // parent1 (another family) tries Sara's email: nothing linked, nothing of Sara's shown, a request for the admins.
+    const result = await add(other, DEV_EMAILS.secondParent, [otherChild], "Sally");
+    expect(result).toMatchObject({ created: false, linked: 0, pending: true });
+    const links = await t.asSystem((tx) =>
+      tx.query(`select 1 from player_guardians pg join guardians g on g.id = pg.guardian_id where g.email = $1 and pg.player_id = $2`, [DEV_EMAILS.secondParent, otherChild]),
+    );
+    expect(links).toHaveLength(0);
+    const parents = await t.asUser(other, loadFamilyParents);
+    // Listed as invited under the name parent1 typed ("Sally"), never the club's name for her ("Sara").
+    expect(parents.find((p) => !p.you)).toMatchObject({ firstName: "Sally", invited: true, signedIn: false });
+    expect(parents.some((p) => p.firstName === "Sara")).toBe(false);
+    // Only admins read the requests.
+    expect(await t.asUser(other, (tx) => tx.query(`select * from co_parent_requests`))).toHaveLength(0);
+    const admin = await t.signIn(DEV_EMAILS.admin);
+    expect(await t.asUser(admin, (tx) => tx.query(`select first_name from co_parent_requests`))).toEqual([{ first_name: "Sally" }]);
+  });
 });
