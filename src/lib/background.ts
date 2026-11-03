@@ -17,7 +17,7 @@ export function enqueue(label: string, fn: () => Promise<unknown>): Promise<void
     try {
       await fn();
     } catch (error) {
-      reportJobFailure(`background: ${label}`, error);
+      reportJobFailure(label, error, "background");
     }
   });
   tail = run;

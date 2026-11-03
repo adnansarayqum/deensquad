@@ -88,8 +88,8 @@ export async function sendScannerWarning(sessionId: string, title: string, manua
  * like any server error), so a job that keeps failing — reminders, notifications, the summary — never fails quietly.
  * Never throws.
  */
-export function reportJobFailure(job: string, error: unknown): void {
+export function reportJobFailure(job: string, error: unknown, tag?: string): void {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`[${job}] failed:`, message);
+  console.error(tag ? `[${tag}] ${job} failed:` : `[${job}] failed:`, message);
   void sendErrorAlert({ message: `${job} failed: ${message}`, path: `job: ${job}`, kind: "background job" }).catch(() => undefined);
 }
