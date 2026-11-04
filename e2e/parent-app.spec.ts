@@ -1296,8 +1296,10 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
   // down to the last line can be scrolled clear of the bar.
   const clearOfTabBar = async () => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    const bar = (await page.getByRole("navigation", { name: "Main" }).boundingBox())!;
-    const tip = (await page.getByText(/not the club or the coaches/i).boundingBox())!;
+    const bar = await page.getByRole("navigation", { name: "Main" }).boundingBox();
+    const tip = await page.getByText(/not the club or the coaches/i).boundingBox();
+    // Still loading (the skeleton shows while a refresh comes back): no measurement yet, so the poll tries again.
+    if (!bar || !tip) return -1;
     return bar.y - (tip.y + tip.height);
   };
   await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
