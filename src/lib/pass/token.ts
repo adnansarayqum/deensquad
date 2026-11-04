@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { UUID } from "../auth/tokens";
 import { isDemo } from "../db";
