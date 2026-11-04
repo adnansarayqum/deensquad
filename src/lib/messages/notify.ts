@@ -31,6 +31,8 @@ export type Recipient = {
   child: string;
   author: string;
   body: string;
+  /** When the newest message being told about was written: part of the email's idempotency key. */
+  latestAt: Date;
 };
 
 /** People with an unread, un-notified message waiting, and not notified about that conversation in the last 15 minutes. */
@@ -45,6 +47,7 @@ export async function dueNotices(tx: Queryable, now: Date, conversationId: strin
     child: string;
     author: string;
     body: string;
+    latest_at: Date;
   }>(
     `with latest as (
        -- the newest message from each side of each conversation (recent ones only)
@@ -79,7 +82,7 @@ export async function dueNotices(tx: Queryable, now: Date, conversationId: strin
        )
        where l.author_kind = 'parent'
      )
-     select x.conversation_id, x.recipient_id, x.side, x.user_id, x.email, x.first_name, x.child, x.author, x.body
+     select x.conversation_id, x.recipient_id, x.side, x.user_id, x.email, x.first_name, x.child, x.author, x.body, x.created_at as latest_at
      from people x
      left join conversation_reads r on r.conversation_id = x.conversation_id and r.user_id = x.user_id
      left join conversation_notices n on n.conversation_id = x.conversation_id and n.recipient_id = x.recipient_id
@@ -100,6 +103,7 @@ export async function dueNotices(tx: Queryable, now: Date, conversationId: strin
     child: r.child,
     author: r.author,
     body: r.body,
+    latestAt: new Date(r.latest_at),
   }));
 }
 
@@ -149,7 +153,11 @@ export async function notifyMessages(tx: Queryable, now: Date, senders: NoticeSe
   if (senders.email && senders.appUrl && byEmail.length) {
     const emails = byEmail.map((r) => ({
       r,
-      email: messageEmail({ to: r.email!, firstName: r.firstName, author: r.author, child: r.child, toStaff: r.side === "staff", link: `${senders.appUrl}${threadPath(r)}`, appUrl: senders.appUrl }),
+      email: {
+        ...messageEmail({ to: r.email!, firstName: r.firstName, author: r.author, child: r.child, toStaff: r.side === "staff", link: `${senders.appUrl}${threadPath(r)}`, appUrl: senders.appUrl }),
+        // A retry after a send that timed out but went (the next hourly run) never emails them twice about it.
+        idempotencyKey: `message:${r.conversationId}:${r.recipientId}:${r.latestAt.getTime()}`,
+      },
     }));
     const report = await senders.email(emails.map((e) => e.email));
     const went = new Set(report.sent);

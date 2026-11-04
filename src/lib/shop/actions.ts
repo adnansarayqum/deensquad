@@ -188,13 +188,26 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
       redirectUrl: `${base}/shop/orders/${orderId}?return=1`,
       returnUrl: `${base}/api/sumup/webhook`,
     });
-    await asSystem((tx) => tx.query(`update shop_orders set sumup_checkout_id = $2 where id = $1 and sumup_checkout_id is null`, [orderId, sumup.id]));
-    url = sumup.url;
+    url = (await keepCheckout(orderId, sumup)) ?? `/shop/orders/${orderId}`;
   } catch (error) {
     console.error("[shop] SumUp:", error instanceof Error ? error.message : error);
     redirect(`/shop/orders/${orderId}?payment=failed`);
   }
   redirect(url);
+}
+
+/**
+ * Records a new SumUp checkout on the order and returns its page, unless another tap got there first (a double tap
+ * on Pay): then this checkout is deactivated, so the parent can only ever pay on the one the order knows about (a
+ * payment on any other would never match), and null sends them to the order page, which asks SumUp about it.
+ */
+async function keepCheckout(orderId: string, sumup: { id: string; url: string }): Promise<string | null> {
+  const kept = await asSystem((tx) =>
+    tx.query(`update shop_orders set sumup_checkout_id = $2 where id = $1 and sumup_checkout_id is null returning 1`, [orderId, sumup.id]),
+  );
+  if (kept.length) return sumup.url;
+  await deactivateCheckout(sumup.id);
+  return null;
 }
 
 /** The order this parent already placed for a basket attempt, with its lines, if any. */
@@ -251,8 +264,7 @@ export async function payAgain(formData: FormData): Promise<void> {
       redirectUrl: `${base}/shop/orders/${order.id}?return=1`,
       returnUrl: `${base}/api/sumup/webhook`,
     });
-    await asSystem((tx) => tx.query(`update shop_orders set sumup_checkout_id = $2 where id = $1 and sumup_checkout_id is null`, [order.id, sumup.id]));
-    url = sumup.url;
+    url = (await keepCheckout(order.id, sumup)) ?? `/shop/orders/${order.id}`;
   } catch (error) {
     // SumUp refused (it may already hold a checkout with this reference) or didn't answer: pay by bank instead.
     console.error("[shop] SumUp retry:", error instanceof Error ? error.message : error);

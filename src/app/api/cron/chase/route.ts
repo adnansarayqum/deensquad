@@ -4,7 +4,8 @@ import { runMonthlySummary } from "@/lib/admin/summary-run";
 import { enqueue } from "@/lib/background";
 import { purgeExpiredSessions } from "@/lib/auth/service";
 import { runChase } from "@/lib/chase/run";
-import { sendErrorAlert } from "@/lib/alerts";
+import { reportJobFailure, sendErrorAlert } from "@/lib/alerts";
+import { sweepCardPayments } from "@/lib/shop/payments";
 import { runMediaCleanup } from "@/lib/media/run";
 import { runMessageNotices } from "@/lib/messages/run";
 import { asSystem } from "@/lib/db";
@@ -32,6 +33,16 @@ function authorised(header: string | null): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** Card payments SumUp says went through but no webhook told us about (src/lib/shop/payments.ts). */
+async function sweepCards(): Promise<{ checked: number; paid: number }> {
+  try {
+    return await sweepCardPayments();
+  } catch (error) {
+    reportJobFailure("card payment check", error);
+    return { checked: 0, paid: 0 };
+  }
+}
+
 async function purgeSessions(): Promise<number> {
   try {
     return await asSystem((tx) => purgeExpiredSessions(tx));
@@ -50,7 +61,7 @@ export async function POST(request: Request) {
       void sendErrorAlert({ message: `The hourly reminders failed: ${error instanceof Error ? error.message : String(error)}`, path: "/api/cron/chase", kind: "cron job" });
       return { failed: ["chase"] };
     });
-    const result = { ...chase, plans: await runPlanNotifications(), messages: await runMessageNotices(), attendanceReminder: await runAttendanceReminder(), summary: await runMonthlySummary(), trials: await runTrialFollowUps(), staffChecks: await runStaffCheckReminders(), wellbeing: await runWellbeingAlerts(), pointsReward: await runPointsMilestones(), media: await runMediaCleanup(), sessionsPurged: await purgeSessions() };
+    const result = { ...chase, plans: await runPlanNotifications(), messages: await runMessageNotices(), attendanceReminder: await runAttendanceReminder(), summary: await runMonthlySummary(), trials: await runTrialFollowUps(), staffChecks: await runStaffCheckReminders(), wellbeing: await runWellbeingAlerts(), pointsReward: await runPointsMilestones(), media: await runMediaCleanup(), cardPayments: await sweepCards(), sessionsPurged: await purgeSessions() };
     console.info("[chase]", JSON.stringify(result));
     // Read by the watchdog and the admins' overview: a cron that stops being called says so.
     await asSystem((tx) => recordHeartbeat(tx, new Date())).catch((error: unknown) => console.error("[chase] heartbeat:", error instanceof Error ? error.message : error));

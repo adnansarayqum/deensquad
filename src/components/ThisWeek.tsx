@@ -1,3 +1,4 @@
+import { WeekFold } from "./WeekFold";
 import Link from "next/link";
 import { CalendarX, CheckCircle2, ChevronDown, ChevronRight, ListChecks, QrCode, Shirt } from "lucide-react";
 import { AllComing } from "./AllComing";
@@ -194,18 +195,12 @@ function SessionPart({ session, rows, family, now }: { session: Session; rows: C
     </>
   );
   const label = `${dayHeading(session.startsAt, now)}, ${session.title}`;
-  if (!settled) {
-    return (
-      <section aria-label={label} className="flex flex-col border-t border-line">
-        {details}
-        {list}
-      </section>
-    );
-  }
   return (
     <section aria-label={label} className="border-t border-line">
-      <details className="group/week">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3.5 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+      <WeekFold
+        settled={settled}
+        summary={
+          <>
           <span aria-hidden className="flex h-12 w-11 shrink-0 flex-col items-center justify-center rounded-[12px] bg-pitch text-on-pitch">
             <span className="font-display text-[22px] leading-none">{new Intl.DateTimeFormat("en-GB", { day: "numeric", timeZone: "Europe/London" }).format(start)}</span>
             <span className="text-[10px] font-bold text-floodlight">{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "Europe/London" }).format(start).toUpperCase()}</span>
@@ -221,12 +216,12 @@ function SessionPart({ session, rows, family, now }: { session: Session; rows: C
             <span className="hidden group-open/week:inline">Close</span>
             <ChevronDown aria-hidden size={18} className="transition-transform group-open/week:rotate-180" />
           </span>
-        </summary>
-        <div className="border-t border-line">
-          {details}
-          {list}
-        </div>
-      </details>
+          </>
+        }
+      >
+        {details}
+        {list}
+      </WeekFold>
     </section>
   );
 }

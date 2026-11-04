@@ -30,7 +30,7 @@ vi.mock("next/server", () => ({ after: (fn: () => unknown) => void fn() }));
 vi.mock("../background", () => ({ enqueue: (_name: string, fn: () => Promise<unknown>) => fn() }));
 
 const { payAgain, payByBankInstead } = await import("./actions");
-const { confirmSumupPayment } = await import("./payments");
+const { confirmSumupPayment, sweepCardPayments } = await import("./payments");
 const { POST: webhook } = await import("@/app/api/sumup/webhook/route");
 
 let t: Awaited<ReturnType<typeof testDatabase>>;
@@ -199,5 +199,54 @@ describe("SumUp webhook", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0].signal).toBeInstanceOf(AbortSignal);
     expect(await row()).toMatchObject({ status: "paid" });
+  });
+});
+
+describe("the hourly check on card payments", () => {
+  const age = (minutes: number) => t.asSystem((tx) => tx.query(`update shop_orders set created_at = now() - make_interval(mins => $2::int) where id = $1`, [order, minutes]));
+
+  it("confirms an order SumUp says is paid, when no webhook came", async () => {
+    await age(30);
+    fakeSumup("PAID");
+    expect(await sweepCardPayments()).toEqual({ checked: 1, paid: 1 });
+    expect(await row()).toMatchObject({ status: "paid", pay_by: "card" });
+  });
+
+  it("leaves a payment that may be in progress, and orders over a week old", async () => {
+    fakeSumup("PAID");
+    await age(2);
+    expect(await sweepCardPayments()).toEqual({ checked: 0, paid: 0 });
+    await age(8 * 24 * 60);
+    expect(await sweepCardPayments()).toEqual({ checked: 0, paid: 0 });
+    expect(await row()).toMatchObject({ status: "awaiting_payment" });
+  });
+
+  it("changes nothing while SumUp says it's still pending", async () => {
+    await age(30);
+    fakeSumup("PENDING");
+    expect(await sweepCardPayments()).toEqual({ checked: 1, paid: 0 });
+    expect(await row()).toMatchObject({ status: "awaiting_payment" });
+  });
+});
+
+describe("a double tap on Pay for an order with no checkout yet", () => {
+  it("keeps the first checkout, deactivates the second, and sends the parent to the order page", async () => {
+    await t.asSystem((tx) => tx.query(`update shop_orders set sumup_checkout_id = null where id = $1`, [order]));
+    calls = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        calls.push({ url, method: init.method ?? "GET" });
+        if (init.method === "POST") {
+          // The other tap's checkout lands on the order while this one is being made.
+          await t.asSystem((tx) => tx.query(`update shop_orders set sumup_checkout_id = 'chk_first' where id = $1`, [order]));
+          return Response.json({ id: "chk_second", hosted_checkout_url: "https://pay.sumup.example/chk_second" });
+        }
+        return Response.json({ id: "chk_second", status: "INACTIVE" });
+      }),
+    );
+    await expect(payAgain(form())).rejects.toThrow(`redirect /shop/orders/${order}`);
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["POST https://api.sumup.com/v0.1/checkouts", "DELETE https://api.sumup.com/v0.1/checkouts/chk_second"]);
+    expect(await row()).toMatchObject({ sumup_checkout_id: "chk_first", status: "awaiting_payment" });
   });
 });

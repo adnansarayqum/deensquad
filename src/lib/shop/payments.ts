@@ -48,3 +48,32 @@ export async function confirmSumupPayment(checkoutId: string): Promise<boolean> 
   }
   return Boolean(paid);
 }
+
+/** Card orders older than this are left for the club (SumUp's hosted checkouts don't last that long anyway). */
+const SWEEP_DAYS = 7;
+const SWEEP_MAX = 50;
+
+/**
+ * The hourly safety net for card payments: a parent who paid and closed the page before coming back, with a webhook
+ * that never arrived, would otherwise sit on "awaiting payment" until they opened the order again. Asks SumUp about
+ * each unpaid card order with a checkout, placed at least 10 minutes ago (so a payment in progress is left alone) and
+ * in the last week, and confirms the ones SumUp says are paid, through the same checks as the webhook. Never throws.
+ */
+export async function sweepCardPayments(): Promise<{ checked: number; paid: number }> {
+  const result = { checked: 0, paid: 0 };
+  if (!sumupConfigured()) return result;
+  const waiting = await asSystem((tx) =>
+    tx.query<{ sumup_checkout_id: string }>(
+      `select sumup_checkout_id from shop_orders
+       where status = 'awaiting_payment' and sumup_checkout_id is not null
+         and created_at < now() - interval '10 minutes' and created_at > now() - make_interval(days => $1::int)
+       order by created_at limit $2::int`,
+      [SWEEP_DAYS, SWEEP_MAX],
+    ),
+  );
+  for (const { sumup_checkout_id } of waiting) {
+    result.checked++;
+    if (await confirmSumupPayment(sumup_checkout_id).catch(() => false)) result.paid++;
+  }
+  return result;
+}

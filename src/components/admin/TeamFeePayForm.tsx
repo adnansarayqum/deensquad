@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useKeptActionState } from "@/components/submitKeepingInput";
 import Link from "next/link";
 import { importTeamFeePay, type TfpState } from "@/lib/payments/actions";
 import type { PaymentState } from "@/lib/domain";
@@ -15,7 +15,7 @@ const WORDS: Record<PaymentState, string> = {
 
 /** Upload the TeamFeePay export → see every change and every row that didn't match → apply. */
 export function TeamFeePayForm() {
-  const [state, run, pending] = useActionState<TfpState, FormData>(importTeamFeePay, { stage: "start" });
+  const [state, run, pending, keep] = useKeptActionState<TfpState>(importTeamFeePay, { stage: "start" });
 
   if (state.stage === "done") {
     return (
@@ -36,7 +36,7 @@ export function TeamFeePayForm() {
   const skipped = state.skipped ?? [];
 
   return (
-    <form action={run} className="flex flex-col gap-4">
+    <form action={run} onSubmit={keep} className="flex flex-col gap-4">
       {preview ? (
         <>
           <input type="hidden" name="csv" value={state.csv} />

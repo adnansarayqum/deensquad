@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useId, useState } from "react";
 import { Search } from "lucide-react";
-import { submitKeepingInput } from "@/components/submitKeepingInput";
+import { useKeptActionState } from "@/components/submitKeepingInput";
 import { Pill } from "@/components/ui";
 import type { FormState } from "@/lib/admin/actions";
 import { saveSquadPicks } from "@/lib/admin/actions";
@@ -34,7 +34,7 @@ export function seasonText(season: SquadChild["season"]): string | null {
  */
 export function SquadPicker({ sessionId, title, list }: { sessionId: string; title: string; list: SquadChild[] }) {
   const [picked, setPicked] = useState(() => new Set(list.filter((c) => c.picked).map((c) => c.id)));
-  const [state, run, pending] = useActionState<FormState, FormData>(saveSquadPicks, INITIAL);
+  const [state, run, pending, keep] = useKeptActionState<FormState>(saveSquadPicks, INITIAL);
   const toggle = (id: string, on: boolean) =>
     setPicked((prev) => {
       const next = new Set(prev);
@@ -52,7 +52,7 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
   const filtering = group !== null || query.trim() !== "";
 
   return (
-    <form action={run} onSubmit={submitKeepingInput(run)} className="flex flex-col gap-3" aria-label="Pick the squad">
+    <form action={run} onSubmit={keep} className="flex flex-col gap-3" aria-label="Pick the squad">
       <input type="hidden" name="session" value={sessionId} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[15px] font-bold tabular-nums" aria-live="polite">

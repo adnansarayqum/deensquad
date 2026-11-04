@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useKeptActionState } from "@/components/submitKeepingInput";
 import Link from "next/link";
 import { importFamilies, type ImportState } from "@/lib/admin/actions";
 
 export function ImportForm() {
-  const [state, run, pending] = useActionState<ImportState, FormData>(importFamilies, { stage: "start" });
+  const [state, run, pending, keep] = useKeptActionState<ImportState>(importFamilies, { stage: "start" });
 
   if (state.stage === "done" && state.summary) {
     const s = state.summary;
@@ -27,7 +27,7 @@ export function ImportForm() {
   const preview = state.stage === "preview" && state.summary;
 
   return (
-    <form action={run} className="flex flex-col gap-4">
+    <form action={run} onSubmit={keep} className="flex flex-col gap-4">
       {preview ? (
         <>
           <input type="hidden" name="csv" value={state.csv} />

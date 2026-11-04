@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { unstable_rethrow } from "next/navigation";
-import { submitKeepingInput } from "@/components/submitKeepingInput";
+import { NOT_SENT } from "@/components/submitKeepingInput";
 import { fileTooBig, oversizeFile } from "@/lib/files";
 
 type State = { error?: string; saved?: boolean; message?: string };
@@ -13,16 +13,17 @@ const INITIAL: State = {};
  * (the action's own `message` in place of `savedMessage` when it sends one).
  * Typed input stays after an error; after any other result the form resets (to the saved values on edit forms).
  *
- * `keepOnFailure` (forms with an attachment): a file over 8 MB is refused here, naming its size, before anything is
- * sent; and if the save itself fails (no answer, or a body over the Server Action limit) the form keeps what was
- * typed and shows this message instead of the error page. Only for actions that don't redirect.
+ * With JavaScript every submit calls the action here, so a save that fails (no answer on a weak signal, or a body over
+ * the Server Action limit) keeps what was typed and shows `keepOnFailure` (default NOT_SENT) instead of the error
+ * page; a file over 8 MB is refused before anything is sent, naming its size. Next's redirects still go through.
+ * Without JavaScript the form posts `run` as before.
  */
 export function StatefulForm({
   action,
   submitLabel,
   pendingLabel = "Saving…",
   savedMessage = "Saved.",
-  keepOnFailure,
+  keepOnFailure = NOT_SENT,
   className = "",
   children,
 }: {
@@ -35,7 +36,7 @@ export function StatefulForm({
   children: ReactNode;
 }) {
   const [serverState, run, serverPending] = useActionState<State, FormData>(action, INITIAL);
-  // With `keepOnFailure`, a submit with JavaScript calls the action here instead, so a failure can be caught.
+  // With JavaScript a submit calls the action here instead, so a failure can be caught.
   // `action={run}` stays on the form for a submit before the page has loaded.
   const [caught, setCaught] = useState<State | null>(null);
   const [caughtPending, startCaught] = useTransition();
@@ -63,7 +64,7 @@ export function StatefulForm({
   };
 
   return (
-    <form ref={form} action={run} onSubmit={keepOnFailure ? submitCatching : submitKeepingInput(run)} className={`flex flex-col gap-4 ${className}`} noValidate>
+    <form ref={form} action={run} onSubmit={submitCatching} className={`flex flex-col gap-4 ${className}`} noValidate>
       {children}
       {state.error ? (
         <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
