@@ -14,8 +14,9 @@ import { newsReaches, sessionIsFor } from "../squads/sql";
 // The email comes sooner when a session is close (Fri 7 Nov 2026: a "Please read: Friday session" message posted
 // on Friday morning was emailed on Saturday morning): it's due 24 hours after posting or 3 hours before the child's
 // next session (the session it's about, for a session notice or squad message), whichever is first, but never
-// within an hour of posting, so the app notification gets its chance. A message about a session is never emailed or
-// texted once that session has started.
+// within an hour of posting, so the app notification gets its chance. When those 3 hours land in quiet hours (a 10am
+// Saturday cup), it's due at 8pm the evening before. A message about a session is never emailed or texted once that
+// session has started; an urgent notice (a session called off part way through) not once it has finished. The email names every child the message is for, not only the one whose session is close.
 // Nothing is sent between 9pm and 8am London time, urgent or not; due steps go out at the next run after 8am.
 // Every step is logged in announcement_chases, so each runs at most once per parent per message.
 
@@ -26,6 +27,18 @@ export const LADDER: Record<ChaseChannel, { afterHours: number }> = {
   email: { afterHours: 24 },
   sms: { afterHours: 48 },
 };
+
+/**
+ * SQL: the time `x` (timestamptz), or 8pm the evening before when it falls in quiet hours (21:00–08:00 London), so
+ * a reminder due at 7am for a 10am cup goes on the Friday evening instead of after 8am. Null stays null.
+ */
+function beforeQuiet(x: string): string {
+  const local = `(${x} at time zone 'Europe/London')`;
+  return `(case
+    when ${local}::time >= time '21:00' then ((${local}::date + time '20:00') at time zone 'Europe/London')
+    when ${local}::time < time '08:00' then (((${local}::date - 1) + time '20:00') at time zone 'Europe/London')
+    else ${x} end)`;
+}
 
 /** Messages older than this are left alone. */
 export const MAX_AGE_DAYS = 7;
@@ -76,18 +89,6 @@ export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date,
        where s.cancelled_at is null and s.starts_at > a.posted_at and ${sessionIsFor("s", "p")}
      ) nxt on true
      where a.requires_ack
-       -- due for this step: an urgent message's email straight away; any other email 24 hours after posting or 3
-       -- hours before the session, whichever is first, but not within the first hour; texts after 48 hours
-       and $1::timestamptz >= case
-         when $3 = 'email' and a.urgent then a.posted_at
-         when $3 = 'email' then least(
-           a.posted_at + make_interval(hours => $5::int),
-           greatest(a.posted_at + interval '1 hour', coalesce(coalesce(about.starts_at, nxt.starts_at) - interval '3 hours', a.posted_at + make_interval(hours => $5::int)))
-         )
-         else a.posted_at + make_interval(hours => $5::int)
-       end
-       -- never an email or a text about a session that has already started
-       and ($3 = 'app' or about.id is null or about.starts_at > $1::timestamptz)
        and a.posted_at > $2
        and ($4::uuid is null or a.id = $4)
        -- a parent added after the message was posted (a new import or sign-up) can read it in News, but isn't chased
@@ -100,7 +101,24 @@ export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date,
          where r.announcement_id = a.id
        )
        and not exists (select 1 from announcement_chases c where c.announcement_id = a.id and c.guardian_id = g.id and c.channel::text = $3)
-     group by a.id, a.title, a.body, g.id`,
+     group by a.id, a.title, a.body, g.id
+     -- due for this parent when it's due for any of their children (the email still names every child it's for)
+     having bool_or(
+       -- an urgent message's email straight away; any other email 24 hours after posting or 3 hours before the
+       -- child's session, whichever is first (moved to 8pm the evening before when that lands in quiet hours, so a
+       -- 10am Saturday cup is emailed on Friday evening), but not within the first hour; texts after 48 hours
+       $1::timestamptz >= case
+         when $3 = 'email' and a.urgent then a.posted_at
+         when $3 = 'email' then least(
+           a.posted_at + make_interval(hours => $5::int),
+           greatest(a.posted_at + interval '1 hour', coalesce(${beforeQuiet("(coalesce(about.starts_at, nxt.starts_at) - interval '3 hours')")}, a.posted_at + make_interval(hours => $5::int)))
+         )
+         else a.posted_at + make_interval(hours => $5::int)
+       end
+       -- never an email or a text about a session that has already started, or for an urgent notice (cancelled,
+       -- restored, changed: parents may need to collect early), that has already finished
+       and ($3 = 'app' or about.id is null or (case when a.urgent then about.ends_at else about.starts_at end) > $1::timestamptz)
+     )`,
     [now, oldest, channel, announcementId ?? null, LADDER[channel].afterHours],
   );
   return rows.map((r) => ({

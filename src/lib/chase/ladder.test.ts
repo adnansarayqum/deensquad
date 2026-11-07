@@ -144,6 +144,46 @@ describe("the reminder email arrives before the session (Fri 7 Nov 2026)", () =>
     expect(emailedFor(id)).toBeGreaterThan(0);
   });
 
+  it("moves a reminder that would land in quiet hours to 8pm the evening before (a 10am Saturday cup)", async () => {
+    // seeded is Monday 12:00 BST; the cup is Tuesday 10:00 BST, so 3 hours before is 07:00, inside quiet hours.
+    const cupAt = new Date("2026-10-06T09:00:00Z");
+    const id = await post("Cup: meet at 9", { sessionAt: cupAt });
+    await run(new Date("2026-10-05T18:30:00Z")); // 19:30 BST Monday: not yet
+    expect(emailedFor(id)).toBe(0);
+    await run(new Date("2026-10-05T19:05:00Z")); // 20:05 BST Monday: the evening before
+    expect(emailedFor(id)).toBeGreaterThan(0);
+  });
+
+  it("names every child the message is for, not only the one whose session is close", async () => {
+    // Adnan's Yusuf is U10 and Musa U7; a message to both groups, with only a U10 session close.
+    const id = await t.asSystem(async (tx) => {
+      const [{ id: staff }] = await tx.query<{ id: string }>(`select id from staff where email = $1`, [DEV_EMAILS.admin]);
+      await tx.query(
+        `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups) values ('training', 'U10 extra', $1, $1::timestamptz + interval '1 hour', 'Hub', '{U10}')`,
+        [hoursLater(6)],
+      );
+      const [{ id }] = await tx.query<{ id: string }>(
+        `insert into announcements (topic, title, body, audience, posted_by, requires_ack, posted_at) values ('Timing', 'Both groups', 'x', '{U10,U7}', $1, true, $2) returning id`,
+        [staff, seeded],
+      );
+      return id;
+    });
+    await run(hoursLater(3.1));
+    const adnan = (sent.email ?? []).find((x) => x.announcementId === id && x.firstName === "Adnan");
+    expect(adnan?.children).toEqual(["Musa", "Yusuf"]);
+  });
+
+  it("still emails an urgent notice during the session (called off part way), but not once it has finished", async () => {
+    const during = await post("Training stopped: lightning", { sessionAt: hoursLater(-0.5), notice: true });
+    await t.asSystem((tx) => tx.query(`update announcements set urgent = true where id = $1`, [during]));
+    await run(hoursLater(0.2)); // the session is under way (it lasts 90 minutes)
+    expect(emailedFor(during)).toBeGreaterThan(0);
+    const after = await post("Training was stopped", { sessionAt: hoursLater(-3), notice: true });
+    await t.asSystem((tx) => tx.query(`update announcements set urgent = true where id = $1`, [after]));
+    await run(hoursLater(0.3));
+    expect(emailedFor(after)).toBe(0);
+  });
+
   it("never emails about a session once it has started", async () => {
     const id = await post("Friday session moved", { sessionAt: hoursLater(2), notice: true });
     await run(hoursLater(2.5)); // the session started half an hour ago, and nobody was emailed in time
