@@ -1,5 +1,5 @@
 import type { Queryable } from "../db/types";
-import { newsReaches } from "../squads/sql";
+import { newsReaches, sessionIsFor } from "../squads/sql";
 
 // The announcement chase ladder. For each message that asks parents to tap "I've read this":
 //   app    straight away   push notification to parents who turned notifications on
@@ -11,6 +11,11 @@ import { newsReaches } from "../squads/sql";
 // A message to a tournament squad reaches only the parents of the children in that squad.
 // An urgent message (announcements.urgent: a session cancelled, restored or changed) is emailed at post
 // time as well as pushed, instead of after 24 hours; its text still waits 48 hours.
+// The email comes sooner when a session is close (Fri 7 Nov 2026: a "Please read: Friday session" message posted
+// on Friday morning was emailed on Saturday morning): it's due 24 hours after posting or 3 hours before the child's
+// next session (the session it's about, for a session notice or squad message), whichever is first, but never
+// within an hour of posting, so the app notification gets its chance. A message about a session is never emailed or
+// texted once that session has started.
 // Nothing is sent between 9pm and 8am London time, urgent or not; due steps go out at the next run after 8am.
 // Every step is logged in announcement_chases, so each runs at most once per parent per message.
 
@@ -63,9 +68,26 @@ export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date,
      join players p on p.approved_at is not null and ${newsReaches("a", "p")}
      join player_guardians pg on pg.player_id = p.id
      join guardians g on g.id = pg.guardian_id
+     -- the session the message is about (a session notice or a squad message), if any
+     left join sessions about on about.id = coalesce(a.squad_session_id, a.session_id)
+     -- else the child's next session after it was posted
+     left join lateral (
+       select min(s.starts_at) as starts_at from sessions s
+       where s.cancelled_at is null and s.starts_at > a.posted_at and ${sessionIsFor("s", "p")}
+     ) nxt on true
      where a.requires_ack
-       -- old enough for this step (an urgent message's email is due straight away)
-       and a.posted_at <= $1::timestamptz - make_interval(hours => case when a.urgent and $3 = 'email' then 0 else $5::int end)
+       -- due for this step: an urgent message's email straight away; any other email 24 hours after posting or 3
+       -- hours before the session, whichever is first, but not within the first hour; texts after 48 hours
+       and $1::timestamptz >= case
+         when $3 = 'email' and a.urgent then a.posted_at
+         when $3 = 'email' then least(
+           a.posted_at + make_interval(hours => $5::int),
+           greatest(a.posted_at + interval '1 hour', coalesce(coalesce(about.starts_at, nxt.starts_at) - interval '3 hours', a.posted_at + make_interval(hours => $5::int)))
+         )
+         else a.posted_at + make_interval(hours => $5::int)
+       end
+       -- never an email or a text about a session that has already started
+       and ($3 = 'app' or about.id is null or about.starts_at > $1::timestamptz)
        and a.posted_at > $2
        and ($4::uuid is null or a.id = $4)
        -- a parent added after the message was posted (a new import or sign-up) can read it in News, but isn't chased

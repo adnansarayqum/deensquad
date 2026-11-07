@@ -103,6 +103,54 @@ describe("chase ladder", () => {
   });
 });
 
+describe("the reminder email arrives before the session (Fri 7 Nov 2026)", () => {
+  // The case that came in: "Please read: Friday session" posted on Friday morning for that evening's session was
+  // emailed on Saturday morning, 24 hours later. Now it's due 3 hours before the session.
+  const post = (title: string, extra: { sessionAt?: Date; notice?: boolean } = {}) =>
+    t.asSystem(async (tx) => {
+      const [{ id: staff }] = await tx.query<{ id: string }>(`select id from staff where email = $1`, [DEV_EMAILS.admin]);
+      let session: string | null = null;
+      if (extra.sessionAt) {
+        [{ id: session }] = await tx.query<{ id: string }>(
+          `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups) values ('training', 'Friday session', $1, $1::timestamptz + interval '90 minutes', 'Hub', '{U10}') returning id`,
+          [extra.sessionAt],
+        );
+      }
+      const [{ id }] = await tx.query<{ id: string }>(
+        `insert into announcements (topic, title, body, audience, posted_by, requires_ack, posted_at, session_id, session_notice)
+         values ('Timing', $1, 'x', '{U10}', $2, true, $3, $4, $5) returning id`,
+        [title, staff, seeded, extra.notice ? session : null, extra.notice ? "changed" : null],
+      );
+      return id;
+    });
+  const emailedFor = (id: string) => (sent.email ?? []).filter((x) => x.announcementId === id).length;
+
+  it("is due 3 hours before the child's next session when that comes first", async () => {
+    const id = await post("Please read: Friday session", { sessionAt: hoursLater(7.5) });
+    await run(hoursLater(0.5)); // not in the first hour, so the app notification gets its chance
+    expect(emailedFor(id)).toBe(0);
+    await run(hoursLater(4));
+    expect(emailedFor(id)).toBe(0);
+    await run(hoursLater(4.6)); // 2.9 hours before the session
+    expect(emailedFor(id)).toBeGreaterThan(0);
+  });
+
+  it("waits the usual 24 hours when the next session is days away, and ignores cancelled sessions", async () => {
+    const id = await post("Kit reminder", { sessionAt: hoursLater(6) });
+    await t.asSystem((tx) => tx.query(`update sessions set cancelled_at = now() where title = 'Friday session'`));
+    await run(hoursLater(5));
+    expect(emailedFor(id)).toBe(0);
+    await run(hoursLater(24.1));
+    expect(emailedFor(id)).toBeGreaterThan(0);
+  });
+
+  it("never emails about a session once it has started", async () => {
+    const id = await post("Friday session moved", { sessionAt: hoursLater(2), notice: true });
+    await run(hoursLater(2.5)); // the session started half an hour ago, and nobody was emailed in time
+    expect(emailedFor(id)).toBe(0);
+  });
+});
+
 describe("chase ladder when sending fails", () => {
   const count = (sql: string) => t.asSystem(async (tx) => (await tx.query<{ n: number }>(sql))[0].n);
   const chases = (channel: string) => count(`select count(*)::int as n from announcement_chases where channel::text = '${channel}'`);

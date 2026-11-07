@@ -66,7 +66,7 @@ export default async function SettingsPage() {
           </h2>
           <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} />
           <p className="text-[15px] leading-[22px] text-ink-muted">
-            Club news that asks to be read is emailed too if you haven&apos;t read it after a day.
+            Club news that asks to be read is emailed too if you haven&apos;t read it after a day, or a few hours before your child&apos;s next session if that&apos;s sooner.
           </p>
         </section>
 

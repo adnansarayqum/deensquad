@@ -67,7 +67,10 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
     {
       label: "Email reminder",
       // Session notices (cancelled, restored, changed) email at once; quiet hours still hold them until 8am.
-      when: news.urgent ? "when posted" : `${shortDay(at(LADDER.email.afterHours))} ${clock(at(LADDER.email.afterHours))}`,
+      // Others by 24 hours after posting, or 3 hours before a family's next session if that's sooner (ladder.ts).
+      when: news.urgent
+        ? "when posted"
+        : `by ${shortDay(at(LADDER.email.afterHours))} ${clock(at(LADDER.email.afterHours))}, or 3 hours before a family's next session if sooner`,
       ready: canSendEmail(),
     },
     { label: "Text reminder", when: `${shortDay(at(LADDER.sms.afterHours))} ${clock(at(LADDER.sms.afterHours))}`, ready: smsConfigured() },
