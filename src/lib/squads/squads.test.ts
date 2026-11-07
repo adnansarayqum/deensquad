@@ -130,9 +130,14 @@ describe("who sees a squad session", () => {
 
 describe("messages to the squad", () => {
   let message: string;
-  const posted = new Date("2030-06-03T11:00:00Z"); // a Monday, midday in London
+  // 11:00 UTC two days before the cup's day, so a reminder 25 hours later is before the cup and outside quiet hours
+  // (the ladder never emails about a session that has started).
+  let posted: Date;
 
   beforeAll(async () => {
+    const [{ starts_at }] = await t.asSystem((tx) => tx.query<{ starts_at: Date }>(`select starts_at from sessions where id = $1`, [cup]));
+    const day = new Date(starts_at);
+    posted = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() - 2, 11));
     [{ id: message }] = await t.asSystem((tx) =>
       tx.query<{ id: string }>(
         `insert into announcements (topic, title, body, audience, requires_ack, posted_by, posted_at, squad_session_id)
