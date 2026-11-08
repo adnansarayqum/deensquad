@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { ClubFacts } from "@/components/auth/ClubFacts";
+import { loadClubFacts } from "@/lib/club-facts";
 import { SignUpForm } from "@/components/auth/SignUpForm";
 import { GROUP_LABELS, MAX_CHILDREN } from "@/lib/auth/registration";
 import { getCurrentUser } from "@/lib/auth/session";
 import { clubInfoText, privacyUrl } from "@/lib/config";
-import { isDemo } from "@/lib/db";
+import { asSystem, isDemo } from "@/lib/db";
 import { AGE_GROUPS } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Sign up" };
@@ -16,16 +18,19 @@ export default async function SignUpPage() {
   if (isDemo() || (await getCurrentUser())) redirect("/");
   const privacy = privacyUrl();
   const info = clubInfoText();
+  // Real facts only (staff checks, the club list, the sessions): asSystem, as nobody is signed in here.
+  const facts = await asSystem((tx) => loadClubFacts(tx, new Date()));
   return (
     <AuthShell title="Join the club" intro="Sign up to get club news, tell the coach who's coming on Friday and follow your child's progress.">
       {info ? (
-        <section aria-labelledby="about-club" className="flex flex-col gap-1 rounded-app border-2 border-line bg-paper p-4">
-          <h2 id="about-club" className="text-base font-extrabold">
+        <section aria-labelledby="about-club" className="flex flex-col gap-1 rounded-app bg-paper p-4 shadow-card">
+          <h2 id="about-club" className="text-[18px] font-bold">
             About the club
           </h2>
           <p className="text-[15px] leading-[22px] whitespace-pre-line">{info}</p>
         </section>
       ) : null}
+      <ClubFacts facts={facts} />
       <SignUpForm groups={AGE_GROUPS.map((g) => ({ value: g, label: GROUP_LABELS[g] }))} maxChildren={MAX_CHILDREN} />
       <p className="text-[15px]">
         Already signed up?{" "}

@@ -32,7 +32,7 @@ export default async function LinkPage({ searchParams }: PageProps<"/sign-in/lin
       title={valid.purpose === "invite" ? "Welcome to Deen Squad" : "Sign in"}
       intro={
         <>
-          Signing in as <span className="font-bold text-on-pitch">{maskEmail(valid.email)}</span>. Tap Continue to open the club app.
+          Signing in as <span className="font-bold text-ink">{maskEmail(valid.email)}</span>. Tap Continue to open the club app.
         </>
       }
     >

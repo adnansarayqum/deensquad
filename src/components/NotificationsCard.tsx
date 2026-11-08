@@ -42,7 +42,8 @@ function within<T>(ms: number, work: Promise<T>): Promise<T | null> {
 }
 
 /** Offers notifications once, then keeps this device's subscription up to date. */
-export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
+/** `calm`: something more urgent on Home has the orange (`homeLead`), so "off" is drawn neutral. */
+export function NotificationsCard({ publicKey, calm = false }: { publicKey: string | null; calm?: boolean }) {
   const [state, setState] = useState<State>("hidden");
 
   useEffect(() => {
@@ -95,15 +96,15 @@ export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
   // once on, it says so quietly in green.
   const off = state !== "done";
   return (
-    <div role={off ? "region" : "status"} aria-label={off ? "Notifications are off" : undefined} className={`flex items-start gap-3 rounded-app p-4 ${off ? "bg-orange-tint text-ink" : "bg-paper shadow-card"}`}>
-      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${off ? "bg-kit-orange text-on-orange" : "bg-grass-tint text-grass-text"}`}>
+    <div role={off ? "region" : "status"} aria-label={off ? "Notifications are off" : undefined} className={`flex items-start gap-3 rounded-app p-4 ${off && !calm ? "bg-orange-tint text-ink" : "bg-paper shadow-card"}`}>
+      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${off ? (calm ? "bg-fill text-ink" : "bg-kit-orange text-on-orange") : "bg-grass-tint text-grass-text"}`}>
         {off ? <BellOff aria-hidden size={22} /> : <BellRing aria-hidden size={22} />}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
         {state === "ios-install" ? (
           <p className="text-[15px] leading-[22px]">
             <b className="block text-[16px]">Your notifications are off</b>
-            You&apos;ll miss cancelled sessions and messages from the coaches. On iPhone, add this app to your Home Screen first: tap Share,
+            You&apos;ll miss cancelled sessions, messages from the coaches and hearing when your child gets a star. On iPhone, add this app to your Home Screen first: tap Share,
             then Add to Home Screen, then open it from there and tap Turn on notifications.
           </p>
         ) : state === "done" ? (
@@ -114,7 +115,7 @@ export function NotificationsCard({ publicKey }: { publicKey: string | null }) {
           <>
             <p className="text-[15px] leading-[22px]">
               <b className="block text-[16px]">Your notifications are off</b>
-              You&apos;ll miss cancelled sessions and messages from the coaches.
+              You&apos;ll miss cancelled sessions, messages from the coaches and hearing when your child gets a star.
             </p>
             <button type="button" onClick={enable} disabled={state === "working"} className="btn-chunky btn-grass btn-small self-start">
               {state === "working" ? "Turning on…" : "Turn on notifications"}
@@ -133,7 +134,7 @@ function BlockedSteps() {
   return (
     <p className="text-[15px] leading-[22px]">
       <b className="block text-[16px]">Your notifications are off</b>
-      They&apos;re blocked on this phone, so you&apos;ll miss cancelled sessions and messages from the coaches. {help.steps}
+      They&apos;re blocked on this phone, so you&apos;ll miss cancelled sessions, messages from the coaches and hearing when your child gets a star. {help.steps}
     </p>
   );
 }

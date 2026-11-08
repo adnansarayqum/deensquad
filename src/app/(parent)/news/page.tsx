@@ -20,11 +20,15 @@ import { ThisWeek } from "@/components/ThisWeek";
 import { AwaitingApproval } from "@/components/AwaitingApproval";
 import { ComingOnNews, SessionNow, canAnswerComing } from "@/components/NewsSession";
 import { groupsPlural } from "@/lib/domain";
+import { homeLead } from "@/lib/parent/views";
 
 export const metadata: Metadata = { title: "Home" };
 
 export default async function NewsPage({ searchParams }: PageProps<"/news">) {
-  const { family, news, week, stepsLeft, unreadMessages, trips, wellbeingChild } = await getNewsPage();
+  const { family, news, week, stepsLeft, unreadMessages, trips, wellbeingChild, notificationsOn } = await getNewsPage();
+  const tripsWaiting = trips.filter((t) => t.children.some((c) => !c.answer));
+  // One orange thing at a time: the most urgent ask keeps the colour, the rest are drawn neutral.
+  const lead = homeLead({ tripWaiting: tripsWaiting.length > 0, unreadMessages, notificationsOff: !notificationsOn, stepsLeft });
   const now = new Date();
   // Filter chips (redesign brief, Oct 2026): links, so they work without JavaScript; the address keeps the choice.
   const raw = (await searchParams).show;
@@ -53,15 +57,17 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
         {/* Is training on, when, and each child's answer: the first thing on the screen every parent lands on. */}
         <AwaitingApproval>{family.children}</AwaitingApproval>
-        <ThisWeek family={family} week={week} stepsLeft={stepsLeft} now={now} />
+        <ThisWeek family={family} week={week} stepsLeft={stepsLeft} now={now} todoCalm={lead !== "todo"} />
         {/* Straight after This week: with notifications off a parent misses cancellations and messages. */}
-        <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} />
+        <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} calm={lead === "trip" || lead === "messages"} />
+        {/* Most urgent first: an away trip waiting for permission, then messages. */}
+        <TripCards trips={tripsWaiting} from="/news" />
         {unreadMessages > 0 ? (
           <Link
             href="/messages?from=/news"
-            className="flex items-center gap-3 rounded-app bg-orange-tint px-3.5 py-3 text-ink transition-transform active:scale-[0.99]"
+            className={`flex items-center gap-3 rounded-app px-3.5 py-3 text-ink transition-transform active:scale-[0.99] ${lead === "messages" ? "bg-orange-tint" : "bg-paper shadow-card"}`}
           >
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-kit-orange text-on-orange">
+            <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${lead === "messages" ? "bg-kit-orange text-on-orange" : "bg-fill text-ink"}`}>
               <MessageCircle aria-hidden size={24} />
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
@@ -72,7 +78,6 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
             <ChevronRight aria-hidden size={20} className="shrink-0" />
           </Link>
         ) : null}
-        <TripCards trips={trips.filter((t) => t.children.some((c) => !c.answer))} from="/news" />
         {wellbeingChild ? (
           <Link
             href={`/player/wellbeing?child=${wellbeingChild.id}&from=/news`}

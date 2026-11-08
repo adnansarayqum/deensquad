@@ -97,11 +97,13 @@ export async function getNewsPage() {
   const { user, family } = await getFamily();
   const now = new Date();
   const childIds = family.children.map((c) => c.id);
-  const [news, { week }, facts, unreadMessages] = await Promise.all([
+  const [news, { week }, facts, unreadMessages, notificationsOn] = await Promise.all([
     family.children.length ? asUser(user.id, (tx) => loadNewsWithAnswers(tx, family)) : Promise.resolve([]),
     loadWeek(user.id, family, now),
     family.children.length ? asUser(user.id, (tx) => loadChecklistFacts(tx, childIds)) : Promise.resolve(null),
     family.children.length ? asUser(user.id, (tx) => loadParentUnreadMessages(tx, childIds)) : Promise.resolve(0),
+    // Any phone of this parent's with notifications on (decides which card on Home is the orange one).
+    asUser(user.id, async (tx) => (await tx.query<{ on: boolean }>(`select guardian_notifications_on($1) as on`, [family.guardian.id]))[0]?.on ?? false),
   ]);
   const stats = family.children.length === 1 ? await getStats(user.id, family.children[0], now) : null;
   const [trips, askWellbeing] = childIds.length
@@ -109,7 +111,7 @@ export async function getNewsPage() {
     : [[], []];
   // About once a month, after training: "How's Musa finding football?" (the first child due a check-in).
   const wellbeingChild = family.children.find((c) => askWellbeing.includes(c.id)) ?? null;
-  return { family, news: sortNews(news), week, streakWeeks: stats?.streakWeeks ?? null, stepsLeft: facts ? stepsLeft(family, facts) : 0, unreadMessages, trips, wellbeingChild };
+  return { family, news: sortNews(news), week, streakWeeks: stats?.streakWeeks ?? null, stepsLeft: facts ? stepsLeft(family, facts) : 0, unreadMessages, trips, wellbeingChild, notificationsOn };
 }
 
 /** News with the family's quick answers filled in (only messages that ask for one need a look). */

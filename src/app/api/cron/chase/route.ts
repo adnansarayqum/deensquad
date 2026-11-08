@@ -15,7 +15,7 @@ import { runAttendanceReminder } from "@/lib/reminders/run";
 import { localiseProductImages } from "@/lib/shop/images";
 import { runStaffCheckReminders } from "@/lib/staff-checks/run";
 import { runTrialFollowUps } from "@/lib/trials/run";
-import { runPointsMilestones } from "@/lib/awards/milestones-run";
+import { runAwardNotices, runPointsMilestones } from "@/lib/awards/milestones-run";
 import { runWellbeingAlerts } from "@/lib/wellbeing/run";
 
 // Called every hour by the Railway cron job with `Authorization: Bearer <CRON_SECRET>`. The chase ladder is the
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       void sendErrorAlert({ message: `The hourly reminders failed: ${error instanceof Error ? error.message : String(error)}`, path: "/api/cron/chase", kind: "cron job" });
       return { failed: ["chase"] };
     });
-    const result = { ...chase, plans: await runPlanNotifications(), messages: await runMessageNotices(), attendanceReminder: await runAttendanceReminder(), summary: await runMonthlySummary(), trials: await runTrialFollowUps(), staffChecks: await runStaffCheckReminders(), wellbeing: await runWellbeingAlerts(), pointsReward: await runPointsMilestones(), media: await runMediaCleanup(), cardPayments: await sweepCards(), sessionsPurged: await purgeSessions() };
+    const result = { ...chase, plans: await runPlanNotifications(), messages: await runMessageNotices(), attendanceReminder: await runAttendanceReminder(), summary: await runMonthlySummary(), trials: await runTrialFollowUps(), staffChecks: await runStaffCheckReminders(), wellbeing: await runWellbeingAlerts(), pointsReward: await runPointsMilestones(), awards: await runAwardNotices(), media: await runMediaCleanup(), cardPayments: await sweepCards(), sessionsPurged: await purgeSessions() };
     console.info("[chase]", JSON.stringify(result));
     // Read by the watchdog and the admins' overview: a cron that stops being called says so.
     await asSystem((tx) => recordHeartbeat(tx, new Date())).catch((error: unknown) => console.error("[chase] heartbeat:", error instanceof Error ? error.message : error));

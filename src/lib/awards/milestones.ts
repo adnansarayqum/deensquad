@@ -37,10 +37,10 @@ export async function recordMilestones(tx: Queryable, now: Date, playerIds?: str
   return rows.map((r) => r.player_id);
 }
 
-type Person = { key: string; userId: string | null; email: string | null; firstName: string };
+export type Person = { key: string; userId: string | null; email: string | null; firstName: string };
 
 /** Push where the person has notifications on, else email. Returns the keys of the people reached. */
-async function tell(
+export async function tell(
   tx: Queryable,
   people: Person[],
   withPush: Set<string>,

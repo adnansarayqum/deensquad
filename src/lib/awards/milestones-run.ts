@@ -6,6 +6,7 @@ import { appUrl } from "../config";
 import { asSystem } from "../db";
 import { canSendEmail, sendEmails } from "../email/send";
 import { sendMilestoneNotices, type MilestoneSenders } from "./milestones";
+import { sendAwardNotices } from "./award-notices";
 
 function liveSenders(): MilestoneSenders {
   return {
@@ -23,5 +24,15 @@ export async function runPointsMilestones(now = new Date()): Promise<{ reached: 
   } catch (error) {
     reportJobFailure("points reward", error);
     return { reached: 0, admins: 0, parents: 0 };
+  }
+}
+
+/** Stars, points and badges told to the parents (hourly from the cron, once the coaches have finished). Never throws. */
+export async function runAwardNotices(now = new Date()): Promise<{ children: number; told: number }> {
+  try {
+    return await asSystem((tx) => sendAwardNotices(tx, now, liveSenders()));
+  } catch (error) {
+    reportJobFailure("award notices", error);
+    return { children: 0, told: 0 };
   }
 }

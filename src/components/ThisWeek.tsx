@@ -17,7 +17,8 @@ import { answeredLine, availabilityQuestion, sessionsToday, type ChildWeek } fro
  * here (with "Mark both as coming" for several children). On a session day the QR codes are one tap away, and anything still
  * to set up is the last line. Everything else about the session (kit, plan, calendar) stays on Sessions.
  */
-export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; week: ChildWeek[]; stepsLeft: number; now: Date }) {
+/** `todoCalm`: something more urgent on Home has the orange (`homeLead`), so the set-up line is drawn neutral. */
+export function ThisWeek({ family, week, stepsLeft, now, todoCalm = false }: { family: Family; week: ChildWeek[]; stepsLeft: number; now: Date; todoCalm?: boolean }) {
   const sessions = [...new Map(week.flatMap((w) => (w.session ? [[w.session.id, w.session] as const] : []))).values()].sort((a, b) =>
     a.startsAt.localeCompare(b.startsAt),
   );
@@ -74,14 +75,14 @@ export function ThisWeek({ family, week, stepsLeft, now }: { family: Family; wee
 
       {stepsLeft > 0 ? (
         <Link href="/checklist" className="flex items-center gap-3 border-t border-line px-4 py-3.5 text-ink">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-orange-tint text-kit-orange">
+          <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-[10px] ${todoCalm ? "bg-fill text-ink-muted" : "bg-orange-tint text-kit-orange"}`}>
             <ListChecks aria-hidden size={20} />
           </span>
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="text-[16px] font-bold">{stepsLeft === 1 ? "1 thing left to set up" : `${stepsLeft} things left to set up`}</span>
             <span className="text-[14px] text-ink-muted">For {several ? "your children" : family.children[0]?.firstName}: open your To-do list</span>
           </span>
-          <span className="rounded-pill bg-kit-orange px-2 py-0.5 text-[13px] font-bold text-on-orange tabular-nums">{stepsLeft}</span>
+          <span className={`rounded-pill px-2 py-0.5 text-[13px] font-bold tabular-nums ${todoCalm ? "bg-fill text-ink" : "bg-kit-orange text-on-orange"}`}>{stepsLeft}</span>
           <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
         </Link>
       ) : (

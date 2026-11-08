@@ -573,6 +573,19 @@ export function pointsRewardParentEmail(opts: { to: string; firstName: string; c
   return { to, subject, text, html };
 }
 
+/** To a child's parents (without app notifications) once the coaches have given stars, points or badges. */
+export function awardParentEmail(opts: { to: string; firstName: string; childFirstName: string; awards: string; reason: string | null; link: string; appUrl: string | null }): Email {
+  const { to, firstName, childFirstName, awards, reason, link, appUrl } = opts;
+  const subject = `Masha'Allah, ${childFirstName} got ${awards}`;
+  const lines = [
+    `Assalamu alaikum ${firstName},`,
+    `The coaches gave ${childFirstName} ${awards}.${reason ? ` They said: "${reason}"` : ""}`,
+  ];
+  const text = [...lines.flatMap((l) => [l, ""]), `See ${childFirstName}'s progress: ${link}`].join("\n");
+  const html = layout(appUrl, `${lines.map((l) => `<p style="margin:0 0 12px">${escape(l)}</p>`).join("\n")}\n${button(link, `See ${childFirstName}'s progress`)}`);
+  return { to, subject, text, html };
+}
+
 /** To each admin when a child reaches the reward points, so the reward can be given. */
 export function pointsRewardAdminEmail(opts: { to: string; child: string; group: string; points: number; link: string; appUrl: string | null }): Email {
   const { to, child, group, points, link, appUrl } = opts;

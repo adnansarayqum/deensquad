@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CircleCheck } from "lucide-react";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { ClubFacts } from "@/components/auth/ClubFacts";
+import { loadClubFacts } from "@/lib/club-facts";
 import { TrialForm } from "@/components/trials/TrialForm";
 import { GROUP_LABELS } from "@/lib/auth/registration";
 import { privacyUrl } from "@/lib/config";
@@ -20,7 +22,7 @@ export default async function TrialPage({ searchParams }: PageProps<"/trial">) {
   if (params.booked) {
     return (
       <AuthShell title="Trial booked" intro="We've emailed you the details.">
-        <div className="flex items-start gap-3 rounded-app border-2 border-grass bg-grass-tint p-4 text-ink">
+        <div className="flex items-start gap-3 rounded-app bg-grass-tint p-4 text-ink">
           <CircleCheck aria-hidden size={24} className="mt-0.5 shrink-0 text-grass-text" />
           <p className="text-[15px] leading-[22px]">
             See you there. Pay the session fee by card or cash at the gate, and tell the coach you&apos;re here for a trial. If the email doesn&apos;t arrive, check
@@ -33,9 +35,14 @@ export default async function TrialPage({ searchParams }: PageProps<"/trial">) {
       </AuthShell>
     );
   }
-  const { sessions, fee } = await asSystem(async (tx) => ({ sessions: await loadTrialSessions(tx, new Date()), fee: poundsText(await sessionFeePence(tx)) }));
+  const { sessions, fee, facts } = await asSystem(async (tx) => ({
+    sessions: await loadTrialSessions(tx, new Date()),
+    fee: poundsText(await sessionFeePence(tx)),
+    facts: await loadClubFacts(tx, new Date()),
+  }));
   return (
     <AuthShell title="Book a trial session" intro={`Come and try Deen Squad Football Academy. One trial session per child, ${fee} paid at the gate.`}>
+      <ClubFacts facts={facts} />
       <TrialForm
         groups={AGE_GROUPS.map((g) => ({ value: g, label: GROUP_LABELS[g] }))}
         sessions={sessions.map((s) => ({

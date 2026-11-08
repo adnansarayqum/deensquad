@@ -14,7 +14,7 @@ const UPDATED = "October 2026";
 function Part({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-[19px] font-extrabold">{title}</h2>
+      <h2 className="text-[18px] font-bold">{title}</h2>
       <div className="flex flex-col gap-2 text-[15px] leading-[23px]">{children}</div>
     </section>
   );
@@ -53,7 +53,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
 
   return (
     <AuthShell title="Privacy notice" back={back} intro={`How The Deen Squad Football Academy uses your family's information. Last updated ${UPDATED}.`}>
-      <div className="flex flex-col gap-6 rounded-app border-2 border-line bg-paper p-4">
+      <div className="flex flex-col gap-6 rounded-app bg-paper p-4 shadow-card">
         <Part title="Who we are">
           <p>
             The Deen Squad Football Academy (&ldquo;the club&rdquo;, &ldquo;we&rdquo;) runs football training and matches for children. We decide how

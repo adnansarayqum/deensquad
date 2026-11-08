@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Child, Session } from "../domain";
 import type { AnswerRecord } from "./data";
-import { answeredLine, availabilityQuestion, buildChecklist, buildFamilyChecklist, buildWeek, countSteps, directionsUrl, computeStats, joinNames, sessionsToday, squadInvites, weekSummary } from "./views";
+import { answeredLine, availabilityQuestion, buildChecklist, buildFamilyChecklist, buildWeek, countSteps, directionsUrl, computeStats, homeLead, joinNames, sessionsToday, squadInvites, weekSummary } from "./views";
 
 const child = (id: string, name: string, group: Child["ageGroup"]): Child => ({
   id,
@@ -189,5 +189,16 @@ describe("directions to a venue", () => {
     expect(directionsUrl("Venue to be confirmed")).toBeNull();
     expect(directionsUrl("TBC")).toBeNull();
     expect(directionsUrl("  ")).toBeNull();
+  });
+});
+
+describe("homeLead: one orange thing on Home", () => {
+  const none = { tripWaiting: false, unreadMessages: 0, notificationsOff: false, stepsLeft: 0 };
+  it("picks the most urgent ask, else nothing", () => {
+    expect(homeLead(none)).toBeNull();
+    expect(homeLead({ ...none, stepsLeft: 3 })).toBe("todo");
+    expect(homeLead({ ...none, stepsLeft: 3, notificationsOff: true })).toBe("notifications");
+    expect(homeLead({ ...none, stepsLeft: 3, notificationsOff: true, unreadMessages: 2 })).toBe("messages");
+    expect(homeLead({ tripWaiting: true, unreadMessages: 2, notificationsOff: true, stepsLeft: 3 })).toBe("trip");
   });
 });

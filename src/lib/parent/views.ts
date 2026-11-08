@@ -353,3 +353,20 @@ export function directionsUrl(venue: string): string | null {
   if (!place || /\b(tbc|tba|to be (confirmed|announced))\b/i.test(place)) return null;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
 }
+
+/** What Home asks of the parent, most urgent first. Only the first one present is shown in kit-orange. */
+export type HomeAsk = "trip" | "messages" | "notifications" | "todo";
+
+/**
+ * The one thing on Home in kit-orange (UX review, 8 Nov 2026: the Von Restorff effect). With a trip consent, unread
+ * messages, notifications off and set-up steps all on screen at once, four orange cards meant none stood out; the
+ * most urgent keeps the colour and the others are drawn neutral (still there, still tappable). A cancelled session
+ * isn't in this list: it's news about the session, not a task, and keeps its own colour.
+ */
+export function homeLead(ask: { tripWaiting: boolean; unreadMessages: number; notificationsOff: boolean; stepsLeft: number }): HomeAsk | null {
+  if (ask.tripWaiting) return "trip";
+  if (ask.unreadMessages > 0) return "messages";
+  if (ask.notificationsOff) return "notifications";
+  if (ask.stepsLeft > 0) return "todo";
+  return null;
+}

@@ -28,8 +28,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
         {roles.map((r) => (
           <form key={r.role} action={demoSignIn}>
             <input type="hidden" name="role" value={r.role} />
-            <button type="submit" className="flex w-full flex-col items-start gap-0.5 rounded-app border-2 border-line bg-paper p-4 text-left shadow-lip-neutral transition-transform active:translate-y-1 active:shadow-none">
-              <span className="text-[17px] font-extrabold">{r.label}</span>
+            <button type="submit" className="flex w-full flex-col items-start gap-0.5 rounded-app bg-paper p-4 text-left shadow-card transition-transform active:scale-[0.99]">
+              <span className="text-[17px] font-bold">{r.label}</span>
               <span className="text-sm text-ink-muted">{r.detail}</span>
             </button>
           </form>
