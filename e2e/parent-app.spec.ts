@@ -983,18 +983,30 @@ test("admin dashboard: a computer gets the sidebar, Needs you, tiles, charts and
   await expect(table.getByRole("row").nth(1)).toContainText("U12");
   await adminContext.close();
 
-  // The same admin on a phone: the pitch header and pill navigation, no sidebar.
+  // The same admin on a phone: a light header and a tab bar at the bottom (Overview, Register, Families, Inbox, More),
+  // no sidebar. More opens the rest as a sheet; going to one closes it.
   const phoneContext = await newContext(browser, { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: desktop.baseURL, storageState: ADMIN_STATE });
   const phone = await phoneContext.newPage();
   await phone.goto("/admin");
   await expect(phone.getByRole("complementary", { name: "Club admin menu" })).toHaveCount(0);
   await expect(phone.locator("header")).toBeVisible();
-  const pills = phone.locator("header").getByRole("navigation", { name: "Club admin" }).getByRole("link");
-  await expect(pills).toHaveCount(11);
-  const [first, second] = [(await pills.nth(0).boundingBox())!, (await pills.nth(1).boundingBox())!];
-  expect(second.y).toBe(first.y); // side by side in one scrolling row
-  expect(second.x).toBeGreaterThan(first.x);
   await expect(phone.locator("header").getByRole("button", { name: "Sign out" })).toBeVisible();
+  const tabs = phone.getByRole("navigation", { name: "Club admin" });
+  await expect(tabs.getByRole("link")).toHaveCount(4);
+  await expect(tabs.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+  const tabBox = (await tabs.boundingBox())!;
+  expect(tabBox.y + tabBox.height).toBeCloseTo(844, 0); // along the bottom of the screen
+  await tabs.getByText("More", { exact: true }).click();
+  for (const name of ["Announcements", "Sessions", "Plans", "Practice sheets", "Points and stars", "Shop", "Staff"]) {
+    await expect(tabs.getByRole("link", { name: new RegExp(`^${name}`) })).toBeInViewport({ ratio: 1 });
+  }
+  await phone.keyboard.press("Escape");
+  await expect(tabs.getByRole("link", { name: /^Staff/ })).toHaveCount(0);
+  await tabs.getByText("More", { exact: true }).click();
+  await tabs.getByRole("link", { name: /^Sessions/ }).click();
+  await expect(phone).toHaveURL(/\/admin\/sessions$/);
+  await expect(tabs.getByRole("link", { name: /^Staff/ })).toHaveCount(0);
+  await phone.goto("/admin");
   await expect(phone.getByRole("heading", { name: "Families and payments" })).toBeVisible();
   // Tapping the chart with a finger shows the session under it, and each tap shows its own (a finger lifting
   // off is not a mouse leaving, and focus doesn't jump it to the latest session).
@@ -1459,9 +1471,12 @@ test("staff roles: an admin makes a coach an admin, who then sees the shop, and 
   await expect(coach.getByRole("link", { name: "Shop", exact: true })).toHaveCount(0);
   // Greeted by name, not by "Coach"; on a phone every section is on screen without scrolling sideways.
   await expect(coach.getByRole("heading", { name: "Assalamu alaikum, Hamza" })).toBeVisible();
+  const coachTabs = coach.getByRole("navigation", { name: "Club admin" });
+  await coachTabs.getByText("More", { exact: true }).click();
   for (const name of ["Plans", "Points and stars"]) {
-    await expect(coach.getByRole("navigation", { name: "Club admin" }).getByRole("link", { name })).toBeInViewport({ ratio: 1 });
+    await expect(coachTabs.getByRole("link", { name })).toBeInViewport({ ratio: 1 });
   }
+  await expect(coachTabs.getByRole("link", { name: "Shop", exact: true })).toHaveCount(0);
 
   await admin.goto("/admin/staff");
   await editStaff(admin, "Coach Hamza");
@@ -1477,6 +1492,7 @@ test("staff roles: an admin makes a coach an admin, who then sees the shop, and 
   await admin.screenshot({ path: shot("admin-staff-roles"), fullPage: true });
 
   await coach.goto("/admin");
+  await coach.getByRole("navigation", { name: "Club admin" }).getByText("More", { exact: true }).click();
   await coach.getByRole("link", { name: "Shop", exact: true }).click();
   await expect(coach).toHaveURL(/\/admin\/shop$/);
 

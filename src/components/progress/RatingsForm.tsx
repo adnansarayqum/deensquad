@@ -81,7 +81,7 @@ export function RatingsForm({ sessionId, rows }: { sessionId: string; rows: Rati
         })}
       </ul>
       {/* Stays on screen at the bottom while the list scrolls under it. */}
-      <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-2 border-t border-line bg-cream px-1 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]">
+      <div className="sticky bottom-[var(--staff-bar-height,0px)] lg:bottom-0 z-10 -mx-1 flex flex-col gap-2 border-t border-line bg-cream px-1 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]">
         {state.error ? (
           <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
             {state.error}

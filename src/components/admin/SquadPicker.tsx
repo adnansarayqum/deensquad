@@ -183,7 +183,7 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
         </p>
       ) : null}
       {/* Stays on screen at the bottom while the list scrolls under it. */}
-      <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-end gap-3 border-t border-line bg-paper px-1 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]">
+      <div className="sticky bottom-[var(--staff-bar-height,0px)] lg:bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-end gap-3 border-t border-line bg-paper px-1 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]">
         <button type="submit" className="btn-chunky btn-grass" disabled={pending}>
           {pending ? "Saving…" : `Save squad (${picked.size} picked)`}
         </button>

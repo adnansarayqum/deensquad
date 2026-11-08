@@ -8,9 +8,9 @@ import { asUser } from "@/lib/db";
 import { loadStaffUnread } from "@/lib/messages/data";
 
 /**
- * The one frame for every staff page (/admin and /coach): phones get the pitch header with wrapping pill
- * navigation; computers (lg and up) a pitch sidebar and a wide main column. Only one of the two is shown, so the
- * page has one "Club admin" nav. Pages put a PageHeader first and cards (Section) after it.
+ * The one frame for every staff page (/admin and /coach): phones get a light header and a bottom tab bar (Overview,
+ * Register, Families, Inbox, More); computers (lg and up) a pitch sidebar and a wide main column. Only one of the
+ * two is shown, so the page has one visible "Club admin" nav. Pages put a PageHeader first and cards (Section) after it.
  */
 export async function StaffShell({ user, children }: { user: CurrentUser & { staff: NonNullable<CurrentUser["staff"]> }; children: ReactNode }) {
   const isAdmin = user.staff.role === "admin";
@@ -40,32 +40,31 @@ export async function StaffShell({ user, children }: { user: CurrentUser & { sta
         </div>
       </aside>
       <div className="min-w-0 flex-1">
-        <header className="rounded-b-[24px] bg-pitch px-4 pt-[max(env(safe-area-inset-top),12px)] pb-2 text-on-pitch lg:hidden">
-          <div className="mx-auto flex max-w-3xl flex-col gap-2.5 pt-1">
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-              <Link href="/admin" className="flex items-center gap-2.5">
-                <Image src="/crest.png" alt="" width={36} height={36} className="rounded-[8px]" />
-                <span className="font-display text-[30px] leading-none tracking-[0.02em]">Club admin</span>
-              </Link>
-              <div className="flex items-center gap-4 text-sm font-bold text-on-pitch-muted">
-                {user.guardian ? (
-                  <Link href="/news" className="inline-flex min-h-11 items-center">
-                    Parent view
-                  </Link>
-                ) : null}
-                <SignOutForm>
-                  <button type="submit" className="inline-flex min-h-11 items-center">
-                    Sign out
-                  </button>
-                </SignOutForm>
-              </div>
+        {/* Phones: a light header (the crest to the Overview, Parent view, Sign out) and the tab bar at the bottom. */}
+        <header className="px-4 pt-[max(env(safe-area-inset-top),12px)] lg:hidden">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 pt-1">
+            <Link href="/admin" className="flex min-h-12 items-center gap-2.5">
+              <Image src="/crest.png" alt="" width={32} height={32} className="rounded-[8px]" />
+              <span className="text-[15px] font-bold whitespace-nowrap text-ink-muted">Club admin</span>
+            </Link>
+            <div className="flex items-center gap-4 text-sm font-bold whitespace-nowrap text-grass-text">
+              {user.guardian ? (
+                <Link href="/news" className="inline-flex min-h-12 items-center">
+                  Parent view
+                </Link>
+              ) : null}
+              <SignOutForm>
+                <button type="submit" className="inline-flex min-h-12 items-center">
+                  Sign out
+                </button>
+              </SignOutForm>
             </div>
-            <AdminNav isAdmin={isAdmin} unreadMessages={unreadMessages} />
           </div>
         </header>
-        <main className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-5 pb-[max(env(safe-area-inset-bottom),32px)] lg:max-w-6xl lg:px-8 lg:py-8">
+        <main className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-2 pb-[calc(var(--staff-bar-height,72px)+32px)] lg:max-w-6xl lg:px-8 lg:py-8">
           {children}
         </main>
+        <AdminNav isAdmin={isAdmin} unreadMessages={unreadMessages} />
       </div>
     </div>
   );

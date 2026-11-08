@@ -272,7 +272,7 @@ export function AssistantChat() {
           e.preventDefault();
           void ask(draftText);
         }}
-        className="sticky bottom-0 flex flex-col gap-2 border-t border-line bg-cream pt-3 pb-3"
+        className="sticky bottom-[var(--staff-bar-height,0px)] lg:bottom-0 flex flex-col gap-2 border-t border-line bg-cream pt-3 pb-3"
       >
         <label htmlFor="ask" className="field-label">
           Ask about the club
