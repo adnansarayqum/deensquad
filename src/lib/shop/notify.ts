@@ -1,3 +1,4 @@
+import { LIVE_STATUSES, PAID_STATUSES } from "./order-flow";
 import "server-only";
 
 import { appUrl, bankDetails, shopOrdersEmails } from "../config";
@@ -53,8 +54,8 @@ export async function notifyNewOrder(orderId: string): Promise<void> {
 
 // Each email to the parent has its own column (migration 0016), and goes only while the order is at that step.
 const PARENT_EMAIL: Record<OrderEmailKind, { column: string; statuses: string[] }> = {
-  placed: { column: "placed_email_at", statuses: ["awaiting_payment", "paid", "ordered", "ready", "collected"] },
-  paid: { column: "paid_email_at", statuses: ["paid", "ordered", "ready", "collected"] },
+  placed: { column: "placed_email_at", statuses: [...LIVE_STATUSES] },
+  paid: { column: "paid_email_at", statuses: [...PAID_STATUSES] },
   ready: { column: "ready_email_at", statuses: ["ready"] },
   cancelled: { column: "cancelled_email_at", statuses: ["cancelled"] },
 };

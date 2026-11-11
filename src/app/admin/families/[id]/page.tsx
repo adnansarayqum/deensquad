@@ -18,6 +18,7 @@ import { coachLimit, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { AGE_GROUPS, groupPlural, type PaymentState } from "@/lib/domain";
 import { loadMedicalForStaff } from "@/lib/medical/data";
+import { PAYMENT_TONE, STAFF_CAN_SET } from "@/lib/payments/states";
 
 export const metadata: Metadata = { title: "Child" };
 
@@ -104,7 +105,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
         </Section>
       ) : null}
 
-      <Section title="Payment" aside={<Pill tone={child.payment === "active" ? "done" : child.payment === "self_reported" ? "gold" : child.payment === "pay_as_you_go" ? "neutral" : "action"}>{paymentLabel[child.payment]}</Pill>}>
+      <Section title="Payment" aside={<Pill tone={PAYMENT_TONE[child.payment]}>{paymentLabel[child.payment]}</Pill>}>
         <p className="text-sm text-ink-muted">Set this after checking TeamFeePay. Pay as you go: the family pays for each session.</p>
         {/* Where the status came from and how old it is (admin UX review, Oct 2026): it's the app's record, not TeamFeePay live. */}
         {child.paymentChangedAt ? (
@@ -118,7 +119,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
           </p>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          {(["active", "pay_as_you_go", "missing", "overdue"] as const).map((state) => (
+          {STAFF_CAN_SET.map((state) => (
             <form key={state} action={setPayment}>
               <input type="hidden" name="child" value={child.id} />
               <input type="hidden" name="state" value={state} />

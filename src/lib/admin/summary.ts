@@ -5,6 +5,10 @@ import type { Email, EmailReport } from "../email/send";
 import { monthlySummaryEmail } from "../email/templates";
 import { averagePct, groupAttendance, loadDashboard } from "./dashboard";
 import { newsReaches } from "../squads/sql";
+import { PAID_STATUSES, sqlList } from "../shop/order-flow";
+
+/** Orders the club has been paid for (order-flow.ts). */
+const PAID = sqlList(PAID_STATUSES);
 
 // The owner's monthly summary: on the 1st of each month (the first hourly run at or after 8am London), admins are
 // emailed last month's figures. Month figures (sessions, attendance, joiners, news, shop) are for that calendar month
@@ -95,7 +99,7 @@ export async function loadMonthlySummary(tx: Queryable, month: SummaryMonth, now
          (select count(*)::int from guardians where created_at >= $1 and created_at < $2) as parents,
          (select count(*)::int from shop_orders where created_at >= $1 and created_at < $2 and status <> 'cancelled') as orders,
          (select coalesce(sum(total_pence), 0)::int from shop_orders
-           where status in ('paid', 'ordered', 'ready', 'collected') and paid_at >= $1 and paid_at < $2) as takings,
+           where status in (${PAID}) and paid_at >= $1 and paid_at < $2) as takings,
          (select count(*)::int from session_payments where taken_at >= $1 and taken_at < $2) as gate_payments,
          (select coalesce(sum(amount_pence), 0)::int from session_payments where taken_at >= $1 and taken_at < $2) as gate_pence,
          (select count(*)::int from trial_bookings t join sessions s on s.id = t.session_id

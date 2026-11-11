@@ -7,48 +7,21 @@ import { requireAdmin } from "@/lib/auth/session";
 import { emailConfigured } from "@/lib/email/send";
 import { asUser } from "@/lib/db";
 import { setOrderStatus } from "@/lib/shop/actions";
-import { formatPence, loadOrdersAdmin, loadSupplierTotals, type Order, type OrderStatus } from "@/lib/shop/data";
+import { formatPence, loadOrdersAdmin, loadSupplierTotals } from "@/lib/shop/data";
+import { adminSteps, CLOSED_STATUSES, OPEN_STATUSES } from "@/lib/shop/order-flow";
 import { paymentOptions } from "@/lib/shop/options";
 
 export const metadata: Metadata = { title: "Shop" };
 
-const OPEN: OrderStatus[] = ["awaiting_payment", "paid", "ordered", "ready"];
-const CLOSED: OrderStatus[] = ["collected", "cancelled"];
 
 const date = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Europe/London" });
-
-/** The buttons for moving an order on. Mirrors the forward moves allowed in setOrderStatus. */
-function nextSteps(o: Order): { status: OrderStatus; label: string; primary?: boolean }[] {
-  switch (o.status) {
-    case "awaiting_payment":
-      return [
-        { status: "paid", label: o.payBy === "bank" ? "Transfer received" : "Mark paid", primary: o.payBy === "bank" },
-        { status: "cancelled", label: "Cancel" },
-      ];
-    case "paid":
-      return [
-        { status: "ordered", label: "Ordered from supplier", primary: true },
-        { status: "ready", label: "Ready for Friday" },
-        { status: "cancelled", label: "Cancel" },
-      ];
-    case "ordered":
-      return [
-        { status: "ready", label: "Ready for Friday", primary: true },
-        { status: "cancelled", label: "Cancel" },
-      ];
-    case "ready":
-      return [{ status: "collected", label: "Handed over", primary: true }];
-    default:
-      return [];
-  }
-}
 
 export default async function AdminShopPage({ searchParams }: PageProps<"/admin/shop">) {
   const user = await requireAdmin();
   const { view, cancelled } = await searchParams;
   const past = view === "past";
   const { orders, supplier } = await asUser(user.id, async (tx) => ({
-    orders: await loadOrdersAdmin(tx, past ? CLOSED : OPEN),
+    orders: await loadOrdersAdmin(tx, past ? [...CLOSED_STATUSES] : [...OPEN_STATUSES]),
     supplier: past ? [] : await loadSupplierTotals(tx),
   }));
 
@@ -149,7 +122,7 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
                 </span>
               </span>
               <div className="flex flex-wrap gap-2">
-                {nextSteps(o).map((step) =>
+                {adminSteps(o).map((step) =>
                   step.status === "cancelled" ? (
                     // Asks first on its own page: it can't be undone and the parent is emailed.
                     <Link

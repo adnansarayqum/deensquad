@@ -35,6 +35,7 @@ import { loadNotificationParents, sendNotificationHelp } from "./notifications";
 import { parseQuickAnswers } from "../messages/quick-answers";
 import { attachOrThrow, formMedia, withMediaProblem } from "../media/attach";
 import type { Queryable } from "../db/types";
+import { isPaymentState } from "../payments/states";
 
 // Club admin Server Actions. Each checks the role first, then writes as that person,
 // so row level security still applies (staff manage the club; only admins manage staff).
@@ -203,7 +204,7 @@ export async function setPayment(formData: FormData): Promise<void> {
   const user = await requireStaff();
   const child = id(formData.get("child"));
   const state = formData.get("state");
-  if (!child || !["active", "missing", "overdue", "self_reported", "pay_as_you_go"].includes(String(state))) return;
+  if (!child || !isPaymentState(state)) return;
   const mine = coachLimit(user.staff);
   await asUser(user.id, async (tx) => {
     if (mine) {

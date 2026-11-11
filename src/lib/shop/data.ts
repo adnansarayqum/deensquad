@@ -1,5 +1,6 @@
 import type { Queryable } from "../db/types";
 import { iso } from "../db/types";
+import type { OrderStatus, PayBy } from "./order-flow";
 
 // The club shop's queries. They run inside asUser(): parents see products and their own orders,
 // staff see everything.
@@ -59,9 +60,8 @@ export async function loadProduct(tx: Queryable, id: string): Promise<Product | 
   return row ? toProduct(row) : null;
 }
 
-export type PayBy = "card" | "bank";
-
-export type OrderStatus = "awaiting_payment" | "paid" | "ordered" | "ready" | "collected" | "cancelled";
+// The statuses and the moves between them live in order-flow.ts.
+export type { OrderStatus, PayBy } from "./order-flow";
 
 export type OrderItem = {
   id: string;

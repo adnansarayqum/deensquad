@@ -1,6 +1,7 @@
 import type { Queryable } from "../db/types";
 import type { PaymentState } from "../domain";
 import { parseCsv } from "../admin/csv";
+import { PAYMENT_MOVES } from "./states";
 
 // TeamFeePay export import (the roadmap's "TeamFeePay export import"; the FootballPro comparison showed online fees
 // as the gap clubs ask about first). The club collects monthly fees on TeamFeePay; until now a plan showed as "active"
@@ -127,9 +128,7 @@ export async function planTeamFeePay(tx: Queryable, rows: TfpRow[]): Promise<Tfp
  * no plan, unless the family pays as they go (a cancelled monthly plan doesn't change that) or already had none.
  */
 export function nextState(current: PaymentState, status: TfpStatus): PaymentState {
-  if (status === "active") return "active";
-  if (status === "overdue") return "overdue";
-  return current === "pay_as_you_go" || current === "missing" ? current : "missing";
+  return PAYMENT_MOVES.teamFeePay(current, status);
 }
 
 export async function applyTeamFeePay(tx: Queryable, changes: TfpChange[], now: Date): Promise<number> {

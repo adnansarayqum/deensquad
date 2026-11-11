@@ -10,6 +10,11 @@ import { loadOpenDeletionRequests, type OpenDeletionRequest } from "../data-requ
 import { seasonStart } from "../exports/reports";
 import { newsReaches, sessionIsFor } from "../squads/sql";
 import { NEEDS, TODO_NEEDS, behindOnNews } from "./needs";
+import { PAID_STATUSES, sqlList } from "../shop/order-flow";
+import { PAYMENT_STATES } from "../payments/states";
+
+/** Orders the club has been paid for (order-flow.ts). */
+const PAID = sqlList(PAID_STATUSES);
 
 // The numbers on the club admin overview (/admin). Every figure is counted in SQL over the
 // children in `groups` (a group coach's own, or every group), so a coach never sees another
@@ -254,7 +259,7 @@ export async function loadDashboard(
          (select count(*)::int from parents where auth_user_id is null and invited_at is null) as "notInvited",
          (select count(*)::int from mine p where ${NEEDS.signin.where}) as "childrenAwaitingSignIn",
          ${TODO_NEEDS.map((n) => `(select count(*)::int from mine p where ${NEEDS[n].where}) as "todo_${n}"`).join(",\n         ")},
-         ${(["active", "self_reported", "pay_as_you_go", "missing", "overdue"] as const)
+         ${PAYMENT_STATES
            .map((st) => `(select count(*)::int from mine p left join payment_status ps on ps.player_id = p.id where coalesce(ps.state::text, 'missing') = '${st}') as "pay_${st}"`)
            .join(",\n         ")}`,
       [groups, now],
@@ -267,8 +272,8 @@ export async function loadDashboard(
              count(*) filter (where status = 'ordered')::int as ordered,
              count(*) filter (where status = 'ready')::int as ready,
              count(*)::int as orders,
-             coalesce(sum(total_pence) filter (where status in ('paid', 'ordered', 'ready', 'collected') and paid_at >= $1), 0)::int as month_pence,
-             coalesce(sum(total_pence) filter (where status in ('paid', 'ordered', 'ready', 'collected') and paid_at >= $2), 0)::int as season_pence
+             coalesce(sum(total_pence) filter (where status in (${PAID}) and paid_at >= $1), 0)::int as month_pence,
+             coalesce(sum(total_pence) filter (where status in (${PAID}) and paid_at >= $2), 0)::int as season_pence
            from shop_orders`,
           [monthStart(now), season],
         )

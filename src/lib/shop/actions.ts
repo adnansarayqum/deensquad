@@ -14,9 +14,9 @@ import { readUpload, saveFile } from "../files";
 import { cleanText } from "../validate";
 import { BASKET_COOKIE, addLine, parseBasketCookie, sameLines, serialiseBasket, type Basket, type BasketLine } from "./basket";
 import { orderReference } from "./data";
+import { EMAIL_ON_MOVE, isOrderStatus, movesInto } from "./order-flow";
 import { paymentOptions } from "./options";
 import { enqueue } from "../background";
-import type { OrderEmailKind } from "../email/templates";
 import { notifyNewOrder, notifyParentOrder } from "./notify";
 import { localiseProductImages } from "./images";
 import { confirmSumupPayment } from "./payments";
@@ -366,28 +366,17 @@ export async function saveProduct(_prev: ProductFormState, formData: FormData): 
   return { saved: true };
 }
 
-// Forward moves only. Bank transfers are marked paid by staff when the money arrives.
-const NEXT: Record<string, string[]> = {
-  awaiting_payment: ["paid", "cancelled"],
-  paid: ["ordered", "ready", "cancelled"],
-  ordered: ["ready", "cancelled"],
-  ready: ["collected"],
-  collected: [],
-  cancelled: [],
-};
-
-// The parent's email for each move (the order's own step columns make each go once; see notifyParentOrder).
-const EMAIL_FOR: Partial<Record<string, OrderEmailKind>> = { paid: "paid", ready: "ready", cancelled: "cancelled" };
-
+// Which moves are allowed, and the parent's email each sets off, are in order-flow.ts (forward only; bank transfers
+// are marked paid by an admin when the money arrives).
 export async function setOrderStatus(formData: FormData): Promise<void> {
   const user = await requireAdmin();
   const id = formData.get("order");
-  const status = String(formData.get("status"));
-  if (typeof id !== "string" || !UUID.test(id) || !(status in NEXT)) return;
+  const status = formData.get("status");
+  if (typeof id !== "string" || !UUID.test(id) || !isOrderStatus(status)) return;
   // Cancelling can't be undone and emails the parent, so it's confirmed on its own page first
   // (/admin/shop/orders/[id]/cancel), which works without JavaScript.
   if (status === "cancelled" && formData.get("confirm") !== "yes") redirect(`/admin/shop/orders/${id}/cancel`);
-  const from = Object.entries(NEXT).filter(([, next]) => next.includes(status)).map(([s]) => s);
+  const from = movesInto(status);
   const moved = await asUser(user.id, (tx) =>
     tx.query(
       `update shop_orders set status = $2::order_status, updated_at = now(),
@@ -401,7 +390,7 @@ export async function setOrderStatus(formData: FormData): Promise<void> {
   );
   // Only a move that happened emails the parent (a second tap finds the order already moved on). After the
   // response, so a slow or failing email never holds up or undoes the status change.
-  const kind = EMAIL_FOR[status];
+  const kind = EMAIL_ON_MOVE[status];
   if (moved.length && kind) after(() => enqueue(`order ${kind} email`, () => notifyParentOrder(id, kind)));
   if (status === "cancelled") redirect(moved.length ? "/admin/shop?cancelled=1" : "/admin/shop");
   refresh();
