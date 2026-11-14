@@ -149,6 +149,57 @@ describe("download my data", () => {
     expect((await t.asUser(sara, (tx) => buildFamilyExport(tx, now))).shopOrders).toEqual([]);
   });
 
+  it("holds what the app keeps about the parent themselves: sign-ins, devices, reminders, likes, a trial, rewards; never another parent's", async () => {
+    const adnan = await t.signIn(DEV_EMAILS.parent);
+    const sara = await t.signIn(DEV_EMAILS.secondParent);
+    await t.asSystem(async (tx) => {
+      const one = async (sql: string, params: unknown[] = []) => (await tx.query<{ id: string }>(sql, params))[0].id;
+      const session = await one(`select id from sessions order by starts_at limit 1`);
+      const news = await one(`select id from announcements order by posted_at limit 1`);
+      const guardian = async (email: string) => one(`select id from guardians where email = $1`, [email]);
+      for (const [email, ip] of [[DEV_EMAILS.parent, "203.0.113.7"], [DEV_EMAILS.secondParent, "198.51.100.9"]]) {
+        await tx.query(`insert into auth.sign_in_requests (email, purpose, link_hash, ip, expires_at) values ($1, 'sign_in', $2, $3, now() + interval '15 minutes')`, [email, `hash-${ip}`, ip]);
+        await tx.query(`insert into attendance_reminders (session_id, guardian_id, channel) values ($1, $2, 'email')`, [session, await guardian(email)]);
+        await tx.query(`insert into announcement_chases (announcement_id, guardian_id, channel) values ($1, $2, 'email'::text::chase_channel)`, [news, await guardian(email)]);
+        await tx.query(`insert into announcement_likes (announcement_id, guardian_id) values ($1, $2) on conflict do nothing`, [news, await guardian(email)]);
+        await tx.query(
+          `insert into trial_bookings (session_id, parent_first_name, parent_last_name, email, child_first_name, child_last_name, date_of_birth, age_group)
+           values ($1, 'A', 'B', $2, $3, 'Trial', '2019-01-01', 'U7')`,
+          [session, email.toUpperCase(), email === DEV_EMAILS.parent ? "Idris" : "Hamza"],
+        );
+      }
+      await tx.query(`insert into auth.sessions (id, user_id, expires_at) values ('adnan-phone', $1, now() + interval '1 day'), ('sara-phone', $2, now() + interval '1 day')`, [adnan, sara]);
+      await tx.query(`insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, 'https://push.example/adnan-secret', 'k', 'a'), ($2, 'https://push.example/sara-secret', 'k', 'a')`, [adnan, sara]);
+      await tx.query(`insert into points_milestones (player_id, points) values ($1, 20)`, [DEV_IDS.yusuf]);
+      await tx.query(`insert into session_squads (session_id, player_id) values ($1, $2)`, [session, DEV_IDS.yusuf]);
+      await tx.query(`insert into data_requests (guardian_id, kind) values ($1, 'delete')`, [await guardian(DEV_EMAILS.parent)]);
+    });
+
+    const data = await t.asUser(adnan, (tx) => buildFamilyExport(tx, now));
+    const you = data.you!;
+    expect(you.signInRecords).toEqual([expect.objectContaining({ kind: "sign-in code", internetAddress: "203.0.113.7", usedAt: null })]);
+    expect(you.signedInOn).toHaveLength(1);
+    expect(you.notificationsOnFor).toHaveLength(1);
+    expect(you.askedToDeleteAccount).toEqual([expect.objectContaining({ dealtWithAt: null })]);
+    expect(you.trialBookings).toEqual([expect.objectContaining({ child: "Idris Trial", ageGroup: "U7" })]);
+    expect(data.newsLiked).toHaveLength(1);
+    expect(data.remindersSentToYou.map((r) => r.how)).toEqual(["email", "email"]);
+    const yusuf = data.children.find((c) => c.firstName === "Yusuf")!;
+    expect(yusuf.pointsRewards).toEqual([expect.objectContaining({ points: 20, rewardGivenAt: null })]);
+    expect(yusuf.pickedForSquads).toHaveLength(1);
+    expect(typeof yusuf.approvedByTheClubAt).toBe("string");
+
+    // Nothing of Sara's, and never the address a phone gave for notifications or the sign-in itself.
+    const text = JSON.stringify(data);
+    for (const hers of ["198.51.100.9", "Hamza Trial", "sara-phone", "adnan-phone", "push.example"]) expect(text).not.toContain(hers);
+
+    // Someone who isn't a parent gets nothing from the functions, a trial booked with their email included.
+    const coach = await t.signIn(DEV_EMAILS.coach);
+    const asCoach = await t.asUser(coach, (tx) => buildFamilyExport(tx, now));
+    expect(asCoach.you).toBeNull();
+    expect(asCoach.remindersSentToYou).toEqual([]);
+  });
+
   it("allows 10 downloads an hour per person", () => {
     resetExportLimit();
     for (let i = 0; i < EXPORT_LIMIT; i++) expect(allowExport("a", 1000)).toBe(true);

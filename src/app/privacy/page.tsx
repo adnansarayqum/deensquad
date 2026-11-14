@@ -9,7 +9,7 @@ import { analyticsConfig, sentryConfigured } from "@/lib/observability/config";
 
 export const metadata: Metadata = { title: "Privacy notice" };
 
-const UPDATED = "October 2026";
+const UPDATED = "November 2026";
 
 function Part({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -101,7 +101,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
             notifications, we store the address your phone gives us to send them.
           </p>
           <p>
-            If you add the club&apos;s sessions to your calendar (on the player screen), we keep a scrambled copy of your private calendar link, not the
+            If you add the club&apos;s sessions to your calendar (from the Sessions screen), we keep a scrambled copy of your private calendar link, not the
             link itself. Your calendar app (or a calendar service you choose, such as Google Calendar) then fetches your children&apos;s sessions (with their first names) from the app every few hours. Anyone you give
             the link to can see them too, so keep it to yourself; resetting it stops the old link working.
           </p>
@@ -128,7 +128,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
                 <b>To keep children safe</b> (knowing who is at training, who to call in an emergency): our legitimate interest, and our safeguarding duties.
               </>,
               <>
-                <b>To keep in touch</b> (club news, reminders to read important messages, session plans): our legitimate interest in running the club well.
+                <b>To keep in touch</b> (club news, reminders to read important messages and to say whether your child is coming, session plans, and telling you when your child is given a star, points or a badge): our legitimate interest in running the club well.
               </>,
               <>
                 <b>Medical and additional needs</b>: only with your explicit consent, to look after your child (UK GDPR Article 9(2)(a)). You can
@@ -148,7 +148,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
             items={[
               "Club admins can see every family. Coaches see the children in the groups they coach.",
               "Other parents never see your details. They only see how many children in a group are coming to a session, not who.",
-              "Your child's other parents or carers in the app (added by the club, or by you or them from Players → Your family, with their own email and sign-in) see what you see about that child, and your name and answers. Adding someone sends them a sign-in link, and the club is told. To take someone off, ask the club.",
+              "Your child's other parents or carers in the app (added by the club, or by you or them from Family → Settings, with their own email and sign-in) see what you see about that child, and your name and answers. Adding someone sends them a sign-in link, and the club is told. To take someone off, ask the club.",
               "Messages in the app between you and the club are about one child. Both of that child's parents can read them, as can the coach they were sent to, the child's coaches and the club's admins (so no conversation with a child's family is ever hidden from the club). Other parents never see them. Messages can't be edited or deleted: they are kept as club records.",
               "Photos and videos the club's staff add to club news, session details or a message are seen only by the people who can read that news, session or message: for news and sessions, the families it is for; for a message, that child's parents and the club's staff. Staff post only children whose parents have said yes to photos. Location and camera details are removed from every photo and video before it is stored, in a private storage bucket with Railway. Parents can't add photos or videos to messages.",
               "Ratings and progress reports are written by the club's coaches and admins. Staff can see them; you see your own child's in the app once the club turns this on, and only reports the coach has published. Other parents never see them, and you never see other children's.",
@@ -255,15 +255,16 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
           <List
             items={[
               "see the information we hold about you or your child",
-              "correct anything that is wrong (you can change your own name and mobile, your children's names and dates of birth, contacts, photo consent and medical and additional needs yourself in the app, on the player screen)",
+              "correct anything that is wrong (you can change your own name and mobile, your children's names and dates of birth, contacts, photo consent and medical and additional needs yourself in the app, on the Family screen and its Settings)",
               "delete information we no longer need",
               "stop or limit how we use it, or object to how we use it",
               "give you a copy to take elsewhere",
             ]}
           />
           <p>
-            You can do two of these yourself in the app: on the player screen, under <b>Your data</b>, download a copy of what the app holds about you
-            and your children, or ask us to delete your account.
+            You can do two of these yourself in the app: on the Family screen, open Settings and, under <b>Your data</b>, download a copy of what the
+            app holds about you and your children, or ask us to delete your account. The copy includes the record of your sign-ins, the reminders
+            sent to you and whether notifications are on, as well as your children&apos;s records.
           </p>
           <p>To use any of these rights, {contact}. We will reply within one month.</p>
           <p>

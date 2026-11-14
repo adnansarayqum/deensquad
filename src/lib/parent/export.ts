@@ -145,6 +145,63 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
      where sp.player_id in (select my_player_ids()) order by s.starts_at`,
   );
 
+  // The rest of what the app holds about the parent themselves (privacy review, 14 Nov 2026). Their own rows only:
+  // read under their own policies, or through functions that return only the caller's (migration 0049).
+  const liked = await tx.query<{ title: string; created_at: Date }>(
+    `select a.title, l.created_at from announcement_likes l join announcements a on a.id = l.announcement_id
+     where l.guardian_id = my_guardian_id() order by l.created_at`,
+  );
+  const newsReminders = await tx.query<{ title: string; channel: string; sent_at: Date }>(
+    `select a.title, c.channel::text as channel, c.sent_at from announcement_chases c join announcements a on a.id = c.announcement_id
+     where c.guardian_id = my_guardian_id() order by c.sent_at`,
+  );
+  const sessionReminders = await tx.query<{ session_title: string; starts_at: Date; sent_at: Date; channel: string }>(
+    `select session_title, starts_at, sent_at, channel from my_attendance_reminders()`,
+  );
+  const deletionRequests = await tx.query<{ created_at: Date; handled_at: Date | null }>(
+    `select created_at, handled_at from data_requests where guardian_id = my_guardian_id() order by created_at`,
+  );
+  // That notifications are on for a phone or browser and since when; never the address the phone gave us.
+  const notificationDevices = await tx.query<{ created_at: Date; last_success_at: Date | null }>(
+    `select created_at, last_success_at from push_subscriptions where user_id = auth.uid() order by created_at`,
+  );
+  const signIns = await tx.query<{ asked_at: Date; kind: string; internet_address: string | null; used_at: Date | null }>(
+    `select asked_at, kind, internet_address, used_at from my_sign_in_records()`,
+  );
+  const devices = await tx.query<{ signed_in_at: Date; last_used_at: Date }>(`select signed_in_at, last_used_at from my_signed_in_devices()`);
+  const moreCalendarLinks = await tx.query<{ created_at: Date }>(
+    `select created_at from guardian_calendar_links where guardian_id = my_guardian_id() order by created_at`,
+  );
+  // People they asked to add as a parent whom the club is still checking: the name they typed, never whose email it was.
+  const askedToAdd = await tx.query<{ first_name: string; last_name: string; created_at: Date }>(
+    `select first_name, last_name, created_at from my_co_parent_requests()`,
+  );
+  const trials = await tx.query<{
+    child_first_name: string;
+    child_last_name: string;
+    date_of_birth: string;
+    age_group: string;
+    session_title: string;
+    starts_at: Date;
+    booked_at: Date;
+    arrived_at: Date | null;
+    cancelled_at: Date | null;
+  }>(
+    `select child_first_name, child_last_name, date_of_birth::text as date_of_birth, age_group, session_title, starts_at, booked_at, arrived_at, cancelled_at
+     from my_trial_bookings()`,
+  );
+  const squads = await tx.query<{ player_id: string; title: string; starts_at: Date; added_at: Date }>(
+    `select q.player_id, s.title, s.starts_at, q.added_at from session_squads q join sessions s on s.id = q.session_id
+     where q.player_id in (select my_player_ids()) order by s.starts_at`,
+  );
+  const rewards = await tx.query<{ player_id: string; points: number; reached_at: Date; rewarded_at: Date | null }>(
+    `select player_id, points, reached_at, rewarded_at from my_children_rewards()`,
+  );
+  const approvals = await tx.query<{ player_id: string; approved_at: Date | null }>(
+    `select id as player_id, approved_at from players where id in (select my_player_ids())`,
+  );
+  const HOW: Record<string, string> = { app: "app notification", email: "email", sms: "text message", gate: "flag on the register", nudge: "app notification from a coach", whatsapp: "WhatsApp from a coach" };
+
   const forChild = <T extends { player_id: string }>(rows: T[], id: string) => rows.filter((r) => r.player_id === id);
   const pounds = (pence: number) => (pence / 100).toFixed(2);
 
@@ -163,6 +220,23 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
           // That a private calendar link exists and when it was made; never the link itself (only its hash is kept).
           calendarLink: parent.calendar_at ? { madeAt: at(parent.calendar_at) } : null,
           sportsHubEntryCode: hub ? `saved ${at(hub.updated_at)}` : null,
+          moreCalendarLinks: moreCalendarLinks.map((l) => ({ madeAt: at(l.created_at) })),
+          // Kept for 30 days: each time a sign-in code or invite was sent to this email, and the internet address it was asked from.
+          signInRecords: signIns.map((r) => ({ askedAt: at(r.asked_at), kind: r.kind === "invite" ? "invite" : "sign-in code", internetAddress: r.internet_address, usedAt: at(r.used_at) })),
+          signedInOn: devices.map((d) => ({ signedInAt: at(d.signed_in_at), lastUsedAt: at(d.last_used_at) })),
+          notificationsOnFor: notificationDevices.map((d) => ({ turnedOnAt: at(d.created_at), lastDeliveredAt: at(d.last_success_at) })),
+          askedToDeleteAccount: deletionRequests.map((r) => ({ askedAt: at(r.created_at), dealtWithAt: at(r.handled_at) })),
+          parentsYouAskedToAdd: askedToAdd.map((r) => ({ name: `${r.first_name} ${r.last_name}`, askedAt: at(r.created_at), status: "the club is checking" })),
+          trialBookings: trials.map((b) => ({
+            child: `${b.child_first_name} ${b.child_last_name}`,
+            dateOfBirth: b.date_of_birth,
+            ageGroup: b.age_group,
+            session: b.session_title,
+            startsAt: at(b.starts_at),
+            bookedAt: at(b.booked_at),
+            arrivedAt: at(b.arrived_at),
+            cancelledAt: at(b.cancelled_at),
+          })),
         }
       : null,
     children: children.map((c) => ({
@@ -173,6 +247,7 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
       shirtNumber: c.shirt_number,
       position: c.position,
       joinedOn: c.joined_on,
+      approvedByTheClubAt: at(approvals.find((a) => a.player_id === c.id)?.approved_at ?? null) ?? "waiting for the club",
       yourRelationship: c.relationship,
       photoConsent: c.photo_consent === null ? "not answered" : c.photo_consent ? "yes" : "no",
       photoConsentRecordedAt: at(c.photo_consent_recorded_at),
@@ -192,6 +267,8 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
       attendance: forChild(attendance, c.id).map((a) => ({ session: a.title, startsAt: at(a.starts_at), checkedInAt: at(a.checked_in_at), how: a.method })),
       awards: forChild(awards, c.id).map((a) => ({ stars: a.stars, points: a.points, reason: a.reason, givenBy: a.given_by, givenAt: at(a.created_at) })),
       badges: forChild(badges, c.id).map((b) => ({ badge: b.name, earnedOn: b.earned_on })),
+      pointsRewards: forChild(rewards, c.id).map((r) => ({ points: r.points, reachedAt: at(r.reached_at), rewardGivenAt: at(r.rewarded_at) })),
+      pickedForSquads: forChild(squads, c.id).map((q) => ({ session: q.title, startsAt: at(q.starts_at), pickedAt: at(q.added_at) })),
       coachNotes: forChild(notes, c.id).map((n) => ({ note: n.body, writtenBy: n.written_by, writtenAt: at(n.created_at) })),
       medicalAndAdditionalNeeds:
         forChild(medical, c.id).map((m) => ({
@@ -244,6 +321,11 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
       progressReports: forChild(reports, c.id).map((r) => ({ month: r.month.slice(0, 7), report: r.body, writtenBy: r.written_by, publishedAt: at(r.published_at) })),
     })),
     newsRead: reads.map((r) => ({ title: r.title, postedAt: at(r.posted_at), readAt: at(r.read_at) })),
+    newsLiked: liked.map((l) => ({ title: l.title, likedAt: at(l.created_at) })),
+    remindersSentToYou: [
+      ...newsReminders.map((r) => ({ about: `Club news: ${r.title}`, how: HOW[r.channel] ?? r.channel, sentAt: at(r.sent_at) })),
+      ...sessionReminders.map((r) => ({ about: `Is your child coming to ${r.session_title}, ${at(r.starts_at)?.slice(0, 10)}?`, how: HOW[r.channel] ?? r.channel, sentAt: at(r.sent_at) })),
+    ],
     shopOrders: orders.map((o) => ({
       reference: orderReference(o.id),
       status: o.status,

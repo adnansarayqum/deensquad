@@ -4,6 +4,7 @@ import { adminEmails, appUrl } from "./config";
 import { isClientDisconnect } from "./client-disconnect";
 import { isMalformedActionBody } from "./malformed-body";
 import { emailConfigured, sendEmails } from "./email/send";
+import { scrubText } from "./observability/scrub";
 
 // Emails the app's maintainer when a page or action fails on the live app, at most once every
 // 30 minutes (with a count of what happened in between). Only the path and the error message are sent:
@@ -45,7 +46,8 @@ export async function sendErrorAlert(
     `Something went wrong on the Deen Squad app.`,
     ``,
     `Where: ${path} (${error.kind})`,
-    `Error: ${error.message.slice(0, 500)}`,
+    // A database error can quote what someone typed ("invalid input syntax …"): email addresses are taken out.
+    `Error: ${scrubText(error.message).slice(0, 500)}`,
     ...(error.digest ? [`Reference: ${error.digest}`] : []),
     ...(others ? [``, `${others} other error${others === 1 ? "" : "s"} since the last alert.`] : []),
     ``,
