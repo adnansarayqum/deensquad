@@ -90,8 +90,14 @@ test("news with a photo and a video: the parent sees both and opens them full sc
   if (await player.evaluate((v) => (v as HTMLVideoElement).canPlayType('video/mp4; codecs="avc1.42E01E"') !== "")) {
     await expect.poll(() => player.evaluate((v) => (v as HTMLVideoElement).readyState), { timeout: 15_000 }).toBeGreaterThan(0);
   }
+  // A double tap on Close: the second tap never reaches what's under the viewer (a shortcut, or Sign out for staff).
+  const closeBox = (await viewer.getByRole("button", { name: "Close" }).boundingBox())!;
+  const before = p.url();
   await viewer.getByRole("button", { name: "Close" }).click();
   await expect(viewer).toBeHidden();
+  await p.mouse.click(closeBox.x + closeBox.width / 2, closeBox.y + closeBox.height / 2);
+  await p.waitForTimeout(300);
+  expect(p.url()).toBe(before);
   // The file itself: a cleaned JPEG, kept private to this person's browser.
   const res = await p.request.get(photoUrl!);
   expect(res.status()).toBe(200);

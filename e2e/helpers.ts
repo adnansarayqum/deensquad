@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { expect, type Browser, type BrowserContext, type BrowserContextOptions, type Page } from "@playwright/test";
+import { expect, type Browser, type Locator, type BrowserContext, type BrowserContextOptions, type Page } from "@playwright/test";
 
 // Shared by the e2e specs. Screenshots land in e2e/.results/screens.
 
@@ -102,4 +102,13 @@ export async function approveChild(page: Page, fullName: string) {
   await page.getByRole("link", { name: fullName }).filter({ visible: true }).first().click();
   await page.getByRole("button", { name: `Approve ${fullName}` }).click();
   await expect(page.getByText(/is approved\. Their family can now see/)).toBeVisible();
+}
+
+/**
+ * Waits until the page's script has taken over this element (React has hydrated it). Until then a link or form does
+ * what the browser does on its own, so a test of what the script adds (a message on the screen instead of a failed
+ * download, say) can pass or fail by how fast the page happened to wake up. Not a pause: it returns as soon as it's so.
+ */
+export async function whenLive(target: Locator) {
+  await expect.poll(() => target.evaluate((el) => Object.keys(el).some((key) => key.startsWith("__reactProps")))).toBe(true);
 }

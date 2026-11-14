@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { devices, expect, test, type Page } from "@playwright/test";
-import { ADMIN_STATE, OUTBOX, YOUR_DATA_PARENT_STATE, approveChild, latestCode, newContext, shot } from "./helpers";
+import { ADMIN_STATE, OUTBOX, YOUR_DATA_PARENT_STATE, approveChild, latestCode, newContext, shot, whenLive } from "./helpers";
 
 // A parent's own data (Player → Your data: download, ask to be deleted) and the accessibility repairs a parent meets:
 // the QR codes by keyboard, and Friday at 200% zoom. A new family signs itself up with two children (its own address,
@@ -133,7 +133,11 @@ test("your data: a parent downloads their family's data, which holds their child
   await page.goto("/player/settings");
   const section = page.getByRole("region", { name: "Your data" });
   await expect(section).toBeVisible();
+  // The button is a plain link until the page's script has taken it over, and a tap before then is the browser's own
+  // download: fine for a parent, but everything below is about what the script does (a refusal said on the screen).
+  await whenLive(section.getByRole("link", { name: "Download my data" }));
   const [download] = await Promise.all([page.waitForEvent("download"), section.getByRole("link", { name: "Download my data" }).click()]);
+  expect(download.url()).toMatch(/^blob:/); // fetched by the page first, not followed as a link
   expect(download.suggestedFilename()).toMatch(/^deen-squad-my-data-\d{4}-\d{2}-\d{2}\.json$/);
   const text = readFileSync((await download.path())!, "utf8");
   const data = JSON.parse(text) as { you: { email: string }; children: { firstName: string; ageGroup: string }[] };
@@ -223,7 +227,9 @@ test("privacy notice lists WhatsApp, the nightly backups and the rights parents 
 });
 
 test("calendar: a parent gets a private link, a second phone gets its own without breaking the first, and Stop all ends both", async ({ browser, playwright }) => {
-  test.skip(!existsSync(YOUR_DATA_PARENT_STATE), "needs the sign-up test above");
+  // The feed only has sessions once the children are approved, which needs the admin's sign-in (a failure in
+  // parent-app.spec.ts removes it: without this the test failed with "no VEVENT" instead of being skipped).
+  test.skip(!existsSync(YOUR_DATA_PARENT_STATE) || !existsSync(ADMIN_STATE), "needs the sign-up and approval tests above");
   const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
   const page = await context.newPage();
   await page.goto("/friday");

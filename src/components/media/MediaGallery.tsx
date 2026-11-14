@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight, Play, X } from "lucide-react";
 import type { MediaItem } from "@/lib/media/data";
 import { durationText } from "@/lib/media/limits";
+import { useTapShield } from "@/components/TapShield";
 
 // Pictures and videos on a news post, a session or a message. One picture fills the width; one video plays where it
 // is (nothing downloads until play is tapped); several make a grid of up to four (the fourth says "+3") that opens a
@@ -21,6 +22,8 @@ function ratio(m: MediaItem): string {
 
 export function MediaGallery({ items, label, compact = false }: { items: MediaItem[]; label: string; compact?: boolean }) {
   const [open, setOpen] = useState<number | null>(null);
+  // A double tap on the viewer's Close mustn't reach what's under it (on staff phones, the header's Sign out).
+  const { shield, raise } = useTapShield();
   if (items.length === 0) return null;
   const name = (m: MediaItem, i: number) => `${label}: ${m.kind === "video" ? "video" : "photo"} ${i + 1} of ${items.length}`;
   const max = compact ? "max-w-[320px]" : "";
@@ -81,7 +84,18 @@ export function MediaGallery({ items, label, compact = false }: { items: MediaIt
           </li>
         ))}
       </ul>
-      {open !== null ? <Viewer items={items} start={open} label={label} onClose={() => setOpen(null)} /> : null}
+      {open !== null ? (
+        <Viewer
+          items={items}
+          start={open}
+          label={label}
+          onClose={() => {
+            setOpen(null);
+            raise();
+          }}
+        />
+      ) : null}
+      {shield}
     </>
   );
 }

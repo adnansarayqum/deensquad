@@ -78,7 +78,8 @@ test("a parent changes their mobile and a child's date of birth; the admin's chi
 });
 
 test("a parent adds a child in U10: on Player, on Friday, on the admin's Families, and the club is emailed", async ({ browser }) => {
-  test.skip(!existsSync(YOUR_DATA_PARENT_STATE), "needs the sign-up in parent-your-data.spec.ts");
+  // Layla and Zaid must be approved first (it checks the notice names only Omar), which needs the admin's sign-in.
+  test.skip(!existsSync(YOUR_DATA_PARENT_STATE) || !existsSync(ADMIN_STATE), "needs the sign-up and approval in parent-your-data.spec.ts");
   const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE });
   const page = await context.newPage();
   await page.goto("/player/add-child");

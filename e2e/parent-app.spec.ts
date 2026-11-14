@@ -1417,6 +1417,17 @@ test("gate pass: a parent shows the QR pass, a coach scans it (after a dropped s
     await coach.waitForTimeout(500);
     expect(coach.url()).toBe(register);
     await expect(coach.getByText(/^Gate test · /)).toBeVisible();
+    // A second tap that lands just after the scanner has gone never reaches what's under the Close button: the
+    // header's Sign out sits there (11 Nov 2026: a double tap on Close signed the coach out at the register).
+    await scan.click();
+    const closeButton = scanner.getByRole("button", { name: "Close the scanner" });
+    const closeBox = (await closeButton.boundingBox())!;
+    await closeButton.click();
+    await expect(scanner).toHaveCount(0);
+    await coach.mouse.click(closeBox.x + closeBox.width / 2, closeBox.y + closeBox.height / 2);
+    await coach.waitForTimeout(500);
+    expect(coach.url()).toBe(register);
+    await expect(coach.getByText(/^Gate test · /)).toBeVisible();
     // The phone is locked or the coach switches apps: the scanner closes and the camera goes off.
     await scan.click();
     await expect.poll(cameraOn).toBe(true);

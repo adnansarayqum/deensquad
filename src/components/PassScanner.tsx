@@ -8,6 +8,7 @@ import { ChildAvatar } from "./ChildAvatar";
 import { FLAG_WORDS, PAYING_WORDS } from "@/lib/staff/flags";
 import { poundsText } from "@/lib/settings";
 import { refreshIfReachable, setScannerOpen } from "@/lib/client/register-refresh";
+import { useTapShield } from "@/components/TapShield";
 
 const reasonText = {
   not_a_pass: "That isn't a Deen Squad attendance QR code.",
@@ -61,6 +62,8 @@ export function PassScanner({
   const [result, setResult] = useState<Shown | null>(null);
   const [retrying, setRetrying] = useState(false);
   const [checking, setChecking] = useState(false);
+  /** Keeps a double tap on Close off the page under the scanner (the header's Sign out): see TapShield. */
+  const { shield, raise } = useTapShield();
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const busy = useRef(false);
@@ -83,13 +86,17 @@ export function PassScanner({
     history.pushState({ scanner: 1 }, "");
     pushed.current = true;
   };
+  const shut = useCallback(() => {
+    setOpen(false);
+    raise();
+  }, [raise]);
   const closeScanner = useCallback(() => {
     if (pushed.current) {
       // Cleared first, so a second tap (or Escape) before popstate arrives doesn't go back a second page.
       pushed.current = false;
       history.back();
-    } else setOpen(false);
-  }, []);
+    } else shut();
+  }, [shut]);
 
   useEffect(() => {
     if (!open) {
@@ -106,7 +113,7 @@ export function PassScanner({
     closer.current?.focus();
     const onPop = () => {
       pushed.current = false;
-      setOpen(false);
+      shut();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -126,7 +133,7 @@ export function PassScanner({
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("visibilitychange", onHide);
     };
-  }, [open, closeScanner, router]);
+  }, [open, closeScanner, shut, router]);
 
   // A failed request isn't a bad pass: say so and keep the pass to try again.
   // The last child's card goes while the next code is checked, so nobody is waved through on the wrong result.
@@ -227,17 +234,20 @@ export function PassScanner({
 
   if (!open) {
     return (
-      <button
-        ref={opener}
-        type="button"
-        onClick={openScanner}
-        disabled={disabled}
-        title={disabled ? disabledReason : undefined}
-        className={`btn-chunky btn-grass disabled:opacity-60 disabled:shadow-none ${className}`}
-      >
-        <QrCode aria-hidden size={22} />
-        Scan QR codes
-      </button>
+      <>
+        <button
+          ref={opener}
+          type="button"
+          onClick={openScanner}
+          disabled={disabled}
+          title={disabled ? disabledReason : undefined}
+          className={`btn-chunky btn-grass disabled:opacity-60 disabled:shadow-none ${className}`}
+        >
+          <QrCode aria-hidden size={22} />
+          Scan QR codes
+        </button>
+        {shield}
+      </>
     );
   }
 

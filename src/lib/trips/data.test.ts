@@ -10,7 +10,9 @@ let admin: string;
 let parent: string;
 let cup: string;
 let adminStaff: string;
-const NOW = new Date("2026-10-27T12:00:00Z");
+// The real clock, not a fixed day: give_trip_consent() checks the session hasn't started against the database's own
+// now(), so a pinned date fails once the sample club's cup (two weeks after it) is in the past (it did, 14 Nov 2026).
+const NOW = new Date();
 
 beforeAll(async () => {
   t = await testDatabase({ seed: true, now: NOW });
