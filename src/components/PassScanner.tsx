@@ -10,7 +10,7 @@ import { poundsText } from "@/lib/settings";
 import { refreshIfReachable, setScannerOpen } from "@/lib/client/register-refresh";
 import { useTapShield } from "@/components/TapShield";
 
-const reasonText = {
+export const reasonText = {
   not_a_pass: "That isn't a Deen Squad attendance QR code.",
   unknown_child: "This QR code is for a child who is no longer at the club.",
 } as const;
@@ -317,7 +317,7 @@ export function PassScanner({
   );
 }
 
-function ChildResult({ child: c }: { child: Extract<ScanResult, { ok: true }>["child"] }) {
+export function ChildResult({ child: c }: { child: Extract<ScanResult, { ok: true }>["child"] }) {
   const here = c.status !== "no_session_today";
   const tone = !here ? "bg-paper" : c.flags.length ? "bg-orange-tint" : "bg-grass-tint";
   return (

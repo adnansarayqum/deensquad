@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { devices, expect, test } from "@playwright/test";
 import QRCode from "qrcode";
 import sharp, { type Sharp } from "sharp";
-import { COACH_STATE, newContext, shot, signIn } from "./helpers";
+import { ADMIN_STATE, COACH_STATE, newContext, shot, signIn } from "./helpers";
 
 // The gate scanner with real camera pictures, not clean computer-made codes. On Fri 30 Oct 2026, the first session in
 // the dark, the scanner read one code and then nothing: jsQR throws on some frames when it looks for a light-on-dark
@@ -73,8 +73,16 @@ async function cameraFile(token: string, look: Look, out: string): Promise<void>
   ]);
 }
 
+// The first scanner, and the rebuilt one a phone can switch to ("Try the new scanner", kept in localStorage).
+const SCANNERS = ["usual", "new"] as const;
+
+for (const which of SCANNERS)
 for (const look of LOOKS) {
-  test(`the scanner reads a code ${look.name}, and keeps reading after frames that make the decoder throw`, async ({ browser, playwright }) => {
+  const title =
+    which === "usual"
+      ? `the scanner reads a code ${look.name}, and keeps reading after frames that make the decoder throw`
+      : `the new scanner reads a code ${look.name}, shows it is reading, and skips no pictures`;
+  test(title, async ({ browser, playwright }) => {
     test.skip(!existsSync(COACH_STATE) || !hasFfmpeg, "run with parent-app.spec.ts (its coach sign-in and Gate test session); needs ffmpeg");
     const token = await nuhToken(browser);
     const video = resolve(`e2e/.results/scanner-${look.name.replace(/\W+/g, "-")}.y4m`);
@@ -86,10 +94,11 @@ for (const look of LOOKS) {
     });
     try {
       const context = await newContext(camera, { ...PHONE, storageState: COACH_STATE, permissions: ["camera"] });
+      if (which === "new") await context.addInitScript(() => localStorage.setItem("ds-new-scanner", "1"));
       const coach = await context.newPage();
       const skipped: string[] = [];
       const crashes: string[] = [];
-      coach.on("console", (m) => m.text().startsWith("[scanner] frame skipped") && skipped.push(m.text()));
+      coach.on("console", (m) => /^\[scanner\] (frame|picture) skipped/.test(m.text()) && skipped.push(m.text()));
       coach.on("pageerror", (e) => crashes.push(e.message));
       const scans: string[] = [];
       coach.on("request", (r) => r.url().endsWith("/api/coach/scan") && scans.push(r.postData() ?? ""));
@@ -100,7 +109,11 @@ for (const look of LOOKS) {
       await expect(coach.getByText(/^Gate test · /)).toBeVisible();
       await coach.getByRole("button", { name: "Scan QR codes" }).click();
       const scanner = coach.getByRole("dialog", { name: "Scan attendance QR codes" });
+      await expect(scanner).toBeVisible();
+      expect(await scanner.getAttribute("data-scanner")).toBe(which === "new" ? "new" : null);
       await expect(scanner.getByText("Nuh E.")).toBeVisible({ timeout: 15_000 });
+      // The new scanner shows that pictures are being read.
+      if (which === "new") await expect(scanner.locator("[data-reading]")).toBeVisible();
       await expect(scanner.getByText("U7 · Checked in", { exact: true })).toBeVisible();
       await coach.screenshot({ path: shot(`scanner-${look.name.replace(/\W+/g, "-")}`) });
 
@@ -108,8 +121,32 @@ for (const look of LOOKS) {
       await expect.poll(() => scans.length, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
       expect(scans.every((s) => s.includes(token))).toBe(true);
       // The frames that throw were met (the inverted pass on this photo) and none stopped the page.
-      if (look.name === "as photographed in the dark") expect(skipped.length).toBeGreaterThan(0);
+      // The first scanner meets them (its light-on-dark pass throws on every picture) and none stops the page;
+      // the new one reads light-on-dark pictures without throwing, so it skips none.
+      if (which === "usual" && look.name === "as photographed in the dark") expect(skipped.length).toBeGreaterThan(0);
+      if (which === "new") expect(skipped).toEqual([]);
       expect(crashes).toEqual([]);
+
+      if (which === "new" && look.name === "as photographed in the dark") {
+        // The reader stops (as on 30 Oct 2026, when the loop died): the screen says so instead of looking normal,
+        // points to Mark here once it has happened twice, and reads again as soon as pictures come back.
+        await coach.evaluate(() => {
+          const w = window as unknown as { __raf: typeof requestAnimationFrame };
+          w.__raf = window.requestAnimationFrame;
+          window.requestAnimationFrame = () => 0;
+        });
+        await expect(scanner.getByText("The scanner stopped. Restarting…")).toBeVisible({ timeout: 8000 });
+        await expect(scanner.locator("[data-reading]")).toHaveCount(0);
+        await expect(scanner.getByText(/use Mark here if it doesn't come back/)).toBeVisible({ timeout: 8000 });
+        const before = scans.length;
+        await coach.evaluate(() => {
+          const w = window as unknown as { __raf: typeof requestAnimationFrame };
+          window.requestAnimationFrame = w.__raf;
+        });
+        await expect(scanner.getByText("The scanner stopped. Restarting…")).toHaveCount(0, { timeout: 15_000 });
+        await expect.poll(() => scans.length, { timeout: 20_000 }).toBeGreaterThan(before);
+        await expect(scanner.getByText("Nuh E.")).toBeVisible();
+      }
 
       await scanner.getByRole("button", { name: "Close the scanner" }).click();
       const here = coach.getByRole("region", { name: /^Here/ });
@@ -121,3 +158,42 @@ for (const look of LOOKS) {
     }
   });
 }
+
+test("an admin switches their own phone to the new scanner and back; a coach isn't offered it", async ({ browser }) => {
+  test.skip(!existsSync(COACH_STATE) || !existsSync(ADMIN_STATE), "run with parent-app.spec.ts (its admin and coach sign-ins)");
+  const adminContext = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
+  const admin = await adminContext.newPage();
+  await admin.goto("/coach?group=U7");
+  const dialog = admin.getByRole("dialog", { name: "Scan attendance QR codes" });
+  const scan = admin.getByRole("button", { name: "Scan QR codes" });
+  // The usual scanner unless this phone has chosen otherwise.
+  if (await scan.isEnabled()) {
+    await scan.click();
+    expect(await dialog.getAttribute("data-scanner")).toBeNull();
+    await dialog.getByRole("button", { name: "Close the scanner" }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+  await admin.getByRole("button", { name: "Try the new scanner" }).click();
+  await expect(admin.getByText("This phone is using the new scanner.")).toBeVisible();
+  if (await scan.isEnabled()) {
+    await scan.click();
+    await expect(dialog).toHaveAttribute("data-scanner", "new");
+    // No camera on this test phone: it says so and points to Mark here, as the usual one does.
+    await expect(dialog.getByText(/The camera didn't open|Opening the camera|Hold the parent's QR code/)).toBeVisible();
+    await dialog.getByRole("button", { name: "Close the scanner" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(admin).toHaveURL(/\/coach/);
+  }
+  // Kept on the phone: still on after a reload, and off again with one tap.
+  await admin.reload();
+  await admin.getByRole("button", { name: "Go back to the usual scanner" }).click();
+  await expect(admin.getByRole("button", { name: "Try the new scanner" })).toBeVisible();
+  await adminContext.close();
+
+  const coachContext = await newContext(browser, { ...PHONE, storageState: COACH_STATE });
+  const coach = await coachContext.newPage();
+  await coach.goto("/coach?group=U7");
+  await expect(coach.getByRole("button", { name: "Scan QR codes" })).toBeVisible();
+  await expect(coach.getByRole("button", { name: "Try the new scanner" })).toHaveCount(0);
+  await coachContext.close();
+});

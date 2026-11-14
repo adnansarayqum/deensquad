@@ -4,7 +4,7 @@ import { CalendarClock } from "lucide-react";
 import { PageHeader } from "@/components/admin/bits";
 import { UndoCheckInButton } from "@/components/CheckInButton";
 import { ChildAvatar } from "@/components/ChildAvatar";
-import { PassScanner } from "@/components/PassScanner";
+import { ScannerChoice, TryNewScanner } from "@/components/scanner/ScannerChoice";
 import { RegisterAutoRefresh } from "@/components/RegisterAutoRefresh";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { FlagPills, PayingPill, RegisterLists, type GateRow } from "@/components/RegisterLists";
@@ -89,7 +89,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
       {open ? <RegisterAutoRefresh /> : null}
       <PullToRefresh />
       {/* Scan sits beside the title and the clock on the session line, so the lists start higher on a phone at the gate. */}
-      <PageHeader title="Register" actions={<PassScanner disabled={!open} disabledReason={open ? undefined : registerClosedMessage(session.startsAt, now)} className="" />}>
+      <PageHeader title="Register" actions={<ScannerChoice disabled={!open} disabledReason={open ? undefined : registerClosedMessage(session.startsAt, now)} className="" />}>
         <div className="-mt-1 flex items-center justify-between gap-3">
           <p className="min-w-0 text-[15px] leading-[22px] text-ink-muted">
             {session.title} · {shortDay(session.startsAt)}
@@ -236,6 +236,8 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
           All incidents
         </Link>
       </div>
+      {/* The rebuilt scanner, on trial: admins switch their own phone to it and back (ScannerChoice). */}
+      {user.staff.role === "admin" ? <TryNewScanner /> : null}
     </>
   );
 }
