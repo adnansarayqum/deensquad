@@ -103,6 +103,9 @@ export async function addSessionRun(tx: Queryable, run: NewSessions): Promise<{ 
   const groups = AGE_GROUPS.filter((g) => run.groups.includes(g));
   const added: Date[] = [];
   const skipped: Date[] = [];
+  // One add at a time: "not exists" can't see another add that hasn't finished, so two at the same moment (two
+  // admins, a double submit, the assistant's Confirm) each added every date. The second now waits and skips them.
+  await tx.query("select pg_advisory_xact_lock(727278)");
   for (const { start, end } of run.times) {
     const rows = await tx.query(
       `insert into sessions (kind, title, starts_at, ends_at, venue, age_groups, arrive_by, kit, notes)

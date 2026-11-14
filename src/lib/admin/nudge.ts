@@ -23,6 +23,8 @@ export async function nudgeUnread(
   if (!pushConfigured()) return { ok: false, reason: "off" };
   if (inQuietHours(now)) return { ok: false, reason: "quiet" };
   if (opts.guardianIds.length === 0) return { ok: false, reason: "nobody" };
+  // One reminder at a time per message: two coaches pressing together would both pass the hour's check below.
+  await tx.query("select pg_advisory_xact_lock(727281, hashtext($1))", [opts.newsId]);
   const [last] = await tx.query<{ at: Date | null }>(
     `select max(sent_at) as at from announcement_chases where announcement_id = $1 and channel::text = 'nudge'`,
     [opts.newsId],

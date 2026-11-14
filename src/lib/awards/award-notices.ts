@@ -41,6 +41,8 @@ export function awardMessage(childFirstName: string, a: ChildAwards): { title: s
 /** Tells each child's parents what the coaches gave them. Marks what it told only once a parent was reached. */
 export async function sendAwardNotices(tx: Queryable, now: Date, senders: MilestoneSenders): Promise<{ children: number; told: number }> {
   if (inQuietHours(now)) return { children: 0, told: 0 };
+  // One run at a time (two servers overlap for a minute during a deploy): a second waits, then finds them told.
+  await tx.query("select pg_advisory_xact_lock(727280)");
   type Row = { player_id: string; first_name: string; stars: number; points: number; badges: string[]; reason: string | null; latest: Date };
   const due = await tx.query<Row>(
     `with given as (

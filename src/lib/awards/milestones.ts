@@ -73,6 +73,9 @@ export async function tell(
 export async function sendMilestoneNotices(tx: Queryable, now: Date, senders: MilestoneSenders): Promise<{ reached: number; admins: number; parents: number }> {
   const result = { reached: (await recordMilestones(tx, now)).length, admins: 0, parents: 0 };
   if (inQuietHours(now)) return result;
+  // One run at a time (it starts after points are given and from the hourly job): a second waits here, then finds
+  // everyone already told.
+  await tx.query("select pg_advisory_xact_lock(727279)");
   const due = await tx.query<{ player_id: string; points: number; first_name: string; last_name: string; age_group: string; admins: boolean; parents: boolean }>(
     `select m.player_id, m.points, p.first_name, p.last_name, p.age_group::text as age_group,
        m.admins_told_at is null as admins, m.parents_told_at is null as parents
