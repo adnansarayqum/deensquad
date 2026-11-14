@@ -9,6 +9,7 @@ import { FLAG_WORDS, PAYING_WORDS } from "@/lib/staff/flags";
 import { poundsText } from "@/lib/settings";
 import { refreshIfReachable, setScannerOpen } from "@/lib/client/register-refresh";
 import { useTapShield } from "@/components/TapShield";
+import { readCode, type Decode } from "@/lib/scanner/reader";
 
 export const reasonText = {
   not_a_pass: "That isn't a Deen Squad attendance QR code.",
@@ -210,10 +211,13 @@ export function PassScanner({
           const ctx = c.getContext("2d", { willReadFrequently: true })!;
           ctx.drawImage(v, (v.videoWidth - side) / 2, (v.videoHeight - side) / 2, side, side, 0, 0, size, size);
           // Every other frame looks for a light-on-dark code too: a phone that darkens websites can show one that way.
+          // Through the shared reader (lib/scanner/reader), which inverts the picture itself: jsQR's own "onlyInvert",
+          // used here from 18 Oct to 14 Nov 2026, threw on every picture, so half the frames were thrown away and a
+          // light-on-dark code was never read.
           frames += 1;
-          const code = jsQR(ctx.getImageData(0, 0, size, size).data, size, size, {
-            inversionAttempts: frames % 2 ? "dontInvert" : "onlyInvert",
-          });
+          const read = readCode(jsQR as unknown as Decode, ctx.getImageData(0, 0, size, size).data, size, frames);
+          if (read.skipped) console.warn("[scanner] frame skipped:", read.skipped);
+          const code = read.code ? { data: read.code } : null;
           const now = Date.now();
           // Ignore the same pass held up for a few seconds after it was scanned.
           if (code?.data && !(last.current?.token === code.data && now - last.current.at < 6000)) {

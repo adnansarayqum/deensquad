@@ -80,7 +80,7 @@ for (const which of SCANNERS)
 for (const look of LOOKS) {
   const title =
     which === "usual"
-      ? `the scanner reads a code ${look.name}, and keeps reading after frames that make the decoder throw`
+      ? `the scanner reads a code ${look.name}, keeps reading, and skips no pictures`
       : `the new scanner reads a code ${look.name}, shows it is reading, and skips no pictures`;
   test(title, async ({ browser, playwright }) => {
     test.skip(!existsSync(COACH_STATE) || !hasFfmpeg, "run with parent-app.spec.ts (its coach sign-in and Gate test session); needs ffmpeg");
@@ -121,10 +121,9 @@ for (const look of LOOKS) {
       await expect.poll(() => scans.length, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
       expect(scans.every((s) => s.includes(token))).toBe(true);
       // The frames that throw were met (the inverted pass on this photo) and none stopped the page.
-      // The first scanner meets them (its light-on-dark pass throws on every picture) and none stops the page;
-      // the new one reads light-on-dark pictures without throwing, so it skips none.
-      if (which === "usual" && look.name === "as photographed in the dark") expect(skipped.length).toBeGreaterThan(0);
-      if (which === "new") expect(skipped).toEqual([]);
+      // Neither scanner throws a picture away: until 14 Nov 2026 the first one's light-on-dark pass threw on every
+      // picture (jsQR's "onlyInvert"), which this test took for a few bad frames.
+      expect(skipped).toEqual([]);
       expect(crashes).toEqual([]);
 
       if (which === "new" && look.name === "as photographed in the dark") {
