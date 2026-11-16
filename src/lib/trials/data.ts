@@ -38,6 +38,8 @@ export type TrialInput = {
   childLastName: string;
   dateOfBirth: string;
   ageGroup: AgeGroup;
+  /** The family ticked "Don't email me after the trial about joining". */
+  noFollowUp?: boolean;
 };
 
 export type BookResult = { ok: true; id: string; session: TrialSession } | { ok: false; reason: "session" | "group" | "already" };
@@ -48,10 +50,10 @@ export async function bookTrial(tx: Queryable, input: TrialInput, now: Date): Pr
   if (!session) return { ok: false, reason: "session" };
   if (!session.ageGroups.includes(input.ageGroup)) return { ok: false, reason: "group" };
   const rows = await tx.query<{ id: string }>(
-    `insert into trial_bookings (session_id, parent_first_name, parent_last_name, email, phone, child_first_name, child_last_name, date_of_birth, age_group)
-     values ($1, $2, $3, $4, $5, $6, $7, $8::date, $9::text::age_group)
+    `insert into trial_bookings (session_id, parent_first_name, parent_last_name, email, phone, child_first_name, child_last_name, date_of_birth, age_group, no_follow_up)
+     values ($1, $2, $3, $4, $5, $6, $7, $8::date, $9::text::age_group, $10)
      on conflict (lower(email), lower(child_first_name), date_of_birth) where cancelled_at is null do nothing returning id`,
-    [input.sessionId, input.parentFirstName, input.parentLastName, input.email, input.phone, input.childFirstName, input.childLastName, input.dateOfBirth, input.ageGroup],
+    [input.sessionId, input.parentFirstName, input.parentLastName, input.email, input.phone, input.childFirstName, input.childLastName, input.dateOfBirth, input.ageGroup, input.noFollowUp === true],
   );
   return rows[0] ? { ok: true, id: rows[0].id, session } : { ok: false, reason: "already" };
 }
@@ -162,7 +164,7 @@ export async function cancelTrial(tx: Queryable, trialId: string, mine: readonly
 export async function dueFollowUps(tx: Queryable, now: Date) {
   return tx.query<{ id: string; email: string; parent_first_name: string; child_first_name: string }>(
     `select t.id, t.email, t.parent_first_name, t.child_first_name from trial_bookings t join sessions s on s.id = t.session_id
-     where t.arrived_at is not null and t.cancelled_at is null and t.follow_up_sent_at is null
+     where t.arrived_at is not null and t.cancelled_at is null and t.follow_up_sent_at is null and not t.no_follow_up
        and s.ends_at < $1::timestamptz - interval '1 hour' and s.ends_at > $1::timestamptz - interval '7 days'
      order by s.ends_at limit 200`,
     [now],

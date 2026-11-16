@@ -470,13 +470,16 @@ export function trialFollowUpEmail(opts: { to: string; parentFirstName: string; 
     `If you'd like ${childFirstName} to join, sign up in the club's app. It's where you'll get club news, tell the coach who's coming each week and follow ${childFirstName}'s progress.`,
     "",
     `Join the club: ${joinUrl}`,
+    "",
+    "This is the only email we'll send you about joining.",
   ];
   const html = layout(
     appUrl,
     `<p style="margin:0">Assalamu alaikum ${escape(parentFirstName)},</p>
 <p>Thank you for bringing ${escape(childFirstName)} to try Deen Squad Football Academy. We hope ${escape(childFirstName)} enjoyed it.</p>
 <p>If you'd like ${escape(childFirstName)} to join, sign up in the club's app. It's where you'll get club news, tell the coach who's coming each week and follow ${escape(childFirstName)}'s progress.</p>
-${button(joinUrl, "Join the club")}`,
+${button(joinUrl, "Join the club")}
+<p style="color:#5b665f;font-size:14px">This is the only email we&#39;ll send you about joining.</p>`,
   );
   return { to, subject, text: lines.join("\n"), html };
 }

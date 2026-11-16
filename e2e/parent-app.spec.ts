@@ -84,6 +84,8 @@ test("pages can't be shown in another site's frame and don't name the server sof
   expect(headers["x-frame-options"]).toBe("DENY");
   expect(headers["content-security-policy"]).toBe("frame-ancestors 'none'");
   expect(headers["x-content-type-options"]).toBe("nosniff");
+  expect(headers["permissions-policy"]).toContain("camera=(self)");
+  expect(headers["permissions-policy"]).toContain("geolocation=()");
   expect(headers["x-powered-by"]).toBeUndefined();
 });
 

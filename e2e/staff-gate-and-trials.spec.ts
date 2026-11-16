@@ -99,7 +99,9 @@ test("a new family books a paid trial on the public page; the club sees it", asy
   await sessions.first().check();
   await page.getByRole("group", { name: "You", exact: true }).getByLabel("First name").fill("Amina");
   await page.getByRole("group", { name: "You", exact: true }).getByLabel("Last name").fill("Newfamily");
-  await page.getByLabel("Email").fill("amina.newfamily@example.com");
+  await page.getByLabel("Email", { exact: true }).fill("amina.newfamily@example.com");
+  // The one "join the club" email afterwards can be refused here; it is never ticked for them.
+  await expect(page.getByLabel("Don't email me after the trial about joining the club.")).not.toBeChecked();
   await page.getByLabel(/I've read/).check();
   await page.screenshot({ path: shot("trial-booking"), fullPage: true });
   await page.getByRole("button", { name: "Book the trial" }).click();

@@ -98,6 +98,10 @@ export function TrialForm({ groups, sessions, fee, privacyHref }: { groups: { va
           .
         </span>
       </label>
+      <label className="flex min-h-12 items-start gap-3 text-[15px]">
+        <input type="checkbox" name="noFollowUp" value="yes" className="mt-1 h-5 w-5 shrink-0 accent-[var(--grass)]" />
+        <span>Don&apos;t email me after the trial about joining the club.</span>
+      </label>
       {state.error ? (
         <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
           {state.error}

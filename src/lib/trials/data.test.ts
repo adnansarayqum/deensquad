@@ -76,10 +76,16 @@ describe("trial sessions", () => {
     await t.asSystem((tx) => markFollowUpSent(tx, [booked.id]));
     expect(await t.asSystem((tx) => dueFollowUps(tx, later))).toHaveLength(0);
 
+    // A family that ticked "Don't email me after the trial about joining" never gets it.
+    const quiet = await t.asSystem((tx) => bookTrial(tx, { ...booking(), email: "quiet@example.com", childFirstName: "Zayd", noFollowUp: true }, monday));
+    if (!quiet.ok) throw new Error("not booked");
+    expect(await t.asUser(coach, (tx) => setTrialArrived(tx, session, quiet.id, true, atGate))).toEqual({});
+    expect(await t.asSystem((tx) => dueFollowUps(tx, later))).toHaveLength(0);
+
     // 181 days on, the personal details go and the takings stay.
     const muchLater = new Date(friday.start.getTime() + 181 * 86400_000);
-    expect(await t.asSystem((tx) => anonymiseOldTrials(tx, muchLater))).toBe(1);
-    const [row] = await t.asSystem((tx) => tx.query<{ email: string; phone: string | null; child_first_name: string }>(`select email, phone, child_first_name from trial_bookings`));
+    expect(await t.asSystem((tx) => anonymiseOldTrials(tx, muchLater))).toBe(2);
+    const [row] = await t.asSystem((tx) => tx.query<{ email: string; phone: string | null; child_first_name: string }>(`select email, phone, child_first_name from trial_bookings order by created_at`));
     expect(row).toMatchObject({ phone: null, child_first_name: "Trial" });
     expect(row.email).toMatch(/^removed\+/);
     expect(await t.asSystem((tx) => anonymiseOldTrials(tx, muchLater))).toBe(0);

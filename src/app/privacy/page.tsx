@@ -93,8 +93,8 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
           />
           <p>
             <b>Trial sessions.</b> If you book a trial on the club&apos;s booking page before joining, we keep your name, email and mobile, and your child&apos;s
-            name, date of birth and group, so the coaches know to expect your child and can contact you. We email you the details, and a link to join
-            the club after the trial. The club&apos;s coaches and admins can see it. We remove these details 6 months after the trial.
+            name, date of birth and group, so the coaches know to expect your child and can contact you. We email you the details, and one email with a link to
+            join the club after the trial, unless you tick the box on the booking form to say you don&apos;t want it. The club&apos;s coaches and admins can see it. We remove these details 6 months after the trial.
           </p>
           <p>
             When you use the app we also keep a record of when you signed in and the device&apos;s internet address, to keep accounts secure. If you turn on
@@ -268,7 +268,9 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
           </p>
           <p>To use any of these rights, {contact}. We will reply within one month.</p>
           <p>
-            If you are unhappy with how we have used your information, please tell us first so we can put it right. You can also complain to the
+            <b>Complaints.</b> If you are unhappy with how we have used your information, {contact}.
+            We will let you know we have your complaint within 30 days, look into it without delay, and tell you what we found and what we have done.
+            You can also complain to the
             Information Commissioner&apos;s Office (ICO) at{" "}
             <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener noreferrer" className="font-bold text-grass-text underline">
               ico.org.uk

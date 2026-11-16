@@ -58,7 +58,7 @@ export async function bookTrialAction(_prev: TrialFormState, formData: FormData)
   const result = await asSystem(async (tx) => ({
     booked: await bookTrial(
       tx,
-      { sessionId, parentFirstName, parentLastName, email, phone, childFirstName, childLastName, dateOfBirth: dob.dob, ageGroup },
+      { sessionId, parentFirstName, parentLastName, email, phone, childFirstName, childLastName, dateOfBirth: dob.dob, ageGroup, noFollowUp: formData.get("noFollowUp") === "yes" },
       now,
     ),
     fee: poundsText(await sessionFeePence(tx)),

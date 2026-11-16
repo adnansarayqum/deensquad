@@ -22,6 +22,12 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "same-origin" },
+          // Browser features the app never uses are switched off; the camera (gate scanner) and microphone (Dictate)
+          // stay for the app's own pages only, never for anything embedded in them.
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), bluetooth=(), serial=(), hid=(), midi=(), accelerometer=(), gyroscope=(), magnetometer=(), browsing-topics=()",
+          },
           { key: "Strict-Transport-Security", value: "max-age=31536000" },
         ],
       },
