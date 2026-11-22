@@ -121,7 +121,7 @@ describe("admin and staff screens are behind a login", () => {
 describe("every request checks who is asking", () => {
   /** Routes that are meant to be reached without a session, and what guards them instead. */
   const PUBLIC_ROUTES: Record<string, RegExp> = {
-    "src/app/api/health/route.ts": /select 1/, // no data, only that the app and database are up
+    "src/app/api/health/route.ts": /from public\.schema_migrations/, // no data, only that the app and database are up and migrated
     "src/app/api/cron/chase/route.ts": /timingSafeEqual/, // the cron's bearer secret
     "src/app/api/sumup/webhook/route.ts": /confirmSumupPayment/, // asks SumUp itself
     "src/app/api/calendar/[file]/route.ts": /guardianForToken|tokenHash|sha256|createHash/i, // the hashed link

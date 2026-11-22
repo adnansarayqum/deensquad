@@ -153,4 +153,21 @@ describe.skipIf(!REAL_DATABASE_URL)("two at once, on a real Postgres", () => {
     );
     expect(counts).toEqual({ here: 1, paid: 1 });
   });
+
+  it("every connection carries the time limits, so a stuck statement or a forgotten transaction gives its connection back", async () => {
+    const [limits] = await t.asSystem((tx) =>
+      tx.query<{ statement: string; idle: string }>(
+        `select current_setting('statement_timeout') as statement, current_setting('idle_in_transaction_session_timeout') as idle`,
+      ),
+    );
+    expect(limits).toEqual({ statement: "5min", idle: "15min" });
+    // And a statement over the limit is ended, not left running (shortened here to keep the test quick).
+    await expect(
+      t.asSystem(async (tx) => {
+        await tx.query(`set local statement_timeout = '200ms'`);
+        await tx.query(`select pg_sleep(2)`);
+      }),
+    ).rejects.toThrow(/statement timeout/);
+    expect(await t.asSystem((tx) => tx.query<{ one: number }>(`select 1 as one`))).toEqual([{ one: 1 }]);
+  });
 });

@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { requireAdmin } from "../auth/session";
 import { UUID } from "../auth/tokens";
-import { londonDate, londonTime } from "../dates";
+import { londonDate, londonIsoDate, londonTime } from "../dates";
 import { asUser } from "../db";
 import { readLondonDateTime } from "../incidents/data";
 import { cleanSponsorLink } from "../sponsors/data";
@@ -34,7 +34,10 @@ export async function saveEvent(_prev: CommunityFormState, formData: FormData): 
     endsAt = m ? londonTime(day.year, day.month, day.day, Number(m[1]), Number(m[2])) : null;
     if (!endsAt || endsAt <= startsAt) return { error: "The finish time should be later the same day than the start." };
   }
-  if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) return { error: "The last date should be a day, like 2027-03-25." };
+  if (until && (!/^\d{4}-\d{2}-\d{2}$/.test(until) || Number.isNaN(Date.parse(`${until}T00:00:00Z`)))) {
+    return { error: "The last date should be a day, like 2027-03-25." };
+  }
+  if (weekly && until && until < londonIsoDate(startsAt)) return { error: "The last date should be on or after the first day." };
   if (linkText && !link) return { error: "The link should be a full address starting with https://" };
 
   const values = [

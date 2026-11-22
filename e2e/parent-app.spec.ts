@@ -198,12 +198,12 @@ test("friday: each child gets their own answer and headcount", async ({ page, br
 
   // News's This week card shows the same answers, ready to change there too.
   await page.getByRole("link", { name: "Home" }).click();
-  await expect(page.getByRole("button", { name: "Yusuf is coming", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("button", { name: "Not coming: Musa isn't coming", exact: true })).toHaveAttribute("aria-pressed", "true");
   // Both answered: the session folds to one line, so the club's news is on the first screen; Change opens it.
+  // (Checked on Home itself: the Sessions screen left behind has buttons of the same names until Home has loaded.)
   await expect(page.getByText("Yusuf coming · Musa not coming")).toBeVisible();
   await page.getByText("Yusuf coming · Musa not coming").click();
-  await expect(page.getByRole("button", { name: "Yusuf is coming", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Yusuf is coming", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Not coming: Musa isn't coming", exact: true })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("to-do: contacts copied to a sibling, consent and payments", async ({ page }) => {

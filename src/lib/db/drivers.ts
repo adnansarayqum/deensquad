@@ -1,6 +1,10 @@
 import type { TransactionSql } from "postgres";
 import type { Database, Queryable } from "./types";
 
+/** The longest one statement may run (5 minutes), and the longest a transaction may sit idle (15 minutes). */
+export const STATEMENT_TIMEOUT_MS = 5 * 60 * 1000;
+export const IDLE_IN_TRANSACTION_MS = 15 * 60 * 1000;
+
 /** Railway (and any real Postgres): a small postgres.js pool. */
 export async function postgresDatabase(url: string): Promise<Database> {
   const { default: postgres } = await import("postgres");
@@ -8,6 +12,11 @@ export async function postgresDatabase(url: string): Promise<Database> {
     max: Number(process.env.DATABASE_POOL_MAX ?? 5),
     idle_timeout: 30,
     connect_timeout: 10,
+    // Backstops, far above anything the app does (its slowest statements take a second or two; the chase holds a
+    // transaction open while it sends, for a few minutes at most). Without them one statement stuck behind a lock, or a
+    // transaction whose request died mid-way, keeps its connection for ever, and with a pool this small a few of
+    // those stop every page. Postgres ends the statement or the session instead and the connection comes back.
+    connection: { statement_timeout: STATEMENT_TIMEOUT_MS, idle_in_transaction_session_timeout: IDLE_IN_TRANSACTION_MS },
     onnotice: () => {},
   });
   // postgres.js remembers any failed statement in a transaction and rolls it all back, even if the

@@ -128,7 +128,9 @@ test("Friday at 200% zoom (195px wide) doesn't scroll sideways, and the tab bar 
 
 test("your data: a parent downloads their family's data, which holds their children and no one else's", async ({ browser }) => {
   test.skip(!existsSync(YOUR_DATA_PARENT_STATE), "needs the sign-up test above");
-  const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE, acceptDownloads: true });
+  // No service worker here: once the app's worker is running, a page's requests can go through it and past the
+  // stand-in answer below (Playwright only stands in for requests the page itself makes), and the test then fails by timing.
+  const context = await newContext(browser, { ...PHONE, storageState: YOUR_DATA_PARENT_STATE, acceptDownloads: true, serviceWorkers: "block" });
   const page = await context.newPage();
   await page.goto("/player/settings");
   const section = page.getByRole("region", { name: "Your data" });

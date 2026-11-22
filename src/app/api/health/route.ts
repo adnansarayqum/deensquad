@@ -5,9 +5,9 @@ import { asSystem } from "@/lib/db";
 export async function GET() {
   try {
     const started = performance.now();
-    await asSystem((tx) => tx.query("select 1"));
-    const dbMs = Math.round(performance.now() - started);
+    // One transaction: phones on the register ask this every 20 seconds, so it shouldn't take two connections' turns.
     const [{ n }] = await asSystem((tx) => tx.query<{ n: number }>("select count(*)::int as n from public.schema_migrations"));
+    const dbMs = Math.round(performance.now() - started);
     return Response.json({ ok: true, migrations: n, dbMs });
   } catch (error) {
     console.error("[health]", error instanceof Error ? error.message : error);
