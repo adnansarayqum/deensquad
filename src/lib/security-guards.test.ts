@@ -83,6 +83,7 @@ describe("admin and staff screens are behind a login", () => {
   it("admin-only screens ask for an admin, not just staff", () => {
     const ADMIN_ONLY = [
       "admin/assistant",
+      "admin/community",
       "admin/families/import",
       "admin/families/invite",
       "admin/families/teamfeepay",

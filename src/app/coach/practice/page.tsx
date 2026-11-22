@@ -12,6 +12,7 @@ import { iso } from "@/lib/db/types";
 import { Card, Pill } from "@/components/ui";
 import { isGroupCoach, requireStaff, staffGroups } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
+import { setSheetCommunity } from "@/lib/community/actions";
 import { addPracticeSheet, deletePracticeSheet } from "@/lib/plans/actions";
 import { loadPracticeSheets } from "@/lib/plans/data";
 
@@ -90,6 +91,15 @@ export default async function StaffPracticePage() {
               ))}
             </div>
           </fieldset>
+          {user.staff.role === "admin" ? (
+            <label className="flex min-h-12 items-start gap-3 text-[15px]">
+              <input type="checkbox" name="community" className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--grass)]" />
+              <span>
+                <span className="font-bold">Also put it in Coach&apos;s corner</span>
+                <span className="block text-ink-muted">Everyone on the app sees it on the Community page, whatever their child&apos;s group.</span>
+              </span>
+            </label>
+          ) : null}
         </StatefulForm>
       </div>
 
@@ -101,6 +111,7 @@ export default async function StaffPracticePage() {
             <h3 className="text-base font-bold">{s.title}</h3>
             <span className="flex flex-wrap justify-end gap-1">
               {s.video ? <Pill tone="neutral">Video</Pill> : null}
+              {s.community ? <Pill tone="neutral">Coach&apos;s corner</Pill> : null}
               <Pill tone="neutral">{s.ageGroups.length ? s.ageGroups.join(", ") : "Everyone"}</Pill>
             </span>
           </div>
@@ -109,6 +120,19 @@ export default async function StaffPracticePage() {
           {s.video ? <VideoCard video={s.video} name={s.title} /> : null}
           <div className="flex items-center justify-between gap-2 text-[13px] text-ink-muted">
             <span>{[s.from, day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</span>
+            {user.staff.role === "admin" ? (
+              <form action={setSheetCommunity}>
+                <input type="hidden" name="sheet" value={s.id} />
+                <input type="hidden" name="share" value={s.community ? "no" : "yes"} />
+                <button
+                  type="submit"
+                  aria-label={s.community ? `Take ${s.title} out of Coach's corner` : `Put ${s.title} in Coach's corner`}
+                  className="min-h-12 px-1 text-[13px] font-bold text-grass-text underline"
+                >
+                  {s.community ? "Take out of Coach's corner" : "Put in Coach's corner"}
+                </button>
+              </form>
+            ) : null}
             {user.staff.role === "admin" || s.postedById === user.staff.id ? (
               <ConfirmDelete action={deletePracticeSheet} label="Remove" confirmLabel="Yes, remove it" name={s.title}>
                 <input type="hidden" name="sheet" value={s.id} />

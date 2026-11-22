@@ -94,8 +94,10 @@ export async function addPracticeSheet(_prev: PlanState, formData: FormData): Pr
   await asUser(user.id, async (tx) => {
     const fileId = file.upload ? await saveFile(tx, file.upload, user.staff.id) : null;
     await tx.query(
-      `insert into practice_sheets (title, body, age_groups, file_id, video_url, posted_by) values ($1, $2, $3::text[]::age_group[], $4, $5, $6)`,
-      [title, body, groups, fileId, video.url, user.staff.id],
+      `insert into practice_sheets (title, body, age_groups, file_id, video_url, posted_by, community)
+       values ($1, $2, $3::text[]::age_group[], $4, $5, $6, $7)`,
+      // Only an admin can put a sheet in Coach's corner, where everyone signed in sees it.
+      [title, body, groups, fileId, video.url, user.staff.id, user.staff.role === "admin" && formData.get("community") === "on"],
     );
   });
   notifyAfterResponse();

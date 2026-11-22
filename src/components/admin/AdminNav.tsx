@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, ClipboardCheck, ClipboardList, FileText, House, Inbox, Megaphone, MoreHorizontal, HeartHandshake, ShoppingBag, Star, UserCog, Users } from "lucide-react";
+import { CalendarDays, ClipboardCheck, ClipboardList, FileText, House, Inbox, Megaphone, MoreHorizontal, HeartHandshake, PartyPopper, ShoppingBag, Star, UserCog, Users } from "lucide-react";
 
 /** Every staff page, in the order the club works through them. Coaches don't see the admin-only ones. */
 export const STAFF_NAV = [
@@ -18,6 +18,7 @@ export const STAFF_NAV = [
   // Ratings (/coach/ratings) are reached from Points and stars, so it stays lit there.
   { href: "/coach/awards", label: "Points and stars", also: "/coach/ratings", icon: Star },
   { href: "/admin/shop", label: "Shop", adminOnly: true, icon: ShoppingBag },
+  { href: "/admin/community", label: "Community", adminOnly: true, icon: PartyPopper },
   { href: "/admin/sponsors", label: "Sponsors", adminOnly: true, icon: HeartHandshake },
   { href: "/admin/staff", label: "Staff", adminOnly: true, icon: UserCog },
 ] as const;

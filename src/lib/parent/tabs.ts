@@ -6,6 +6,7 @@ export type Tab = "news" | "friday" | "checklist" | "shop" | "player";
 const TAB_OF_SEGMENT: Record<string, Tab> = {
   news: "news",
   sponsors: "news",
+  community: "news",
   friday: "friday",
   pass: "friday",
   practice: "friday",
@@ -31,11 +32,11 @@ export function sectionName(path: string): string {
   const second = path.replace(/^\//, "").split(/[?#]/)[0].split("/")[1];
   if (first === "checklist") return "To-do";
   if (first === "player") return second === "child" ? "Child's details" : second === "settings" ? "Settings" : "Family";
-  return { news: "Home", friday: "Sessions", pass: "QR codes", practice: "Practise at home", shop: "Club shop", messages: "Messages", sponsors: "Our sponsors" }[first] ?? "Back";
+  return { news: "Home", friday: "Sessions", pass: "QR codes", practice: "Practise at home", shop: "Club shop", messages: "Messages", sponsors: "Our sponsors", community: "Community" }[first] ?? "Back";
 }
 
 /** The parent screens a ?from= may point back to. Anything else (another site, staff pages) falls back. */
-const BACK_OK = /^\/(news|friday|pass|practice|checklist|shop|player|messages)(\/[A-Za-z0-9/_-]*)?(\?[A-Za-z0-9=&_-]*)?$/;
+const BACK_OK = /^\/(news|friday|pass|practice|checklist|shop|player|messages|community|sponsors)(\/[A-Za-z0-9/_-]*)?(\?[A-Za-z0-9=&_-]*)?$/;
 
 /**
  * Where a page's back link goes: the screen it was opened from (?from=, checked), else its usual parent. The label

@@ -78,10 +78,12 @@ export type PracticeSheet = {
   from: string | null;
   postedById: string | null;
   createdAt: string;
+  /** Shared with everyone signed in, in Coach's corner on the Community page. */
+  community: boolean;
 };
 
 /** Sheets for any of these groups (and those for everyone), newest first. */
-export async function loadPracticeSheets(tx: Queryable, groups: readonly AgeGroup[], limit = 50): Promise<PracticeSheet[]> {
+export async function loadPracticeSheets(tx: Queryable, groups: readonly AgeGroup[], limit = 50, communityOnly = false): Promise<PracticeSheet[]> {
   const rows = await tx.query<{
     id: string;
     title: string;
@@ -95,15 +97,16 @@ export async function loadPracticeSheets(tx: Queryable, groups: readonly AgeGrou
     author: string | null;
     posted_by: string | null;
     created_at: Date;
+    community: boolean;
   }>(
     `select ps.id, ps.title, ps.body, ps.age_groups::text[] as age_groups, ps.file_id, f.name as file_name, f.mime as file_mime, f.size as file_size,
-       ps.video_url, sn.display_name as author, ps.posted_by, ps.created_at
+       ps.video_url, sn.display_name as author, ps.posted_by, ps.created_at, ps.community
      from practice_sheets ps
      left join club_files f on f.id = ps.file_id
      left join staff_names sn on sn.id = ps.posted_by
-     where cardinality(ps.age_groups) = 0 or ps.age_groups::text[] && $1::text[]
+     where case when $3 then ps.community else cardinality(ps.age_groups) = 0 or ps.age_groups::text[] && $1::text[] end
      order by ps.created_at desc limit $2`,
-    [[...groups], limit],
+    [[...groups], limit, communityOnly],
   );
   return rows.map((r) => ({
     id: r.id,
@@ -115,5 +118,11 @@ export async function loadPracticeSheets(tx: Queryable, groups: readonly AgeGrou
     from: r.author,
     postedById: r.posted_by,
     createdAt: iso(r.created_at),
+    community: r.community,
   }));
+}
+
+/** Coach's corner: the sheets an admin has shared with everyone signed in, whatever groups they were written for. */
+export function loadCommunitySheets(tx: Queryable, limit = 30): Promise<PracticeSheet[]> {
+  return loadPracticeSheets(tx, [], limit, true);
 }
