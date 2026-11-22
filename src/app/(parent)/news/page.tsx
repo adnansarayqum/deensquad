@@ -17,6 +17,7 @@ import { getNewsPage } from "@/lib/parent/load";
 import type { AnnouncementView, Family } from "@/lib/parent/data";
 import { MediaGallery } from "@/components/media/MediaGallery";
 import { ThisWeek } from "@/components/ThisWeek";
+import { HomeSponsors } from "@/components/HomeSponsors";
 import { AwaitingApproval } from "@/components/AwaitingApproval";
 import { ComingOnNews, SessionNow, canAnswerComing } from "@/components/NewsSession";
 import { groupsPlural } from "@/lib/domain";
@@ -90,6 +91,8 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
             <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
           </Link>
         ) : null}
+        {/* One slim row, so the club's news stays on the first screen. */}
+        <HomeSponsors />
         {news.length > 3 ? (
           <nav aria-label="Show club news" className="flex flex-wrap gap-2">
             {(

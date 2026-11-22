@@ -49,3 +49,24 @@ export async function cleanScreenshot(data: Uint8Array): Promise<{ mime: "image/
     return null;
   }
 }
+
+/** Longest side of a stored sponsor logo: shown at up to 64px, with room for sharp screens. */
+export const LOGO_SIDE = 600;
+
+/**
+ * Re-encodes a sponsor's logo before it's stored: at most 600px, on white (a see-through logo would vanish on the
+ * dark theme), lossless PNG so lettering stays sharp, no metadata. Null when the bytes aren't a readable image.
+ */
+export async function cleanLogo(data: Uint8Array): Promise<{ mime: "image/png"; data: Uint8Array } | null> {
+  try {
+    const out = await sharp(data, { limitInputPixels: 50_000_000, failOn: "error" })
+      .rotate()
+      .resize(LOGO_SIDE, LOGO_SIDE, { fit: "inside", withoutEnlargement: true })
+      .flatten({ background: "#ffffff" })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+    return { mime: "image/png", data: new Uint8Array(out) };
+  } catch {
+    return null;
+  }
+}

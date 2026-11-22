@@ -87,6 +87,7 @@ describe("admin and staff screens are behind a login", () => {
       "admin/families/invite",
       "admin/families/teamfeepay",
       "admin/shop",
+      "admin/sponsors",
       "admin/staff",
       "admin/summary",
       "admin/wellbeing",

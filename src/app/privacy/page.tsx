@@ -176,6 +176,10 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
                 <b>SumUp</b> takes card payments in the club shop. Your card details go to SumUp, never to the club or the app.
               </>,
               <>
+                <b>Our sponsors</b>: the sponsors page links to their own websites and social pages. The app tells a sponsor nothing about you; what
+                you do on their site is between you and them.
+              </>,
+              <>
                 <b>YouTube</b> (Google): coaches can add a YouTube video to a session plan or practice sheet. The app shows its picture, which comes from
                 YouTube; the video itself loads from YouTube only if you tap to play it, in YouTube&apos;s privacy-enhanced mode, under Google&apos;s own
                 privacy notice.
