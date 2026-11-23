@@ -34,7 +34,7 @@ export async function loadOverview(tx: Queryable): Promise<Overview> {
   return row;
 }
 
-export type FamilyGuardian = { id: string; name: string; email: string | null; phone: string | null; inApp: boolean; invited: boolean; notifications?: boolean };
+export type FamilyGuardian = { id: string; name: string; email: string | null; phone: string | null; inApp: boolean; invited: boolean; notifications?: boolean; lastOpened?: string | null };
 
 export type FamilyRow = {
   id: string;
@@ -237,10 +237,12 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
       in_app: boolean;
       invited: boolean;
       notifications: boolean;
+      last_opened: string | null;
       other_children: string[] | null;
     }>(
       `select g.id, g.first_name, g.last_name, g.email, g.phone, g.auth_user_id is not null as in_app, g.invited_at is not null as invited,
          guardian_notifications_on(g.id) as notifications,
+         (select max(ao.day)::text from app_opens ao where ao.guardian_id = g.id) as last_opened,
          (select array_agg(o.first_name order by o.first_name) from player_guardians og join players o on o.id = og.player_id
           where og.guardian_id = g.id and o.id <> $1) as other_children
        from guardians g join player_guardians pg on pg.guardian_id = g.id where pg.player_id = $1 order by g.first_name`,
@@ -285,6 +287,7 @@ export async function loadChild(tx: Queryable, id: string): Promise<ChildDetail 
       inApp: g.in_app,
       invited: g.invited,
       notifications: g.notifications,
+      lastOpened: g.last_opened,
       otherChildren: g.other_children ?? [],
     })),
     contacts,
@@ -306,6 +309,8 @@ export type NewsRow = {
   /** Parents it reaches and how many have read it: for a group coach, only parents with a child in their groups. */
   audienceCount: number;
   readCount: number;
+  /** Parents it reaches who've had it on screen (announcement_views) or read it: Seen, migration 0055. */
+  seenCount: number;
   /** True when the counts are a group coach's own groups only ("Your groups: 1 of 25 read"). */
   groupsOnly: boolean;
   /** A message to a tournament squad: the session it's about (it reaches only the squad's parents). */
@@ -325,7 +330,12 @@ const newsColumns = (groups: string) => `a.id, a.topic, a.title, a.body, a.audie
   -- parents who've read it and still have a child it reaches (a squad message follows the squad as it changes)
   (select count(distinct r.guardian_id)::int from announcement_reads r
     join player_guardians pg on pg.guardian_id = r.guardian_id join players p on p.id = pg.player_id
-    where r.announcement_id = a.id and p.approved_at is not null and ${newsReaches()} and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))) as read_count`;
+    where r.announcement_id = a.id and p.approved_at is not null and ${newsReaches()} and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))) as read_count,
+  -- parents who've had it on screen or read it, with a child it reaches (Seen, migration 0055)
+  (select count(distinct pg.guardian_id)::int from player_guardians pg join players p on p.id = pg.player_id
+    where p.approved_at is not null and ${newsReaches()} and (${groups}::text[] is null or p.age_group::text = any (${groups}::text[]))
+      and (exists (select 1 from announcement_views v where v.announcement_id = a.id and v.guardian_id = pg.guardian_id)
+        or exists (select 1 from announcement_reads r where r.announcement_id = a.id and r.guardian_id = pg.guardian_id))) as seen_count`;
 
 type NewsDbRow = {
   id: string;
@@ -339,6 +349,7 @@ type NewsDbRow = {
   posted_by: string | null;
   audience_count: number;
   read_count: number;
+  seen_count: number;
   squad_session_id: string | null;
   squad_title: string | null;
   chosen: string[] | null;
@@ -356,6 +367,7 @@ const toNews = (r: NewsDbRow, groups: readonly AgeGroup[] | null): NewsRow => ({
   postedBy: r.posted_by,
   audienceCount: r.audience_count,
   readCount: Math.min(r.read_count, r.audience_count),
+  seenCount: Math.min(Math.max(r.seen_count, r.read_count), r.audience_count),
   groupsOnly: groups !== null,
   squad: r.squad_session_id ? { sessionId: r.squad_session_id, title: r.squad_title ?? "Squad" } : null,
   chosen: r.chosen,
@@ -389,10 +401,14 @@ export type UnreadGuardian = {
   partnerRead: boolean;
   /** Reminders already sent: app, email, sms, whatsapp (repeats allowed for WhatsApp). */
   chased: string[];
+  /** When the post was first on their screen without a tap (Seen, migration 0055), else null. */
+  seenAt: string | null;
+  /** The last London day they opened the app (app_opens), else null. */
+  lastOpened: string | null;
 };
 
 /** A parent who has read a message: who, for which children, and when. */
-export type NewsReader = { id: string; name: string; children: string; readAt: string };
+export type NewsReader = { id: string; name: string; children: string; readAt: string; fromNotification: boolean };
 
 /**
  * One message and the parents who haven't read it. `groups` (a group coach's own) hides a message
@@ -418,6 +434,8 @@ export async function loadNewsDetail(
     children: string;
     partner_read: boolean;
     chased: string[] | null;
+    seen_at: Date | null;
+    last_opened: string | null;
   }>(
     `select g.id, g.first_name, g.last_name, g.phone, g.auth_user_id is not null as in_app,
        string_agg(distinct p.first_name, ', ') as children,
@@ -427,7 +445,9 @@ export async function loadNewsDetail(
          where r.announcement_id = $1 and r.guardian_id <> g.id
            and other.player_id in (select player_id from player_guardians where guardian_id = g.id)
        ) as partner_read,
-       (select array_agg(c.channel::text order by c.sent_at) from announcement_chases c where c.announcement_id = $1 and c.guardian_id = g.id) as chased
+       (select array_agg(c.channel::text order by c.sent_at) from announcement_chases c where c.announcement_id = $1 and c.guardian_id = g.id) as chased,
+       (select v.seen_at from announcement_views v where v.announcement_id = $1 and v.guardian_id = g.id) as seen_at,
+       (select max(o.day)::text from app_opens o where o.guardian_id = g.id) as last_opened
      from guardians g
      join player_guardians pg on pg.guardian_id = g.id
      join players p on p.id = pg.player_id
@@ -441,8 +461,8 @@ export async function loadNewsDetail(
     [id, groups ? [...groups] : null],
   );
   // Who has read it: parents it reaches (in the coach's groups), newest first, with when.
-  const readers = await tx.query<{ id: string; first_name: string; last_name: string; children: string; read_at: Date }>(
-    `select g.id, g.first_name, g.last_name, string_agg(distinct p.first_name, ', ') as children, r.read_at
+  const readers = await tx.query<{ id: string; first_name: string; last_name: string; children: string; read_at: Date; via: string | null }>(
+    `select g.id, g.first_name, g.last_name, string_agg(distinct p.first_name, ', ') as children, r.read_at, r.via
      from announcement_reads r
      join guardians g on g.id = r.guardian_id
      join player_guardians pg on pg.guardian_id = g.id
@@ -450,13 +470,19 @@ export async function loadNewsDetail(
      join announcements a on a.id = r.announcement_id
      where r.announcement_id = $1 and ${newsReaches()}
        and ($2::text[] is null or p.age_group::text = any ($2::text[]))
-     group by g.id, r.read_at
+     group by g.id, r.read_at, r.via
      order by r.read_at desc`,
     [id, groups ? [...groups] : null],
   );
   return {
     news: toNews(row, groups),
-    readers: readers.map((r) => ({ id: r.id, name: `${r.first_name} ${r.last_name}`, children: r.children, readAt: new Date(r.read_at).toISOString() })),
+    readers: readers.map((r) => ({
+      id: r.id,
+      name: `${r.first_name} ${r.last_name}`,
+      children: r.children,
+      readAt: new Date(r.read_at).toISOString(),
+      fromNotification: r.via === "notification",
+    })),
     unread: unread.map((u) => ({
       id: u.id,
       name: `${u.first_name} ${u.last_name}`,
@@ -466,6 +492,8 @@ export async function loadNewsDetail(
       children: u.children,
       partnerRead: u.partner_read,
       chased: u.chased ?? [],
+      seenAt: u.seen_at ? new Date(u.seen_at).toISOString() : null,
+      lastOpened: u.last_opened,
     })),
   };
 }

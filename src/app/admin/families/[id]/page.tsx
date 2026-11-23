@@ -145,6 +145,8 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                 {g.inApp ? <Pill tone="done">Signed in</Pill> : g.invited ? <Pill tone="gold">Invited</Pill> : <Pill tone="neutral">Not invited</Pill>}
                 {/* Whether app notifications reach this parent: on a phone or browser they allowed them on. */}
                 {g.inApp ? <Pill tone="neutral">{g.notifications ? "Notifications on" : "Notifications off"}</Pill> : null}
+                {/* App use (migration 0055): the last day they opened the app, recorded from 23 Nov 2026. */}
+                {g.inApp ? <Pill tone="neutral">{g.lastOpened ? `Last opened ${shortDay(g.lastOpened)}` : "Not opened since 23 Nov"}</Pill> : null}
               </span>
             </div>
             {isAdmin ? (

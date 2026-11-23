@@ -2,7 +2,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { devices, expect, test, type Page } from "@playwright/test";
 import jsQR from "jsqr";
-import { ADMIN_STATE, COACH_STATE, OUTBOX, latestCode, newContext, shot, signIn, skipInstallGate, switchUser, unfold, previewAndPost, editStaff } from "./helpers";
+import { ADMIN_STATE, COACH_STATE, OUTBOX, latestCode, newContext, shot, signIn, skipInstallGate, switchUser, unfold, previewAndPost, editStaff, whenLive } from "./helpers";
 
 // Signs in with real emailed codes (read from the test outbox) and walks through the parent,
 // coach and admin flows against the sample club. Screenshots land in e2e/.results/screens.
@@ -745,6 +745,7 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await expect(unreadable).not.toContainText(/signal/i);
   await expect(unreadable.getByRole("link", { name: "Download" })).toHaveAttribute("href", /\/api\/files\/[0-9a-f-]{36}\?download=1$/);
   await expect(unreadable.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  await whenLive(page.getByRole("link", { name: "Back" }));
   await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveURL(/\/coach\/practice$/);
   // Each sheet's Remove is named for the sheet, and asks before it goes.
@@ -763,6 +764,7 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   // Staff see the file name they uploaded; parents (below) see "Practice sheet (photo)".
   await expect(page.getByRole("heading", { name: "keepy-uppy.png" })).toBeVisible();
   await expect(page.getByRole("img", { name: "keepy-uppy.png" })).toBeVisible();
+  await whenLive(page.getByRole("link", { name: "Back" }));
   await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveURL(/\/coach\/practice$/);
 
@@ -817,6 +819,7 @@ test("plans: the club shares a U10 session plan and a practice sheet; the parent
   await page.unroute(`**/api/files/${fileId}`);
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByText("2 pages", { exact: true })).toBeVisible();
+  await whenLive(page.getByRole("link", { name: "Back" }));
   await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveURL(/\/friday$/);
 

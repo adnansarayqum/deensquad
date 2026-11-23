@@ -68,6 +68,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "your name, email address and phone number",
               "which children you look after and your relationship to them",
               "whether you have read club news, your quick answers to club messages (such as Yes or No for your child), and the date you signed the club contract",
+              "which club posts have been on your screen, and the days you opened the app and how many times, so the club can tell whether its posts reach parents (the club's staff see these; how long the app is open is only ever added up for the whole club, never against your name)",
               "messages between you and the club in the app (who wrote each one and when)",
               "if you say your child isn't coming to a session and choose to tell the coaches why, what you wrote: it's sent to them as a message and shown to the coaches on that session's register, so only write what you're happy for them to know",
               "if you ask us to delete your account, the date you asked",
@@ -251,6 +252,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
               "Photos and videos on club news, sessions and messages are kept while that news, session or message is; when it is deleted, they are deleted within a day.",
               "Messages with the club are kept as club records while your child is at the club, and deleted with their record when they leave, unless our safeguarding duties mean we must keep them longer.",
               "Sign-in codes expire after 15 minutes and old sign-in records are deleted after 30 days.",
+              "The days you opened the app are deleted after a year.",
             ]}
           />
         </Part>

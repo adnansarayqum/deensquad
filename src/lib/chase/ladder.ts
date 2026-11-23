@@ -58,6 +58,8 @@ export type ChaseTarget = {
   email: string | null;
   phone: string | null;
   children: string[];
+  /** A post that asks for a plain tap (no quick answer, not "who's coming"): its notification offers "Mark as read". */
+  tapRead?: boolean;
 };
 
 /** Parents due a given step: the message is old enough, they and their child's other parent haven't read it, and the step hasn't run. */
@@ -73,8 +75,9 @@ export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date,
     email: string | null;
     phone: string | null;
     children: string[];
+    tap_read: boolean;
   }>(
-    `select a.id as announcement_id, a.title, a.body, g.id as guardian_id, g.auth_user_id as user_id, g.first_name, g.email, g.phone,
+    `select a.id as announcement_id, a.title, a.body, (a.quick_answers is null and coalesce(a.session_notice, '') <> 'attendance') as tap_read, g.id as guardian_id, g.auth_user_id as user_id, g.first_name, g.email, g.phone,
        array_agg(distinct p.first_name order by p.first_name) as children
      from announcements a
      -- a child still waiting for the club's approval (migration 0047) doesn't bring their parents in: they can't read it
@@ -131,6 +134,7 @@ export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date,
     email: r.email,
     phone: r.phone,
     children: r.children,
+    tapRead: r.tap_read,
   }));
 }
 

@@ -7,7 +7,7 @@ import { CalendarDays, ClipboardCheck, ClipboardList, FileText, House, Inbox, Me
 
 /** Every staff page, in the order the club works through them. Coaches don't see the admin-only ones. */
 export const STAFF_NAV = [
-  { href: "/admin", label: "Overview", exact: true, tab: true, icon: House, section: "Today", also: "/admin/assistant" },
+  { href: "/admin", label: "Overview", exact: true, tab: true, icon: House, section: "Today", also: ["/admin/assistant", "/admin/app-use"] },
   { href: "/coach", label: "Register", exact: true, tab: true, icon: ClipboardCheck, section: "Today" },
   { href: "/admin/families", label: "Families", tab: true, icon: Users, section: "Families and messages" },
   { href: "/admin/messages", label: "Inbox", tab: true, icon: Inbox, section: "Families and messages" },
@@ -16,7 +16,7 @@ export const STAFF_NAV = [
   { href: "/coach/plans", label: "Plans", icon: ClipboardList, section: "Training" },
   { href: "/coach/practice", label: "Practice sheets", icon: FileText, section: "Training" },
   // Ratings (/coach/ratings) are reached from Points and stars, so it stays lit there.
-  { href: "/coach/awards", label: "Points and stars", also: "/coach/ratings", icon: Star, section: "Training" },
+  { href: "/coach/awards", label: "Points and stars", also: ["/coach/ratings"], icon: Star, section: "Training" },
   { href: "/admin/shop", label: "Shop", adminOnly: true, icon: ShoppingBag, section: "Club" },
   { href: "/admin/community", label: "Community", adminOnly: true, icon: PartyPopper, section: "Club" },
   { href: "/admin/sponsors", label: "Sponsors", adminOnly: true, icon: HeartHandshake, section: "Club" },
@@ -35,7 +35,7 @@ export function AdminNav({ isAdmin, layout = "tabs", unreadMessages = 0 }: { isA
   const items = STAFF_NAV.filter((item) => isAdmin || !("adminOnly" in item && item.adminOnly));
   // `also` keeps an item lit on a page reached from it (the assistant from the Overview, ratings from Points and stars).
   const isActive = (item: (typeof STAFF_NAV)[number]) =>
-    ("exact" in item && item.exact ? path === item.href : path.startsWith(item.href)) || ("also" in item && path.startsWith(item.also));
+    ("exact" in item && item.exact ? path === item.href : path.startsWith(item.href)) || ("also" in item && item.also.some((a) => path.startsWith(a)));
   // Inbox carries how many conversations have a parent's message this person hasn't read. The link is named
   // "Inbox, 3 unread" (an aria-label, so it reads the same everywhere); the badge shows the number.
   const unread = (item: (typeof STAFF_NAV)[number]) => item.href === "/admin/messages" && unreadMessages > 0;

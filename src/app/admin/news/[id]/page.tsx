@@ -110,6 +110,20 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
             {covered.length ? ` · ${covered.length} whose child's other parent has read it` : ""}
           </p>
         ) : null}
+        {/* Seen (migration 0055): parents who had it on screen, tapped or not, so "not read" can be told apart from
+            "never opened". Counted from 23 Nov 2026. */}
+        {news.requiresAck && news.audienceCount ? (
+          <p className="text-sm">
+            <b className="tabular-nums">{news.seenCount}</b> of {news.audienceCount} have seen it
+            {chase.some((u) => u.seenAt) ? (
+              <span className="text-ink-muted"> · {chase.filter((u) => u.seenAt).length} seen it but haven&apos;t tapped</span>
+            ) : null}
+            .{" "}
+            <Link href="/admin/app-use" className="font-bold text-grass-text underline">
+              App use
+            </Link>
+          </p>
+        ) : null}
       </Section>
 
       {news.requiresAck ? (
@@ -145,7 +159,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
                 <span className="flex flex-col">
                   <span className="text-[15px] font-bold">{u.name}</span>
                   <span className="text-[13px] text-ink-muted">
-                    {u.children} · {u.inApp ? "in the app" : "hasn't signed in yet"}
+                    {u.children} · {!u.inApp ? "hasn't signed in yet" : u.seenAt ? `seen ${postedLabel(u.seenAt, new Date())}, not tapped` : u.lastOpened ? `not seen · last opened the app ${shortDay(u.lastOpened)}` : "not seen"}
                   </span>
                   {u.chased.length ? (
                     <span className="mt-1 flex flex-wrap gap-1">
@@ -194,7 +208,10 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
                 <li key={r.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-t border-line pt-2 first:border-0 first:pt-0">
                   <span className="flex flex-col">
                     <span className="text-[15px] font-bold">{r.name}</span>
-                    <span className="text-[13px] text-ink-muted">{r.children}</span>
+                    <span className="text-[13px] text-ink-muted">
+                      {r.children}
+                      {r.fromNotification ? " · from the notification" : ""}
+                    </span>
                   </span>
                   <span className="inline-flex items-center gap-1 text-[13px] text-ink-muted">
                     <Check aria-hidden size={14} strokeWidth={3} className="text-grass-text" />

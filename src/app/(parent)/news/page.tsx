@@ -10,6 +10,7 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import { QuickAnswers } from "@/components/messages/QuickAnswers";
 import { NotificationsCard } from "@/components/NotificationsCard";
 import { ReadFocus } from "@/components/ReadFocus";
+import { SeenTracker } from "@/components/SeenTracker";
 import { StaffSwitch } from "@/components/StaffSwitch";
 import { AppHeader, Card, Eyebrow, Pill } from "@/components/ui";
 import { postedLabel } from "@/lib/dates";
@@ -44,6 +45,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
   return (
     <>
       <PullToRefresh />
+      <SeenTracker key={unread.map((a) => a.id).join(",")} />
       <AppHeader>
         <StaffSwitch />
         <div className="flex items-center justify-between gap-3">
@@ -148,7 +150,10 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
                     </Pill>
                     <span className="text-[13px] text-ink-muted">{postedLabel(a.postedAt, now)}</span>
                   </div>
-                  <h2 className="text-[20px] leading-[25px] font-bold">{a.title}</h2>
+                  {/* Seen once the headline has been on screen for a moment (SeenTracker): the club's Seen figure. */}
+                  <h2 data-seen={a.id} className="text-[20px] leading-[25px] font-bold">
+                    {a.title}
+                  </h2>
                   <p className="text-[16px] leading-6 whitespace-pre-line">{a.body}</p>
                   <MediaGallery items={a.media} label={a.title} />
                   {outOfDate(a) ? <SessionNow session={a.session!} now={now} /> : null}

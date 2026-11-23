@@ -117,7 +117,8 @@ export default async function AdminNewsPage({ searchParams }: PageProps<"/admin/
             <label className="flex min-h-11 items-center gap-3 text-[15px]">
               <input type="checkbox" name="requiresAck" defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
               <span>
-                <b>Ask parents to tap &ldquo;I&apos;ve read this&rdquo;</b> so you can see who has read it
+                <b>Ask parents to tap &ldquo;I&apos;ve read this&rdquo;</b> so you can see who has read it.{" "}
+                <span className="text-ink-muted">Keep it for posts that matter: when every post asks, parents stop tapping.</span>
               </span>
             </label>
           </NewsComposeForm>

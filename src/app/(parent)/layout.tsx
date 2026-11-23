@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Viewport } from "next";
+import { AppUseBeacon } from "@/components/AppUseBeacon";
 import { InstallGate } from "@/components/InstallGate";
 import { TopShortcuts } from "@/components/TopShortcuts";
 import { RegisterServiceWorker } from "@/components/RegisterServiceWorker";
@@ -23,6 +24,7 @@ export default async function ParentLayout({ children }: { children: ReactNode }
       {children}
       <InstallGate isStaff={shell.isStaff} />
       <RegisterServiceWorker />
+      <AppUseBeacon />
       <Toaster />
       <TabBar unread={shell.unread} todo={shell.todo} photo={shell.photo} />
     </div>

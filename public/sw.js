@@ -114,20 +114,48 @@ self.addEventListener("push", (event) => {
   try {
     data = { ...data, ...event.data.json() };
   } catch {}
+  // A post that asks for a plain tap carries readId: "Mark as read" right on the notification (Android and computers;
+  // iPhones don't show notification buttons, and a tap there opens the app as before).
+  const readId = typeof data.readId === "string" ? data.readId : null;
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
-      data: { url: data.url },
+      data: { url: data.url, readId },
+      ...(readId ? { actions: [{ action: "read", title: "Mark as read" }] } : {}),
     }),
   );
 });
 
+/** Marks the post read as the signed-in parent; true only when the app says it's done. */
+function markRead(id) {
+  return fetch("/api/news/read", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+    redirect: "manual",
+  })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((answer) => Boolean(answer && answer.read))
+    .catch(() => false);
+}
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = new URL(event.notification.data?.url || "/news", self.location.origin).href;
-  event.waitUntil(
+  const readId = event.notification.data?.readId;
+  // "Mark as read": done from the lock screen; if it couldn't be saved (signed out, no signal), open the app instead.
+  if (event.action === "read" && readId) {
+    event.waitUntil(markRead(readId).then((ok) => (ok ? undefined : openApp(url))));
+    return;
+  }
+  event.waitUntil(openApp(url));
+});
+
+function openApp(url) {
+  return (
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
       for (const w of windows) {
         if (w.url.startsWith(self.location.origin) && "focus" in w) {
@@ -136,6 +164,6 @@ self.addEventListener("notificationclick", (event) => {
         }
       }
       return self.clients.openWindow(url);
-    }),
+    })
   );
-});
+}

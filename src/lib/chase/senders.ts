@@ -22,7 +22,8 @@ export function smsConfigured(): boolean {
 
 type Subscription = { id: string; user_id: string; endpoint: string; p256dh: string; auth: string };
 
-export type PushPayload = { title: string; body: string; url: string };
+/** `readId`: a post that asks for a plain tap; the notification then offers "Mark as read" (public/sw.js). */
+export type PushPayload = { title: string; body: string; url: string; readId?: string };
 
 /** One push to one device; rejects with the push service's `statusCode` when it refuses. */
 export type PushSend = (sub: { endpoint: string; keys: { p256dh: string; auth: string } }, body: string) => Promise<unknown>;
@@ -108,7 +109,7 @@ async function sendApp(targets: ChaseTarget[], tx: Queryable): Promise<ChaseTarg
     const reached = await pushToUsers(
       tx,
       group.flatMap((t) => (t.userId ? [t.userId] : [])),
-      { title: "Deen Squad: please read", body: group[0].title, url: "/news" },
+      { title: "Deen Squad: please read", body: group[0].title, url: "/news", ...(group[0].tapRead ? { readId: group[0].announcementId } : {}) },
     );
     sent.push(...group.filter((t) => t.userId && reached.has(t.userId)));
   }

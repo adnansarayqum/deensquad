@@ -1,5 +1,5 @@
 import { lastHeartbeat, staleHeartbeat } from "@/lib/cron-heartbeat";
-import { Download, MessageCircleQuestion } from "lucide-react";
+import { ChartColumn, Download, MessageCircleQuestion } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Notice, PageHeader, Section, SubLabel } from "@/components/admin/bits";
@@ -55,12 +55,18 @@ export default async function AdminHome() {
     <>
       <PageHeader title={`Assalamu alaikum, ${greetingName(user.staff.displayName)}`} subtitle={next ? `${next.day}: ${next.coming} of ${next.squad} ${next.squad === 1 ? "child" : "children"} coming` : undefined}
         actions={
-          isAdmin && aiConfigured() ? (
-            <Link href="/admin/assistant" className="btn-chunky btn-paper">
-              <MessageCircleQuestion aria-hidden size={18} />
-              Ask the assistant
+          <>
+            <Link href="/admin/app-use" className="btn-chunky btn-paper">
+              <ChartColumn aria-hidden size={18} />
+              App use
             </Link>
-          ) : null
+            {isAdmin && aiConfigured() ? (
+              <Link href="/admin/assistant" className="btn-chunky btn-paper">
+                <MessageCircleQuestion aria-hidden size={18} />
+                Ask the assistant
+              </Link>
+            ) : null}
+          </>
         }
       />
 

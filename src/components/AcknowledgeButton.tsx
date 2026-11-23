@@ -34,6 +34,8 @@ export function AcknowledgeButton({ announcementId, title }: { announcementId: s
       >
         {pending ? "Saving…" : "I've read this"}
       </button>
+      {/* Why the tap matters (the owner, 23 Nov 2026: few parents tapped, so the club couldn't tell who'd read a post). */}
+      <p className="-mt-1 text-center text-[13px] text-ink-muted">Tap so the club knows you&apos;ve seen it. We&apos;ll stop reminding you.</p>
       {problem ? <TapProblem problem={problem} onRetry={acknowledge} retrying={pending} /> : null}
     </>
   );

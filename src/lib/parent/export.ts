@@ -147,6 +147,14 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
 
   // The rest of what the app holds about the parent themselves (privacy review, 14 Nov 2026). Their own rows only:
   // read under their own policies, or through functions that return only the caller's (migration 0049).
+  // App use (migration 0055): posts that were on your screen, and the days you opened the app.
+  const seenPosts = await tx.query<{ title: string; seen_at: Date }>(
+    `select a.title, v.seen_at from announcement_views v join announcements a on a.id = v.announcement_id
+     where v.guardian_id = my_guardian_id() order by v.seen_at`,
+  );
+  const opened = await tx.query<{ day: string; opens: number }>(
+    `select day::text as day, opens from app_opens where guardian_id = my_guardian_id() order by day`,
+  );
   const liked = await tx.query<{ title: string; created_at: Date }>(
     `select a.title, l.created_at from announcement_likes l join announcements a on a.id = l.announcement_id
      where l.guardian_id = my_guardian_id() order by l.created_at`,
@@ -322,6 +330,8 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
     })),
     newsRead: reads.map((r) => ({ title: r.title, postedAt: at(r.posted_at), readAt: at(r.read_at) })),
     newsLiked: liked.map((l) => ({ title: l.title, likedAt: at(l.created_at) })),
+    newsSeenOnYourScreen: seenPosts.map((v) => ({ title: v.title, seenAt: at(v.seen_at) })),
+    daysYouOpenedTheApp: opened.map((o) => ({ day: o.day, times: o.opens })),
     remindersSentToYou: [
       ...newsReminders.map((r) => ({ about: `Club news: ${r.title}`, how: HOW[r.channel] ?? r.channel, sentAt: at(r.sent_at) })),
       ...sessionReminders.map((r) => ({ about: `Is your child coming to ${r.session_title}, ${at(r.starts_at)?.slice(0, 10)}?`, how: HOW[r.channel] ?? r.channel, sentAt: at(r.sent_at) })),

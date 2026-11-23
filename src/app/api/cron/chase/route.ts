@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { runMonthlySummary } from "@/lib/admin/summary-run";
 import { enqueue } from "@/lib/background";
 import { purgeExpiredSessions } from "@/lib/auth/service";
+import { purgeOldAppOpens } from "@/lib/app-use/record";
 import { runChase } from "@/lib/chase/run";
 import { reportJobFailure, sendErrorAlert } from "@/lib/alerts";
 import { sweepCardPayments } from "@/lib/shop/payments";
@@ -45,7 +46,12 @@ async function sweepCards(): Promise<{ checked: number; paid: number }> {
 
 async function purgeSessions(): Promise<number> {
   try {
-    return await asSystem((tx) => purgeExpiredSessions(tx));
+    // App opens older than a year go too (migration 0055; the privacy notice says so).
+    return await asSystem(async (tx) => {
+      const n = await purgeExpiredSessions(tx);
+      await purgeOldAppOpens(tx);
+      return n;
+    });
   } catch (error) {
     console.error("[sessions] purge failed:", error instanceof Error ? error.message : error);
     return 0;

@@ -34,7 +34,13 @@ export async function nudgeUnread(
     opts.guardianIds,
   ]);
   const users = people.flatMap((p) => (p.user_id ? [p.user_id] : []));
-  const reached = await pushToUsers(tx, users, { title: "Deen Squad: please read", body: opts.title, url: "/news" }, opts.send);
+  // A post that asks for a plain tap gets "Mark as read" on the notification (public/sw.js).
+  const [post] = await tx.query<{ tap: boolean }>(
+    `select (quick_answers is null and coalesce(session_notice, '') <> 'attendance') as tap from announcements where id = $1`,
+    [opts.newsId],
+  );
+  const payload = { title: "Deen Squad: please read", body: opts.title, url: "/news", ...(post?.tap ? { readId: opts.newsId } : {}) };
+  const reached = await pushToUsers(tx, users, payload, opts.send);
   const hit = people.filter((p) => p.user_id && reached.has(p.user_id));
   for (const p of hit) {
     await tx.query(`insert into announcement_chases (announcement_id, guardian_id, channel, sent_at) values ($1, $2, 'nudge'::text::chase_channel, $3)`, [opts.newsId, p.id, now]);
