@@ -83,6 +83,23 @@ export const MISSED_LAST_3_IDS = `(
 /** "Missing lately" as a condition on `players p` (see MISSED_LAST_3_IDS). */
 export const MISSED_LAST_3 = `(p.id in ${MISSED_LAST_3_IDS})`;
 
+// A child's name reduced for matching: the first word of the first name and the last word of the last name, letters
+// only, any case ("Adam M" Uddin and Adam "M Uddin" both become adam|uddin).
+const nameKey = (t: string) =>
+  `lower(regexp_replace(split_part(trim(${t}.first_name), ' ', 1), '[^[:alpha:]]', '', 'g')) || '|' || lower(regexp_replace(regexp_replace(trim(${t}.last_name), '^.*\\s', ''), '[^[:alpha:]]', '', 'g'))`;
+const firstKey = (t: string) => `lower(regexp_replace(split_part(trim(${t}.first_name), ' ', 1), '[^[:alpha:]]', '', 'g'))`;
+
+/**
+ * Possibly the same child twice (admin review, 23 Nov 2026: Yaqub Zakaria in U6 under two parents, his points split
+ * across both): another child in the club with the same name (first word of the first name, last word of the
+ * surname), or with the same first name and a parent in common. Shown so an admin can check; never merged here.
+ */
+export const DUPLICATE = `exists (select 1 from players dup where dup.id <> p.id and (
+    ${nameKey("dup")} = ${nameKey("p")}
+    or (${firstKey("dup")} = ${firstKey("p")}
+        and exists (select 1 from player_guardians d1 join player_guardians d2 on d2.guardian_id = d1.guardian_id
+                    where d1.player_id = p.id and d2.player_id = dup.id))))`;
+
 export const NEEDS = {
   // Added by a parent (sign-up or Add a child) and not approved yet: the family can't see the group's news or sessions.
   approve: { label: "Waiting for approval", where: `p.approved_at is null` },
@@ -97,6 +114,7 @@ export const NEEDS = {
   check: { label: "Payment to check", where: `${paymentState} = 'self_reported'` },
   payg: { label: "Pay as you go", where: `${paymentState} = 'pay_as_you_go'` },
   missing3: { label: "Missed the last 3 sessions", where: MISSED_LAST_3 },
+  duplicate: { label: "Maybe listed twice", where: DUPLICATE },
   // A parent is on the app but no parent of the child has app notifications on, so pushes don't reach the family.
   notifoff: {
     label: "Notifications off",

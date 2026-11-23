@@ -5,10 +5,10 @@ const tone = {
   awaiting_payment: "action",
   paid: "neutral",
   ordered: "neutral",
-  ready: "action",
+  ready: "gold",
   collected: "done",
   cancelled: "neutral",
-} as const satisfies Record<OrderStatus, "action" | "neutral" | "done">;
+} as const satisfies Record<OrderStatus, "action" | "neutral" | "done" | "gold">;
 
 export function OrderStatusPill({ status, payBy }: { status: OrderStatus; payBy: PayBy }) {
   const label = status === "awaiting_payment" && payBy === "bank" ? "Waiting for transfer" : STATUS_LABEL[status];

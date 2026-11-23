@@ -60,15 +60,15 @@ describe("the admin's buttons", () => {
       { status: "cancelled", label: "Cancel" },
     ]);
     expect(adminSteps({ status: "paid", payBy: "card" })).toEqual([
-      { status: "ordered", label: "Ordered from supplier", primary: true },
-      { status: "ready", label: "Ready for Friday" },
+      { status: "ordered", label: "Mark ordered from supplier", primary: true },
+      { status: "ready", label: "Mark ready for Friday" },
       { status: "cancelled", label: "Cancel" },
     ]);
     expect(adminSteps({ status: "ordered", payBy: "bank" })).toEqual([
-      { status: "ready", label: "Ready for Friday", primary: true },
+      { status: "ready", label: "Mark ready for Friday", primary: true },
       { status: "cancelled", label: "Cancel" },
     ]);
-    expect(adminSteps({ status: "ready", payBy: "bank" })).toEqual([{ status: "collected", label: "Handed over", primary: true }]);
+    expect(adminSteps({ status: "ready", payBy: "bank" })).toEqual([{ status: "collected", label: "Mark handed over", primary: true }]);
     expect(adminSteps({ status: "collected", payBy: "bank" })).toEqual([]);
   });
 });

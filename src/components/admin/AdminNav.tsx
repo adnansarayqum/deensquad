@@ -7,20 +7,20 @@ import { CalendarDays, ClipboardCheck, ClipboardList, FileText, House, Inbox, Me
 
 /** Every staff page, in the order the club works through them. Coaches don't see the admin-only ones. */
 export const STAFF_NAV = [
-  { href: "/admin", label: "Overview", exact: true, tab: true, icon: House },
-  { href: "/coach", label: "Register", exact: true, tab: true, icon: ClipboardCheck },
-  { href: "/admin/families", label: "Families", tab: true, icon: Users },
-  { href: "/admin/messages", label: "Inbox", tab: true, icon: Inbox },
-  { href: "/admin/news", label: "Announcements", icon: Megaphone, hint: "Posts to many families" },
-  { href: "/admin/sessions", label: "Sessions", icon: CalendarDays, hint: "Add, edit, cancel" },
-  { href: "/coach/plans", label: "Plans", icon: ClipboardList },
-  { href: "/coach/practice", label: "Practice sheets", icon: FileText },
+  { href: "/admin", label: "Overview", exact: true, tab: true, icon: House, section: "Today", also: "/admin/assistant" },
+  { href: "/coach", label: "Register", exact: true, tab: true, icon: ClipboardCheck, section: "Today" },
+  { href: "/admin/families", label: "Families", tab: true, icon: Users, section: "Families and messages" },
+  { href: "/admin/messages", label: "Inbox", tab: true, icon: Inbox, section: "Families and messages" },
+  { href: "/admin/news", label: "Announcements", icon: Megaphone, hint: "Posts to many families", section: "Families and messages" },
+  { href: "/admin/sessions", label: "Sessions", icon: CalendarDays, hint: "Add, edit, cancel", section: "Training" },
+  { href: "/coach/plans", label: "Plans", icon: ClipboardList, section: "Training" },
+  { href: "/coach/practice", label: "Practice sheets", icon: FileText, section: "Training" },
   // Ratings (/coach/ratings) are reached from Points and stars, so it stays lit there.
-  { href: "/coach/awards", label: "Points and stars", also: "/coach/ratings", icon: Star },
-  { href: "/admin/shop", label: "Shop", adminOnly: true, icon: ShoppingBag },
-  { href: "/admin/community", label: "Community", adminOnly: true, icon: PartyPopper },
-  { href: "/admin/sponsors", label: "Sponsors", adminOnly: true, icon: HeartHandshake },
-  { href: "/admin/staff", label: "Staff", adminOnly: true, icon: UserCog },
+  { href: "/coach/awards", label: "Points and stars", also: "/coach/ratings", icon: Star, section: "Training" },
+  { href: "/admin/shop", label: "Shop", adminOnly: true, icon: ShoppingBag, section: "Club" },
+  { href: "/admin/community", label: "Community", adminOnly: true, icon: PartyPopper, section: "Club" },
+  { href: "/admin/sponsors", label: "Sponsors", adminOnly: true, icon: HeartHandshake, section: "Club" },
+  { href: "/admin/staff", label: "Staff", adminOnly: true, icon: UserCog, section: "Club" },
 ] as const;
 
 /**
@@ -33,7 +33,9 @@ export const STAFF_NAV = [
 export function AdminNav({ isAdmin, layout = "tabs", unreadMessages = 0 }: { isAdmin: boolean; layout?: "tabs" | "sidebar"; unreadMessages?: number }) {
   const path = usePathname();
   const items = STAFF_NAV.filter((item) => isAdmin || !("adminOnly" in item && item.adminOnly));
-  const isActive = (item: (typeof STAFF_NAV)[number]) => ("exact" in item && item.exact ? path === item.href : path.startsWith(item.href) || ("also" in item && path.startsWith(item.also)));
+  // `also` keeps an item lit on a page reached from it (the assistant from the Overview, ratings from Points and stars).
+  const isActive = (item: (typeof STAFF_NAV)[number]) =>
+    ("exact" in item && item.exact ? path === item.href : path.startsWith(item.href)) || ("also" in item && path.startsWith(item.also));
   // Inbox carries how many conversations have a parent's message this person hasn't read. The link is named
   // "Inbox, 3 unread" (an aria-label, so it reads the same everywhere); the badge shows the number.
   const unread = (item: (typeof STAFF_NAV)[number]) => item.href === "/admin/messages" && unreadMessages > 0;
@@ -48,11 +50,14 @@ export function AdminNav({ isAdmin, layout = "tabs", unreadMessages = 0 }: { isA
   if (layout === "sidebar") {
     return (
       <nav aria-label="Club admin">
+        {/* Thirteen items read as one long list: grouped under quiet headings (admin review, 23 Nov 2026). */}
         <ul className="flex flex-col gap-1">
-          {items.map((item) => {
+          {items.map((item, i) => {
             const active = isActive(item);
+            const heading = i === 0 || items[i - 1].section !== item.section ? item.section : null;
             return (
-              <li key={item.href}>
+              <li key={item.href} className={heading && i > 0 ? "mt-3" : undefined}>
+                {heading ? <p className="px-3 pb-1 text-[13px] font-bold text-on-pitch-muted">{heading}</p> : null}
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}

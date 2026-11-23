@@ -525,8 +525,8 @@ test("shop: a parent orders kit for a child and pays by transfer; the club is to
   // The supplier table names the initials to print, not just how many.
   await expect(page.getByRole("cell", { name: "YS", exact: true })).toBeVisible();
   await expect.poll(() => parentMails().filter((m) => m.subject === `Payment received for order ${reference}`).length).toBe(1);
-  await page.getByRole("button", { name: "Ready for Friday" }).first().click();
-  await expect(page.getByRole("button", { name: "Handed over" })).toBeVisible();
+  await page.getByRole("button", { name: "Mark ready for Friday" }).first().click();
+  await expect(page.getByRole("button", { name: "Mark handed over" })).toBeVisible();
   await expect.poll(() => parentMails().filter((m) => m.subject === "Kit ready to collect on Friday").length).toBe(1);
   expect(parentMails().find((m) => m.subject === "Kit ready to collect on Friday")!.text).toContain(`Yusuf's kit from order ${reference} is ready`);
   await page.screenshot({ path: shot("admin-shop"), fullPage: true });

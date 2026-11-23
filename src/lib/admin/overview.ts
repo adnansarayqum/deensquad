@@ -75,6 +75,7 @@ export function needsYou(d: Dashboard, now: Date, { canInvite }: { canInvite: bo
   const soon = next && daysAhead(next.startsAt, now) <= 2 ? next : null;
   const rows: NeedRow[] = [
     { key: "approve", count: d.toApprove ?? 0, text: plural(d.toApprove ?? 0, "child waiting for approval", "children waiting for approval"), href: "/admin/families?need=approve" },
+    { key: "duplicate", count: d.duplicates ?? 0, text: plural(d.duplicates ?? 0, "child may be listed twice", "children may be listed twice"), href: "/admin/families?need=duplicate" },
     {
       key: "unanswered",
       count: soon?.unanswered ?? 0,

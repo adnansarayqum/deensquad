@@ -50,6 +50,12 @@ export async function loadSponsorViews(tx: Queryable, days = 30): Promise<Sponso
   return out;
 }
 
+/** "412 views · 30 days", for the sponsor's closed row on the admin page. */
+export function viewsShort(totals: SponsorViewTotals[string] | undefined, days = 30): string {
+  const n = totals?.total ?? 0;
+  return `${n === 1 ? "1 view" : `${n.toLocaleString("en-GB")} views`} · ${days} days`;
+}
+
 /** "Shown 412 times in the last 30 days: 380 on Home, 20 on the checked-in line, 12 on the sponsors page." */
 export function viewsSentence(totals: SponsorViewTotals[string] | undefined, days = 30): string {
   if (!totals || totals.total === 0) return `Not shown yet in the last ${days} days.`;

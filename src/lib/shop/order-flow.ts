@@ -57,9 +57,9 @@ export type AdminStep = { status: OrderStatus; label: string; primary?: boolean 
 const STEP_LABEL: Record<OrderStatus, string> = {
   awaiting_payment: "",
   paid: "Mark paid",
-  ordered: "Ordered from supplier",
-  ready: "Ready for Friday",
-  collected: "Handed over",
+  ordered: "Mark ordered from supplier",
+  ready: "Mark ready for Friday",
+  collected: "Mark handed over",
   cancelled: "Cancel",
 };
 

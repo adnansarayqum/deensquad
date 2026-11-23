@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { removeSponsor, saveSponsor } from "@/lib/sponsors/actions";
 import { loadSponsors, sponsorIcon, type Sponsor } from "@/lib/sponsors/data";
-import { loadSponsorViews, viewsSentence } from "@/lib/sponsors/views";
+import { loadSponsorViews, viewsSentence, viewsShort } from "@/lib/sponsors/views";
 
 export const metadata: Metadata = { title: "Sponsors" };
 
@@ -122,7 +122,7 @@ export default async function AdminSponsorsPage() {
       />
       {sponsors.length ? (
         <p className="text-[15px] text-ink-muted">
-          Figures to pass on to a sponsor: {parents === 1 ? "1 parent uses" : `${parents} parents use`} the app, and each sponsor&apos;s count below. Counts are totals of times shown to
+          Figures to pass on to a sponsor: {parents === 1 ? "1 parent uses" : `${parents} parents use`} the app, and each sponsor&apos;s count beside its name. Counts are totals of times shown to
           parents, never who saw them.
         </p>
       ) : null}
@@ -140,7 +140,11 @@ export default async function AdminSponsorsPage() {
               <SponsorLogo name={s.name} fileId={sponsorIcon(s).fileId} bg={sponsorIcon(s).bg} size={40} />
               <span className="min-w-0 text-[15px] font-bold break-words">Edit {s.name}</span>
             </span>
-            {s.active ? <Pill tone="done">Showing</Pill> : <Pill tone="neutral">Hidden</Pill>}
+            <span className="flex shrink-0 flex-col items-end gap-1">
+              {s.active ? <Pill tone="done">Showing</Pill> : <Pill tone="neutral">Hidden</Pill>}
+              {/* The figure to pass on to the sponsor, on the closed row (admin review, 23 Nov 2026: it was inside the fold). */}
+              <span className="text-[13px] text-ink-muted tabular-nums">{viewsShort(views[s.id])}</span>
+            </span>
           </summary>
           <div className="flex flex-col gap-5 border-t border-line p-4">
             <p className="text-[15px]">{viewsSentence(views[s.id])}</p>

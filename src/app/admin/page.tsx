@@ -307,7 +307,14 @@ function AttendanceSection({ d }: { d: Dashboard }) {
           </span>
         </p>
       ) : (
-        <AttendanceChart data={attendanceChart(d)} title={title} />
+        <>
+          {/* The tile's figure is the season's; each line's end label is its last session. Said, so 64% beside 66% isn't
+              read as a mismatch (admin review, 23 Nov 2026). */}
+          <p className="text-[14px] text-ink-muted">
+            {d.attendance.seasonPct ?? 0}% across the season. The figure at the end of each line is its last session.
+          </p>
+          <AttendanceChart data={attendanceChart(d)} title={title} />
+        </>
       )}
     </Section>
   );

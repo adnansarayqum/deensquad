@@ -76,7 +76,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
     ) : null;
   const groupsForm = (s: StaffRow, compact = false): ReactNode =>
     s.role === "coach" ? (
-      <form action={setStaffGroups} className={`flex items-center ${compact ? "flex-nowrap gap-0.5" : "flex-wrap gap-2"}`} aria-label={`${s.displayName}'s groups`}>
+      <form action={setStaffGroups} className={`flex items-center ${compact ? "flex-wrap gap-1" : "flex-wrap gap-2"}`} aria-label={`${s.displayName}'s groups`}>
         <input type="hidden" name="id" value={s.id} />
         <GroupBoxes selected={s.ageGroups} small={compact} />
         <button type="submit" className="btn-chunky btn-paper btn-small shrink-0" aria-label={compact ? `Save ${s.displayName}'s groups` : undefined}>
@@ -195,7 +195,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
       </ul>
 
       {/* Computers: a table, one row per person. */}
-      <div className="hidden overflow-x-auto rounded-app border border-line bg-paper lg:block">
+      <div className="relative hidden overflow-x-auto rounded-app border border-line bg-paper lg:block">
         <table className="w-full text-[14px]">
           <caption className="sr-only">Coaches and admins</caption>
           <thead>

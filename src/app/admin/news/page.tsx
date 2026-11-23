@@ -66,7 +66,8 @@ export default async function AdminNewsPage({ searchParams }: PageProps<"/admin/
     <>
       <PageHeader title="Announcements" subtitle="One post to many families, with read receipts. A private chat with one family goes in Inbox." />
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+      {/* One column: with the form folded, two columns left half the page empty (admin review, 23 Nov 2026). */}
+      <div className="flex flex-col gap-4 lg:max-w-3xl">
         <FoldCard id="post-message" title="New announcement" open={news.length === 0 || Boolean(comingTo) || toChildren}>
           <NewsComposeForm action={postNews}>
             {came ? (
