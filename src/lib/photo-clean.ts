@@ -57,16 +57,31 @@ export const LOGO_SIDE = 600;
  * Re-encodes a sponsor's logo before it's stored: at most 600px, on white (a see-through logo would vanish on the
  * dark theme), lossless PNG so lettering stays sharp, no metadata. Null when the bytes aren't a readable image.
  */
-export async function cleanLogo(data: Uint8Array): Promise<{ mime: "image/png"; data: Uint8Array } | null> {
+export async function cleanLogo(data: Uint8Array, side: number = LOGO_SIDE): Promise<{ mime: "image/png"; data: Uint8Array; bg: string } | null> {
   try {
     const out = await sharp(data, { limitInputPixels: 50_000_000, failOn: "error" })
       .rotate()
-      .resize(LOGO_SIDE, LOGO_SIDE, { fit: "inside", withoutEnlargement: true })
+      .resize(side, side, { fit: "inside", withoutEnlargement: true })
       .flatten({ background: "#ffffff" })
       .png({ compressionLevel: 9 })
       .toBuffer();
-    return { mime: "image/png", data: new Uint8Array(out) };
+    return { mime: "image/png", data: new Uint8Array(out), bg: await cornerColour(out) };
   } catch {
     return null;
+  }
+}
+
+/**
+ * The colour just inside a picture's top-left corner, as #rrggbb: a logo's own ground, so the tile behind it can be
+ * the same colour and a dark logo doesn't sit in a white box. White when it can't be read.
+ */
+async function cornerColour(png: Buffer): Promise<string> {
+  try {
+    const { width = 0, height = 0 } = await sharp(png).metadata();
+    const at = Math.min(3, Math.max(0, Math.min(width, height) - 1));
+    const px = await sharp(png).extract({ left: at, top: at, width: 1, height: 1 }).removeAlpha().raw().toBuffer();
+    return "#" + [px[0], px[1], px[2]].map((v) => (v ?? 255).toString(16).padStart(2, "0")).join("");
+  } catch {
+    return "#ffffff";
   }
 }

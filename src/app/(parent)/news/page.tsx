@@ -18,6 +18,7 @@ import type { AnnouncementView, Family } from "@/lib/parent/data";
 import { MediaGallery } from "@/components/media/MediaGallery";
 import { ThisWeek } from "@/components/ThisWeek";
 import { HomeSponsors } from "@/components/HomeSponsors";
+import { SupportedBy } from "@/components/SupportedBy";
 import { HomeCommunity } from "@/components/HomeCommunity";
 import { AwaitingApproval } from "@/components/AwaitingApproval";
 import { ComingOnNews, SessionNow, canAnswerComing } from "@/components/NewsSession";
@@ -59,7 +60,14 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
         {/* Is training on, when, and each child's answer: the first thing on the screen every parent lands on. */}
         <AwaitingApproval>{family.children}</AwaitingApproval>
-        <ThisWeek family={family} week={week} stepsLeft={stepsLeft} now={now} todoCalm={lead !== "todo"} />
+        <ThisWeek
+          family={family}
+          week={week}
+          stepsLeft={stepsLeft}
+          now={now}
+          todoCalm={lead !== "todo"}
+          sponsor={<SupportedBy place="home" from="/news" className="border-t border-line px-4" />}
+        />
         {/* Straight after This week: with notifications off a parent misses cancellations and messages. */}
         <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} calm={lead === "trip" || lead === "messages"} />
         {/* Most urgent first: an away trip waiting for permission, then messages. */}

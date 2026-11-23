@@ -3,6 +3,7 @@ import { backTarget } from "@/lib/parent/tabs";
 import { Sun } from "lucide-react";
 import { BackHeader } from "@/components/BackHeader";
 import { CheckedIn } from "@/components/CheckedIn";
+import { SupportedBy } from "@/components/SupportedBy";
 import { PassCacheWriter } from "@/components/PassCacheWriter";
 import { PassCarousel } from "@/components/PassCarousel";
 import { KeepAwake } from "@/components/KeepAwake";
@@ -36,6 +37,8 @@ export default async function PassPage({ searchParams }: PageProps<"/pass">) {
                 {checkedIn.map(({ child, at }) => (
                   <CheckedIn key={child.id} name={child.firstName} at={at} />
                 ))}
+                {/* Under the checked-in line, never on or beside the code: the moment a parent reads this screen. */}
+                <SupportedBy place="gate" label="Today's session is supported by" from="/pass" className="rounded-app bg-paper px-3.5 shadow-card" />
               </div>
             ) : null}
             <KeepAwake />

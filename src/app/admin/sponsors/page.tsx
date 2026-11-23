@@ -6,7 +6,8 @@ import { Pill } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { removeSponsor, saveSponsor } from "@/lib/sponsors/actions";
-import { loadSponsors, type Sponsor } from "@/lib/sponsors/data";
+import { loadSponsors, sponsorIcon, type Sponsor } from "@/lib/sponsors/data";
+import { loadSponsorViews, viewsSentence } from "@/lib/sponsors/views";
 
 export const metadata: Metadata = { title: "Sponsors" };
 
@@ -63,7 +64,7 @@ function SponsorFields({ s }: { s?: Sponsor }) {
           <span className="field-label">Logo</span>
           {s?.logoFileId ? (
             <div className="flex items-center gap-3">
-              <SponsorLogo name={s.name} fileId={s.logoFileId} size={64} />
+              <SponsorLogo name={s.name} fileId={s.logoFileId} bg={s.logoBg} size={64} />
               <label className="flex min-h-12 items-center gap-2 text-[15px]">
                 <input type="checkbox" name="removeLogo" className="h-5 w-5 accent-[var(--grass)]" />
                 Remove logo
@@ -79,6 +80,25 @@ function SponsorFields({ s }: { s?: Sponsor }) {
           <input id={`sort-${key}`} name="sort" inputMode="numeric" defaultValue={s?.sort ?? 0} className="field" />
         </div>
       </div>
+      <div className="flex flex-col gap-2">
+        <span className="field-label">
+          Small square icon <span className="font-normal text-ink-muted">(optional)</span>
+        </span>
+        <p className="text-sm text-ink-muted">
+          Shown at thumbnail size beside the sponsor&apos;s name, on Home and after check-in. A wide logo is hard to read that small, so add just its symbol here. Without one,
+          the logo is used.
+        </p>
+        {s?.iconFileId ? (
+          <div className="flex items-center gap-3">
+            <SponsorLogo name={s.name} fileId={s.iconFileId} bg={s.iconBg} size={48} />
+            <label className="flex min-h-12 items-center gap-2 text-[15px]">
+              <input type="checkbox" name="removeIcon" className="h-5 w-5 accent-[var(--grass)]" />
+              Remove icon
+            </label>
+          </div>
+        ) : null}
+        <input id={`icon-${key}`} name="icon" type="file" accept="image/jpeg,image/png,image/webp" aria-label={s?.iconFileId ? `Replace the small icon for ${s.name}` : "Add a small square icon"} className="field py-3 text-[15px]" />
+      </div>
       <label className="flex min-h-12 items-center gap-3">
         <input type="checkbox" name="active" defaultChecked={s ? s.active : true} className="h-5 w-5 accent-[var(--grass)]" />
         <span className="text-[15px] font-bold">Show to parents</span>
@@ -89,10 +109,23 @@ function SponsorFields({ s }: { s?: Sponsor }) {
 
 export default async function AdminSponsorsPage() {
   const user = await requireAdmin();
-  const sponsors = await asUser(user.id, (tx) => loadSponsors(tx, { includeHidden: true }));
+  const { sponsors, views, parents } = await asUser(user.id, async (tx) => ({
+    sponsors: await loadSponsors(tx, { includeHidden: true }),
+    views: await loadSponsorViews(tx),
+    parents: (await tx.query<{ n: number }>(`select count(*)::int as n from guardians where auth_user_id is not null`))[0]?.n ?? 0,
+  }));
   return (
     <>
-      <PageHeader title="Sponsors" subtitle="Shown to parents on Home and on the Our sponsors page. Lowest order number first." />
+      <PageHeader
+        title="Sponsors"
+        subtitle="Shown on Home, after check-in, on the sign-up page and on Our sponsors. They take a week each on Home and after check-in, lowest order number first."
+      />
+      {sponsors.length ? (
+        <p className="text-[15px] text-ink-muted">
+          Figures to pass on to a sponsor: {parents === 1 ? "1 parent uses" : `${parents} parents use`} the app, and each sponsor&apos;s count below. Counts are totals of times shown to
+          parents, never who saw them.
+        </p>
+      ) : null}
 
       <FoldCard id="add-sponsor" title="Add a sponsor" open={sponsors.length === 0}>
         <StatefulForm action={saveSponsor} keepOnFailure={NOT_SAVED} submitLabel="Add sponsor" savedMessage="Sponsor added.">
@@ -104,12 +137,13 @@ export default async function AdminSponsorsPage() {
         <details key={s.id} className="rounded-app border border-line bg-paper">
           <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-3 px-4 py-2">
             <span className="flex min-w-0 items-center gap-3">
-              <SponsorLogo name={s.name} fileId={s.logoFileId} size={40} />
+              <SponsorLogo name={s.name} fileId={sponsorIcon(s).fileId} bg={sponsorIcon(s).bg} size={40} />
               <span className="min-w-0 text-[15px] font-bold break-words">Edit {s.name}</span>
             </span>
             {s.active ? <Pill tone="done">Showing</Pill> : <Pill tone="neutral">Hidden</Pill>}
           </summary>
           <div className="flex flex-col gap-5 border-t border-line p-4">
+            <p className="text-[15px]">{viewsSentence(views[s.id])}</p>
             <StatefulForm action={saveSponsor} keepOnFailure={NOT_SAVED} submitLabel={`Save ${s.name}`} savedMessage="Saved.">
               <SponsorFields s={s} />
             </StatefulForm>

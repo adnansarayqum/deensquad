@@ -1,5 +1,6 @@
 import { WeekFold } from "./WeekFold";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { CalendarX, CheckCircle2, ChevronDown, ChevronRight, ListChecks, QrCode, Shirt } from "lucide-react";
 import { AllComing } from "./AllComing";
 import { AvailabilityPicker } from "./AvailabilityPicker";
@@ -18,7 +19,22 @@ import { answeredLine, availabilityQuestion, sessionsToday, type ChildWeek } fro
  * to set up is the last line. Everything else about the session (kit, plan, calendar) stays on Sessions.
  */
 /** `todoCalm`: something more urgent on Home has the orange (`homeLead`), so the set-up line is drawn neutral. */
-export function ThisWeek({ family, week, stepsLeft, now, todoCalm = false }: { family: Family; week: ChildWeek[]; stepsLeft: number; now: Date; todoCalm?: boolean }) {
+export function ThisWeek({
+  family,
+  week,
+  stepsLeft,
+  now,
+  todoCalm = false,
+  sponsor,
+}: {
+  family: Family;
+  week: ChildWeek[];
+  stepsLeft: number;
+  now: Date;
+  todoCalm?: boolean;
+  /** The week's sponsor line, when the club has sponsors: one quiet row above the set-up line. */
+  sponsor?: ReactNode;
+}) {
   const sessions = [...new Map(week.flatMap((w) => (w.session ? [[w.session.id, w.session] as const] : []))).values()].sort((a, b) =>
     a.startsAt.localeCompare(b.startsAt),
   );
@@ -72,6 +88,8 @@ export function ThisWeek({ family, week, stepsLeft, now, todoCalm = false }: { f
         </Link>
         </div>
       ) : null}
+
+      {sponsor}
 
       {stepsLeft > 0 ? (
         <Link href="/checklist" className="flex items-center gap-3 border-t border-line px-4 py-3.5 text-ink">

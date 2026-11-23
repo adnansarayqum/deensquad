@@ -108,6 +108,7 @@ describe("admin and staff screens are behind a login", () => {
         "/^\\/api\\/calendar\\/[^/]+$/", // calendar apps send no cookie; the unguessable link is the key
         "/^\\/api\\/cron\\//", // bearer CRON_SECRET, checked in the route
         "/^\\/api\\/health$/",
+        "/^\\/api\\/sponsor-logo\\/[^/]+$/", // only the logo or icon of a sponsor on show, for the public sign-up page
         "/^\\/api\\/sumup\\//", // the webhook, which trusts nothing in its body
         "/^\\/privacy$/",
         "/^\\/sign-in(\\/|$)/",
@@ -125,6 +126,7 @@ describe("every request checks who is asking", () => {
     "src/app/api/cron/chase/route.ts": /timingSafeEqual/, // the cron's bearer secret
     "src/app/api/sumup/webhook/route.ts": /confirmSumupPayment/, // asks SumUp itself
     "src/app/api/calendar/[file]/route.ts": /guardianForToken|tokenHash|sha256|createHash/i, // the hashed link
+    "src/app/api/sponsor-logo/[id]/route.ts": /from sponsors s where s\.active and f\.id in \(s\.logo_file_id, s\.icon_file_id\)/, // a sponsor's own logo, nothing else
     "src/app/monitoring/route.ts": /.*/, // Sentry tunnel: forwards only to the built-in DSN (its own tests)
   };
 

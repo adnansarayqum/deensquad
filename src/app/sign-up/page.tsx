@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { ClubFacts } from "@/components/auth/ClubFacts";
 import { loadClubFacts } from "@/lib/club-facts";
+import { SponsorCard } from "@/components/SponsorLogo";
+import { loadSponsors } from "@/lib/sponsors/data";
 import { SignUpForm } from "@/components/auth/SignUpForm";
 import { GROUP_LABELS, MAX_CHILDREN } from "@/lib/auth/registration";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -19,7 +21,7 @@ export default async function SignUpPage() {
   const privacy = privacyUrl();
   const info = clubInfoText();
   // Real facts only (staff checks, the club list, the sessions): asSystem, as nobody is signed in here.
-  const facts = await asSystem((tx) => loadClubFacts(tx, new Date()));
+  const [facts, sponsors] = await asSystem(async (tx) => [await loadClubFacts(tx, new Date()), await loadSponsors(tx)] as const);
   return (
     <AuthShell title="Join the club" intro="Sign up to get club news, tell the coach who's coming on Friday and follow your child's progress.">
       {info ? (
@@ -32,6 +34,20 @@ export default async function SignUpPage() {
       ) : null}
       <ClubFacts facts={facts} />
       <SignUpForm groups={AGE_GROUPS.map((g) => ({ value: g, label: GROUP_LABELS[g] }))} maxChildren={MAX_CHILDREN} />
+      {sponsors.length ? (
+        <section aria-labelledby="supported-by" className="flex flex-col gap-3">
+          <h2 id="supported-by" className="text-center text-[15px] text-ink-muted">
+            Proudly supported by
+          </h2>
+          <ul className="grid grid-cols-2 gap-2.5">
+            {sponsors.map((s) => (
+              <li key={s.id} className="last:odd:col-span-2 last:odd:mx-auto last:odd:w-[calc(50%-5px)]">
+                <SponsorCard name={s.name} fileId={s.logoFileId} bg={s.logoBg} open />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <p className="text-[15px]">
         Already signed up?{" "}
         <Link href="/sign-in" className="font-bold text-grass-text underline">

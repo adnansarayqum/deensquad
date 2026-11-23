@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const { cleanPhoto, PHOTO_SIDE } = await import("./photo-clean");
+const { cleanLogo, cleanPhoto, PHOTO_SIDE } = await import("./photo-clean");
 
 describe("cleanPhoto", () => {
   it("drops EXIF (GPS included), shrinks to 512px and returns a JPEG", async () => {
@@ -32,5 +32,20 @@ describe("cleanPhoto", () => {
 
   it("returns null for bytes that only look like an image", async () => {
     expect(await cleanPhoto(new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]))).toBeNull();
+  });
+});
+
+describe("cleanLogo", () => {
+  it("reads the logo's own ground colour, so a dark logo's tile can match it", async () => {
+    const navy = await sharp({ create: { width: 900, height: 500, channels: 3, background: "#10294a" } }).png().toBuffer();
+    const logo = await cleanLogo(new Uint8Array(navy));
+    expect(logo?.bg).toBe("#10294a");
+    expect((await sharp(logo!.data).metadata()).width).toBe(600);
+    // A see-through logo is flattened onto white, and a small icon is kept small.
+    const clear = await sharp({ create: { width: 800, height: 800, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer();
+    const icon = await cleanLogo(new Uint8Array(clear), 256);
+    expect(icon?.bg).toBe("#ffffff");
+    expect((await sharp(icon!.data).metadata()).width).toBe(256);
+    expect(await cleanLogo(new Uint8Array([1, 2, 3]))).toBeNull();
   });
 });

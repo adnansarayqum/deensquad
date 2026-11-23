@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { SponsorLogo } from "@/components/SponsorLogo";
 import { requireParent } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
-import { loadSponsors } from "@/lib/sponsors/data";
+import { loadSponsors, sponsorIcon } from "@/lib/sponsors/data";
 
 /** Home's one-row link to the sponsors page: up to five logos and how many have an offer. Nothing until there's a sponsor. */
 export async function HomeSponsors() {
@@ -20,9 +20,10 @@ export async function HomeSponsors() {
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="text-[15px] font-bold">Our sponsors</span>
         <span className="flex items-center gap-1.5">
-          {sponsors.slice(0, 5).map((s) => (
-            <SponsorLogo key={s.id} name={s.name} fileId={s.logoFileId} size={36} />
-          ))}
+          {sponsors.slice(0, 5).map((s) => {
+            const icon = sponsorIcon(s);
+            return <SponsorLogo key={s.id} name={s.name} fileId={icon.fileId} bg={icon.bg} size={36} />;
+          })}
           {sponsors.length > 5 ? <span className="text-[13px] text-ink-muted">+{sponsors.length - 5}</span> : null}
         </span>
         {offers ? <span className="text-[13px] text-ink-muted">{offers === 1 ? "1 offer" : `${offers} offers`} for Deen Squad families</span> : null}

@@ -3,7 +3,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { DEV_EMAILS } from "@/lib/db/dev-seed";
 import { testDatabase } from "../../../test/db";
-import { cleanSponsorLink, loadSponsors, sponsorInitials, sponsorLinkLabel } from "./data";
+import { cleanSponsorLink, loadSponsors, sponsorIcon, sponsorInitials, sponsorLinkLabel, sponsorOfTheWeek } from "./data";
+import { addSponsorViews, loadSponsorViews, viewsSentence } from "./views";
 
 let t: Awaited<ReturnType<typeof testDatabase>>;
 let admin: string;
@@ -83,5 +84,54 @@ describe("sponsors", () => {
     expect(sponsorLinkLabel("https://example.co.uk")).toBe("Visit their website");
     expect(sponsorInitials("Test Motors")).toBe("TM");
     expect(sponsorInitials("Shahi")).toBe("SH");
+  });
+
+  it("opens the small icon like the logo, and uses it in small spots where there is one", async () => {
+    const icon = await t.asUser(admin, async (tx) => {
+      const id = await logo(tx);
+      await tx.query(`update sponsors set icon_file_id = $2, icon_bg = '#10294a', logo_bg = '#ffffff' where id = $1`, [shown, id]);
+      return id;
+    });
+    expect(await canOpen(parent, icon)).toBe(true);
+    const [first] = await t.asUser(parent, (tx) => loadSponsors(tx));
+    expect(sponsorIcon(first)).toEqual({ fileId: icon, bg: "#10294a" });
+    expect(sponsorIcon({ ...first, iconFileId: null })).toEqual({ fileId: shownLogo, bg: "#ffffff" });
+    await expect(t.asUser(admin, (tx) => tx.query(`update sponsors set logo_bg = 'red' where id = $1`, [shown]))).rejects.toThrow();
+  });
+
+  it("gives each sponsor a week in turn, changing on Monday in London", () => {
+    const three = ["a", "b", "c"];
+    const sunday = sponsorOfTheWeek(three, new Date("2026-11-22T23:30:00Z"));
+    expect(sponsorOfTheWeek(three, new Date("2026-11-16T00:30:00Z"))).toBe(sunday); // the Monday that week began
+    const monday = sponsorOfTheWeek(three, new Date("2026-11-23T00:30:00Z"));
+    expect(monday).not.toBe(sunday);
+    expect(sponsorOfTheWeek(three, new Date("2026-11-29T23:30:00Z"))).toBe(monday);
+    // Three weeks on it is the same sponsor's turn again, and every sponsor has had one.
+    expect(sponsorOfTheWeek(three, new Date("2026-12-14T12:00:00Z"))).toBe(monday);
+    expect(new Set([0, 7, 14].map((d) => sponsorOfTheWeek(three, new Date(Date.UTC(2026, 10, 23 + d, 12))))).size).toBe(3);
+    // In summer the week turns at London's midnight, an hour before UTC's.
+    expect(sponsorOfTheWeek(three, new Date("2026-06-28T23:30:00Z"))).not.toBe(sponsorOfTheWeek(three, new Date("2026-06-28T22:30:00Z")));
+    expect(sponsorOfTheWeek([], new Date())).toBeNull();
+  });
+
+  it("keeps a total of times shown per place, which only admins read and nobody signed in can write", async () => {
+    await t.asSystem(async (tx) => {
+      await addSponsorViews(tx, [shown], "home");
+      await addSponsorViews(tx, [shown], "home");
+      await addSponsorViews(tx, [shown, hidden], "page");
+      await addSponsorViews(tx, [], "gate");
+    });
+    const totals = await t.asUser(admin, (tx) => loadSponsorViews(tx));
+    expect(totals[shown]).toEqual({ total: 3, byPlace: { home: 2, page: 1 } });
+    expect(viewsSentence(totals[shown])).toBe("Shown 3 times in the last 30 days: 2 on Home, 1 on the sponsors page.");
+    expect(viewsSentence(undefined)).toBe("Not shown yet in the last 30 days.");
+    // The table holds a sponsor, a day, a place and a count: nothing about who.
+    const columns = await t.asSystem((tx) => tx.query<{ c: string }>(`select column_name as c from information_schema.columns where table_name = 'sponsor_views' order by 1`));
+    expect(columns.map((r) => r.c)).toEqual(["day", "place", "sponsor_id", "views"]);
+    for (const who of [parent, coach]) {
+      expect(await t.asUser(who, (tx) => loadSponsorViews(tx))).toEqual({});
+      await expect(t.asUser(who, (tx) => addSponsorViews(tx, [shown], "home"))).rejects.toThrow();
+    }
+    await expect(t.asUser(admin, (tx) => addSponsorViews(tx, [shown], "home"))).rejects.toThrow();
   });
 });
