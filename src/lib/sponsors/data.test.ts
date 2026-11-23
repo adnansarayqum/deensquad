@@ -1,5 +1,7 @@
 // Sponsors on the database: everyone signed in reads the ones on show (and their logos), only admins change them,
 // and a hidden sponsor and its logo are the admins' alone.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { DEV_EMAILS } from "@/lib/db/dev-seed";
 import { testDatabase } from "../../../test/db";
@@ -133,5 +135,29 @@ describe("sponsors", () => {
       await expect(t.asUser(who, (tx) => addSponsorViews(tx, [shown], "home"))).rejects.toThrow();
     }
     await expect(t.asUser(admin, (tx) => addSponsorViews(tx, [shown], "home"))).rejects.toThrow();
+  });
+
+  it("the first sponsors' migration fills only a database that was already running, and only once", async () => {
+    const sql = readFileSync(join(process.cwd(), "db/migrations/0054_first_sponsors.sql"), "utf8");
+    const fresh = await testDatabase();
+    const count = (db: typeof fresh) => db.asSystem((tx) => tx.query<{ n: number }>(`select count(*)::int as n from sponsors`)).then((r) => r[0].n);
+    // A database made afresh applied every migration just now: it stays empty, as the tests and the demo expect.
+    expect(await count(fresh)).toBe(0);
+    await fresh.asSystem((tx) => tx.query(sql));
+    expect(await count(fresh)).toBe(0);
+    // The club's database has migrations from before: there the five go in, each with a logo and an icon.
+    await fresh.asSystem((tx) => tx.query(`update public.schema_migrations set applied_at = '2026-10-01' where name like '0001%'`));
+    await fresh.asSystem((tx) => tx.query(sql));
+    const rows = await fresh.asSystem((tx) =>
+      tx.query<{ name: string; logo_bg: string; icon_bg: string; logo: number; icon: number; mime: string }>(
+        `select s.name, s.logo_bg, s.icon_bg, l.size as logo, i.size as icon, l.mime from sponsors s
+         join club_files l on l.id = s.logo_file_id join club_files i on i.id = s.icon_file_id order by s.sort`,
+      ),
+    );
+    expect(rows.map((r) => r.name)).toEqual(["Banglatown Cash & Carry", "Morning Stars Care Ltd", "SAS Facilities", "Syed Capital Holdings", "A&S Accountancy Services"]);
+    expect(rows.every((r) => r.mime === "image/png" && r.logo > 1000 && r.icon > 1000 && /^#[0-9a-f]{6}$/.test(r.logo_bg) && /^#[0-9a-f]{6}$/.test(r.icon_bg))).toBe(true);
+    // Run again (or after the club has added its own): nothing is added twice.
+    await fresh.asSystem((tx) => tx.query(sql));
+    expect(await count(fresh)).toBe(5);
   });
 });
