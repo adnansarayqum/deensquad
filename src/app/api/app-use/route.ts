@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   if (!limit.hit(user.id)) return new Response(null, { status: 204 });
   const body = (await request.json().catch(() => null)) as { event?: unknown; seconds?: unknown } | null;
   const guardianId = user.guardian.id;
-  if (body?.event === "open") await asSystem((tx) => recordOpen(tx, guardianId));
+  if (body?.event === "open") await asSystem((tx) => recordOpen(tx, guardianId, !user.staff));
   else if (body?.event === "leave" && typeof body.seconds === "number" && Number.isFinite(body.seconds)) {
     const seconds = body.seconds;
     if (!user.staff) await asSystem((tx) => recordTimeOnScreen(tx, seconds));

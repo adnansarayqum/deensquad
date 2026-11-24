@@ -12,13 +12,18 @@ export const MAX_VISIT_SECONDS = 30 * 60;
 /** Most posts marked seen in one go (a long News screen). */
 export const SEEN_MAX = 50;
 
-/** A parent opened the app (or came back to it): one row per day, counted. Run as the system. */
-export async function recordOpen(tx: Queryable, guardianId: string): Promise<void> {
+/**
+ * A parent opened the app (or came back to it): one row per day, counted. Run as the system. `countVisit` is false
+ * for staff who are also parents: their open counts, but their time on screen is left out of the club's total, so
+ * their visit must be too, or the average visit comes out too short.
+ */
+export async function recordOpen(tx: Queryable, guardianId: string, countVisit = true): Promise<void> {
   await tx.query(
     `insert into app_opens (guardian_id, day) values ($1, ${LONDON_TODAY})
      on conflict (guardian_id, day) do update set opens = app_opens.opens + 1, last_at = now()`,
     [guardianId],
   );
+  if (!countVisit) return;
   await tx.query(`insert into app_use_daily (day, visits) values (${LONDON_TODAY}, 1) on conflict (day) do update set visits = app_use_daily.visits + 1`);
 }
 

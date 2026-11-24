@@ -1,6 +1,6 @@
 import type { AgeGroup } from "../domain";
 import type { Queryable } from "../db/types";
-import { newsReaches } from "../squads/sql";
+import { newsReaches, sessionIsFor } from "../squads/sql";
 
 // The App use page (/admin/app-use): how many parents open the app, how long a visit lasts, whether posts are seen
 // and read, when parents read, and who hasn't opened the app lately. Parents are those with an approved child in
@@ -25,9 +25,32 @@ export type AppUse = {
   visits: number;
   averageSeconds: number | null;
   /** The last 8 posts that asked for a tap: reached, seen, read, read within a day, read from the notification. */
-  posts: { id: string; title: string; postedAt: string; reached: number; seen: number; read: number; readInADay: number; fromNotification: number }[];
+  posts: {
+    id: string;
+    title: string;
+    postedAt: string;
+    reached: number;
+    seen: number;
+    read: number;
+    readInADay: number;
+    fromNotification: number;
+    /** Reads that came after the reminder email had gone to that parent (not counting notification taps). */
+    afterEmail: number;
+    /** The middle time from posting to reading, in minutes (null with no reads). */
+    medianMinutes: number | null;
+  }[];
   /** Reads in the last 60 days by London hour of the day (0–23): when to post. */
   readHours: number[];
+  /** The same reads by London day of the week, Monday first (7 numbers). */
+  readDays: number[];
+  /** Parents opening the app on an average Monday … Sunday over the last 4 weeks (or since recording began). */
+  openDays: number[];
+  /** Of the parents who opened the app in the 7 days before last, how many opened it again in the last 7. Null until 14 days are on record. */
+  comeBack: { before: number; returned: number } | null;
+  /** The last 6 finished sessions: children they were for, answered before the start, and a day or more ahead. */
+  answers: { id: string; title: string; startsAt: string; children: number; answered: number; dayAhead: number }[];
+  /** Parents added since recording began and at least a week ago: how many opened the app in their first week. Null with none. */
+  newParents: { added: number; opened: number } | null;
   /**
    * Parents on the app who haven't opened it for QUIET_DAYS or more, longest first. A parent with no open on record
    * is listed only once opens have been recorded for QUIET_DAYS (`quietFrom`, null once that day has come): before
@@ -71,6 +94,8 @@ export async function loadAppUse(tx: Queryable, groups: readonly AgeGroup[], rec
     read: number;
     read_in_a_day: number;
     from_notification: number;
+    after_email: number;
+    median_minutes: number | null;
   }>(
     `with mine as (${mine}),
      recent as (
@@ -92,7 +117,14 @@ export async function loadAppUse(tx: Queryable, groups: readonly AgeGroup[], rec
        (select count(*)::int from reach join announcement_reads r on r.announcement_id = a.id and r.guardian_id = reach.guardian_id
           where reach.announcement_id = a.id and r.read_at <= a.posted_at + interval '24 hours') as read_in_a_day,
        (select count(*)::int from reach join announcement_reads r on r.announcement_id = a.id and r.guardian_id = reach.guardian_id
-          where reach.announcement_id = a.id and r.via = 'notification') as from_notification
+          where reach.announcement_id = a.id and r.via = 'notification') as from_notification,
+       (select count(*)::int from reach join announcement_reads r on r.announcement_id = a.id and r.guardian_id = reach.guardian_id
+          where reach.announcement_id = a.id and r.via is distinct from 'notification'
+            and exists (select 1 from announcement_chases c where c.announcement_id = a.id and c.guardian_id = r.guardian_id
+              and c.channel::text = 'email' and c.sent_at < r.read_at)) as after_email,
+       (select (percentile_cont(0.5) within group (order by extract(epoch from (r.read_at - a.posted_at))) / 60)::float8
+          from reach join announcement_reads r on r.announcement_id = a.id and r.guardian_id = reach.guardian_id
+          where reach.announcement_id = a.id) as median_minutes
      from recent a order by a.posted_at desc`,
     [g],
   );
@@ -103,6 +135,54 @@ export async function loadAppUse(tx: Queryable, groups: readonly AgeGroup[], rec
      where r.read_at > now() - interval '60 days'
      group by 1`,
     [g],
+  );
+  const days = await tx.query<{ dow: number; reads: number }>(
+    `with mine as (${mine})
+     select extract(isodow from r.read_at at time zone 'Europe/London')::int as dow, count(*)::int as reads
+     from announcement_reads r join mine on mine.id = r.guardian_id
+     where r.read_at > now() - interval '60 days'
+     group by 1`,
+    [g],
+  );
+  const opens = await tx.query<{ dow: number; days: number; opens: number }>(
+    `with mine as (${mine}),
+     span as (select d.day::date as day from generate_series(greatest($2::date, ${today} - 27), ${today}, interval '1 day') as d(day))
+     select extract(isodow from span.day)::int as dow, count(distinct span.day)::int as days, count(o.guardian_id)::int as opens
+     from span left join app_opens o on o.day = span.day and o.guardian_id in (select id from mine)
+     group by 1`,
+    [g, recordedFrom],
+  );
+  const [back] = await tx.query<{ ready: boolean; before: number; returned: number }>(
+    `with mine as (${mine}),
+     earlier as (select distinct o.guardian_id from app_opens o join mine on mine.id = o.guardian_id where o.day > ${today} - 14 and o.day <= ${today} - 7)
+     select ${today} >= $2::date + 14 as ready, (select count(*)::int from earlier) as before,
+       (select count(*)::int from earlier e where exists (select 1 from app_opens o where o.guardian_id = e.guardian_id and o.day > ${today} - 7)) as returned`,
+    [g, recordedFrom],
+  );
+  const answers = await tx.query<{ id: string; title: string; starts_at: Date; children: number; answered: number; day_ahead: number }>(
+    `with recent as (
+       select s.* from sessions s
+       where s.cancelled_at is null and s.ends_at < now() and s.age_groups::text[] && $1::text[]
+       order by s.starts_at desc limit 6
+     )
+     select s.id, s.title, s.starts_at, count(p.id)::int as children,
+       (count(av.player_id) filter (where av.answered_at < s.starts_at))::int as answered,
+       (count(av.player_id) filter (where av.answered_at < s.starts_at - interval '24 hours'))::int as day_ahead
+     from recent s
+     join players p on p.approved_at is not null and p.age_group::text = any ($1::text[]) and ${sessionIsFor("s", "p")}
+       and p.joined_on <= (s.starts_at at time zone 'Europe/London')::date
+     left join availability av on av.session_id = s.id and av.player_id = p.id
+     group by s.id, s.title, s.starts_at order by s.starts_at desc`,
+    [g],
+  );
+  const [fresh] = await tx.query<{ added: number; opened: number }>(
+    `with mine as (${mine})
+     select count(*)::int as added,
+       (count(*) filter (where exists (select 1 from app_opens o where o.guardian_id = gu.id
+          and o.day <= (gu.created_at at time zone 'Europe/London')::date + 7)))::int as opened
+     from guardians gu join mine on mine.id = gu.id
+     where gu.created_at >= $2::date and gu.created_at < now() - interval '7 days'`,
+    [g, recordedFrom],
   );
   const [{ quiet_from: quietFrom }] = await tx.query<{ quiet_from: string | null }>(
     `select case when ${today} < $1::date + $2::int then ($1::date + $2::int)::text end as quiet_from`,
@@ -141,8 +221,18 @@ export async function loadAppUse(tx: Queryable, groups: readonly AgeGroup[], rec
       read: p.read,
       readInADay: p.read_in_a_day,
       fromNotification: p.from_notification,
+      afterEmail: p.after_email,
+      medianMinutes: p.median_minutes === null ? null : Math.round(Number(p.median_minutes)),
     })),
     readHours,
+    readDays: Array.from({ length: 7 }, (_, i) => days.find((r) => r.dow === i + 1)?.reads ?? 0),
+    openDays: Array.from({ length: 7 }, (_, i) => {
+      const row = opens.find((r) => r.dow === i + 1);
+      return row && row.days > 0 ? Math.round((row.opens / row.days) * 10) / 10 : 0;
+    }),
+    comeBack: back.ready ? { before: back.before, returned: back.returned } : null,
+    answers: answers.map((a) => ({ id: a.id, title: a.title, startsAt: new Date(a.starts_at).toISOString(), children: a.children, answered: a.answered, dayAhead: a.day_ahead })),
+    newParents: fresh.added > 0 ? { added: fresh.added, opened: fresh.opened } : null,
     quietFrom,
     quiet: quiet.map((q) => ({ id: q.id, name: `${q.first_name} ${q.last_name}`, children: q.children ?? "", lastOpened: q.last_opened })),
   };
@@ -176,4 +266,25 @@ function clockHour(h: number): string {
   if (h === 0) return "midnight";
   if (h === 12) return "midday";
   return h < 12 ? `${h}am` : `${h - 12}pm`;
+}
+
+export const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+
+/** "Fridays" when one day of the week clearly has the most (Monday first); null with too few to say or a tie. */
+export function busiestDay(byDay: readonly number[], min = 10): string | null {
+  const total = byDay.reduce((a, b) => a + b, 0);
+  if (total < min) return null;
+  const top = Math.max(...byDay);
+  if (byDay.filter((n) => n === top).length !== 1) return null;
+  return `${WEEKDAYS[byDay.indexOf(top)]}s`;
+}
+
+/** "40 minutes", "3 hours", "2 days": how long a post typically waited to be read. */
+export function waitWords(minutes: number): string {
+  if (minutes < 1) return "under a minute";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 36) return `${hours} hour${hours === 1 ? "" : "s"}`;
+  const d = Math.round(minutes / 1440);
+  return `${d} days`;
 }

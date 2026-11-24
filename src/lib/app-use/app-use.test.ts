@@ -3,7 +3,7 @@ import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
 import { AGE_GROUPS } from "../domain";
 import { loadNewsDetail } from "../admin/data";
-import { busiestHours, loadAppUse, visitLength } from "./data";
+import { busiestHours, loadAppUse, visitLength, busiestDay, waitWords } from "./data";
 import { markSeen, readFromNotification, recordOpen, recordTimeOnScreen } from "./record";
 
 // App use and Seen (migration 0055, the owner's question, 23 Nov 2026).
@@ -98,6 +98,46 @@ describe("app use", () => {
     expect(again.quiet.map((q) => q.id)).not.toContain(DEV_IDS.adnan);
     const [row] = await t.asSystem((tx) => tx.query<{ opens: number }>(`select opens from app_opens where guardian_id = $1`, [DEV_IDS.adnan]));
     expect(row.opens).toBe(2);
+    // By day of the week (Monday first): today's opens land on today's London weekday, as an average per such day.
+    const dow = Number((await t.asSystem((tx) => tx.query<{ d: number }>(`select extract(isodow from (now() at time zone 'Europe/London')::date)::int as d`)))[0].d);
+    expect(again.openDays).toHaveLength(7);
+    expect(again.openDays[dow - 1]).toBeGreaterThan(0);
+    expect(again.openDays.filter((n) => n > 0)).toHaveLength(1);
+    expect(again.readDays).toHaveLength(7);
+    // Coming back: nobody opened it the week before, and it isn't said at all until 14 days are on record.
+    expect(again.comeBack).toEqual({ before: 0, returned: 0 });
+    expect(early.comeBack).toBeNull();
+  });
+
+  it("leaves a staff parent's visit out of the club's average, but counts their open", async () => {
+    await t.asSystem((tx) => recordOpen(tx, DEV_IDS.adnan, false));
+    const use = await t.asUser(admin, (tx) => loadAppUse(tx, [...AGE_GROUPS]));
+    expect(use.today).toBe(1);
+    expect(use.visits).toBe(0);
+  });
+
+  it("says how early families answer for a session, and how long a post waited to be read", async () => {
+    const [s] = await t.asSystem((tx) =>
+      tx.query<{ id: string }>(
+        `insert into sessions (title, starts_at, ends_at, age_groups, venue)
+         values ('Answer test', now() - interval '3 hours', now() - interval '2 hours', '{U10}', 'Hub') returning id`,
+      ),
+    );
+    await t.asSystem((tx) =>
+      tx.query(`insert into availability (session_id, player_id, answer, answered_at) values ($1, $2, 'coming', now() - interval '2 days')`, [s.id, DEV_IDS.yusuf]),
+    );
+    const use = await t.asUser(admin, (tx) => loadAppUse(tx, ["U10"]));
+    const row = use.answers.find((a) => a.id === s.id)!;
+    expect(row.answered).toBe(1);
+    expect(row.dayAhead).toBe(1);
+    expect(row.children).toBeGreaterThanOrEqual(1);
+    expect(waitWords(0)).toBe("under a minute");
+    expect(waitWords(45)).toBe("45 minutes");
+    expect(waitWords(180)).toBe("3 hours");
+    expect(waitWords(4320)).toBe("3 days");
+    expect(busiestDay([1, 2, 3, 4, 20, 1, 0])).toBe("Fridays");
+    expect(busiestDay([5, 5, 0, 0, 0, 0, 0])).toBeNull();
+    expect(busiestDay([1, 0, 0, 0, 0, 0, 0])).toBeNull();
   });
 
   it("keeps app opens from parents and other families, and nobody signed in writes them", async () => {
