@@ -17,6 +17,12 @@ describe("normaliseUrl", () => {
     expect(normaliseUrl(`https://app.example/coach/plans/${ID}`)).toBe("https://app.example/coach/plans/:id");
   });
 
+  it("never sends the reminder email's read link", () => {
+    expect(normaliseUrl("https://app.example/read/3f2b1c9e-1111-4222-8333-444455556666.3f2b1c9e-1111-4222-8333-444455556667.AbCdEfGhIjKlMnOpQrStUvWxYz012345?done=1")).toBe(
+      "https://app.example/read/:id",
+    );
+  });
+
   it("never sends a sign-in token", () => {
     expect(normaliseUrl("https://app.example/sign-in/link?token=Zx9_Qw-12345678901234567890")).toBe("https://app.example/sign-in/link");
     expect(normaliseUrl("https://app.example/sign-in/Zx9_Qw-12345678901234567890")).toBe("https://app.example/sign-in/:id");

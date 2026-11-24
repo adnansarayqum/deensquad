@@ -19,6 +19,8 @@ export function normalisePath(path: string): string {
   const bare = path.split(/[?#]/, 1)[0] || "/";
   const parts = bare.split("/");
   const signIn = parts[1] === "sign-in";
+  // /read/<post>.<parent>.<signature>: the reminder email's link. Its dots keep it from looking like one id.
+  const readLink = parts[1] === "read";
   return parts
     .map((segment, i) => {
       if (!segment) return segment;
@@ -31,6 +33,7 @@ export function normalisePath(path: string): string {
       if (isId(decoded)) return ":id";
       // a calendar feed's token (/api/calendar/<token>.ics)
       if (decoded.endsWith(".ics") && isId(decoded.slice(0, -4))) return ":id.ics";
+      if (readLink && i >= 2) return ":id";
       if (signIn && i >= 2 && !(i === 2 && SIGN_IN_PAGES.has(decoded))) return ":id";
       return segment;
     })
