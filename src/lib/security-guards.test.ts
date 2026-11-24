@@ -111,6 +111,8 @@ describe("admin and staff screens are behind a login", () => {
         "/^\\/api\\/sponsor-logo\\/[^/]+$/", // only the logo or icon of a sponsor on show, for the public sign-up page
         "/^\\/api\\/sumup\\//", // the webhook, which trusts nothing in its body
         "/^\\/privacy$/",
+        "/^\\/read\\/[^/]+$/", // the reminder email's "I've read this": a link signed for one parent and one post
+
         "/^\\/sign-in(\\/|$)/",
         "/^\\/sign-up$/",
         "/^\\/trial$/",
@@ -149,6 +151,7 @@ describe("every request checks who is asking", () => {
       "src/lib/auth/actions.ts:signOut",
       "src/lib/auth/demo.ts:demoSignIn", // refuses outside the demo (isDemo)
       "src/lib/trials/actions.ts:bookTrialAction", // rate-limited per address and club-wide
+      "src/lib/news/read-actions.ts:confirmRead", // the email's signed link is the key; it can only mark that parent's read
     ]);
     const bare: string[] = [];
     for (const f of files) {

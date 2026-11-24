@@ -408,7 +408,7 @@ export type UnreadGuardian = {
 };
 
 /** A parent who has read a message: who, for which children, and when. */
-export type NewsReader = { id: string; name: string; children: string; readAt: string; fromNotification: boolean };
+export type NewsReader = { id: string; name: string; children: string; readAt: string; fromNotification: boolean; fromEmail: boolean };
 
 /**
  * One message and the parents who haven't read it. `groups` (a group coach's own) hides a message
@@ -482,6 +482,7 @@ export async function loadNewsDetail(
       children: r.children,
       readAt: new Date(r.read_at).toISOString(),
       fromNotification: r.via === "notification",
+      fromEmail: r.via === "email",
     })),
     unread: unread.map((u) => ({
       id: u.id,

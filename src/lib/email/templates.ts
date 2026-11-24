@@ -44,8 +44,12 @@ ${link ? `<p>Instead of the code, you can tap below on the phone you want to sig
 }
 
 /** The ladder's 24-hour reminder: the message itself, plus a link that signs them in where needed. */
-export function reminderEmail(opts: { to: string; firstName: string; title: string; body: string; children: string[]; link: string; appUrl: string | null }): Email {
-  const { to, firstName, title, body, children, link, appUrl } = opts;
+/**
+ * `oneTap`: the link is the signed /read page, where one tap tells the club with no sign-in (a post that asks for a
+ * plain tap). `signInLink`: for a parent not on the app yet, a second link that signs them in.
+ */
+export function reminderEmail(opts: { to: string; firstName: string; title: string; body: string; children: string[]; link: string; appUrl: string | null; oneTap?: boolean; signInLink?: string }): Email {
+  const { to, firstName, title, body, children, link, appUrl, oneTap, signInLink } = opts;
   const names = children.length <= 1 ? (children[0] ?? "your child") : `${children.slice(0, -1).join(", ")} and ${children.at(-1)}`;
   const subject = `Please read: ${title}`;
   const text = [
@@ -56,8 +60,9 @@ export function reminderEmail(opts: { to: string; firstName: string; title: stri
     title,
     body,
     "",
-    "Open the app and tap \"I've read this\":",
+    oneTap ? "Tap here to tell the club you've read it (no need to sign in):" : "Open the app and tap \"I've read this\":",
     link,
+    ...(signInLink ? ["", "Not on the app yet? This link signs you in:", signInLink] : []),
   ].join("\n");
   const html = layout(
     appUrl,
@@ -67,7 +72,8 @@ export function reminderEmail(opts: { to: string; firstName: string; title: stri
 <p style="font-weight:800;margin:0 0 6px">${escape(title)}</p>
 <p style="margin:0;white-space:pre-line">${escape(body)}</p></div>
 ${button(link, "I've read this")}
-<p style="color:#56625a;margin-bottom:0">The button opens the app, where one tap lets the club know.</p>`,
+<p style="color:#56625a;margin-bottom:0">${oneTap ? "One more tap on the page that opens lets the club know. No need to sign in." : "The button opens the app, where one tap lets the club know."}</p>
+${signInLink ? `<p style="color:#56625a;margin-bottom:0">Not on the app yet? <a href="${escape(signInLink)}" style="color:#1f6b33;font-weight:700">Sign in with this link</a>.</p>` : ""}`,
   );
   return { to, subject, text, html };
 }

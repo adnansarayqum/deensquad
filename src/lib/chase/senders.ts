@@ -6,6 +6,7 @@ import { appUrl } from "../config";
 import type { Queryable } from "../db/types";
 import { SEND_TIMEOUT_MS, canSendEmail, sendEmails, type Email } from "../email/send";
 import { reminderEmail } from "../email/templates";
+import { readToken } from "../news/read-link";
 import { dialable } from "../validate";
 import type { ChaseTarget, Senders } from "./ladder";
 
@@ -132,7 +133,20 @@ export async function sendEmail(targets: ChaseTarget[], tx: Queryable): Promise<
         requestId = issued.request.requestId;
       }
     }
-    const email = reminderEmail({ to: t.email!, firstName: t.firstName, title: t.title, body: t.body, children: t.children, link, appUrl: base });
+    // A post that asks for a plain tap: the button is the signed page where one tap records the read, no sign-in
+    // (so a parent who reads the post in the email is counted). A parent not on the app also gets their sign-in link.
+    const oneTap = t.tapRead === true;
+    const email = reminderEmail({
+      to: t.email!,
+      firstName: t.firstName,
+      title: t.title,
+      body: t.body,
+      children: t.children,
+      link: oneTap ? `${base}/read/${readToken(t.announcementId, t.guardianId)}` : link,
+      appUrl: base,
+      oneTap,
+      ...(oneTap && requestId ? { signInLink: link } : {}),
+    });
     // One reminder email per message per parent: a later run retrying one that timed out but went isn't sent twice.
     out.push({ target: t, requestId, email: { ...email, idempotencyKey: `${t.announcementId}:${t.guardianId}:email` } });
   }

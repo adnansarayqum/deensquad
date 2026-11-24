@@ -210,7 +210,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
                     <span className="text-[15px] font-bold">{r.name}</span>
                     <span className="text-[13px] text-ink-muted">
                       {r.children}
-                      {r.fromNotification ? " · from the notification" : ""}
+                      {r.fromNotification ? " · from the notification" : r.fromEmail ? " · from the email" : ""}
                     </span>
                   </span>
                   <span className="inline-flex items-center gap-1 text-[13px] text-ink-muted">

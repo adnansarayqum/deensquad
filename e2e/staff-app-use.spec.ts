@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { devices, expect, test } from "@playwright/test";
-import { ADMIN_STATE, newContext, signIn } from "./helpers";
+import { readFileSync } from "node:fs";
+import { ADMIN_STATE, OUTBOX, newContext, signIn } from "./helpers";
 
 // App use and Seen (migration 0055): a parent opens Home and has the club's posts on screen without tapping; the
 // admin sees them counted as seen, not read, and the parent among today's openers. Runs after parent-app.spec.ts
@@ -44,5 +45,26 @@ test("a parent sees a post without tapping; the admin sees it as seen, not read,
   // "Mark as read" from a notification is a parent's: the admin (not a parent) is refused.
   const res = await a.request.post("/api/news/read", { data: { id: "00000000-0000-4000-8000-000000000000" } });
   expect(res.status()).toBe(401);
+
+  // The reminder email's button: a page that needs one tap and no sign-in, so a parent who reads the post in the
+  // email is counted. "Send a reminder now" emails the parents a notification can't reach (no push keys in tests).
+  await a.getByRole("button", { name: /^Send a reminder now to the \d+ parents? who haven't read Winter timings start 7 Nov/ }).click();
+  await expect(a.getByText(/^(Reminder sent|Nobody new to remind)/)).toBeVisible();
+  const mails = readFileSync(OUTBOX, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { to: string; subject: string; text: string });
+  const mail = mails.filter((m) => m.subject === "Please read: Winter timings start 7 Nov" && m.text.includes("/read/")).at(-1);
+  expect(mail, "a reminder email with the one-tap link").toBeTruthy();
+  const link = mail!.text.match(/https?:\/\/\S+\/read\/\S+/)![0];
+  const visitor = await newContext(browser, PHONE);
+  const v = await visitor.newPage();
+  await v.goto(new URL(link).pathname);
+  await expect(v.getByRole("heading", { name: "Let the club know" })).toBeVisible();
+  await v.getByRole("button", { name: "I've read this" }).click();
+  await expect(v.getByRole("heading", { name: "Thank you" })).toBeVisible();
+  // A made-up link shows nothing of anyone's.
+  await v.goto("/read/00000000-0000-4000-8000-000000000000.00000000-0000-4000-8000-000000000000.nope");
+  await expect(v.getByRole("heading", { name: "This link has stopped working" })).toBeVisible();
+  await visitor.close();
+  await a.reload();
+  await expect(a.getByText("from the email").first()).toBeVisible();
   await admin.close();
 });
