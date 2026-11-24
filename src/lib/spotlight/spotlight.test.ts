@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
 import type { Email } from "../email/send";
-import { loadChildSpotlights, loadSpotlight, loadWeekSpotlight, setSpotlight, weekStart, weekWords } from "./data";
+import { loadCardStats, loadChildSpotlights, loadSpotlight, loadWeekSpotlight, positionShort, setSpotlight, weekStart, weekWords } from "./data";
 import { sendSpotlightNotices } from "./notify";
 
 // Player of the week (migration 0057).
@@ -27,6 +27,45 @@ describe("the week", () => {
     expect(weekStart(new Date("2026-11-29T23:30:00Z"))).toBe("2026-11-23"); // Sunday night
     expect(weekStart(new Date("2026-11-30T00:30:00Z"))).toBe("2026-11-30");
     expect(weekWords("2026-11-23")).toBe("week of 23 November");
+  });
+});
+
+describe("the card's numbers", () => {
+  it("are the child's own season, counted from the register, never made up", async () => {
+    const [{ id: player }] = await t.asSystem((tx) =>
+      tx.query<{ id: string }>(`insert into players (first_name, last_name, age_group, joined_on) values ('Card', 'Test', 'U10', '2026-08-01') returning id`),
+    );
+    const read = async () => (await t.asSystem((tx) => loadCardStats(tx, player, true))).map((s) => `${s.value} ${s.label}`);
+    // Nothing of their own yet (only the sample club's finished sessions for the group, none attended).
+    const before = await read();
+    expect(before.slice(0, 1)).toEqual(["0 sessions"]);
+    expect(before.slice(2)).toEqual(["0 in a row", "0 points", "0 stars", "0 badges"]);
+    // Three more finished sessions, the newest of all: missed the oldest of them, came to the two since.
+    const ids = await t.asSystem((tx) =>
+      tx.query<{ id: string }>(
+        `insert into sessions (title, starts_at, ends_at, age_groups, venue)
+         select 'Card ' || n, now() - (n || ' hours')::interval, now() - (n || ' hours')::interval + interval '30 minutes', '{U10}', 'Hub'
+         from generate_series(1, 3) n returning id`,
+      ),
+    );
+    await t.asSystem(async (tx) => {
+      const rows = await tx.query<{ id: string }>(`select id from sessions where id = any($1::uuid[]) order by starts_at desc limit 2`, [ids.map((r) => r.id)]);
+      for (const r of rows) await tx.query(`insert into attendance (session_id, player_id, method) values ($1, $2, 'manual')`, [r.id, player]);
+      await tx.query(`insert into player_awards (player_id, points, stars, reason) values ($1, 5, 1, 'Great pass')`, [player]);
+    });
+    const after = await read();
+    expect(after[0]).toBe("2 sessions");
+    expect(after.slice(2)).toEqual(["2 in a row", "5 points", "1 star", "0 badges"]);
+    // A group without points, stars or badges gets the attendance three only.
+    expect(await t.asSystem((tx) => loadCardStats(tx, player, false))).toHaveLength(3);
+  });
+
+  it("shortens the position, and leaves it out when the club hasn't set one", () => {
+    expect(positionShort("Midfielder")).toBe("MID");
+    expect(positionShort("goalkeeper")).toBe("GK");
+    expect(positionShort("Striker")).toBe("ST");
+    expect(positionShort("  ")).toBeNull();
+    expect(positionShort(null)).toBeNull();
   });
 });
 

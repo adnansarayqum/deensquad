@@ -1,6 +1,8 @@
 import type { AgeGroup } from "../domain";
 import type { Queryable } from "../db/types";
+import { SEASON_START_SQL } from "../admin/needs";
 import { londonDate } from "../dates";
+import { sessionIsFor } from "../squads/sql";
 
 // Player of the week (migration 0057; the end-to-end verdict's "wow" feature, 24 Nov 2026): a coach picks one child
 // per group each week and writes a line about them; the child's parents get a card to keep and share. A family
@@ -29,12 +31,14 @@ export type Spotlight = {
   comment: string;
   coach: string | null;
   photoFileId: string | null;
+  shirtNumber: number | null;
+  position: string | null;
 };
 
 const COLUMNS = `sp.id, sp.player_id, p.first_name, sp.age_group::text as age_group, sp.week::text as week, sp.comment,
-  (select sn.display_name from staff_names sn where sn.id = sp.given_by) as coach, p.photo_file_id`;
+  (select sn.display_name from staff_names sn where sn.id = sp.given_by) as coach, p.photo_file_id, p.shirt_number, p.position`;
 
-type Row = { id: string; player_id: string; first_name: string; age_group: AgeGroup; week: string; comment: string; coach: string | null; photo_file_id: string | null };
+type Row = { id: string; player_id: string; first_name: string; age_group: AgeGroup; week: string; comment: string; coach: string | null; photo_file_id: string | null; shirt_number: number | null; position: string | null };
 
 const view = (r: Row): Spotlight => ({
   id: r.id,
@@ -45,6 +49,8 @@ const view = (r: Row): Spotlight => ({
   comment: r.comment,
   coach: r.coach,
   photoFileId: r.photo_file_id,
+  shirtNumber: r.shirt_number,
+  position: r.position,
 });
 
 /** One spotlight, if the signed-in person may read it (their own child's, or staff). */
@@ -91,4 +97,55 @@ export async function setSpotlight(tx: Queryable, opts: { playerId: string; comm
 
 export async function removeSpotlight(tx: Queryable, id: string): Promise<void> {
   await tx.query(`delete from player_spotlights where id = $1`, [id]);
+}
+
+export type CardStat = { value: string; label: string };
+
+/**
+ * The child's own season in numbers for the card (the same figures as the Family screen's player card): sessions
+ * that were theirs and have finished, how many they came to, their run of sessions in a row, and points, stars and
+ * badges where their group has them. Read as the signed-in person, so a family gets only its own child's.
+ */
+export async function loadCardStats(tx: Queryable, playerId: string, awards: boolean): Promise<CardStat[]> {
+  const sessions = await tx.query<{ here: boolean }>(
+    `select exists (select 1 from attendance a where a.session_id = s.id and a.player_id = p.id) as here
+     from players p join sessions s on ${sessionIsFor("s", "p")}
+     where p.id = $1 and s.cancelled_at is null and s.starts_at < now()
+       and s.starts_at >= ${SEASON_START_SQL} and s.starts_at >= p.joined_on::timestamptz
+       and (s.ends_at <= now() or exists (select 1 from attendance a where a.session_id = s.id and a.player_id = p.id))
+     order by s.starts_at desc limit 200`,
+    [playerId],
+  );
+  const came = sessions.filter((s) => s.here).length;
+  const streak = sessions.findIndex((s) => !s.here);
+  const stats: CardStat[] = [
+    { value: String(came), label: came === 1 ? "session" : "sessions" },
+    { value: sessions.length ? `${Math.round((came / sessions.length) * 100)}%` : "–", label: "attended" },
+    { value: String(streak === -1 ? sessions.length : streak), label: "in a row" },
+  ];
+  if (!awards) return stats;
+  const [totals] = await tx.query<{ points: number; stars: number; badges: number }>(
+    `select coalesce((select sum(points) from player_awards where player_id = $1), 0)::int as points,
+       coalesce((select sum(stars) from player_awards where player_id = $1), 0)::int as stars,
+       (select count(*) from player_badges where player_id = $1)::int as badges`,
+    [playerId],
+  );
+  return [
+    ...stats,
+    { value: String(totals.points), label: totals.points === 1 ? "point" : "points" },
+    { value: String(totals.stars), label: totals.stars === 1 ? "star" : "stars" },
+    { value: String(totals.badges), label: totals.badges === 1 ? "badge" : "badges" },
+  ];
+}
+
+/** "MID" for Midfielder: the short position on the card (null when the club hasn't set one). */
+export function positionShort(position: string | null): string | null {
+  const p = position?.trim().toLowerCase();
+  if (!p) return null;
+  if (p.startsWith("goal") || p === "gk" || p === "keeper") return "GK";
+  if (p.startsWith("def")) return "DEF";
+  if (p.startsWith("mid")) return "MID";
+  if (p.startsWith("str")) return "ST";
+  if (p.startsWith("for") || p.startsWith("att") || p.startsWith("wing")) return "FWD";
+  return p.replace(/[^a-z]/g, "").slice(0, 3).toUpperCase() || null;
 }

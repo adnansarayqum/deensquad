@@ -88,7 +88,12 @@ describe("app use", () => {
     expect(use.averageSeconds).toBe(Math.round((90 + 1800) / 2));
     // Sara is signed in and hasn't opened it: quiet. Adnan opened it today: not.
     await t.signIn(DEV_EMAILS.secondParent);
-    const again = await t.asUser(admin, (tx) => loadAppUse(tx, [...AGE_GROUPS]));
+    // Until opens have been recorded for 14 days, "no open on record" says nothing, so nobody is listed for it.
+    const early = await t.asUser(admin, (tx) => loadAppUse(tx, [...AGE_GROUPS], "2999-01-01"));
+    expect(early.quietFrom).toBe("2999-01-15");
+    expect(early.quiet).toEqual([]);
+    const again = await t.asUser(admin, (tx) => loadAppUse(tx, [...AGE_GROUPS], "2026-01-01"));
+    expect(again.quietFrom).toBeNull();
     expect(again.quiet.map((q) => q.id)).toContain(DEV_IDS.sara);
     expect(again.quiet.map((q) => q.id)).not.toContain(DEV_IDS.adnan);
     const [row] = await t.asSystem((tx) => tx.query<{ opens: number }>(`select opens from app_opens where guardian_id = $1`, [DEV_IDS.adnan]));

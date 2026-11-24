@@ -8,6 +8,8 @@ import { newsReaches } from "../squads/sql";
 
 /** A parent counts as gone quiet after this many days without opening the app. */
 export const QUIET_DAYS = 14;
+/** The London day opens were first recorded (migration 0055 went live). Before then nobody has an open on record. */
+export const RECORDED_FROM = "2026-11-23";
 
 export type AppUse = {
   /** Parents with an approved child in the groups; how many have ever signed in. */
@@ -26,11 +28,16 @@ export type AppUse = {
   posts: { id: string; title: string; postedAt: string; reached: number; seen: number; read: number; readInADay: number; fromNotification: number }[];
   /** Reads in the last 60 days by London hour of the day (0–23): when to post. */
   readHours: number[];
-  /** Parents on the app who haven't opened it for QUIET_DAYS or more, longest first. */
+  /**
+   * Parents on the app who haven't opened it for QUIET_DAYS or more, longest first. A parent with no open on record
+   * is listed only once opens have been recorded for QUIET_DAYS (`quietFrom`, null once that day has come): before
+   * then "no open on record" only means "not since recording began", which on day two was nearly everyone.
+   */
+  quietFrom: string | null;
   quiet: { id: string; name: string; children: string; lastOpened: string | null }[];
 };
 
-export async function loadAppUse(tx: Queryable, groups: readonly AgeGroup[]): Promise<AppUse> {
+export async function loadAppUse(tx: Queryable, groups: readonly AgeGroup[], recordedFrom: string = RECORDED_FROM): Promise<AppUse> {
   const g = [...groups];
   const mine = `select distinct pg.guardian_id as id from player_guardians pg join players p on p.id = pg.player_id
     where p.approved_at is not null and p.age_group::text = any ($1::text[])`;
@@ -97,6 +104,10 @@ export async function loadAppUse(tx: Queryable, groups: readonly AgeGroup[]): Pr
      group by 1`,
     [g],
   );
+  const [{ quiet_from: quietFrom }] = await tx.query<{ quiet_from: string | null }>(
+    `select case when ${today} < $1::date + $2::int then ($1::date + $2::int)::text end as quiet_from`,
+    [recordedFrom, QUIET_DAYS],
+  );
   const quiet = await tx.query<{ id: string; first_name: string; last_name: string; children: string; last_opened: string | null }>(
     `with mine as (${mine})
      select gu.id, gu.first_name, gu.last_name,
@@ -106,9 +117,10 @@ export async function loadAppUse(tx: Queryable, groups: readonly AgeGroup[]): Pr
      from guardians gu join mine on mine.id = gu.id
      where gu.auth_user_id is not null
        and not exists (select 1 from app_opens o where o.guardian_id = gu.id and o.day > ${today} - $2::int)
+       and (${today} >= $3::date + $2::int or exists (select 1 from app_opens o where o.guardian_id = gu.id))
      order by last_opened nulls first, gu.last_name, gu.first_name
      limit 100`,
-    [g, QUIET_DAYS],
+    [g, QUIET_DAYS, recordedFrom],
   );
   const readHours = Array.from({ length: 24 }, (_, h) => hours.find((r) => r.hour === h)?.reads ?? 0);
   return {
@@ -131,6 +143,7 @@ export async function loadAppUse(tx: Queryable, groups: readonly AgeGroup[]): Pr
       fromNotification: p.from_notification,
     })),
     readHours,
+    quietFrom,
     quiet: quiet.map((q) => ({ id: q.id, name: `${q.first_name} ${q.last_name}`, children: q.children ?? "", lastOpened: q.last_opened })),
   };
 }

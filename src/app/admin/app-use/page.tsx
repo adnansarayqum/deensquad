@@ -29,7 +29,7 @@ export default async function AppUsePage() {
       <PageHeader
         back={{ href: "/admin", label: "Overview" }}
         title="App use"
-        subtitle="Which parents open the app, whether they see and read posts, and when. Staff using the parent side aren't counted."
+        subtitle="Which parents open the app, whether they see and read posts, and when."
       />
 
       <ul className="grid grid-cols-3 gap-2.5">
@@ -145,8 +145,12 @@ export default async function AppUsePage() {
         </p>
       </Section>
 
-      <Section title={`Not opened for ${QUIET_DAYS} days or more (${use.quiet.length})`}>
-        {use.quiet.length === 0 ? (
+      <Section title={use.quietFrom ? `Not opened for ${QUIET_DAYS} days or more` : `Not opened for ${QUIET_DAYS} days or more (${use.quiet.length})`}>
+        {use.quietFrom ? (
+          <p className="text-[15px] text-ink-muted">
+            Too early to say. The app has only kept a note of who opens it since 23 November, so this list starts on {shortDay(use.quietFrom)}.
+          </p>
+        ) : use.quiet.length === 0 ? (
           <p className="text-[15px] text-ink-muted">Every parent on the app has opened it in the last {QUIET_DAYS} days.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-line">
@@ -155,13 +159,12 @@ export default async function AppUsePage() {
                 <Link href={`/admin/families?q=${encodeURIComponent(tidyName(q.name))}`} className="font-bold underline decoration-line underline-offset-2">
                   {tidyName(q.name)}
                 </Link>
-                <span className="text-[13px] text-ink-muted">{q.lastOpened ? `Last opened ${shortDay(q.lastOpened)}` : "Not opened since 23 Nov"}</span>
+                <span className="text-[13px] text-ink-muted">{q.lastOpened ? `Last opened ${shortDay(q.lastOpened)}` : "Not opened since 23 Nov, when counting began"}</span>
                 <span className="basis-full text-[14px] text-ink-muted">Parent of {q.children}</span>
               </li>
             ))}
           </ul>
         )}
-        <p className="mt-2 text-[13px] text-ink-muted">Opening the app was first recorded on 23 November 2026.</p>
       </Section>
     </div>
   );
