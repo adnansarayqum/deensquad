@@ -102,7 +102,13 @@ test("the admin sees the answer and the unread reply, and replies back", async (
   await expect(nav.getByRole("link", { name: "Inbox, 1 unread" })).toBeVisible();
   await nav.getByRole("link", { name: "Inbox, 1 unread" }).click();
   await expect(page).toHaveURL(/\/admin\/messages$/);
-  const row = page.getByRole("link", { name: new RegExp(`Re: ${HEADLINE}`) });
+  // Replies to a post are gathered under it: one row for the post, then each family's reply.
+  const group = page.getByRole("link", { name: new RegExp(`Replies to .${HEADLINE}`) });
+  await expect(group).toContainText("1 new");
+  await expect(group).toContainText("1 family replied");
+  await group.click();
+  await expect(page).toHaveURL(/\/admin\/messages\?about=/);
+  const row = page.getByRole("link", { name: new RegExp(`Re: ${HEADLINE}`) }).first();
   await expect(row).toContainText("Unread");
   await expect(row).toContainText("Yunus V");
   await page.screenshot({ path: shot("admin-messages-inbox"), fullPage: true });

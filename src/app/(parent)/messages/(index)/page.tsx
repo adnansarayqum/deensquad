@@ -13,7 +13,9 @@ export const metadata: Metadata = { title: "Messages" };
 
 /** Messages: the family's conversations with the club, newest first, with a dot on those with something new. */
 export default async function MessagesPage({ searchParams }: PageProps<"/messages">) {
-  const back = backTarget((await searchParams).from, { href: "/player", label: "Family" });
+  const params = await searchParams;
+  const back = backTarget(params.from, { href: "/player", label: "Family" });
+  const sentTo = Number(params.sent) > 1 ? Number(params.sent) : 0;
   const { family, conversations } = await getMessagesPage();
   const now = new Date();
   const several = family.children.length > 1;
@@ -24,10 +26,15 @@ export default async function MessagesPage({ searchParams }: PageProps<"/message
         Between you and the club. Both of a child&apos;s parents see the same messages, and the club&apos;s admins can read every conversation.
       </BackHeader>
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
+        {sentTo ? (
+          <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+            Sent. It&apos;s in each child&apos;s conversation below.
+          </p>
+        ) : null}
         {family.children.length ? (
           <Link href="/messages/new" className="btn-chunky btn-grass w-full">
             <PenLine aria-hidden size={20} />
-            Message the coaches
+            Message the club
           </Link>
         ) : (
           <Card className="p-4 text-[15px] leading-[22px]">No players are linked to your email yet. Ask the club to add your child.</Card>

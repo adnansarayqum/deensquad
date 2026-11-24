@@ -65,7 +65,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "who_is_coming",
-    description: "For the next session day: every child who said coming, not coming (with the family's reason) or hasn't answered.",
+    description: "For the next session day: every child who said coming, not coming or hasn't answered. Reasons aren't included: they can mention health.",
     input_schema: { type: "object", properties: { group: { ...GROUP_ENUM, description: "Only this group (optional)." } } },
   },
   {
@@ -370,7 +370,7 @@ async function whoIsComing(tx: Queryable, input: Record<string, unknown>, ctx: T
   const group = isAgeGroup(input.group) ? input.group : null;
   const kids = w.children.filter((c) => !group || c.group === group);
   const names = (answer: string) =>
-    kids.filter((c) => c.answer === answer).map((c) => `${c.firstName} ${c.lastName} (${c.group})${c.reason ? `: ${c.reason}` : ""}`);
+    kids.filter((c) => c.answer === answer).map((c) => `${c.firstName} ${c.lastName} (${c.group})`); // never the family's reason: it can mention health, which the assistant doesn't see
   return {
     day: w.day,
     sessions: w.sessions.map((s) => ({ title: s.title, when: when(s.startsAt, s.endsAt), groups: s.groups, venue: s.venue })),

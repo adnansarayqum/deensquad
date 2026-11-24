@@ -149,7 +149,10 @@ export function NewsAudience({
         ) : null}
         <ul aria-label="Children" className="flex max-h-96 flex-col gap-1.5 overflow-y-auto rounded-app border border-line p-1.5">
           {ordered.map((c) => {
-            const name = shortName(c.firstName, c.lastName);
+            // Two children who'd both read "Yusuf A." in the same group get their full surname, so the right one is picked.
+            const short = shortName(c.firstName, c.lastName);
+            const twice = ordered.some((o) => o.id !== c.id && o.ageGroup === c.ageGroup && shortName(o.firstName, o.lastName) === short);
+            const name = twice ? `${c.firstName} ${c.lastName}` : short;
             const on = chosen.has(c.id);
             return (
               <li key={c.id} hidden={!shows(c)}>

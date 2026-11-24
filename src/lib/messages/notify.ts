@@ -76,6 +76,8 @@ export async function dueNotices(tx: Queryable, now: Date, conversationId: strin
        join players p on p.id = c.player_id
        join staff s on (
          case when c.staff_id is not null then s.id = c.staff_id
+         -- a parent's message for the club's admins (payments, the shop, the account): migration 0056
+         when c.for_admins then s.role = 'admin'
          when exists (select 1 from staff gc where gc.role = 'coach' and p.age_group = any (gc.age_groups))
            then s.role = 'coach' and p.age_group = any (s.age_groups)
          else s.role = 'admin' end

@@ -25,7 +25,7 @@ export default async function ConversationPage({ params, searchParams }: PagePro
     return found;
   });
   if (!thread) notFound();
-  const withName = staffNameForParents(thread.withName) ?? "the coaches";
+  const withName = staffNameForParents(thread.withName) ?? (thread.forAdmins ? "the club's admins" : "the coaches");
 
   return (
     <>
@@ -39,7 +39,7 @@ export default async function ConversationPage({ params, searchParams }: PagePro
           </p>
         ) : null}
         {thread.news ? <QuotedNews news={{ ...thread.news, postedBy: staffNameForParents(thread.news.postedBy) }} now={new Date()} /> : null}
-        <Thread messages={thread.messages.map((m) => (m.authorKind === "staff" ? { ...m, authorName: staffNameForParents(m.authorName) ?? m.authorName } : m))} now={new Date()} />
+        <Thread messages={thread.messages.map((m) => (m.authorKind === "staff" ? { ...m, authorName: staffNameForParents(m.authorName) ?? m.authorName } : m))} now={new Date()} seenBy={staffNameForParents(thread.seenBy)} />
         <Card className="p-4">
           <MessageForm action={sendParentMessage} hidden={{ conversation: thread.id }} label="Reply" submitLabel="Send reply" compact />
         </Card>

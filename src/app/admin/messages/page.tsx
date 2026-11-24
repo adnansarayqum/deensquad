@@ -8,7 +8,7 @@ import { requireStaff } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { postedLabel } from "@/lib/dates";
 import { markAllRead } from "@/lib/messages/actions";
-import { loadStaffUnread, loadInbox, type InboxRow } from "@/lib/messages/data";
+import { loadStaffUnread, loadInbox, loadReplyGroups, type InboxRow } from "@/lib/messages/data";
 
 export const metadata: Metadata = { title: "Inbox" };
 
@@ -23,12 +23,17 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
   const about = typeof params.about === "string" && UUID.test(params.about) ? params.about : null;
   const absences = params.show === "absences" && !about;
   const sent = params.show === "sent" && !about;
-  const all = params.show === "all" || absences || sent || Boolean(about);
-  const [rows, newsTitle, newAbsences] = await asUser(user.id, async (tx) => {
-    const list = await loadInbox(tx, { unreadOnly: !all, about, absences, sent });
+  const replies = params.show === "replies" && !about;
+  const all = params.show === "all" || absences || sent || replies || Boolean(about);
+  // Replies to posts are listed by post, not one row each (messaging review, 23 Nov 2026: one post's 56 replies
+  // buried the real conversations); Needs reply shows the posts with new replies above the conversations.
+  const [rows, newsTitle, newAbsences, groups] = await asUser(user.id, async (tx) => {
+    const list = replies ? [] : await loadInbox(tx, { unreadOnly: !all, about, absences, sent, direct: !about && !absences });
     const [news] = about ? await tx.query<{ title: string }>(`select title from announcements where id = $1`, [about]) : [];
-    return [list, news?.title ?? null, await loadStaffUnread(tx, { absences: true })] as const;
+    const byPost = replies ? await loadReplyGroups(tx) : !all ? await loadReplyGroups(tx, { unreadOnly: true }) : [];
+    return [list, news?.title ?? null, await loadStaffUnread(tx, { absences: true }), byPost] as const;
   });
+  const healthNew = absences ? rows.filter((r) => r.unread && r.health).length : 0;
   const confirming = params.markall === "confirm";
   const now = new Date();
   const tab = (active: boolean) => `btn-chunky btn-small ${active ? "btn-grass" : "btn-paper"}`;
@@ -56,14 +61,17 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
           <Link href="/admin/messages?show=absences" aria-current={absences ? "page" : undefined} className={tab(absences)}>
             {newAbsences ? `Not coming (${newAbsences} new)` : "Not coming"}
           </Link>
-          <Link href="/admin/messages?show=all" aria-current={all && !about && !absences && !sent ? "page" : undefined} className={tab(all && !about && !absences && !sent)}>
-            All
+          <Link href="/admin/messages?show=replies" aria-current={replies ? "page" : undefined} className={tab(replies)}>
+            Replies to posts
+          </Link>
+          <Link href="/admin/messages?show=all" aria-current={all && !about && !absences && !sent && !replies ? "page" : undefined} className={tab(all && !about && !absences && !sent && !replies)}>
+            All conversations
           </Link>
           <span className="ml-auto flex flex-wrap gap-2">
             {/* One message to several families at once (a news post to chosen children, replies on): Coach Jav's request. */}
             <Link href="/admin/news?to=children#post-message" className="btn-chunky btn-small btn-paper">
               <Users aria-hidden size={16} />
-              Message several families
+              Post to chosen families
             </Link>
             <Link href="/admin/messages/new" className="btn-chunky btn-small btn-paper">
               <PenLine aria-hidden size={16} />
@@ -87,21 +95,55 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
             </form>
           </details>
         ) : null}
-        {absences && newAbsences > 0 ? (
+        {healthNew ? (
+          <Notice tone="action">
+            {healthNew === 1 ? "1 new reason mentions" : `${healthNew} new reasons mention`} an injury or illness. {healthNew === 1 ? "It's" : "They're"} listed first: open {healthNew === 1 ? "it" : "each one"} to read it.
+          </Notice>
+        ) : null}
+        {absences && newAbsences - healthNew > 0 ? (
           <form action={markAllRead}>
             <input type="hidden" name="scope" value="absences" />
             <button type="submit" className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
-              Mark the {newAbsences} new {newAbsences === 1 ? "reason" : "reasons"} as read
+              Mark the {newAbsences - healthNew} other new {newAbsences - healthNew === 1 ? "reason" : "reasons"} as read
             </button>
           </form>
         ) : null}
         {about ? <Notice>Replies to “{newsTitle ?? "a message that has been deleted"}”.</Notice> : null}
-        {absences ? <p className="text-[15px] text-ink-muted">Reasons parents gave for a child not coming. They also show on the register for that session.</p> : null}
+        {absences ? (
+          <p className="text-[15px] text-ink-muted">
+            Reasons parents gave for a child not coming. They also show on the register for that session, and once a coach has opened that register the parent sees &ldquo;Seen by&rdquo; with their name.
+          </p>
+        ) : null}
+        {replies ? <p className="text-[15px] text-ink-muted">Parents&apos; replies to your posts, gathered by post. Open one to see each family&apos;s reply.</p> : null}
       </PageHeader>
 
-      {rows.length === 0 ? (
+      {groups.length ? (
+        <ul aria-label="Replies to posts" className="flex flex-col gap-2.5">
+          {groups.map((g) => (
+            <li key={g.newsId}>
+              <Link
+                href={`/admin/messages?about=${g.newsId}`}
+                className={`flex items-center gap-3 rounded-app border-2 bg-paper px-3.5 py-3 ${g.unread ? "border-kit-orange" : "border-line"}`}
+              >
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    {g.unread ? <Pill tone="action">{g.unread} new</Pill> : null}
+                    <span className="text-[15px] font-bold">Replies to &ldquo;{g.title}&rdquo;</span>
+                  </span>
+                  <span className="text-[13px] text-ink-muted">
+                    {g.replies === 1 ? "1 family replied" : `${g.replies} families replied`} · {postedLabel(g.lastAt, now)}
+                  </span>
+                </span>
+                <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {rows.length === 0 && groups.length === 0 ? (
         <p className="rounded-app border border-line bg-paper p-4 text-[15px] text-ink-muted">
-          {sent ? "Nothing waiting on a family. " : all ? "No conversations yet." : "Nothing waiting for a reply. "}
+          {sent ? "Nothing waiting on a family. " : replies ? "No replies to posts yet. " : all ? "No conversations yet." : "Nothing waiting for a reply. "}
           {all && !sent ? null : (
             <Link href="/admin/messages?show=all" className="font-bold text-grass-text underline">
               See all conversations
@@ -122,6 +164,8 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="flex flex-wrap items-center gap-2">
                     {r.unread ? <Pill tone="action">Unread</Pill> : null}
+                    {r.health ? <Pill tone={r.unread ? "action" : "neutral"}>Injury or illness</Pill> : null}
+                    {r.forAdmins ? <Pill tone="gold">For admins</Pill> : null}
                     <span className="text-[15px] font-bold">{name(r)}</span>
                     <Pill tone="neutral">{r.child.ageGroup}</Pill>
                   </span>
@@ -186,7 +230,13 @@ export default async function AdminMessagesPage({ searchParams }: PageProps<"/ad
                     <span className="line-clamp-2">{r.last ? `${r.last.authorKind === "staff" ? `${r.last.authorName}: ` : ""}${r.last.preview}` : "–"}</span>
                   </td>
                   <td className="px-2 py-2 whitespace-nowrap text-ink-muted">{postedLabel(r.lastAt, now)}</td>
-                  <td className="py-2 pr-2.5 pl-2">{r.unread ? <Pill tone="action">Unread</Pill> : <Pill tone="neutral">Read</Pill>}</td>
+                  <td className="py-2 pr-2.5 pl-2">
+                    <span className="flex flex-wrap gap-1">
+                      {r.unread ? <Pill tone="action">Unread</Pill> : <Pill tone="neutral">Read</Pill>}
+                      {r.health ? <Pill tone={r.unread ? "action" : "neutral"}>Injury or illness</Pill> : null}
+                      {r.forAdmins ? <Pill tone="gold">For admins</Pill> : null}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>

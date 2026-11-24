@@ -20,6 +20,7 @@ export function MessageForm({
   children,
   compact = false,
   media = false,
+  quickReplies,
 }: {
   action: (prev: MessageFormState, formData: FormData) => Promise<MessageFormState>;
   hidden: Record<string, string>;
@@ -31,6 +32,8 @@ export function MessageForm({
   compact?: boolean;
   /** Staff only: "Add photos or videos" above the box (src/components/media). */
   media?: boolean;
+  /** Staff only: replies typed often, one tap to put in the box (still checked and sent by hand). Needs JavaScript. */
+  quickReplies?: readonly string[];
 }) {
   const [state, run, pending, keep] = useKeptActionState<MessageFormState>(action, {});
   const form = useRef<HTMLFormElement>(null);
@@ -59,13 +62,33 @@ export function MessageForm({
           <label htmlFor="message-body" className="field-label">
             {label}
           </label>
-          <div className="flex items-end gap-2">
+          {quickReplies?.length ? (
+            <div className="mb-2 flex flex-wrap gap-1.5" role="group" aria-label="Quick replies">
+              {quickReplies.map((text) => (
+                <button
+                  key={text}
+                  type="button"
+                  className="min-h-12 rounded-pill border border-line bg-paper px-3 text-left text-[14px] font-bold text-grass-text"
+                  onClick={() => {
+                    const box = form.current?.querySelector("textarea");
+                    if (!box) return;
+                    box.value = box.value.trim() ? `${box.value.trimEnd()} ${text}` : text;
+                    box.focus();
+                  }}
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {/* The box takes the full width, Send under it (messaging review, Nov 2026: beside the button it was cramped). */}
+          <div className="flex flex-col gap-2">
             <textarea
               id="message-body"
               name="body"
               rows={2}
               maxLength={BODY_MAX}
-              className="field max-h-48 min-h-12 flex-1 resize-none"
+              className="field max-h-48 min-h-12 w-full resize-none"
               placeholder={placeholder}
               onInput={(e) => {
                 // Grow with the text, up to about eight lines; then it scrolls.
@@ -74,7 +97,7 @@ export function MessageForm({
                 box.style.height = `${box.scrollHeight + 4}px`;
               }}
             />
-            <button type="submit" className="btn-chunky btn-grass shrink-0" disabled={pending}>
+            <button type="submit" className="btn-chunky btn-grass self-end" disabled={pending}>
               {pending ? "Sending…" : submitLabel}
             </button>
           </div>

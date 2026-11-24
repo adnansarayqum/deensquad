@@ -124,7 +124,7 @@ test("Messages offers one message to several families, and a past session presel
   const page = await admin.newPage();
   // From Messages: the post form opens on Chosen children, with replies on.
   await page.goto("/admin/messages");
-  await page.getByRole("link", { name: "Message several families" }).click();
+  await page.getByRole("link", { name: "Post to chosen families" }).click();
   await expect(page).toHaveURL(/\/admin\/news\?to=children/);
   await expect(page.getByLabel("Chosen children")).toBeChecked();
   await expect(page.getByRole("checkbox", { name: /Let parents reply to you/ })).toBeChecked();

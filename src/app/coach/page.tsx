@@ -14,6 +14,7 @@ import { asUser } from "@/lib/db";
 import { clock, shortDay } from "@/lib/dates";
 import { registerClosedMessage, registerOpen } from "@/lib/staff/checkin";
 import { flagSummary } from "@/lib/staff/flags";
+import { markAbsencesSeen } from "@/lib/messages/data";
 import { ALL_GROUPS, loadRegister, summarise, type RegisterRow } from "@/lib/staff/register";
 import { groupPlural } from "@/lib/domain";
 import { loadSessionPayments } from "@/lib/gate/payments";
@@ -50,6 +51,8 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
   const now = new Date();
   const { view, feePence, taken, trials } = await asUser(user.id, async (tx) => {
     const view = await loadRegister(tx, { now, sessionId: params.session, group: params.group, allowed: staffGroups(user.staff) });
+    // The reasons on this register have now been seen by a coach: parents get "Seen by …" in their conversation.
+    if (view) await markAbsencesSeen(tx, view.session.id, view.rows.filter((r) => r.awayReason).map((r) => r.id));
     return {
       view,
       feePence: await sessionFeePence(tx),

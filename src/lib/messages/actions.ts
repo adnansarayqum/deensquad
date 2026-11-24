@@ -78,22 +78,29 @@ export async function sendParentMessage(_prev: MessageFormState, formData: FormD
     return { saved: true };
   }
 
-  const child = formData.get("child");
-  if (typeof child !== "string" || !UUID.test(child)) return { error: "Choose which child it's about." };
+  // One child, or several ticked: the same message goes into each child's own conversation (their coaches differ).
+  const children = [...new Set(formData.getAll("child").filter((c): c is string => typeof c === "string" && UUID.test(c)))];
+  if (children.length === 0) return { error: "Choose which child it's about." };
   const about = formData.get("about");
   const aboutId = typeof about === "string" && UUID.test(about) ? about : null;
+  if (aboutId && children.length > 1) return { error: RELOAD };
   const subject = cleanText(formData.get("subject"), SUBJECT_MAX);
-  const result = await asUser(user.id, async (tx): Promise<{ id: string } | { error: string }> => {
+  const forAdmins = formData.get("to") === "admins";
+  const result = await asUser(user.id, async (tx): Promise<{ ids: string[] } | { error: string }> => {
     const family = await loadFamily(tx);
     const ids = family?.children.map((c) => c.id) ?? [];
-    if (!ids.includes(child)) return { error: RELOAD };
-    const reply = aboutId ? await loadReplyTarget(tx, aboutId, child, ids) : null;
-    if (aboutId && !reply) return { error: "Replies are closed for this message. Use Message the coaches instead." };
-    return { id: await startParentConversation(tx, { childId: child, subject: reply ? null : subject, body: body!, reply }) };
+    if (children.some((c) => !ids.includes(c))) return { error: RELOAD };
+    const started: string[] = [];
+    for (const child of children) {
+      const reply = aboutId ? await loadReplyTarget(tx, aboutId, child, ids) : null;
+      if (aboutId && !reply) return { error: "Replies are closed for this message. Use Message the club instead." };
+      started.push(await startParentConversation(tx, { childId: child, subject: reply ? null : subject, body: body!, reply, forAdmins: !reply && forAdmins }));
+    }
+    return { ids: started };
   });
   if ("error" in result) return result;
-  notifyAfter(result.id);
-  redirect(`/messages/${result.id}?sent=1`);
+  for (const id of result.ids) notifyAfter(id);
+  redirect(result.ids.length === 1 ? `/messages/${result.ids[0]}?sent=1` : `/messages?sent=${result.ids.length}`);
 }
 
 /**
@@ -157,7 +164,8 @@ export async function markAllRead(formData: FormData): Promise<void> {
   const absences = formData.get("scope") === "absences";
   if (!absences && formData.get("confirm") !== "yes") redirect("/admin/messages?markall=confirm");
   await asUser(user.id, async (tx) => {
-    const rows = absences ? (await loadInbox(tx, { absences: true, limit: 500 })).filter((r) => r.unread) : await loadInbox(tx, { unreadOnly: true, limit: 500 });
+    // A reason that mentions an injury or illness is opened and read, never swept up here.
+    const rows = absences ? (await loadInbox(tx, { absences: true, limit: 500 })).filter((r) => r.unread && !r.health) : await loadInbox(tx, { unreadOnly: true, limit: 500 });
     for (const row of rows) await markRead(tx, row.id);
   });
   refresh();

@@ -14,6 +14,9 @@ import { loadThread, markRead } from "@/lib/messages/data";
 export const metadata: Metadata = { title: "Message" };
 
 /** One conversation with a family: who it's about and with, the messages, and a reply box. Opening it marks it read. */
+/** Replies staff type again and again (the review found one typed by hand dozens of times). A tap puts it in the box. */
+const QUICK_REPLIES = ["Thanks for letting us know.", "Thanks, hope they feel better soon.", "No problem, see you next session."] as const;
+
 export default async function AdminConversationPage({ params, searchParams }: PageProps<"/admin/messages/[id]">) {
   const user = await requireStaff();
   const { id } = await params;
@@ -32,7 +35,7 @@ export default async function AdminConversationPage({ params, searchParams }: Pa
       <PageHeader
         back={{ href: "/admin/messages?show=all", label: "Messages" }}
         title={thread.title}
-        subtitle={thread.withName ? `Sent to ${thread.withName}` : "Sent to the coaches"}
+        subtitle={thread.withName ? `Sent to ${thread.withName}` : thread.forAdmins ? "Sent to the club's admins" : "Sent to the coaches"}
       >
         <div className="flex flex-col gap-1.5 rounded-app border border-line bg-paper px-4 py-3">
           <p className="flex flex-wrap items-center gap-2 text-[15px]">
@@ -67,7 +70,7 @@ export default async function AdminConversationPage({ params, searchParams }: Pa
       <Thread messages={thread.messages} now={new Date()} />
 
       <Section title="Reply">
-        <MessageForm action={sendStaffMessage} hidden={{ conversation: thread.id }} label={`Reply to ${thread.child.firstName}'s parents`} submitLabel="Send reply" compact media />
+        <MessageForm action={sendStaffMessage} hidden={{ conversation: thread.id }} label={`Reply to ${thread.child.firstName}'s parents`} submitLabel="Send reply" compact media quickReplies={QUICK_REPLIES} />
         <p className="text-[13px] text-ink-muted">Both of {thread.child.firstName}&apos;s parents see it. The club&apos;s admins can read every conversation. Messages can&apos;t be edited or deleted.</p>
       </Section>
     </div>

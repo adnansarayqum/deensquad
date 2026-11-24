@@ -10,6 +10,7 @@ import { shortName } from "../admin/news-audience";
 // (parent queries go by the family's own child ids) and a member of staff who is also a parent can read their own
 // family's conversations (staff queries go by `staff_covers` or being addressed, as the policy's staff part does).
 
+import { mentionsHealth } from "./absence";
 export { BODY_MAX, SUBJECT_MAX } from "./limits";
 export const PREVIEW_LENGTH = 90;
 
@@ -129,6 +130,10 @@ export type Thread = {
   withName: string | null;
   parents: { id: string; name: string }[];
   messages: MessageView[];
+  /** A member of staff who has read it since the parents' latest message ("Seen by Coach Javed"), else null. */
+  seenBy: string | null;
+  /** Addressed to the club's admins rather than the coaches. */
+  forAdmins: boolean;
 };
 
 /**
@@ -149,10 +154,12 @@ export async function loadThread(tx: Queryable, id: string, side: { parent: read
     news_at: Date | null;
     announcement_id: string | null;
     with_name: string | null;
+    seen_by: string | null;
+    for_admins: boolean;
   }>(
     `select c.id, c.player_id, p.first_name, p.last_name, p.age_group::text as age_group, c.subject, a.title as news_title,
        a.body as news_body, (select display_name from staff_names where id = a.posted_by) as news_by, a.posted_at as news_at,
-       c.announcement_id, sn.display_name as with_name
+       c.announcement_id, sn.display_name as with_name, conversation_seen_by(c.id) as seen_by, c.for_admins
      from conversations c join players p on p.id = c.player_id
      left join announcements a on a.id = c.announcement_id
      left join staff_names sn on sn.id = c.staff_id
@@ -180,6 +187,8 @@ export async function loadThread(tx: Queryable, id: string, side: { parent: read
         ? { title: c.news_title, body: c.news_body ?? "", postedBy: c.news_by, postedAt: iso(c.news_at) }
         : null,
     withName: c.with_name,
+    seenBy: c.seen_by,
+    forAdmins: c.for_admins,
     parents: parents.map((g) => ({ id: g.id, name: `${g.first_name} ${g.last_name}` })),
     messages: messages.map((m) => ({
       id: m.id,
@@ -240,7 +249,7 @@ export async function findReplyThread(tx: Queryable, announcementId: string, chi
  */
 export async function startParentConversation(
   tx: Queryable,
-  opts: { childId: string; subject: string | null; body: string; reply: ReplyTarget | null },
+  opts: { childId: string; subject: string | null; body: string; reply: ReplyTarget | null; /** For the club's admins, not the coaches. */ forAdmins?: boolean },
 ): Promise<string> {
   let id: string | null = null;
   if (opts.reply) {
@@ -253,8 +262,8 @@ export async function startParentConversation(
     id = row?.id ?? (await findReplyThread(tx, opts.reply.id, opts.childId));
   } else {
     const [row] = await tx.query<{ id: string }>(
-      `insert into conversations (player_id, started_by_user, started_by_kind, subject) values ($1, auth.uid(), 'parent', $2) returning id`,
-      [opts.childId, opts.subject],
+      `insert into conversations (player_id, started_by_user, started_by_kind, subject, for_admins) values ($1, auth.uid(), 'parent', $2, $3) returning id`,
+      [opts.childId, opts.subject, Boolean(opts.forAdmins)],
     );
     id = row.id;
   }
@@ -274,6 +283,10 @@ export type InboxRow = {
   last: { authorKind: AuthorKind; authorName: string; preview: string } | null;
   lastAt: string;
   unread: boolean;
+  /** A "not coming" reason that mentions an injury or illness (`mentionsHealth`). */
+  health: boolean;
+  /** Addressed to the club's admins (payments, the shop, the account) rather than the coaches. */
+  forAdmins: boolean;
 };
 
 /**
@@ -284,7 +297,7 @@ export type InboxRow = {
  */
 export async function loadInbox(
   tx: Queryable,
-  opts: { unreadOnly?: boolean; about?: string | null; limit?: number; absences?: boolean; sent?: boolean } = {},
+  opts: { unreadOnly?: boolean; about?: string | null; limit?: number; absences?: boolean; sent?: boolean; /** Leave out replies to posts (listed by post, `loadReplyGroups`) and "not coming" reasons. */ direct?: boolean } = {},
 ): Promise<InboxRow[]> {
   const rows = await tx.query<{
     id: string;
@@ -301,6 +314,8 @@ export async function loadInbox(
     body: string | null;
     last_message_at: Date;
     unread: boolean;
+    reason: string | null;
+    for_admins: boolean;
   }>(
     `select * from (
        select c.id, c.player_id, p.first_name, p.last_name, p.age_group::text as age_group,
@@ -310,7 +325,8 @@ export async function loadInbox(
            select 1 from conversation_messages pm where pm.conversation_id = c.id and pm.author_kind = 'parent'
              and pm.created_at > coalesce((select r.last_read_at from conversation_reads r where r.conversation_id = c.id and r.user_id = auth.uid()), '-infinity')
          ) as unread,
-         c.session_id is not null as absence
+         c.session_id is not null as absence, c.announcement_id is not null as reply, c.for_admins,
+         case when c.session_id is not null then (select fm.body from conversation_messages fm where fm.conversation_id = c.id and fm.author_kind = 'parent' order by fm.created_at, fm.id limit 1) end as reason
        from conversations c
        join players p on p.id = c.player_id
        left join announcements a on a.id = c.announcement_id
@@ -322,11 +338,12 @@ export async function loadInbox(
      ) x
      where (not $2 or (x.unread and not x.absence))
        and (not $5 or (x.author_kind = 'staff' and not x.absence))
+       and (not $6 or (not x.absence and not x.reply))
      order by x.last_message_at desc
      limit $3`,
-    [opts.about ?? null, Boolean(opts.unreadOnly), opts.limit ?? 200, Boolean(opts.absences), Boolean(opts.sent)],
+    [opts.about ?? null, Boolean(opts.unreadOnly), opts.limit ?? 200, Boolean(opts.absences), Boolean(opts.sent), Boolean(opts.direct)],
   );
-  return rows.map((r) => ({
+  const list = rows.map((r) => ({
     id: r.id,
     child: { id: r.player_id, firstName: r.first_name, lastName: r.last_name, ageGroup: r.age_group },
     parents: r.parents ?? [],
@@ -335,7 +352,53 @@ export async function loadInbox(
     last: r.author_kind && r.body !== null ? { authorKind: r.author_kind, authorName: r.author_name ?? "", preview: preview(r.body) } : null,
     lastAt: iso(r.last_message_at),
     unread: r.unread,
+    health: mentionsHealth(r.reason),
+    forAdmins: r.for_admins,
   }));
+  // Not coming: unread reasons that mention an injury or illness first, so they aren't lost among the weather.
+  if (opts.absences) list.sort((a, b) => Number(b.unread && b.health) - Number(a.unread && a.health));
+  return list;
+}
+
+export type ReplyGroup = { newsId: string; title: string; replies: number; unread: number; lastAt: string };
+
+/**
+ * Replies to club posts, gathered by post (messaging review, 23 Nov 2026: one post's 56 "all good" replies were 56
+ * rows in the inbox): how many conversations reply to each, how many have a parent's message this person hasn't
+ * read, newest first. Only conversations this member of staff can see.
+ */
+export async function loadReplyGroups(tx: Queryable, opts: { unreadOnly?: boolean } = {}): Promise<ReplyGroup[]> {
+  const rows = await tx.query<{ news_id: string; title: string; replies: number; unread: number; last_at: Date }>(
+    `select a.id as news_id, a.title, count(*)::int as replies, max(c.last_message_at) as last_at,
+       count(*) filter (where exists (
+         select 1 from conversation_messages pm where pm.conversation_id = c.id and pm.author_kind = 'parent'
+           and pm.created_at > coalesce((select r.last_read_at from conversation_reads r where r.conversation_id = c.id and r.user_id = auth.uid()), '-infinity')
+       ))::int as unread
+     from conversations c join announcements a on a.id = c.announcement_id
+     where ${STAFF_SEES}
+     group by a.id, a.title
+     order by max(c.last_message_at) desc
+     limit 100`,
+  );
+  return rows
+    .filter((r) => !opts.unreadOnly || r.unread > 0)
+    .map((r) => ({ newsId: r.news_id, title: r.title, replies: r.replies, unread: r.unread, lastAt: iso(r.last_at) }));
+}
+
+/**
+ * Staff have seen a session's "not coming" reasons on its register: marks those threads read for this person, so
+ * parents get "Seen by …" without anyone typing a reply. Only threads with something new, for children they cover.
+ */
+export async function markAbsencesSeen(tx: Queryable, sessionId: string, playerIds: readonly string[]): Promise<void> {
+  if (!playerIds.length) return;
+  await tx.query(
+    `insert into conversation_reads (conversation_id, user_id, last_read_at)
+     select c.id, auth.uid(), now() from conversations c
+     where c.session_id = $1 and c.player_id = any ($2::uuid[]) and ${STAFF_SEES} and auth.uid() is not null
+       and c.last_message_at > coalesce((select r.last_read_at from conversation_reads r where r.conversation_id = c.id and r.user_id = auth.uid()), '-infinity')
+     on conflict (conversation_id, user_id) do update set last_read_at = excluded.last_read_at`,
+    [sessionId, [...playerIds]],
+  );
 }
 
 /**
@@ -343,14 +406,18 @@ export async function loadInbox(
  * "Not coming" reasons (`absences: true` counts only those, for the Not coming tab).
  */
 export async function loadStaffUnread(tx: Queryable, opts: { absences?: boolean } = {}): Promise<number> {
-  const [{ n }] = await tx.query<{ n: number }>(
-    `select count(*)::int as n from conversations c
-     where ${STAFF_SEES} and (c.session_id is not null) = $1
-       and exists (
+  const unread = `exists (
          select 1 from conversation_messages pm where pm.conversation_id = c.id and pm.author_kind = 'parent'
            and pm.created_at > coalesce((select r.last_read_at from conversation_reads r where r.conversation_id = c.id and r.user_id = auth.uid()), '-infinity')
-       )`,
-    [Boolean(opts.absences)],
+       )`;
+  if (opts.absences) {
+    const [{ n }] = await tx.query<{ n: number }>(`select count(*)::int as n from conversations c where ${STAFF_SEES} and c.session_id is not null and ${unread}`);
+    return n;
+  }
+  // Conversations one by one, and replies to posts once per post (as the inbox lists them).
+  const [{ n }] = await tx.query<{ n: number }>(
+    `select (select count(*) from conversations c where ${STAFF_SEES} and c.session_id is null and c.announcement_id is null and ${unread})::int
+          + (select count(distinct c.announcement_id) from conversations c where ${STAFF_SEES} and c.session_id is null and c.announcement_id is not null and ${unread})::int as n`,
   );
   return n;
 }

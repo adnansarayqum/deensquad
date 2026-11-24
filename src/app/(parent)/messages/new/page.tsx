@@ -95,25 +95,44 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
   const only = family.children.length === 1 ? family.children[0] : null;
   return (
     <>
-      <BackHeader back="/messages" backLabel="Messages" title="Message the coaches">
+      <BackHeader back="/messages" backLabel="Messages" title="Message the club">
         Who can read it: your child&apos;s parents and carers on the app (so your partner too), their coaches and the club&apos;s admins. Other families never see it.
       </BackHeader>
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
         <Card className="p-4">
-          <MessageForm action={sendParentMessage} hidden={only ? { child: only.id } : {}} submitLabel="Send to the coaches">
+          <MessageForm action={sendParentMessage} hidden={only ? { child: only.id } : {}} submitLabel="Send">
             {only ? (
               <p className="text-[15px]">About {only.firstName}</p>
             ) : (
+              // Tick boxes, so one message can be about both children (it goes into each child's own conversation).
               <fieldset className="flex flex-col gap-2">
-                <legend className="field-label">Which child is it about?</legend>
+                <legend className="field-label">Which child is it about? Tick more than one if it&apos;s about both.</legend>
                 {family.children.map((c) => (
                   <label key={c.id} className="flex min-h-12 items-center gap-3 rounded-app bg-paper shadow-card px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
-                    <input type="radio" name="child" value={c.id} defaultChecked={c.id === asked?.id} className="h-5 w-5 accent-[var(--grass)]" />
+                    <input type="checkbox" name="child" value={c.id} defaultChecked={c.id === asked?.id} className="h-5 w-5 accent-[var(--grass)]" />
                     <span className="text-[15px] font-bold">{c.firstName}</span>
                   </label>
                 ))}
               </fieldset>
             )}
+            {/* Who it's for decides who is told: payments, the shop and account questions are the admins' (messaging review, Nov 2026). */}
+            <fieldset className="flex flex-col gap-2">
+              <legend className="field-label">Who is it for?</legend>
+              <label className="flex min-h-12 items-center gap-3 rounded-app bg-paper shadow-card px-3.5 py-2 has-[:checked]:bg-grass-tint">
+                <input type="radio" name="to" value="coaches" defaultChecked className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+                <span className="text-[15px]">
+                  <b>The coaches</b>
+                  <span className="block text-[13px] text-ink-muted">Training, matches, injuries, how your child is getting on</span>
+                </span>
+              </label>
+              <label className="flex min-h-12 items-center gap-3 rounded-app bg-paper shadow-card px-3.5 py-2 has-[:checked]:bg-grass-tint">
+                <input type="radio" name="to" value="admins" className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+                <span className="text-[15px]">
+                  <b>The club&apos;s admins</b>
+                  <span className="block text-[13px] text-ink-muted">Payments, the shop, your account</span>
+                </span>
+              </label>
+            </fieldset>
             <div>
               <label htmlFor="message-subject" className="field-label">
                 Subject (optional)

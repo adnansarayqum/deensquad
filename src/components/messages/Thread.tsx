@@ -7,11 +7,11 @@ import { MediaGallery } from "@/components/media/MediaGallery";
  * left with their name and which side they're on ("Coach" for the club's staff, "Parent" for a parent).
  * A list, so screen readers hear how many messages there are; each says who and when before the text.
  */
-export function Thread({ messages, now }: { messages: MessageView[]; now: Date }) {
+export function Thread({ messages, now, seenBy = null }: { messages: MessageView[]; now: Date; /** Parent side: a member of staff has read it since the last parent message. */ seenBy?: string | null }) {
   if (messages.length === 0) return <p className="text-[15px] text-ink-muted">No messages yet.</p>;
   return (
     <ol aria-label="Messages" className="flex flex-col gap-3">
-      {messages.map((m) => (
+      {messages.map((m, i) => (
         <li key={m.id} className={`flex flex-col gap-1 ${m.mine ? "items-end" : "items-start"}`}>
           <p className="flex flex-wrap items-center gap-x-2 px-1 text-[13px] text-ink-muted">
             <span className="font-bold text-ink">{m.mine ? "You" : m.authorName}</span>
@@ -32,6 +32,8 @@ export function Thread({ messages, now }: { messages: MessageView[]; now: Date }
           >
             {m.body}
           </p>
+          {/* Parents see that the club has read their latest message, so nobody has to type "got it" (messaging review, Nov 2026). */}
+          {seenBy && i === messages.length - 1 && m.authorKind === "parent" ? <p className="px-1 text-[13px] font-bold text-grass-text">Seen by {seenBy}</p> : null}
         </li>
       ))}
     </ol>
