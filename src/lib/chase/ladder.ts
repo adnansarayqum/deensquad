@@ -63,7 +63,9 @@ export type ChaseTarget = {
 };
 
 /** Parents due a given step: the message is old enough, they and their child's other parent haven't read it, and the step hasn't run. */
-export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date, announcementId?: string): Promise<ChaseTarget[]> {
+export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date, announcementId?: string, opts: { early?: boolean } = {}): Promise<ChaseTarget[]> {
+  // `early`: the step counts as due now, whatever the message's age ("Send a reminder now" brings the email forward).
+  // Everything else still holds: not read, not already sent on this channel, never about a session that has started.
   const oldest = new Date(now.getTime() - MAX_AGE_DAYS * 86400_000);
   const rows = await tx.query<{
     announcement_id: string;
@@ -110,19 +112,19 @@ export async function dueChases(tx: Queryable, channel: ChaseChannel, now: Date,
        -- an urgent message's email straight away; any other email 24 hours after posting or 3 hours before the
        -- child's session, whichever is first (moved to 8pm the evening before when that lands in quiet hours, so a
        -- 10am Saturday cup is emailed on Friday evening), but not within the first hour; texts after 48 hours
-       $1::timestamptz >= case
+       ($6::boolean or $1::timestamptz >= case
          when $3 = 'email' and a.urgent then a.posted_at
          when $3 = 'email' then least(
            a.posted_at + make_interval(hours => $5::int),
            greatest(a.posted_at + interval '1 hour', coalesce(${beforeQuiet("(coalesce(about.starts_at, nxt.starts_at) - interval '3 hours')")}, a.posted_at + make_interval(hours => $5::int)))
          )
          else a.posted_at + make_interval(hours => $5::int)
-       end
+       end)
        -- never an email or a text about a session that has already started, or for an urgent notice (cancelled,
        -- restored, changed: parents may need to collect early), that has already finished
        and ($3 = 'app' or about.id is null or (case when a.urgent then about.ends_at else about.starts_at end) > $1::timestamptz)
      )`,
-    [now, oldest, channel, announcementId ?? null, LADDER[channel].afterHours],
+    [now, oldest, channel, announcementId ?? null, LADDER[channel].afterHours, opts.early === true],
   );
   return rows.map((r) => ({
     announcementId: r.announcement_id,

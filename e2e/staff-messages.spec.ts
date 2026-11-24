@@ -35,11 +35,12 @@ test("the admin asks one family for a quick answer and lets them reply", async (
   await expect(page).toHaveURL(/\/admin\/news\/[0-9a-f-]{36}\?posted=1$/);
   await expect(page.getByText("No answer yet (1)")).toBeVisible();
   await expect(page.getByText("No replies yet.", { exact: false })).toBeVisible();
-  // Who has read it and who hasn't, both listed; one tap reminds everyone still to read it (no push keys in tests).
+  // Who has read it and who hasn't, both listed; one tap reminds everyone still to read it (no push keys in tests, so the
+  // reminder goes as the email, brought forward).
   await expect(page.getByRole("heading", { name: "Read (0)" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /^Not read yet \(\d+\)$/ })).toBeVisible();
   await page.getByRole("button", { name: new RegExp(`^Send a reminder now to the \\d+ parents? who haven't read ${HEADLINE}`) }).click();
-  await expect(page.getByText("App notifications aren't set up yet.")).toBeVisible();
+  await expect(page.getByText(/^Reminder sent: an email to \d+ parents?\./)).toBeVisible();
   // Who has notifications on and off, each with their children; the overview's bar opens these lists.
   await page.goto("/admin/notifications?show=not-in");
   await expect(page.getByRole("heading", { name: "App notifications" })).toBeVisible();

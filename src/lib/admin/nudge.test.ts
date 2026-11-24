@@ -55,7 +55,7 @@ describe("read and not read", () => {
     const sent: string[] = [];
     const send: PushSend = async (sub) => void sent.push(sub.endpoint);
     const first = await t.asSystem((tx) => nudgeUnread(tx, { newsId: post, title: "Kit day", guardianIds: unread, now: midday, send }));
-    expect(first).toEqual({ ok: true, reached: 1, noDevice: unread.length - 1 });
+    expect(first).toEqual({ ok: true, reached: 1, noDevice: unread.length - 1, emailed: 0 });
     expect(sent).toEqual(["https://push.example/x"]);
     // Logged as a reminder against that parent.
     const logged = await t.asSystem((tx) => tx.query<{ guardian_id: string }>(`select guardian_id from announcement_chases where announcement_id = $1 and channel::text = 'nudge'`, [post]));
@@ -67,5 +67,19 @@ describe("read and not read", () => {
     // An hour later it goes again.
     const later = await t.asSystem((tx) => nudgeUnread(tx, { newsId: post, title: "Kit day", guardianIds: unread, now: new Date(midday.getTime() + 61 * 60_000), send }));
     expect(later.ok).toBe(true);
+
+    // With email: those the notification didn't reach get the reminder email now, once per post each.
+    const mailed: string[] = [];
+    const email = async (targets: { guardianId: string }[]) => (mailed.push(...targets.map((x) => x.guardianId)), targets) as never;
+    const third = await t.asSystem((tx) => nudgeUnread(tx, { newsId: post, title: "Kit day", guardianIds: unread, now: new Date(midday.getTime() + 125 * 60_000), send, email }));
+    expect(third).toMatchObject({ ok: true, reached: 1 });
+    expect(mailed).not.toContain(target.id);
+    expect(mailed.length).toBeGreaterThan(0);
+    expect(mailed.every((g) => unread.includes(g))).toBe(true);
+    expect(third.ok && third.emailed).toBe(mailed.length);
+    // Pressed again later: nobody is emailed twice.
+    const before = mailed.length;
+    await t.asSystem((tx) => nudgeUnread(tx, { newsId: post, title: "Kit day", guardianIds: unread, now: new Date(midday.getTime() + 190 * 60_000), send, email }));
+    expect(mailed.length).toBe(before);
   });
 });

@@ -116,7 +116,7 @@ async function sendApp(targets: ChaseTarget[], tx: Queryable): Promise<ChaseTarg
   return sent;
 }
 
-async function sendEmail(targets: ChaseTarget[], tx: Queryable): Promise<ChaseTarget[]> {
+export async function sendEmail(targets: ChaseTarget[], tx: Queryable): Promise<ChaseTarget[]> {
   const base = appUrl();
   if (!base) return [];
   const now = new Date();
@@ -175,6 +175,11 @@ export async function sendSmsTo(targets: ChaseTarget[], send: SmsSend = sendTwil
 }
 
 const sendSms = (targets: ChaseTarget[]) => sendSmsTo(targets);
+
+/** The reminder email sender, when email is set up (else undefined). */
+export function liveEmailSender(): Senders["email"] {
+  return canSendEmail() && appUrl() ? sendEmail : undefined;
+}
 
 export function liveSenders(): Senders {
   return {

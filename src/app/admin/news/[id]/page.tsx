@@ -50,7 +50,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
     : [0, null];
   const nudgeNotice =
     typeof flags.nudged === "string"
-      ? `Reminder sent to ${flags.nudged} ${flags.nudged === "1" ? "parent" : "parents"}.${Number(flags.missed) > 0 ? ` ${flags.missed} don't have notifications on, so they get the automatic email instead.` : ""}`
+      ? nudgeWords(Number(flags.nudged) || 0, Number(flags.emailed) || 0, Number(flags.missed) || 0)
       : flags.nudge === "wait"
         ? "A reminder went less than an hour ago. Try again later."
         : flags.nudge === "quiet"
@@ -143,10 +143,10 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
               </button>
               <p className="text-sm text-ink-muted">
                 {withDevices === 0
-                  ? "An app notification to anyone here with notifications on (none yet). Everyone else gets the automatic email."
+                  ? "Nobody here has notifications on, so they get the reminder email now (once per post each)."
                   : withDevices === chase.length
                     ? `An app notification to ${chase.length === 1 ? "this parent" : `all ${chase.length}`}.`
-                    : `An app notification to the ${withDevices} of ${chase.length} with notifications on. The others get the automatic email.`}{" "}
+                    : `An app notification to the ${withDevices} of ${chase.length} with notifications on. The others get the reminder email now (once per post each).`}{" "}
                 At most once an hour, never 9pm to 8am.
                 {nudged ? ` Last sent ${postedLabel(nudged.at, new Date())} to ${nudged.count}.` : ""}
               </p>
@@ -297,4 +297,13 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
       ) : null}
     </div>
   );
+}
+
+/** What "Send a reminder now" did, in words. */
+function nudgeWords(pushed: number, emailed: number, missed: number): string {
+  const people = (n: number) => `${n} ${n === 1 ? "parent" : "parents"}`;
+  const parts = [pushed ? `an app notification to ${people(pushed)}` : "", emailed ? `an email to ${people(emailed)}` : ""].filter(Boolean);
+  const left = Math.max(0, missed - emailed);
+  const rest = left ? ` ${left === 1 ? "1 has" : `${left} have`} already had the reminder email, or it can't go to them.` : "";
+  return parts.length ? `Reminder sent: ${parts.join(" and ")}.${rest}` : `Nobody new to remind.${rest}`;
 }

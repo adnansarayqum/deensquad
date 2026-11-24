@@ -31,6 +31,7 @@ import { TOPICS } from "./topics";
 import { checkChosenChildren, insertNews } from "./news";
 import { loadNewsDetail } from "./data";
 import { nudgeUnread } from "./nudge";
+import { liveEmailSender } from "../chase/senders";
 import { loadNotificationParents, sendNotificationHelp } from "./notifications";
 import { parseQuickAnswers } from "../messages/quick-answers";
 import { attachOrThrow, formMedia, withMediaProblem } from "../media/attach";
@@ -472,8 +473,8 @@ export async function remindUnreadNow(formData: FormData): Promise<void> {
   const detail = await asUser(user.id, (tx) => loadNewsDetail(tx, news, mine));
   if (!detail || !detail.news.requiresAck) redirect(`/admin/news/${news}`);
   const targets = detail.unread.filter((u) => !u.partnerRead).map((u) => u.id);
-  const result = await asSystem((tx) => nudgeUnread(tx, { newsId: news, title: detail.news.title, guardianIds: targets }));
-  const query = result.ok ? `nudged=${result.reached}&missed=${result.noDevice}` : `nudge=${result.reason}`;
+  const result = await asSystem((tx) => nudgeUnread(tx, { newsId: news, title: detail.news.title, guardianIds: targets, email: liveEmailSender() }));
+  const query = result.ok ? `nudged=${result.reached}&missed=${result.noDevice}&emailed=${result.emailed}` : `nudge=${result.reason}`;
   redirect(`/admin/news/${news}?${query}#not-read`);
 }
 
