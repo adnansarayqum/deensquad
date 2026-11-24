@@ -3,7 +3,7 @@ import { testDatabase } from "../../../test/db";
 import { DEV_EMAILS, DEV_IDS } from "../db/dev-seed";
 import { AGE_GROUPS } from "../domain";
 import { loadNewsDetail } from "../admin/data";
-import { busiestHours, loadAppUse, visitLength, busiestDay, waitWords } from "./data";
+import { busiestHours, loadAppUse, loadOpeners, visitLength, busiestDay, waitWords } from "./data";
 import { markSeen, readFromNotification, recordOpen, recordTimeOnScreen } from "./record";
 
 // App use and Seen (migration 0055, the owner's question, 23 Nov 2026).
@@ -107,6 +107,23 @@ describe("app use", () => {
     // Coming back: nobody opened it the week before, and it isn't said at all until 14 days are on record.
     expect(again.comeBack).toEqual({ before: 0, returned: 0 });
     expect(early.comeBack).toBeNull();
+  });
+
+  it("names who opened the app, who didn't and who isn't on it", async () => {
+    await t.signIn(DEV_EMAILS.parent);
+    await t.asSystem((tx) => recordOpen(tx, DEV_IDS.adnan));
+    await t.asSystem((tx) => recordOpen(tx, DEV_IDS.adnan));
+    const who = await t.asUser(admin, (tx) => loadOpeners(tx, [...AGE_GROUPS], 7, "2026-01-01"));
+    expect(who.opened.map((o) => o.id)).toEqual([DEV_IDS.adnan]);
+    expect(who.opened[0]).toMatchObject({ days: 1, opens: 2, onApp: true });
+    expect(who.opened[0].children).toMatch(/\(U\d+\)|\(Girls\)/);
+    expect(who.notOpened.every((o) => o.onApp && o.days === 0)).toBe(true);
+    expect(who.notOnApp.some((o) => o.id === DEV_IDS.sara)).toBe(true);
+    expect(who.sinceStart).toBe(false);
+    // A period reaching back before opens were recorded says so; one group lists only its own parents.
+    expect((await t.asUser(admin, (tx) => loadOpeners(tx, [...AGE_GROUPS], 30, "2999-01-01"))).sinceStart).toBe(true);
+    const u6 = await t.asUser(admin, (tx) => loadOpeners(tx, ["U6"], 7));
+    expect([...u6.opened, ...u6.notOpened, ...u6.notOnApp].every((o) => o.children.includes("(U6)"))).toBe(true);
   });
 
   it("leaves a staff parent's visit out of the club's average, but counts their open", async () => {

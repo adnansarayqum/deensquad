@@ -6,6 +6,7 @@ import { Card } from "@/components/ui";
 import { requireParent } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { backTarget } from "@/lib/parent/tabs";
+import { SponsorLink } from "@/components/SponsorLink";
 import { loadSponsors, sponsorLinkLabel } from "@/lib/sponsors/data";
 import { countSponsorViews } from "@/lib/sponsors/views";
 
@@ -41,16 +42,15 @@ export default async function SponsorsPage({ searchParams }: PageProps<"/sponsor
               </div>
             ) : null}
             {s.linkUrl ? (
-              <a
+              <SponsorLink
+                id={s.id}
                 href={s.linkUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`${sponsorLinkLabel(s.linkUrl)}: ${s.name} (opens outside the app)`}
+                label={`${sponsorLinkLabel(s.linkUrl)}: ${s.name} (opens outside the app)`}
                 className="btn-chunky btn-paper flex min-h-12 items-center justify-center gap-2"
               >
                 {sponsorLinkLabel(s.linkUrl)}
                 <ExternalLink aria-hidden size={18} />
-              </a>
+              </SponsorLink>
             ) : null}
           </Card>
         ))}

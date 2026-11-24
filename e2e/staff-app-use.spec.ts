@@ -39,6 +39,12 @@ test("a parent sees a post without tapping; the admin sees it as seen, not read,
   await expect(a.getByText(/of \d+ parents opened it/).first()).toBeVisible();
   const today = Number(await a.locator("li", { hasText: "Today" }).locator(".font-display").innerText());
   expect(today).toBeGreaterThanOrEqual(1);
+  // The names behind the number: who opened it, who is on the app but didn't, and who hasn't signed in.
+  await a.getByRole("link", { name: /^Today: \d+ of \d+ parents opened it\. See who$/ }).click();
+  await expect(a.getByRole("heading", { name: "Who opened the app", level: 1 })).toBeVisible();
+  await expect(a.getByRole("heading", { name: /^Opened it \(\d+\)$/ })).toBeVisible();
+  await expect(a.locator("li", { hasText: "Parent W" }).getByText(/time/)).toBeVisible();
+  await a.getByRole("link", { name: "App use" }).first().click();
   await a.getByRole("link", { name: "Winter timings start 7 Nov" }).click();
   await expect(a.getByText(/have seen it/)).toBeVisible();
   await expect(a.locator("li", { hasText: "Parent W" }).getByText(/seen .*, not tapped/)).toBeVisible();

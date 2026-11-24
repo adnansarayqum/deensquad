@@ -58,14 +58,21 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
 
       <ul className="grid grid-cols-3 gap-2.5">
         {[
-          { label: "Today", value: use.today },
-          { label: "Last 7 days", value: use.week },
-          { label: "Last 30 days", value: use.month },
+          { label: "Today", value: use.today, days: 1 },
+          { label: "Last 7 days", value: use.week, days: 7 },
+          { label: "Last 30 days", value: use.month, days: 30 },
         ].map((t) => (
-          <li key={t.label} className="flex flex-col gap-1 rounded-app border border-line bg-paper p-3">
-            <span className="text-[13px] font-bold text-ink-muted">{t.label}</span>
-            <span className="font-display text-[40px] leading-none tabular-nums">{t.value}</span>
-            <span className="text-[13px] text-ink-muted">of {use.parents} parents opened it</span>
+          <li key={t.label}>
+            <Link
+              href={`/admin/app-use/who?days=${t.days}${group ? `&group=${group}` : ""}`}
+              aria-label={`${t.label}: ${t.value} of ${use.parents} parents opened it. See who`}
+              className="flex h-full flex-col gap-1 rounded-app border border-line bg-paper p-3"
+            >
+              <span className="text-[13px] font-bold text-ink-muted">{t.label}</span>
+              <span className="font-display text-[40px] leading-none tabular-nums">{t.value}</span>
+              <span className="text-[13px] text-ink-muted">of {use.parents} parents opened it</span>
+              <span className="text-[13px] font-bold text-grass-text underline">See who</span>
+            </Link>
           </li>
         ))}
       </ul>

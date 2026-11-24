@@ -123,7 +123,7 @@ export default async function AdminSponsorsPage() {
       {sponsors.length ? (
         <p className="text-[15px] text-ink-muted">
           Figures to pass on to a sponsor: {parents === 1 ? "1 parent uses" : `${parents} parents use`} the app, and each sponsor&apos;s count beside its name. Counts are totals of times shown to
-          parents, never who saw them.
+          parents and taps on the sponsor&apos;s link, never who.
         </p>
       ) : null}
 

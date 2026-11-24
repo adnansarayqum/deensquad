@@ -288,3 +288,46 @@ export function waitWords(minutes: number): string {
   const d = Math.round(minutes / 1440);
   return `${d} days`;
 }
+
+export const WHO_PERIODS = [1, 7, 30] as const;
+export type WhoPeriod = (typeof WHO_PERIODS)[number];
+
+export type Opener = { id: string; name: string; children: string; lastOpened: string | null; days: number; opens: number; onApp: boolean };
+
+/**
+ * The names behind "N of M parents opened it" (the owner's friend's request, 24 Nov 2026): every parent of the given
+ * groups, with the days and times they opened the app in the last `period` days and when they last did. Those who
+ * opened it come first (most recent first), then those on the app who didn't, then those who have never signed in.
+ * `sinceStart` is true when the period reaches back before opens were recorded, so "didn't open it" only means
+ * "not since then".
+ */
+export async function loadOpeners(
+  tx: Queryable,
+  groups: readonly AgeGroup[],
+  period: WhoPeriod,
+  recordedFrom: string = RECORDED_FROM,
+): Promise<{ opened: Opener[]; notOpened: Opener[]; notOnApp: Opener[]; sinceStart: boolean }> {
+  const today = `(now() at time zone 'Europe/London')::date`;
+  const rows = await tx.query<{ id: string; name: string; children: string; last_opened: string | null; days: number; opens: number; on_app: boolean; since_start: boolean }>(
+    `select gu.id, gu.first_name || ' ' || gu.last_name as name,
+       string_agg(distinct p.first_name || ' (' || p.age_group::text || ')', ', ') as children,
+       (select max(o.day)::text from app_opens o where o.guardian_id = gu.id) as last_opened,
+       (select count(*)::int from app_opens o where o.guardian_id = gu.id and o.day > ${today} - $2::int) as days,
+       (select coalesce(sum(o.opens), 0)::int from app_opens o where o.guardian_id = gu.id and o.day > ${today} - $2::int) as opens,
+       gu.auth_user_id is not null as on_app,
+       (${today} - $2::int + 1) < $3::date as since_start
+     from guardians gu
+     join player_guardians pg on pg.guardian_id = gu.id
+     join players p on p.id = pg.player_id and p.approved_at is not null and p.age_group::text = any ($1::text[])
+     group by gu.id
+     order by 4 desc nulls last, 2`,
+    [[...groups], period, recordedFrom],
+  );
+  const all = rows.map((r) => ({ id: r.id, name: r.name, children: r.children, lastOpened: r.last_opened, days: r.days, opens: r.opens, onApp: r.on_app }));
+  return {
+    opened: all.filter((o) => o.days > 0),
+    notOpened: all.filter((o) => o.days === 0 && o.onApp),
+    notOnApp: all.filter((o) => o.days === 0 && !o.onApp),
+    sinceStart: rows[0]?.since_start ?? false,
+  };
+}

@@ -6,7 +6,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { DEV_EMAILS } from "@/lib/db/dev-seed";
 import { testDatabase } from "../../../test/db";
 import { cleanSponsorLink, loadSponsors, sponsorIcon, sponsorInitials, sponsorLinkLabel, sponsorOfTheWeek } from "./data";
-import { addSponsorViews, loadSponsorViews, viewsSentence } from "./views";
+import { addSponsorClick, addSponsorViews, loadSponsorViews, viewsSentence, viewsShort } from "./views";
 
 let t: Awaited<ReturnType<typeof testDatabase>>;
 let admin: string;
@@ -127,6 +127,18 @@ describe("sponsors", () => {
     expect(totals[shown]).toEqual({ total: 3, byPlace: { home: 2, page: 1 } });
     expect(viewsSentence(totals[shown])).toBe("Shown 3 times in the last 30 days: 2 on Home, 1 on the sponsors page.");
     expect(viewsSentence(undefined)).toBe("Not shown yet in the last 30 days.");
+    // Taps on a sponsor's link are counted apart from the times shown, only while it's on show and has a link.
+    await t.asSystem(async (tx) => {
+      await tx.query(`update sponsors set link_url = 'https://example.com' where id = any($1::uuid[])`, [[shown, hidden]]);
+      await addSponsorClick(tx, shown);
+      await addSponsorClick(tx, shown);
+      await addSponsorClick(tx, hidden);
+    });
+    const tapped = await t.asUser(admin, (tx) => loadSponsorViews(tx));
+    expect(tapped[shown]).toEqual({ total: 3, byPlace: { home: 2, page: 1 }, clicks: 2 });
+    expect(tapped[hidden]?.clicks).toBeUndefined();
+    expect(viewsSentence(tapped[shown])).toBe("Shown 3 times in the last 30 days: 2 on Home, 1 on the sponsors page. Their link was tapped 2 times.");
+    expect(viewsShort(tapped[shown])).toBe("3 views · 2 link taps · 30 days");
     // The table holds a sponsor, a day, a place and a count: nothing about who.
     const columns = await t.asSystem((tx) => tx.query<{ c: string }>(`select column_name as c from information_schema.columns where table_name = 'sponsor_views' order by 1`));
     expect(columns.map((r) => r.c)).toEqual(["day", "place", "sponsor_id", "views"]);

@@ -32,11 +32,22 @@ export function countSponsorViews(sponsorIds: string[], place: SponsorPlace): vo
   );
 }
 
-export type SponsorViewTotals = Record<string, { total: number; byPlace: Partial<Record<SponsorPlace, number>> }>;
+/** Adds one to today's (London) total of taps on a sponsor's link, while it's on show. A count only. */
+export async function addSponsorClick(tx: Queryable, sponsorId: string): Promise<void> {
+  await tx.query(
+    `insert into sponsor_views (sponsor_id, day, place, views)
+     select s.id, (now() at time zone 'Europe/London')::date, 'click', 1 from sponsors s where s.id = $1 and s.active and s.link_url is not null
+     on conflict (sponsor_id, day, place) do update set views = sponsor_views.views + 1`,
+    [sponsorId],
+  );
+}
+
+/** `total` and `byPlace` are times shown; `clicks` (taps on the sponsor's link) is counted apart, and left off when none. */
+export type SponsorViewTotals = Record<string, { total: number; byPlace: Partial<Record<SponsorPlace, number>>; clicks?: number }>;
 
 /** Times each sponsor was shown in the last `days` London days, by place (admins only, by RLS). */
 export async function loadSponsorViews(tx: Queryable, days = 30): Promise<SponsorViewTotals> {
-  const rows = await tx.query<{ sponsor_id: string; place: SponsorPlace; views: number }>(
+  const rows = await tx.query<{ sponsor_id: string; place: SponsorPlace | "click"; views: number }>(
     `select sponsor_id, place, sum(views)::int as views from sponsor_views
      where day > (now() at time zone 'Europe/London')::date - $1::int group by sponsor_id, place`,
     [days],
@@ -44,6 +55,10 @@ export async function loadSponsorViews(tx: Queryable, days = 30): Promise<Sponso
   const out: SponsorViewTotals = {};
   for (const r of rows) {
     const entry = (out[r.sponsor_id] ??= { total: 0, byPlace: {} });
+    if (r.place === "click") {
+      entry.clicks = r.views;
+      continue;
+    }
     entry.total += r.views;
     entry.byPlace[r.place] = r.views;
   }
@@ -53,14 +68,18 @@ export async function loadSponsorViews(tx: Queryable, days = 30): Promise<Sponso
 /** "412 views · 30 days", for the sponsor's closed row on the admin page. */
 export function viewsShort(totals: SponsorViewTotals[string] | undefined, days = 30): string {
   const n = totals?.total ?? 0;
-  return `${n === 1 ? "1 view" : `${n.toLocaleString("en-GB")} views`} · ${days} days`;
+  const taps = totals?.clicks ?? 0;
+  return `${n === 1 ? "1 view" : `${n.toLocaleString("en-GB")} views`}${taps ? ` · ${tapWords(taps)}` : ""} · ${days} days`;
 }
 
 /** "Shown 412 times in the last 30 days: 380 on Home, 20 on the checked-in line, 12 on the sponsors page." */
 export function viewsSentence(totals: SponsorViewTotals[string] | undefined, days = 30): string {
-  if (!totals || totals.total === 0) return `Not shown yet in the last ${days} days.`;
+  if (!totals || (totals.total === 0 && !totals.clicks)) return `Not shown yet in the last ${days} days.`;
   const parts = (["home", "gate", "page"] as const)
     .filter((p) => (totals.byPlace[p] ?? 0) > 0)
     .map((p) => `${totals.byPlace[p]} on ${p === "home" ? "Home" : `the ${PLACE_WORDS[p]}`}`);
-  return `Shown ${totals.total === 1 ? "once" : `${totals.total.toLocaleString("en-GB")} times`} in the last ${days} days: ${parts.join(", ")}.`;
+  const shown = `Shown ${totals.total === 1 ? "once" : `${totals.total.toLocaleString("en-GB")} times`} in the last ${days} days${parts.length ? `: ${parts.join(", ")}` : ""}.`;
+  return totals.clicks ? `${shown} Their link was tapped ${totals.clicks === 1 ? "once" : `${totals.clicks.toLocaleString("en-GB")} times`}.` : shown;
 }
+
+const tapWords = (n: number) => (n === 1 ? "1 link tap" : `${n.toLocaleString("en-GB")} link taps`);
