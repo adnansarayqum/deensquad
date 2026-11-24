@@ -1,6 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
 import { after } from "next/server";
 import { runMonthlySummary } from "@/lib/admin/summary-run";
+import { runMondayBriefing } from "@/lib/admin/briefing";
+import { runSpotlightNotices } from "@/lib/spotlight/notify";
 import { enqueue } from "@/lib/background";
 import { purgeExpiredSessions } from "@/lib/auth/service";
 import { purgeOldAppOpens } from "@/lib/app-use/record";
@@ -67,7 +69,7 @@ export async function POST(request: Request) {
       void sendErrorAlert({ message: `The hourly reminders failed: ${error instanceof Error ? error.message : String(error)}`, path: "/api/cron/chase", kind: "cron job" });
       return { failed: ["chase"] };
     });
-    const result = { ...chase, plans: await runPlanNotifications(), messages: await runMessageNotices(), attendanceReminder: await runAttendanceReminder(), summary: await runMonthlySummary(), trials: await runTrialFollowUps(), staffChecks: await runStaffCheckReminders(), wellbeing: await runWellbeingAlerts(), pointsReward: await runPointsMilestones(), awards: await runAwardNotices(), media: await runMediaCleanup(), cardPayments: await sweepCards(), sessionsPurged: await purgeSessions() };
+    const result = { ...chase, plans: await runPlanNotifications(), messages: await runMessageNotices(), attendanceReminder: await runAttendanceReminder(), summary: await runMonthlySummary(), briefing: await runMondayBriefing(), trials: await runTrialFollowUps(), staffChecks: await runStaffCheckReminders(), wellbeing: await runWellbeingAlerts(), pointsReward: await runPointsMilestones(), awards: await runAwardNotices(), spotlight: await runSpotlightNotices(), media: await runMediaCleanup(), cardPayments: await sweepCards(), sessionsPurged: await purgeSessions() };
     console.info("[chase]", JSON.stringify(result));
     // Read by the watchdog and the admins' overview: a cron that stops being called says so.
     await asSystem((tx) => recordHeartbeat(tx, new Date())).catch((error: unknown) => console.error("[chase] heartbeat:", error instanceof Error ? error.message : error));

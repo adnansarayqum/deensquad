@@ -622,3 +622,46 @@ export function coParentRequestEmail(opts: { to: string; addedBy: string; parent
   const html = layout(appUrl, `${lines.map((l) => `<p style="margin:0 0 12px">${escape(l)}</p>`).join("\n")}\n${button(link, "Open the child's page")}`);
   return { to, subject, text, html };
 }
+
+/**
+ * The admins' Monday briefing: what's waiting on the club this week, each line a link to where it's dealt with
+ * (the end-to-end verdict, 24 Nov 2026: "the admin opens the app to act, not to look"). Counts only, no names.
+ */
+export function mondayBriefingEmail(opts: { to: string; firstName: string; lines: { count: number; text: string; path: string }[]; next: string | null; appUrl: string | null }): Email {
+  const { to, firstName, lines, next, appUrl } = opts;
+  const subject = `Deen Squad this week: ${lines.length === 1 ? "1 thing needs" : `${lines.length} things need`} you`;
+  const link = (path: string) => (appUrl ? `${appUrl}${path}` : null);
+  const text = [
+    `Assalamu alaikum ${firstName}. Here's what's waiting on the club this week.`,
+    "",
+    ...lines.map((l) => `- ${l.count} ${l.text}${link(l.path) ? ` ${link(l.path)}` : ""}`),
+    ...(next ? ["", next] : []),
+    "",
+    "This goes to the club's admins on Monday mornings, only when something is waiting.",
+  ].join("\n");
+  const html = layout(
+    appUrl,
+    `<p style="margin:0">Assalamu alaikum ${escape(firstName)}. Here's what's waiting on the club this week.</p>
+<ul style="margin:14px 0 0;padding-left:20px">${lines
+      .map((l) => {
+        const href = link(l.path);
+        const words = `<b>${l.count}</b> ${escape(l.text)}`;
+        return `<li style="margin:6px 0">${href ? `<a href="${escape(href)}" style="color:#1f6b2a">${words}</a>` : words}</li>`;
+      })
+      .join("")}</ul>
+${next ? `<p style="margin:16px 0 0">${escape(next)}</p>` : ""}
+${appUrl ? button(`${appUrl}/admin`, "Open the overview") : ""}
+<p style="font-size:14px;color:#56625a;margin-top:20px">This goes to the club's admins on Monday mornings, only when something is waiting.</p>`,
+  );
+  return { to, subject, text, html };
+}
+
+/** A child is their group's Player of the week: the card to keep and share is in the app. */
+export function spotlightEmail(opts: { to: string; firstName: string; group: string; link: string | null; appUrl: string | null }): Email {
+  const { to, firstName, group, link, appUrl } = opts;
+  const subject = `Masha'Allah, ${firstName} is the ${group}' Player of the week`;
+  const line = `${firstName} has been chosen as the ${group}' Player of the week. Their coach has written a few words, and there's a card in the app to keep and share.`;
+  const text = [line, ...(link ? ["", `See the card: ${link}`] : [])].join("\n");
+  const html = layout(appUrl, `<p style="margin:0">${escape(line)}</p>\n${link ? button(link, "See the card") : ""}`);
+  return { to, subject, text, html };
+}

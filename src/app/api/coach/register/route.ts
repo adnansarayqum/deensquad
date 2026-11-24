@@ -6,6 +6,7 @@ import { enqueue } from "@/lib/background";
 import { asSystem, asUser } from "@/lib/db";
 import { markHere, undoHere } from "@/lib/staff/checkin";
 import { quietScanner } from "@/lib/staff/scanner-watch";
+import { tellParentsOfCheckIn } from "@/lib/staff/checkin-run";
 
 // Mark here and Undo on the register. A route, like the scan, not a Server Action: Next runs a page's actions one at a
 // time with no time limit, so one tap stuck on a weak signal froze every later tap and the register's refresh (found
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
   const result = await asUser(user.id, (tx) => (undo ? undoHere(tx, session, child, now) : markHere(tx, session, child, now)));
   // Lots of hand marking and no scans: the scanner may be broken, so the maintainer is told (scanner-watch.ts).
   if (!undo && !result.error) {
+    tellParentsOfCheckIn();
     after(() =>
       enqueue("scanner watch", async () => {
         const quiet = await asSystem((tx) => quietScanner(tx, session));

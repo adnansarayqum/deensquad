@@ -1,3 +1,4 @@
+import { loadChildSpotlights } from "../spotlight/data";
 import "server-only";
 import { iso } from "../db/types";
 
@@ -283,20 +284,23 @@ export async function getPlayerPage(childParam: unknown) {
   // No child in the address (the Family tab): the child shown last time, if it's still one of this family's.
   const remembered = childParam ? childParam : (await cookies()).get(CHILD_COOKIE)?.value;
   const { family, child, userId } = await getChild(remembered);
-  if (!child) return { family, child: null, stats: null, badges: [], note: null, awards: null, progress: null, records: null };
+  if (!child) return { family, child: null, stats: null, badges: [], note: null, awards: null, progress: null, records: null, spotlights: [] };
   const now = new Date();
   // Some groups have no points, stars or badges (U15, the owner's decision): nothing to load or show.
   const awarded = hasAwards(child.ageGroup);
-  const [{ facts, ...stats }, awards, progress, records] = await Promise.all([
+  const [{ facts, ...stats }, awards, progress, records, spotlights] = await Promise.all([
     getStats(userId, child, now),
     awarded ? asUser(userId, (tx) => loadAwards(tx, child.id)) : null,
     asUser(userId, (tx) => loadChildProgress(tx, child.id, now)),
     // The child's records for the details list (contacts, medical, payment), as the To-do reads them.
     asUser(userId, (tx) => loadChecklistFacts(tx, [child.id])),
+    // Player of the week cards, newest first (the latest is shown with Share).
+    asUser(userId, (tx) => loadChildSpotlights(tx, child.id)),
   ]);
   return {
     family,
     child,
+    spotlights,
     stats,
     badges: awarded ? facts.badges : [],
     note: facts.note,

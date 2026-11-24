@@ -129,7 +129,7 @@ export default async function PrivacyPage({ searchParams }: PageProps<"/privacy"
                 <b>To keep children safe</b> (knowing who is at training, who to call in an emergency): our legitimate interest, and our safeguarding duties.
               </>,
               <>
-                <b>To keep in touch</b> (club news, reminders to read important messages and to say whether your child is coming, session plans, and telling you when your child is given a star, points or a badge): our legitimate interest in running the club well.
+                <b>To keep in touch</b> (club news, reminders to read important messages and to say whether your child is coming, session plans, and telling you when your child is checked in at a session, given a star, points or a badge, or chosen as Player of the week): our legitimate interest in running the club well.
               </>,
               <>
                 <b>Medical and additional needs</b>: only with your explicit consent, to look after your child (UK GDPR Article 9(2)(a)). You can

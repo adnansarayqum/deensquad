@@ -6,6 +6,9 @@ import { Card, Pill, TITLE } from "@/components/ui";
 import { BADGE_RULES, REWARD_POINTS, groupPlural, type PaymentState } from "@/lib/domain";
 import { getPlayerPage } from "@/lib/parent/load";
 import { RememberChild } from "@/components/RememberChild";
+import { SpotlightShare } from "@/components/SpotlightShare";
+import { staffNameForParents } from "@/lib/greeting";
+import { weekWords } from "@/lib/spotlight/data";
 import { StaffSwitch } from "@/components/StaffSwitch";
 import { ProgressSummaryView } from "@/components/progress/ProgressSummary";
 import { monthLabel } from "@/lib/progress/ratings";
@@ -14,7 +17,7 @@ export const metadata: Metadata = { title: "Family" };
 
 export default async function PlayerPage({ searchParams }: PageProps<"/player">) {
   const flags = await searchParams;
-  const { family, child, stats, badges, note, awards, progress, records } = await getPlayerPage(flags.child);
+  const { family, child, stats, badges, note, awards, progress, records, spotlights } = await getPlayerPage(flags.child);
   // Back from Add a child: the child it opened on was just added (only said for the child that's showing).
   const justAdded = child && flags.added === "1" && flags.child === child.id;
 
@@ -120,6 +123,35 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         ) : null}
 
         {/* The child's records first, before achievements (redesign brief, Oct 2026): each row says where it stands. */}
+        {/* Player of the week: the card the coach made, for the family to keep and share. */}
+        {child && spotlights.length ? (
+          <section aria-labelledby="spotlight" className="flex flex-col gap-3 rounded-app bg-paper p-4 shadow-card">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+              <h2 id="spotlight" className="text-[18px] font-bold">
+                Player of the week
+              </h2>
+              <span className="text-[13px] text-ink-muted">
+                {groupPlural(spotlights[0].ageGroup)}, {weekWords(spotlights[0].week)}
+              </span>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element -- drawn by the app for this family, not a static asset */}
+            <img
+              src={`/api/spotlight/${spotlights[0].id}/card`}
+              alt={`Player of the week card: ${child.firstName}, ${groupPlural(spotlights[0].ageGroup)}, ${weekWords(spotlights[0].week)}. “${spotlights[0].comment}”${spotlights[0].coach ? ` ${staffNameForParents(spotlights[0].coach)}` : ""}`}
+              width={1080}
+              height={1350}
+              loading="lazy"
+              className="h-auto w-full rounded-[14px]"
+            />
+            <SpotlightShare id={spotlights[0].id} firstName={child.firstName} />
+            {spotlights.length > 1 ? (
+              <p className="text-[14px] text-ink-muted">
+                Also Player of the week: {spotlights.slice(1).map((sp) => weekWords(sp.week)).join(", ")}.
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
         {child && records ? (
           <section aria-labelledby="child-records" className="flex flex-col rounded-app bg-paper shadow-card p-1">
             <h2 id="child-records" className="px-3 pt-3 pb-1 text-[18px] font-bold">

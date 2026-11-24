@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { checkInByPass } from "@/lib/staff/checkin";
+import { tellParentsOfCheckIn } from "@/lib/staff/checkin-run";
 
 // The gate scanner's check-in. A route, not a Server Action: Next runs a page's actions and refreshes one at a time,
 // so one scan stuck on a weak signal would hold up every later scan, Mark here and Undo until the page reloads.
@@ -11,5 +12,7 @@ export async function POST(request: Request) {
   if (!user?.staff) return Response.json({ error: "signed_out" }, { status: 401 });
   const body = (await request.json().catch(() => null)) as { token?: unknown } | null;
   const result = await asUser(user.id, (tx) => checkInByPass(tx, body?.token, new Date()));
+  // The child's parents are told "checked in" a minute later (not if it's undone first).
+  if (result.ok) tellParentsOfCheckIn();
   return Response.json(result, { headers: { "Cache-Control": "no-store" } });
 }

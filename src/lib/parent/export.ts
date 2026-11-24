@@ -147,6 +147,11 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
 
   // The rest of what the app holds about the parent themselves (privacy review, 14 Nov 2026). Their own rows only:
   // read under their own policies, or through functions that return only the caller's (migration 0049).
+  // Player of the week (migration 0057): the child's own, under the family's policy.
+  const spotlights = await tx.query<{ player_id: string; week: string; comment: string; coach: string | null }>(
+    `select sp.player_id, sp.week::text as week, sp.comment, (select sn.display_name from staff_names sn where sn.id = sp.given_by) as coach
+     from player_spotlights sp where sp.player_id in (select my_player_ids()) order by sp.week`,
+  );
   // App use (migration 0055): posts that were on your screen, and the days you opened the app.
   const seenPosts = await tx.query<{ title: string; seen_at: Date }>(
     `select a.title, v.seen_at from announcement_views v join announcements a on a.id = v.announcement_id
@@ -275,6 +280,7 @@ export async function buildFamilyExport(tx: Queryable, now: Date) {
       attendance: forChild(attendance, c.id).map((a) => ({ session: a.title, startsAt: at(a.starts_at), checkedInAt: at(a.checked_in_at), how: a.method })),
       awards: forChild(awards, c.id).map((a) => ({ stars: a.stars, points: a.points, reason: a.reason, givenBy: a.given_by, givenAt: at(a.created_at) })),
       badges: forChild(badges, c.id).map((b) => ({ badge: b.name, earnedOn: b.earned_on })),
+      playerOfTheWeek: forChild(spotlights, c.id).map((sp) => ({ weekStarting: sp.week, coachWrote: sp.comment, chosenBy: sp.coach })),
       pointsRewards: forChild(rewards, c.id).map((r) => ({ points: r.points, reachedAt: at(r.reached_at), rewardGivenAt: at(r.rewarded_at) })),
       pickedForSquads: forChild(squads, c.id).map((q) => ({ session: q.title, startsAt: at(q.starts_at), pickedAt: at(q.added_at) })),
       coachNotes: forChild(notes, c.id).map((n) => ({ note: n.body, writtenBy: n.written_by, writtenAt: at(n.created_at) })),

@@ -5,6 +5,10 @@ import { badgeIcon } from "@/components/badgeIcons";
 import { PageHeader, Section } from "@/components/admin/bits";
 import { Card } from "@/components/ui";
 import { AwardForm, NoteForm } from "@/components/awards/AwardForm";
+import type { AgeGroup } from "@/lib/domain";
+import { SpotlightForm } from "@/components/awards/SpotlightForm";
+import { removePlayerOfTheWeek } from "@/lib/spotlight/actions";
+import { COMMENT_MAX, loadWeekSpotlight, weekStart, weekWords } from "@/lib/spotlight/data";
 import { aiConfigured } from "@/lib/ai/claude";
 import { removeAward, setBadge } from "@/lib/awards/actions";
 import { loadAwards } from "@/lib/awards/data";
@@ -47,10 +51,14 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
     );
     if (!player) return null;
     const [awards, progress, report, shown] = await Promise.all([loadAwards(tx, id, 10), loadProgress(tx, id, today), loadReport(tx, id, month), progressForParents(tx)]);
-    return { player, badges, ...awards, progress, report, shown };
+    // This week's Player of the week for the child's group (whoever holds it), for the card below.
+    const week = weekStart(new Date());
+    const spotlight = await loadWeekSpotlight(tx, player.age_group as AgeGroup, week);
+    return { player, badges, ...awards, progress, report, shown, spotlight, week };
   });
   if (!page) notFound();
-  const { player, totals, recent, badges, progress, report, shown } = page;
+  const { player, totals, recent, badges, progress, report, shown, spotlight, week } = page;
+  const holdsIt = spotlight?.playerId === player.id;
   const isAdmin = user.staff.role === "admin";
   // U15 has no points, stars or badges (the owner's decision); progress, reports and notes stay.
   const awarded = hasAwards(player.age_group);
@@ -66,6 +74,34 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
             : groupPlural(player.age_group)
         }
       />
+      {/* Player of the week: one child per group each week; their parents get a card to keep and share. */}
+      <Section title="Player of the week" aside={<span className="text-[13px] text-ink-muted">{groupPlural(player.age_group)}, {weekWords(week)}</span>}>
+        {holdsIt ? (
+          <p className="mb-3 text-[15px]">
+            {player.first_name} is this week&apos;s Player of the week.{" "}
+            <a href={`/api/spotlight/${spotlight!.id}/card`} className="font-bold text-grass-text underline">
+              See the card
+            </a>
+          </p>
+        ) : spotlight ? (
+          <p className="mb-3 text-[15px] text-ink-muted">
+            This week it&apos;s {spotlight.firstName} {spotlight.lastName}. Saving here gives it to {player.first_name} instead.
+          </p>
+        ) : null}
+        <SpotlightForm playerId={player.id} firstName={player.first_name} group={player.age_group} comment={holdsIt ? spotlight!.comment : undefined} max={COMMENT_MAX} />
+        {holdsIt ? (
+          <form action={removePlayerOfTheWeek} className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3">
+            <input type="hidden" name="spotlight" value={spotlight!.id} />
+            <label className="flex min-h-12 items-center gap-3 text-[15px]">
+              <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--grass)]" />
+              Yes, take it back
+            </label>
+            <button type="submit" className="btn-chunky btn-paper btn-small" aria-label={`Take Player of the week back from ${player.first_name}`}>
+              Take it back
+            </button>
+          </form>
+        ) : null}
+      </Section>
       {awarded ? (
         <Card className="p-4">
           <AwardForm playerId={player.id} firstName={player.first_name} />
