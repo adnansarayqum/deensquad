@@ -18,8 +18,8 @@ export async function SupportedBy({ place, label = "Supported by", from, classNa
   const icon = sponsorIcon(sponsor);
   return (
     <Link href={`/sponsors?from=${from}`} className={`flex min-h-12 items-center gap-2.5 text-ink ${className}`}>
-      <SponsorLogo name={sponsor.name} fileId={icon.fileId} bg={icon.bg} size={32} />
-      <span className="min-w-0 text-[14px] leading-5 text-ink-muted">
+      <SponsorLogo name={sponsor.name} fileId={icon.fileId} bg={icon.bg} size={24} />
+      <span className="min-w-0 truncate text-[13px] leading-5 text-ink-muted">
         {label} <span className="font-bold text-ink">{sponsor.name}</span>
       </span>
     </Link>

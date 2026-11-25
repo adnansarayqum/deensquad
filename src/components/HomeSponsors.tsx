@@ -5,7 +5,11 @@ import { requireParent } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
 import { loadSponsors, sponsorIcon } from "@/lib/sponsors/data";
 
-/** Home's one-row link to the sponsors page: up to five logos and how many have an offer. Nothing until there's a sponsor. */
+/**
+ * Home's slim one-line link to the sponsors page, shown after the first post (25 Nov 2026: above the news it pushed
+ * the club's posts off the first screen): the heading, how many have an offer, and up to five logos.
+ * Nothing until there's a sponsor.
+ */
 export async function HomeSponsors() {
   const user = await requireParent();
   const sponsors = await asUser(user.id, (tx) => loadSponsors(tx));
@@ -15,18 +19,18 @@ export async function HomeSponsors() {
     <Link
       href="/sponsors?from=/news"
       aria-label={offers ? `Our sponsors: ${offers === 1 ? "1 offer" : `${offers} offers`} for Deen Squad families` : "Our sponsors"}
-      className="flex min-h-16 items-center gap-3 rounded-app bg-paper px-3.5 py-3 text-ink shadow-card transition-transform active:scale-[0.99]"
+      className="flex min-h-14 items-center gap-2.5 rounded-app bg-paper py-2 pr-3 pl-4 text-ink shadow-card transition-transform active:scale-[0.99]"
     >
-      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="text-[15px] font-bold">Our sponsors</span>
-        <span className="flex items-center gap-1.5">
-          {sponsors.slice(0, 5).map((s) => {
-            const icon = sponsorIcon(s);
-            return <SponsorLogo key={s.id} name={s.name} fileId={icon.fileId} bg={icon.bg} size={36} />;
-          })}
-          {sponsors.length > 5 ? <span className="text-[13px] text-ink-muted">+{sponsors.length - 5}</span> : null}
-        </span>
-        {offers ? <span className="text-[13px] text-ink-muted">{offers === 1 ? "1 offer" : `${offers} offers`} for Deen Squad families</span> : null}
+      <span className="flex min-w-0 flex-col">
+        <span className="text-[15px] font-bold whitespace-nowrap">Our sponsors</span>
+        {offers ? <span className="text-[13px] whitespace-nowrap text-ink-muted">{offers === 1 ? "1 offer" : `${offers} offers`}</span> : null}
+      </span>
+      <span className="flex min-w-0 flex-1 items-center justify-end gap-1.5 overflow-hidden">
+        {sponsors.slice(0, 5).map((s) => {
+          const icon = sponsorIcon(s);
+          return <SponsorLogo key={s.id} name={s.name} fileId={icon.fileId} bg={icon.bg} size={32} />;
+        })}
+        {sponsors.length > 5 ? <span className="text-[13px] text-ink-muted">+{sponsors.length - 5}</span> : null}
       </span>
       <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
     </Link>

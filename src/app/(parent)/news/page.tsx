@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -41,22 +42,24 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
   const unread = shown.filter((a) => !a.read);
   const earlier = shown.filter((a) => a.read);
   const needsCount = news.filter((a) => !a.read).length;
+  // The sponsors row sits after the first post, so the club's news starts on the first screen.
+  const sponsors = <HomeSponsors />;
 
   return (
     <>
       <PullToRefresh />
       <SeenTracker key={unread.map((a) => a.id).join(",")} />
       <AppHeader>
-        <StaffSwitch />
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Image src="/crest.png" alt="Deen Squad crest" width={40} height={40} className="rounded-[10px]" priority />
-            <div>
-              <p className="text-[14px] text-ink-muted">Assalamu alaikum, {family.guardian.firstName}</p>
-              <h1 className="text-[20px] leading-6 font-bold tracking-[-0.01em]">Deen Squad</h1>
-            </div>
+        {/* One row: crest and greeting, with the QR codes and Messages buttons in the corner beside them (the layout
+            places those), so the padding keeps a long name clear of them. */}
+        <div className="flex items-center gap-3 pr-[132px] max-[374px]:pr-28">
+          <Image src="/crest.png" alt="Deen Squad crest" width={40} height={40} className="shrink-0 rounded-[10px]" priority />
+          <div className="min-w-0">
+            <p className="text-[13px] leading-[18px] break-words text-ink-muted">Assalamu alaikum, {family.guardian.firstName}</p>
+            <h1 className="text-[20px] leading-6 font-bold tracking-[-0.01em]">Deen Squad</h1>
           </div>
         </div>
+        <StaffSwitch compact />
       </AppHeader>
 
       <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
@@ -104,9 +107,9 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
         ) : null}
         {/* One slim row, so the club's news stays on the first screen. */}
         <HomeCommunity now={now} />
-        <HomeSponsors />
         {news.length > 3 ? (
-          <nav aria-label="Show club news" className="flex flex-wrap gap-2">
+          // One row that scrolls sideways, so four chips never take two lines.
+          <nav aria-label="Show club news" className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {(
               [
                 ["all", "All"],
@@ -119,7 +122,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
                 key={key}
                 href={key === "all" ? "/news" : `/news?show=${key}`}
                 aria-current={show === key ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center rounded-pill border-2 px-3.5 text-[15px] font-bold ${
+                className={`inline-flex min-h-11 shrink-0 items-center rounded-pill border-2 px-3.5 text-[15px] font-bold whitespace-nowrap ${
                   show === key ? "border-grass bg-grass-tint text-grass-text" : "border-line bg-paper text-ink"
                 }`}
               >
@@ -140,8 +143,9 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
               </Eyebrow>
               <span className="rounded-pill bg-kit-orange px-2.5 py-0.5 text-[13px] font-bold text-on-orange">{unread.length} unread</span>
             </div>
-            {unread.map((a) => (
-              <DoubleTapLike key={a.id} id={a.id}>
+            {unread.map((a, i) => (
+              <Fragment key={a.id}>
+              <DoubleTapLike id={a.id}>
                 <Card tone="gold" className="flex flex-col gap-3 p-4">
                   <div className="flex items-center justify-between gap-2">
                     <Pill tone="action">
@@ -169,6 +173,8 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
                 <PostFoot a={a} />
                 </Card>
               </DoubleTapLike>
+              {i === 0 ? sponsors : null}
+              </Fragment>
             ))}
           </section>
         ) : (
@@ -186,13 +192,16 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
           </p>
         )}
 
+        {/* No unread post to sit under: the sponsors come after the line above, or after the first earlier post. */}
+        {unread.length === 0 && earlier.length === 0 ? sponsors : null}
         {earlier.length > 0 ? (
           <section aria-labelledby="earlier" className="mt-1 flex flex-col gap-3">
             <Eyebrow>
               <span id="earlier">Earlier</span>
             </Eyebrow>
-            {earlier.map((a) => (
-              <DoubleTapLike key={a.id} id={a.id}>
+            {earlier.map((a, i) => (
+              <Fragment key={a.id}>
+              <DoubleTapLike id={a.id}>
                 <ReadFocus id={a.id} className="flex flex-col gap-2 rounded-app bg-paper shadow-card px-4 py-3.5">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[15px] text-ink-muted">
@@ -219,6 +228,8 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
                 <PostFoot a={a} />
                 </ReadFocus>
               </DoubleTapLike>
+              {i === 0 && unread.length === 0 ? sponsors : null}
+              </Fragment>
             ))}
           </section>
         ) : null}

@@ -1,14 +1,14 @@
 import { WeekFold } from "./WeekFold";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CalendarX, CheckCircle2, ChevronDown, ChevronRight, ListChecks, QrCode, Shirt } from "lucide-react";
+import { CalendarX, Check, ChevronDown, ChevronRight, ListChecks, QrCode, Shirt } from "lucide-react";
 import { AllComing } from "./AllComing";
 import { AvailabilityPicker } from "./AvailabilityPicker";
 import { CheckedIn } from "./CheckedIn";
 import { Directions } from "./Directions";
 import { EmptyState } from "./EmptyState";
 import { Card, Pill } from "./ui";
-import { clock, dayHeading, shortDay } from "@/lib/dates";
+import { clock, dayHeading, shortDay, whenWords } from "@/lib/dates";
 import { groupPlural, type Session } from "@/lib/domain";
 import type { Family } from "@/lib/parent/data";
 import { answeredLine, availabilityQuestion, sessionsToday, type ChildWeek } from "@/lib/parent/views";
@@ -16,7 +16,7 @@ import { answeredLine, availabilityQuestion, sessionsToday, type ChildWeek } fro
 /**
  * The first thing on News: is training on, when and where, and each child's Coming / Not coming, answerable right
  * here (with "Mark both as coming" for several children). On a session day the QR codes are one tap away, and anything still
- * to set up is the last line. Everything else about the session (kit, plan, calendar) stays on Sessions.
+ * to set up is the last line (nothing once it's all done: the To-do tab is always there). Everything else about the session (kit, plan, calendar) stays on Sessions.
  */
 /** `todoCalm`: something more urgent on Home has the orange (`homeLead`), so the set-up line is drawn neutral. */
 export function ThisWeek({
@@ -103,16 +103,15 @@ export function ThisWeek({
           <span className={`rounded-pill px-2 py-0.5 text-[13px] font-bold tabular-nums ${todoCalm ? "bg-fill text-ink" : "bg-kit-orange text-on-orange"}`}>{stepsLeft}</span>
           <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
         </Link>
-      ) : (
-        // Nothing left to set up: a quiet line, with the To-do still a tap away to look over.
-        <Link href="/checklist" className="flex min-h-12 items-center gap-2 border-t border-line px-4 text-[15px] font-bold text-grass-text">
-          <CheckCircle2 aria-hidden size={18} />
-          Everything&apos;s set up
-          <span className="font-normal text-ink-muted underline">Review</span>
-        </Link>
-      )}
+      ) : null}
     </Card>
   );
+}
+
+/** The folded session's day in words: "Today", "This Friday", "Next Friday", else "Fri 6 Nov" (its date tile has the date). */
+function foldedDay(iso: string, now: Date): string {
+  const words = whenWords(iso, now);
+  return words.startsWith("on ") ? shortDay(iso) : words[0].toUpperCase() + words.slice(1);
 }
 
 /** "Green top · shin pads, water bottle" → ["Green top", "Shin pads", "Water bottle"], for chips. */
@@ -224,16 +223,23 @@ function SessionPart({ session, rows, family, now }: { session: Session; rows: C
             <span className="font-display text-[22px] leading-none">{new Intl.DateTimeFormat("en-GB", { day: "numeric", timeZone: "Europe/London" }).format(start)}</span>
             <span className="text-[10px] font-bold text-floodlight">{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "Europe/London" }).format(start).toUpperCase()}</span>
           </span>
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-[16px] leading-6 font-bold">
-              {dayHeading(session.startsAt, now)} · {clock(session.startsAt)}
+          {/* The day and time with Change beside them, the answers on a line of their own under both: each fits on
+              one line of a phone (the date is on the tile, so the heading needn't repeat it). */}
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="flex items-center justify-between gap-2">
+              <span className="text-[16px] leading-6 font-bold whitespace-nowrap">
+                {foldedDay(session.startsAt, now)} · {clock(session.startsAt)}
+              </span>
+              <span className="inline-flex h-8 shrink-0 items-center gap-0.5 rounded-pill border border-line pr-2 pl-3 text-[14px] font-bold text-ink">
+                <span className="group-open/week:hidden">Change</span>
+                <span className="hidden group-open/week:inline">Close</span>
+                <ChevronDown aria-hidden size={16} className="transition-transform group-open/week:rotate-180" />
+              </span>
             </span>
-            <span className="text-[15px] leading-[22px] text-grass-text font-bold">{answeredSummary(rows)}</span>
-          </span>
-          <span className="inline-flex shrink-0 items-center gap-1 text-[15px] font-bold text-grass-text">
-            <span className="group-open/week:hidden">Change</span>
-            <span className="hidden group-open/week:inline">Close</span>
-            <ChevronDown aria-hidden size={18} className="transition-transform group-open/week:rotate-180" />
+            <span className="flex items-start gap-1 text-[15px] leading-[22px] font-bold text-grass-text">
+              <Check aria-hidden size={16} strokeWidth={3} className="mt-[3px] shrink-0" />
+              {answeredSummary(rows)}
+            </span>
           </span>
           </>
         }
