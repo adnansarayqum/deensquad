@@ -9,7 +9,7 @@ import { enqueue } from "../background";
 import { asUser } from "../db";
 import { loadFamily, saveQuickAnswer } from "../parent/data";
 import { cleanBody, cleanText } from "../validate";
-import { BODY_MAX, SUBJECT_MAX, addMessage, loadInbox, loadMessageChild, loadReplyTarget, loadThread, markRead, startParentConversation, startStaffConversation } from "./data";
+import { BODY_MAX, SUBJECT_MAX, addMessage, chatThread, loadInbox, loadMessageChild, loadReplyTarget, loadThread, markRead, startParentConversation, startStaffConversation } from "./data";
 import { runMessageNotices } from "./run";
 import type { Queryable } from "../db/types";
 import { attachOrThrow, formMedia, withMediaProblem } from "../media/attach";
@@ -100,7 +100,8 @@ export async function sendParentMessage(_prev: MessageFormState, formData: FormD
   });
   if ("error" in result) return result;
   for (const id of result.ids) notifyAfter(id);
-  redirect(result.ids.length === 1 ? `/messages/${result.ids[0]}?sent=1` : `/messages?sent=${result.ids.length}`);
+  // Back to the family's chat, where the new message is the latest.
+  redirect(`/messages?sent=${result.ids.length}`);
 }
 
 /**
@@ -151,7 +152,7 @@ export async function sendStaffMessage(_prev: MessageFormState, formData: FormDa
   if (id && typeof id === "object") return id;
   if (!id) return { error: mine ? `You can message families in your own groups only (${mine.join(", ")}).` : RELOAD };
   notifyAfter(id);
-  redirect(`/admin/messages/${id}?sent=1`);
+  redirect(`/admin/messages/family/${child}?sent=1`);
 }
 
 /** The staff inbox's "Mark all read": every conversation this person sees with a parent's message they haven't opened. */
@@ -162,11 +163,93 @@ export async function sendStaffMessage(_prev: MessageFormState, formData: FormDa
 export async function markAllRead(formData: FormData): Promise<void> {
   const user = await requireStaff();
   const absences = formData.get("scope") === "absences";
-  if (!absences && formData.get("confirm") !== "yes") redirect("/admin/messages?markall=confirm");
+  if (!absences && formData.get("confirm") !== "yes") redirect("/admin/messages?show=unread&markall=confirm");
   await asUser(user.id, async (tx) => {
     // A reason that mentions an injury or illness is opened and read, never swept up here.
     const rows = absences ? (await loadInbox(tx, { absences: true, limit: 500 })).filter((r) => r.unread && !r.health) : await loadInbox(tx, { unreadOnly: true, limit: 500 });
     for (const row of rows) await markRead(tx, row.id);
   });
   refresh();
+}
+
+const aboutChild = (formData: FormData): string | null => {
+  const about = formData.get("about");
+  return typeof about === "string" && UUID.test(about) ? about : null;
+};
+
+/**
+ * A parent's message in their family's chat with the club. It carries on the conversation the chat's latest message
+ * is in; with several children, choosing another child (`about`) puts it in that child's own conversation, so their
+ * coaches are the ones told. A family with nothing yet starts a conversation with the coaches.
+ */
+export async function sendChatMessage(_prev: MessageFormState, formData: FormData): Promise<MessageFormState> {
+  const user = await requireParent();
+  const body = readBody(formData);
+  const problem = bodyProblem(body);
+  if (problem) return { error: problem };
+  const result = await asUser(user.id, async (tx): Promise<{ id: string } | { error: string }> => {
+    const family = await loadFamily(tx);
+    const ids = family?.children.map((c) => c.id) ?? [];
+    if (!ids.length) return { error: "No players are linked to your email yet. Ask the club to add your child." };
+    const about = aboutChild(formData);
+    if (about && !ids.includes(about)) return { error: RELOAD };
+    const target = (await chatThread(tx, { parent: ids }, about)) ?? (ids.length === 1 ? { child: ids[0] } : null);
+    if (!target) return { error: "Choose which child it's about." };
+    if ("conversationId" in target) {
+      await addMessage(tx, target.conversationId, "parent", body!);
+      return { id: target.conversationId };
+    }
+    return { id: await startParentConversation(tx, { childId: target.child, subject: null, body: body!, reply: null }) };
+  });
+  if ("error" in result) return result;
+  notifyAfter(result.id);
+  refresh();
+  return { saved: true };
+}
+
+/**
+ * A member of staff's message in a family's chat (`family`: a child of the family). Like the parent's, it carries on
+ * the latest conversation unless they choose another child; starting a new conversation keeps the coach rule (a
+ * group coach only for children in their own groups).
+ */
+export async function sendStaffChatMessage(_prev: MessageFormState, formData: FormData): Promise<MessageFormState> {
+  const user = await requireStaff();
+  const family = formData.get("family");
+  if (typeof family !== "string" || !UUID.test(family)) return { error: RELOAD };
+  const media = await formMedia(formData, user.staff.id);
+  if ("error" in media) return media;
+  let body = readBody(formData);
+  if (!body && media.ids.length) body = await asUser(user.id, (tx) => onlyMediaBody(tx, media.ids));
+  const problem = bodyProblem(body);
+  if (problem) return { error: problem };
+  const mine = coachLimit(user.staff);
+  const result = await withMediaProblem(() =>
+    asUser(user.id, async (tx): Promise<{ id: string } | { error: string }> => {
+      // Another child may be chosen only from the same family.
+      const about = aboutChild(formData);
+      if (about && about !== family) {
+        const [same] = await tx.query<{ ok: boolean }>(
+          `select (select f.family_id from player_families() f where f.player_id = $1) = (select f.family_id from player_families() f where f.player_id = $2) as ok`,
+          [about, family],
+        );
+        if (!same?.ok) return { error: RELOAD };
+      }
+      const target = (await chatThread(tx, { staff: family }, about)) ?? { child: family };
+      let conversation: string;
+      if ("conversationId" in target) {
+        conversation = target.conversationId;
+        await attachOrThrow(tx, "message", await addMessage(tx, conversation, "staff", body!), media.ids, user.staff.id);
+      } else {
+        if (!(await loadMessageChild(tx, target.child, mine))) return { error: mine ? `You can start a conversation about children in your own groups only (${mine.join(", ")}).` : RELOAD };
+        conversation = await startStaffConversation(tx, { childId: target.child, staffId: user.staff.id, subject: null, body: body! });
+        const [first] = await tx.query<{ id: string }>(`select id from conversation_messages where conversation_id = $1 order by created_at, id limit 1`, [conversation]);
+        await attachOrThrow(tx, "message", first.id, media.ids, user.staff.id);
+      }
+      return { id: conversation };
+    }),
+  );
+  if ("error" in result) return result;
+  notifyAfter(result.id);
+  refresh();
+  return { saved: true };
 }

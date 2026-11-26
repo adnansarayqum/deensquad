@@ -1,80 +1,71 @@
-import { EmptyState } from "@/components/EmptyState";
 import type { Metadata } from "next";
-import { staffNameForParents } from "@/lib/greeting";
-import { backTarget } from "@/lib/parent/tabs";
 import Link from "next/link";
-import { ChevronRight, PenLine } from "lucide-react";
 import { BackHeader } from "@/components/BackHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { Chat } from "@/components/messages/Chat";
+import { ChatComposer } from "@/components/messages/ChatComposer";
+import { ChatLive } from "@/components/messages/ChatLive";
 import { Card } from "@/components/ui";
-import { postedLabel } from "@/lib/dates";
-import { getMessagesPage } from "@/lib/parent/load";
+import { asUser } from "@/lib/db";
+import { staffNameForParents } from "@/lib/greeting";
+import { sendChatMessage } from "@/lib/messages/actions";
+import { loadFamilyChat, markChatRead } from "@/lib/messages/data";
+import { getFamily } from "@/lib/parent/load";
+import { backTarget } from "@/lib/parent/tabs";
 
 export const metadata: Metadata = { title: "Messages" };
 
-/** Messages: the family's conversations with the club, newest first, with a dot on those with something new. */
+/**
+ * Messages: the family's one chat with the club, like a messaging app (26 Nov 2026). Everything between the family
+ * and the club is here in order, the newest at the foot with the box to write under it: messages, replies to posts
+ * and "not coming" reasons. Opening it reads it.
+ */
 export default async function MessagesPage({ searchParams }: PageProps<"/messages">) {
   const params = await searchParams;
   const back = backTarget(params.from, { href: "/player", label: "Family" });
-  const sentTo = Number(params.sent) > 1 ? Number(params.sent) : 0;
-  const { family, conversations } = await getMessagesPage();
+  const { user, family } = await getFamily();
+  const ids = family.children.map((c) => c.id);
+  const chat = await asUser(user.id, async (tx) => {
+    const found = await loadFamilyChat(tx, { parent: ids });
+    await markChatRead(tx, { parent: ids });
+    return found;
+  });
   const now = new Date();
-  const several = family.children.length > 1;
+  const messages = chat?.messages ?? [];
 
   return (
     <>
       <BackHeader back={back.href} backLabel={back.label} title="Messages">
-        Between you and the club. Both of a child&apos;s parents see the same messages, and the club&apos;s admins can read every conversation.
+        Between your family and the club.
       </BackHeader>
-      <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
-        {sentTo ? (
-          <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
-            Sent. It&apos;s in each child&apos;s conversation below.
-          </p>
-        ) : null}
-        {family.children.length ? (
-          <Link href="/messages/new" className="btn-chunky btn-grass w-full">
-            <PenLine aria-hidden size={20} />
-            Message the club
-          </Link>
-        ) : (
+      <main className="flex flex-col gap-3 px-4 pt-3">
+        {family.children.length === 0 ? (
           <Card className="p-4 text-[15px] leading-[22px]">No players are linked to your email yet. Ask the club to add your child.</Card>
+        ) : (
+          <>
+            <p className="text-[13px] leading-5 text-ink-muted">
+              Your children&apos;s parents and carers, their coaches and the club&apos;s admins can read this. Other families never can.{" "}
+              <Link href="/messages/new" className="inline-flex min-h-12 items-center font-bold text-grass-text underline">
+                Write to the club&apos;s admins instead
+              </Link>
+            </p>
+            {chat && messages.length ? (
+              <Chat chat={chat} now={now} side="parent" nameOf={(name) => staffNameForParents(name) ?? name} />
+            ) : (
+              <Card>
+                <EmptyState>No messages yet. Write to the coaches below.</EmptyState>
+              </Card>
+            )}
+            <ChatLive count={messages.length} lastId={messages.at(-1)?.id ?? null} />
+            <ChatComposer
+              action={sendChatMessage}
+              about={family.children.map((c) => ({ id: c.id, firstName: c.firstName }))}
+              aboutNow={chat?.about ?? null}
+              stick="bottom-[var(--tab-bar-height,84px)]"
+              placeholder="Message the club"
+            />
+          </>
         )}
-        {conversations.length === 0 && family.children.length ? (
-          <Card>
-            <EmptyState>No messages yet. Messages between you and the coaches will show here.</EmptyState>
-          </Card>
-        ) : null}
-        {conversations.length ? (
-          <ul aria-label="Conversations" className="flex flex-col gap-2.5">
-            {conversations.map((c) => (
-              <li key={c.id}>
-                <Link
-                  href={`/messages/${c.id}`}
-                  className={`flex items-center gap-3 rounded-app border-2 bg-paper px-3.5 py-3 ${c.unread ? "border-kit-orange" : "border-line"}`}
-                >
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="flex items-center gap-2">
-                      {c.unread ? (
-                        <span className="shrink-0 rounded-pill bg-kit-orange px-2 py-0.5 text-[13px] font-bold text-on-orange">New</span>
-                      ) : null}
-                      <span className="truncate text-[15px] font-bold">{c.title}</span>
-                    </span>
-                    <span className="text-[13px] text-ink-muted">
-                      {several ? `${c.childFirstName} · ` : ""}
-                      {c.withName ? `With ${staffNameForParents(c.withName)}` : "With the coaches"} · {postedLabel(c.lastAt, now)}
-                    </span>
-                    {c.last ? (
-                      <span className="truncate text-[15px] text-ink-muted">
-                        {c.last.mine ? "You" : c.last.authorKind === "staff" ? staffNameForParents(c.last.authorName) : c.last.authorName}: {c.last.preview}
-                      </span>
-                    ) : null}
-                  </span>
-                  <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : null}
       </main>
     </>
   );

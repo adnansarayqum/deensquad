@@ -76,10 +76,16 @@ test("the parent taps Yes, then replies to the admin", async ({ browser }) => {
   await expect(parent.getByRole("alert").filter({ hasText: "Write your message." })).toBeVisible();
   await parent.getByLabel("Your message").fill("Yes, he can play. Can he bring his brother to watch?");
   await parent.getByRole("button", { name: "Send to Ibrahim" }).click();
-  await expect(parent).toHaveURL(/\/messages\/[0-9a-f-]{36}\?sent=1$/);
-  threadUrl = new URL(parent.url()).pathname;
-  await expect(parent.getByText("Can he bring his brother to watch?")).toBeVisible();
-  await expect(parent.getByText("You", { exact: true })).toBeVisible();
+  // Back in the family's one chat, with the reply as its latest message under the post it answers.
+  await expect(parent).toHaveURL(/\/messages\?sent=1$/);
+  const mine = parent.getByRole("listitem").filter({ hasText: "Can he bring his brother to watch?" });
+  await expect(mine).toBeVisible();
+  await expect(mine).toContainText(`Replying to “${HEADLINE}”`);
+  // The conversation's own address still works (old notifications and links): it opens the chat.
+  threadUrl = `/messages/${await mine.getAttribute("data-thread")}`;
+  await parent.goto(threadUrl);
+  await expect(parent).toHaveURL(/\/messages#t-[0-9a-f-]{36}$/);
+  await expect(mine).toBeVisible();
   await parent.screenshot({ path: shot("parent-message-thread"), fullPage: true });
   await context.close();
 });
@@ -103,7 +109,13 @@ test("the admin sees the answer and the unread reply, and replies back", async (
   await expect(nav.getByRole("link", { name: "Inbox, 1 unread" })).toBeVisible();
   await nav.getByRole("link", { name: "Inbox, 1 unread" }).click();
   await expect(page).toHaveURL(/\/admin\/messages$/);
-  // Replies to a post are gathered under it: one row for the post, then each family's reply.
+  // The inbox is one chat per family, the unread one marked.
+  const chat = page.getByRole("list", { name: "Chats" }).getByRole("link", { name: /, 1 unread$/ });
+  await expect(chat).toContainText("Yunus (U7)");
+  await expect(chat).toContainText("Can he bring his brother to watch?");
+  await expect(page.getByRole("link", { name: "Unread (1)" })).toBeVisible();
+  // Replies to a post are also gathered under it: one row for the post, then each family's reply.
+  await page.getByRole("link", { name: "Replies to posts" }).click();
   const group = page.getByRole("link", { name: new RegExp(`Replies to .${HEADLINE}`) });
   await expect(group).toContainText("1 new");
   await expect(group).toContainText("1 family replied");
@@ -114,17 +126,20 @@ test("the admin sees the answer and the unread reply, and replies back", async (
   await expect(row).toContainText("Yunus V");
   await page.screenshot({ path: shot("admin-messages-inbox"), fullPage: true });
   await row.click();
-  await expect(page).toHaveURL(/\/admin\/messages\/[0-9a-f-]{36}$/);
+  // It opens the family's chat at that reply.
+  await expect(page).toHaveURL(/\/admin\/messages\/family\/[0-9a-f-]{36}#t-[0-9a-f-]{36}$/);
   await expect(page.getByText("Can he bring his brother to watch?")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Yunus V" })).toHaveAttribute("href", /\/admin\/families\/[0-9a-f-]{36}$/);
-  await page.getByLabel("Reply to Yunus's parents").fill("Of course, see you Sunday.");
-  await page.getByRole("button", { name: "Send reply" }).click();
+  await expect(page.getByRole("link", { name: `Replying to “${HEADLINE}”` })).toHaveAttribute("href", /\/admin\/news\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("link", { name: /^Yunus V/ })).toHaveAttribute("href", /\/admin\/families\/[0-9a-f-]{36}$/);
+  await page.getByLabel("Message", { exact: true }).fill("Of course, see you Sunday.");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByText("Of course, see you Sunday.")).toBeVisible();
-  await expect(page.getByRole("status").filter({ hasText: "Sent." })).toBeVisible();
+  await expect(page.getByLabel("Message", { exact: true })).toHaveValue("");
+  await page.screenshot({ path: shot("admin-family-chat"), fullPage: true });
   // Opened and answered: nothing unread any more.
-  await page.goto("/admin/messages");
+  await page.goto("/admin/messages?show=unread");
   await expect(nav.getByRole("link", { name: "Inbox", exact: true })).toBeVisible();
-  await expect(page.getByText("Nothing waiting for a reply.")).toBeVisible();
+  await expect(page.getByText("Nothing unread.")).toBeVisible();
   await admin.close();
 });
 
@@ -138,10 +153,16 @@ test("the parent sees the reply on News and in Messages; another parent can't op
   await expect(row).toBeVisible();
   await row.click();
   await expect(parent).toHaveURL(/\/messages(\?|$)/);
-  await parent.getByRole("link", { name: new RegExp(`Re: ${HEADLINE}`) }).click();
-  await expect(parent).toHaveURL(/\/messages\/[0-9a-f-]{36}$/);
+  // The chat opens at the club's answer, marked New, under the name parents know the coach by.
   await expect(parent.getByText("Of course, see you Sunday.")).toBeVisible();
-  await expect(parent.getByText("Coach", { exact: true })).toBeVisible();
+  await expect(parent.getByText("New", { exact: true })).toBeVisible();
+  await expect(parent.getByText("Ibrahim", { exact: true })).toBeVisible();
+  // An answer typed here carries on the same conversation.
+  await parent.getByLabel("Message", { exact: true }).fill("Jazakallah khair.");
+  await parent.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(parent.getByText("Jazakallah khair.")).toBeVisible();
+  await expect(parent.locator(`[data-thread="${threadUrl.split("/").pop()}"]`)).toHaveCount(3);
+  await parent.screenshot({ path: shot("parent-message-thread"), fullPage: true });
   await parent.goto("/news");
   await expect(parent.getByRole("link", { name: /new message from the club/ })).toHaveCount(0);
 
@@ -177,9 +198,11 @@ test("the coaches get the reason as a message and see it on the register", async
   const admin = await newContext(browser, { ...PHONE, storageState: ADMIN_STATE });
   const page = await admin.newPage();
   await page.goto("/admin/messages");
-  // A reason for not coming isn't a message waiting for a reply: it's under Not coming, not in the badge.
+  // A reason for not coming isn't a message waiting for a reply: it's under Not coming, not in the badge (which
+  // has the parent's "Jazakallah khair." and nothing else).
   const nav = page.getByRole("navigation", { name: "Club admin" });
-  await expect(nav.getByRole("link", { name: "Inbox", exact: true })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Inbox, 1 unread" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Unread (1)" })).toBeVisible();
   await page.getByRole("link", { name: "Not coming (1 new)" }).click();
   const row = page.getByRole("link", { name: /Not coming: / });
   await expect(row).toContainText("Yunus V");

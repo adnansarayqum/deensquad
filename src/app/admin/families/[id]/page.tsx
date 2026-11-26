@@ -60,7 +60,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
         title={`${child.firstName} ${child.lastName}`}
         subtitle={`${groupPlural(child.ageGroup)} · ${child.attended} ${child.attended === 1 ? "session" : "sessions"} attended`}
         actions={
-          <Link href={`/admin/messages/new?child=${child.id}`} className="btn-chunky btn-paper btn-small min-h-12">
+          <Link href={`/admin/messages/family/${child.id}`} className="btn-chunky btn-paper btn-small min-h-12">
             <MessageCircle aria-hidden size={16} />
             Message this family
           </Link>

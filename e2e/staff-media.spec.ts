@@ -150,10 +150,12 @@ test("a photo-only message from staff, and a photo on a session the parent sees 
   const childHref = await page.getByRole("link", { name: /Ibrahim M/ }).first().getAttribute("href");
   const childId = /\/admin\/families\/([0-9a-f-]{36})/.exec(childHref!)![1];
   await page.goto(`/admin/messages/new?child=${childId}`);
+  // The family's chat opens; the paperclip shows the picker.
+  await expect(page).toHaveURL(/\/admin\/messages\/family\/[0-9a-f-]{36}$/);
+  await page.getByRole("button", { name: "Attach photos or videos" }).click();
   await page.getByLabel("Add photos or videos").setInputFiles(photo);
   await expect(page.locator('input[type="hidden"][name="media"]')).toHaveCount(1, { timeout: 30_000 });
-  await page.getByRole("button", { name: "Send to the family" }).click();
-  await expect(page).toHaveURL(/\/admin\/messages\/[0-9a-f-]{36}\?sent=1$/);
+  await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByText("Sent a photo.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Your message: photo 1 of 1" })).toBeVisible();
   await admin.close();
@@ -162,7 +164,6 @@ test("a photo-only message from staff, and a photo on a session the parent sees 
   await expect(p.getByRole("link", { name: /: photo 1 of 1$/ })).toBeVisible();
   await p.screenshot({ path: shot("parent-session-media"), fullPage: true });
   await p.goto("/messages");
-  await p.getByRole("link", { name: /Ibrahim/ }).first().click();
   await expect(p.getByText("Sent a photo.")).toBeVisible();
   await loaded(p, /'s message: photo 1 of 1$/, true);
   await parent.close();

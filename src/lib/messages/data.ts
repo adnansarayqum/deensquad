@@ -35,7 +35,8 @@ export function conversationTitle(c: { subject: string | null; newsTitle: string
 }
 
 // Staff side: what a member of staff covers, mirroring the policy without its parent part.
-const STAFF_SEES = `(staff_covers(c.player_id) or (c.staff_id is not null and c.staff_id in (select id from staff where auth_user_id = auth.uid())))`;
+// Since migration 0060 that is a child's whole family: a coach of any of a family's children reads its chat.
+const STAFF_SEES = `(staff_covers_family(c.player_id) or (c.staff_id is not null and c.staff_id in (select id from staff where auth_user_id = auth.uid())))`;
 
 // Parent side ------------------------------------------------------------------
 
@@ -477,4 +478,251 @@ export async function loadNewsAnswers(
     allowReplies: a.allow_replies,
     children: rows.map((r) => ({ name: shortName(r.first_name, r.last_name), answer: r.answer })),
   };
+}
+
+// One chat per family (migration 0060) ------------------------------------------
+//
+// The club's decision (26 Nov 2026): messaging should work like WhatsApp, one continuous chat with each family.
+// Conversations stay as they are underneath (a topic, a reply to a post, a "not coming" reason; each about one
+// child, which decides who is told); a family's chat is all of them as one timeline, oldest first. A new message
+// carries on the conversation the chat's latest message is in, so an answer always lands beside what it answers.
+
+/** What a message in the chat belongs to, said above it when it changes: a post it replies to, a session, a subject. */
+export type ChatContext = { kind: "direct" | "reply" | "absence"; label: string | null; child: string; newsId: string | null };
+
+export type ChatMessage = MessageView & { conversationId: string; context: ChatContext };
+
+export type FamilyChat = {
+  /** A child of the family: what the staff side's address and forms carry. */
+  key: string;
+  children: { id: string; firstName: string; lastName: string; ageGroup: AgeGroup }[];
+  parents: { id: string; name: string }[];
+  messages: ChatMessage[];
+  /** Older messages there wasn't room for (the chat shows the latest `CHAT_LIMIT`). */
+  earlier: number;
+  /** The first message from the other side this person hadn't read when they opened it ("New" above it). */
+  firstNew: string | null;
+  /** The child the latest message is about: what a new message is about unless they choose another. */
+  about: string | null;
+  /** Parent side: a member of staff has read the parents' latest message. */
+  seenBy: string | null;
+};
+
+export const CHAT_LIMIT = 300;
+
+type ChatSide = { parent: readonly string[] } | { staff: string };
+
+/** The conversations a chat is made of: a parent's own children's, or (staff) a family's that this person can read. */
+async function chatConversations(tx: Queryable, side: ChatSide) {
+  const where =
+    "parent" in side
+      ? `c.player_id = any ($1::uuid[])`
+      : `c.player_id in (select f.player_id from player_families() f where f.family_id = (select g.family_id from player_families() g where g.player_id = $1)) and ${STAFF_SEES}`;
+  return tx.query<{
+    id: string;
+    player_id: string;
+    child: string;
+    subject: string | null;
+    absence: boolean;
+    announcement_id: string | null;
+    news_title: string | null;
+    last_message_at: Date;
+    last_read_at: Date | null;
+    last_by: AuthorKind | null;
+  }>(
+    `select c.id, c.player_id, p.first_name as child, c.subject, c.session_id is not null as absence, c.announcement_id, a.title as news_title,
+       c.last_message_at, (select r.last_read_at from conversation_reads r where r.conversation_id = c.id and r.user_id = auth.uid()) as last_read_at,
+       (select m.author_kind from conversation_messages m where m.conversation_id = c.id order by m.created_at desc, m.id desc limit 1) as last_by
+     from conversations c join players p on p.id = c.player_id
+     left join announcements a on a.id = c.announcement_id
+     where ${where}
+     order by c.last_message_at desc, c.id`,
+    ["parent" in side ? [...side.parent] : side.staff],
+  );
+}
+
+/**
+ * A family's chat with the club. Parent side: their own children (`parent`: the family's child ids). Staff side:
+ * the family of `staff` (a child's id), with the conversations this member of staff can read; null when the child
+ * isn't one they cover (or isn't there).
+ */
+export async function loadFamilyChat(tx: Queryable, side: ChatSide): Promise<FamilyChat | null> {
+  const staffSide = "staff" in side;
+  const children = await tx.query<{ id: string; first_name: string; last_name: string; age_group: AgeGroup }>(
+    staffSide
+      ? `select p.id, p.first_name, p.last_name, p.age_group::text as age_group from players p
+         where p.id in (select f.player_id from player_families() f where f.family_id = (select g.family_id from player_families() g where g.player_id = $1))
+           and staff_covers_family(p.id)
+         order by p.date_of_birth nulls last, p.first_name`
+      : `select p.id, p.first_name, p.last_name, p.age_group::text as age_group from players p where p.id = any ($1::uuid[]) order by p.date_of_birth nulls last, p.first_name`,
+    [staffSide ? side.staff : [...side.parent]],
+  );
+  if (staffSide && children.length === 0) return null;
+  const childIds = children.map((c) => c.id);
+  const parents = childIds.length
+    ? await tx.query<{ id: string; first_name: string; last_name: string }>(
+        `select distinct g.id, g.first_name, g.last_name from guardians g join player_guardians pg on pg.guardian_id = g.id where pg.player_id = any ($1::uuid[]) order by g.first_name, g.last_name`,
+        [childIds],
+      )
+    : [];
+  const conversations = childIds.length ? await chatConversations(tx, side) : [];
+  const byId = new Map(conversations.map((c) => [c.id, c]));
+  const ids = conversations.map((c) => c.id);
+  const rows = ids.length
+    ? await tx.query<{ id: string; conversation_id: string; author_kind: AuthorKind; author_name: string; author_user: string | null; body: string; created_at: Date; total: number }>(
+        `select * from (
+           select id, conversation_id, author_kind, author_name, author_user, body, created_at, count(*) over ()::int as total
+           from conversation_messages where conversation_id = any ($1::uuid[]) order by created_at desc, id desc limit $2
+         ) latest order by created_at, id`,
+        [ids, CHAT_LIMIT],
+      )
+    : [];
+  const me = await currentUser(tx);
+  const media = await loadMediaFor(tx, "message", rows.map((m) => m.id));
+  const other: AuthorKind = staffSide ? "parent" : "staff";
+  const firstNew = rows.find((m) => {
+    const read = byId.get(m.conversation_id)?.last_read_at;
+    return m.author_kind === other && (!read || m.created_at > read);
+  });
+  const last = rows.at(-1);
+  const [seen] =
+    !staffSide && last?.author_kind === "parent" ? await tx.query<{ by: string | null }>(`select conversation_seen_by($1) as by`, [last.conversation_id]) : [];
+  return {
+    key: staffSide ? side.staff : (childIds[0] ?? ""),
+    children: children.map((c) => ({ id: c.id, firstName: c.first_name, lastName: c.last_name, ageGroup: c.age_group })),
+    parents: parents.map((g) => ({ id: g.id, name: `${g.first_name} ${g.last_name}` })),
+    messages: rows.map((m) => {
+      const c = byId.get(m.conversation_id)!;
+      return {
+        id: m.id,
+        conversationId: m.conversation_id,
+        authorKind: m.author_kind,
+        authorName: m.author_name,
+        mine: m.author_user !== null && m.author_user === me,
+        body: m.body,
+        at: iso(m.created_at),
+        media: media.get(m.id) ?? [],
+        context: {
+          kind: c.absence ? "absence" : c.announcement_id ? "reply" : "direct",
+          label: c.absence ? c.subject : c.news_title ? `Replying to “${c.news_title}”` : c.announcement_id ? "Replying to a post that has been deleted" : c.subject,
+          child: c.child,
+          newsId: c.announcement_id,
+        },
+      };
+    }),
+    earlier: rows.length ? rows[0].total - rows.length : 0,
+    firstNew: firstNew?.id ?? null,
+    about: last ? (byId.get(last.conversation_id)?.player_id ?? null) : null,
+    seenBy: seen?.by ?? null,
+  };
+}
+
+/** Opening a chat reads it: every conversation in it with something newer than this person's mark. */
+export async function markChatRead(tx: Queryable, side: ChatSide): Promise<void> {
+  const conversations = await chatConversations(tx, side);
+  const stale = conversations.filter((c) => !c.last_read_at || c.last_message_at > c.last_read_at).map((c) => c.id);
+  if (!stale.length) return;
+  await tx.query(
+    `insert into conversation_reads (conversation_id, user_id, last_read_at) select id, auth.uid(), now() from unnest($1::uuid[]) as id where auth.uid() is not null
+     on conflict (conversation_id, user_id) do update set last_read_at = excluded.last_read_at`,
+    [stale],
+  );
+}
+
+/**
+ * Where a new message in a chat goes: the conversation its latest message is in, unless the writer chose another
+ * child (`about`), which uses that child's latest plain conversation (not a post reply or a "not coming" reason).
+ * A parent who writes again after their own "not coming" reason isn't adding to the reason (it would show on the
+ * register): that goes to the child's plain conversation too. Staff answering the reason stay with it.
+ * Null when there's nowhere yet; `{ child }` when the caller should start a conversation about that child.
+ */
+export async function chatThread(tx: Queryable, side: ChatSide, about: string | null): Promise<{ conversationId: string } | { child: string } | null> {
+  const conversations = await chatConversations(tx, side);
+  const latest = conversations[0];
+  if (!latest && !about) return null;
+  const ownReason = latest && "parent" in side && latest.absence && latest.last_by === "parent";
+  if (latest && !ownReason && (!about || about === latest.player_id)) return { conversationId: latest.id };
+  const child = about ?? latest.player_id;
+  const plain = conversations.find((c) => c.player_id === child && !c.absence && !c.announcement_id);
+  return plain ? { conversationId: plain.id } : { child };
+}
+
+export type ChatRow = {
+  /** A child of the family (the smallest id): the chat's address. */
+  key: string;
+  children: { id: string; firstName: string; lastName: string; ageGroup: AgeGroup }[];
+  parents: string[];
+  last: { authorKind: AuthorKind; authorName: string; preview: string } | null;
+  lastAt: string;
+  /** Parents' messages this person hasn't read, leaving out "not coming" reasons (those have their own tab and the register). */
+  unread: number;
+  /** A new message for the club's admins (payments, the shop, the account). */
+  forAdmins: boolean;
+};
+
+/** The staff inbox as chats: one row per family with a conversation this person can read, latest message first. */
+export async function loadChats(tx: Queryable, opts: { unreadOnly?: boolean; limit?: number } = {}): Promise<ChatRow[]> {
+  const rows = await tx.query<{
+    family_id: string;
+    last_at: Date;
+    unread: number;
+    for_admins: boolean;
+    author_kind: AuthorKind | null;
+    author_name: string | null;
+    body: string | null;
+  }>(
+    `with conv as (
+       select c.id, f.family_id, c.last_message_at, c.for_admins, c.session_id is not null as absence,
+         coalesce((select r.last_read_at from conversation_reads r where r.conversation_id = c.id and r.user_id = auth.uid()), '-infinity') as read_at
+       from conversations c join player_families() f on f.player_id = c.player_id
+       where ${STAFF_SEES}
+     ),
+     fam as (
+       select conv.family_id, max(conv.last_message_at) as last_at,
+         coalesce(sum((select count(*) from conversation_messages pm where pm.conversation_id = conv.id and pm.author_kind = 'parent' and pm.created_at > conv.read_at)) filter (where not conv.absence), 0)::int as unread,
+         coalesce(bool_or(conv.for_admins and exists (select 1 from conversation_messages pm where pm.conversation_id = conv.id and pm.author_kind = 'parent' and pm.created_at > conv.read_at)), false) as for_admins
+       from conv group by conv.family_id
+     )
+     select fam.family_id, fam.last_at, fam.unread, fam.for_admins, m.author_kind, m.author_name, m.body
+     from fam
+     left join lateral (
+       select cm.author_kind, cm.author_name, cm.body from conversation_messages cm join conv on conv.id = cm.conversation_id
+       where conv.family_id = fam.family_id order by cm.created_at desc, cm.id desc limit 1
+     ) m on true
+     where (not $1 or fam.unread > 0)
+     order by fam.last_at desc
+     limit $2`,
+    [Boolean(opts.unreadOnly), opts.limit ?? 200],
+  );
+  if (!rows.length) return [];
+  const families = rows.map((r) => r.family_id);
+  const children = await tx.query<{ family_id: string; id: string; first_name: string; last_name: string; age_group: AgeGroup }>(
+    `select f.family_id, p.id, p.first_name, p.last_name, p.age_group::text as age_group from players p join player_families() f on f.player_id = p.id
+     where f.family_id = any ($1::uuid[]) order by p.date_of_birth nulls last, p.first_name`,
+    [families],
+  );
+  const parents = await tx.query<{ family_id: string; name: string }>(
+    `select distinct f.family_id, g.first_name || ' ' || g.last_name as name from player_families() f
+     join player_guardians pg on pg.player_id = f.player_id join guardians g on g.id = pg.guardian_id
+     where f.family_id = any ($1::uuid[]) order by name`,
+    [families],
+  );
+  return rows.map((r) => ({
+    key: r.family_id,
+    children: children.filter((c) => c.family_id === r.family_id).map((c) => ({ id: c.id, firstName: c.first_name, lastName: c.last_name, ageGroup: c.age_group })),
+    parents: parents.filter((p) => p.family_id === r.family_id).map((p) => p.name),
+    last: r.author_kind && r.body !== null ? { authorKind: r.author_kind, authorName: r.author_name ?? "", preview: preview(r.body) } : null,
+    lastAt: iso(r.last_at),
+    unread: r.unread,
+    forAdmins: r.for_admins,
+  }));
+}
+
+/** The child a conversation is about, if this person can read it: where its old address sends them (the family's chat). */
+export async function conversationChild(tx: Queryable, id: string, side: { parent: readonly string[] } | "staff"): Promise<string | null> {
+  const [row] = await tx.query<{ player_id: string }>(
+    `select c.player_id from conversations c where c.id = $1 and ${side === "staff" ? STAFF_SEES : "c.player_id = any ($2::uuid[])"}`,
+    side === "staff" ? [id] : [id, [...side.parent]],
+  );
+  return row?.player_id ?? null;
 }

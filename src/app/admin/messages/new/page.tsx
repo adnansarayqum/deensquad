@@ -1,53 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { PageHeader, Section } from "@/components/admin/bits";
-import { MessageForm } from "@/components/messages/MessageForm";
+import { notFound, redirect } from "next/navigation";
+import { PageHeader } from "@/components/admin/bits";
 import { Pill } from "@/components/ui";
 import { UUID } from "@/lib/auth/tokens";
 import { coachLimit, requireStaff } from "@/lib/auth/session";
 import { asUser } from "@/lib/db";
-import { sendStaffMessage } from "@/lib/messages/actions";
 import { loadMessageChild } from "@/lib/messages/data";
-import { SUBJECT_MAX } from "@/lib/messages/limits";
 import { loadNewsChildren } from "@/lib/admin/news";
 import { matchesName } from "@/lib/search";
 import type { AgeGroup } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Message a family" };
 
-/** "Message this family" from a child's page: a new conversation with the child's parents, addressed to you. */
+/** New chat: choose a child, then their family's chat opens (`?child=`: straight there). */
 export default async function NewStaffMessagePage({ searchParams }: PageProps<"/admin/messages/new">) {
   const user = await requireStaff();
   const { child: childParam, q } = await searchParams;
   if (childParam === undefined) return <ChooseChild userId={user.id} mine={coachLimit(user.staff)} q={typeof q === "string" ? q : ""} />;
   if (typeof childParam !== "string" || !UUID.test(childParam)) notFound();
-  // A group coach only for children in their own groups (the page 404s otherwise, as the child's page does).
+  // A group coach only for children in their own groups (a 404 otherwise, as the child's page is). The family has
+  // one chat: open it, with the box to write at the foot.
   const child = await asUser(user.id, (tx) => loadMessageChild(tx, childParam, coachLimit(user.staff)));
   if (!child) notFound();
-
-  return (
-    <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <PageHeader back={{ href: `/admin/families/${child.id}`, label: `${child.firstName} ${child.lastName}` }} title="Message this family">
-        <p className="flex flex-wrap items-center gap-2 text-[15px]">
-          About {child.firstName} {child.lastName} <Pill tone="neutral">{child.ageGroup}</Pill>
-        </p>
-      </PageHeader>
-      <Section title={child.parents.length ? `To ${child.parents.join(" and ")}` : "No parent linked yet"}>
-        <MessageForm action={sendStaffMessage} hidden={{ child: child.id }} submitLabel="Send to the family" media>
-          <div>
-            <label htmlFor="message-subject" className="field-label">
-              Subject (optional)
-            </label>
-            <input id="message-subject" name="subject" maxLength={SUBJECT_MAX} className="field" />
-          </div>
-        </MessageForm>
-        <p className="text-[13px] text-ink-muted">
-          Every parent of {child.firstName} sees it in the app (with a notification, or an email saying there&apos;s a message). Their replies come to you; {child.firstName}&apos;s coaches and the club&apos;s admins can read the conversation too.
-        </p>
-      </Section>
-    </div>
-  );
+  redirect(`/admin/messages/family/${child.id}`);
 }
 
 /** New message from the inbox: find the child first (a group coach sees only their groups' children). */
@@ -56,7 +32,7 @@ async function ChooseChild({ userId, mine, q }: { userId: string; mine: readonly
   const shown = q.trim() ? children.filter((c) => matchesName(q, c.firstName, c.lastName)) : children;
   return (
     <div className="flex flex-col gap-4 lg:max-w-3xl">
-      <PageHeader back={{ href: "/admin/messages", label: "Messages" }} title="New message" subtitle="Which child is it about? Their parents get it." />
+      <PageHeader back={{ href: "/admin/messages", label: "Inbox" }} title="New chat" subtitle="Which child is it about? Their family's chat opens." />
       <form className="flex gap-2" role="search">
         <label htmlFor="child-search" className="sr-only">
           Find a child

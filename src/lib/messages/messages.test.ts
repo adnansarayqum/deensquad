@@ -23,7 +23,8 @@ import { dueNotices, notifyMessages, type NoticeSenders } from "./notify";
 import { parseQuickAnswers, tallyAnswers } from "./quick-answers";
 
 // Messages between parents and the club on the sample club. Adnan and Sara share Yusuf (U10) and Musa (U7); Nuh's
-// parent (parent16) is another U7 family. Coach Hamza coaches U7 only; Coach Zara U10 only.
+// parent (parent16) is another U7 family. Coach Hamza coaches U7 only; Coach Zara U10 only; Coach Omar U12 only (no
+// child of the Sample family: since migration 0060 a coach of any of a family's children reads the family's chat).
 
 let t: Awaited<ReturnType<typeof testDatabase>>;
 let adnan: string;
@@ -31,6 +32,7 @@ let sara: string;
 let nuhsParent: string;
 let u7Coach: string;
 let u10Coach: string;
+let u12Coach: string;
 let u10CoachStaffId: string;
 let u7CoachStaffId: string;
 let admin: string;
@@ -48,7 +50,9 @@ beforeAll(async () => {
   await t.asSystem((tx) => tx.query(`update staff set age_groups = '{U7}' where email = $1`, [DEV_EMAILS.coach]));
   await t.asSystem((tx) => tx.query(`insert into staff (email, display_name, role, age_groups) values ('zara@deensquad.test', 'Coach Zara', 'coach', '{U10}')`));
   u7Coach = await t.signIn(DEV_EMAILS.coach);
+  await t.asSystem((tx) => tx.query(`insert into staff (email, display_name, role, age_groups) values ('omar@deensquad.test', 'Coach Omar', 'coach', '{U12}')`));
   u10Coach = await t.signIn("zara@deensquad.test");
+  u12Coach = await t.signIn("omar@deensquad.test");
   admin = await t.signIn(DEV_EMAILS.admin);
   const ids = await t.asSystem((tx) => tx.query<{ email: string; id: string }>(`select email, id from staff`));
   const staffId = (email: string) => ids.find((r) => r.email === email)!.id;
@@ -66,14 +70,16 @@ describe("who can read and write a conversation", () => {
     expect(await sees(u7Coach, q, [musaThread])).toHaveLength(1);
     expect(await sees(admin, q, [musaThread])).toHaveLength(1);
     expect(await sees(nuhsParent, q, [musaThread])).toHaveLength(0);
-    expect(await sees(u10Coach, q, [musaThread])).toHaveLength(0);
+    // Yusuf's coach reads it too: Musa is Yusuf's brother, and a family has one chat.
+    expect(await sees(u10Coach, q, [musaThread])).toHaveLength(1);
+    expect(await sees(u12Coach, q, [musaThread])).toHaveLength(0);
     const m = `select body from conversation_messages where conversation_id = $1`;
     expect(await sees(sara, m, [musaThread])).toEqual([{ body: "He hurt his knee at school." }]);
     expect(await sees(nuhsParent, m, [musaThread])).toHaveLength(0);
-    expect(await sees(u10Coach, m, [musaThread])).toHaveLength(0);
+    expect(await sees(u12Coach, m, [musaThread])).toHaveLength(0);
     // The app's own loaders say the same.
     expect(await t.asUser(nuhsParent, (tx) => loadThread(tx, musaThread, { parent: [] }))).toBeNull();
-    expect(await t.asUser(u10Coach, (tx) => loadThread(tx, musaThread, "staff"))).toBeNull();
+    expect(await t.asUser(u12Coach, (tx) => loadThread(tx, musaThread, "staff"))).toBeNull();
     const thread = await t.asUser(sara, (tx) => loadThread(tx, musaThread, { parent: [DEV_IDS.yusuf, DEV_IDS.musa] }));
     expect(thread?.messages).toMatchObject([{ authorKind: "parent", authorName: "Adnan", mine: false }]);
     expect(thread?.title).toBe("Musa's knee");
@@ -135,8 +141,9 @@ describe("unread and the inboxes", () => {
     await t.asUser(sara, (tx) => addMessage(tx, musaThread, "parent", "Thank you."));
     expect(await t.asUser(u7Coach, loadStaffUnread)).toBe(1);
     expect(await t.asUser(admin, loadStaffUnread)).toBe(1);
-    expect(await t.asUser(u10Coach, loadStaffUnread)).toBe(0);
-    expect((await t.asUser(u10Coach, (tx) => loadInbox(tx))).map((r) => r.id)).not.toContain(musaThread);
+    expect(await t.asUser(u10Coach, loadStaffUnread)).toBe(1);
+    expect(await t.asUser(u12Coach, loadStaffUnread)).toBe(0);
+    expect((await t.asUser(u12Coach, (tx) => loadInbox(tx))).map((r) => r.id)).not.toContain(musaThread);
     const inbox = await t.asUser(admin, (tx) => loadInbox(tx, { unreadOnly: true }));
     expect(inbox).toMatchObject([{ id: musaThread, child: { firstName: "Musa", ageGroup: "U7" }, unread: true, last: { authorName: "Sara", preview: "Thank you." } }]);
     expect(inbox[0].parents).toEqual(["Adnan Sample", "Sara Sample"]);
@@ -158,7 +165,9 @@ describe("starting a conversation from the staff side", () => {
     expect(await t.asUser(admin, (tx) => loadMessageChild(tx, DEV_IDS.yusuf, null))).not.toBeNull();
     const id = await t.asUser(admin, (tx) => startStaffConversation(tx, { childId: DEV_IDS.yusuf, staffId: adminStaffId, subject: "Kit", body: "Yusuf left his boots." }));
     expect(await sees(u10Coach, `select id from conversations where id = $1`, [id])).toHaveLength(1);
-    expect(await sees(u7Coach, `select id from conversations where id = $1`, [id])).toHaveLength(0);
+    // Musa's coach reads his brother's conversation (one chat per family), though he couldn't start it.
+    expect(await sees(u7Coach, `select id from conversations where id = $1`, [id])).toHaveLength(1);
+    expect(await sees(u12Coach, `select id from conversations where id = $1`, [id])).toHaveLength(0);
     // The admin's own message isn't unread for them.
     expect((await t.asUser(admin, (tx) => loadInbox(tx))).find((r) => r.id === id)?.unread).toBe(false);
   });
@@ -227,8 +236,9 @@ describe("quick answers and replies on club news", () => {
     expect(thread).toMatchObject({ title: "Re: Cup on Sunday: can your child play?", newsId: news, withName: "Ibrahim Khan" });
     expect(thread!.messages).toHaveLength(2);
     expect(await t.asUser(admin, (tx) => countReplies(tx, news))).toBe(1);
-    // Addressed to the admin who posted it, so the U7 coach sees it as the group's coach, the U10 coach not at all.
-    expect(await t.asUser(u10Coach, (tx) => countReplies(tx, news))).toBe(0);
+    // Addressed to the admin who posted it: the family's coaches see it, a coach of neither child not at all.
+    expect(await t.asUser(u10Coach, (tx) => countReplies(tx, news))).toBe(1);
+    expect(await t.asUser(u12Coach, (tx) => countReplies(tx, news))).toBe(0);
   });
 
   it("a message without replies turned on can't be replied to", async () => {
