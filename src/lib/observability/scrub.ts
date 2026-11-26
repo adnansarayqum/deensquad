@@ -151,6 +151,8 @@ const NOISE = [
   /due to access control checks/i,
   /NetworkError when attempting to fetch resource/i,
   /^(TypeError: )?Failed to fetch( \(.*\))?$/i,
+  // A crypto wallet's script in the visitor's browser (not the app's code), as in client-errors.ts.
+  /window\.ethereum|ethereum\.selectedAddress/i,
 ];
 const EXTENSION = /^(chrome|moz|safari|safari-web|ms-browser)-extension:\/\//i;
 

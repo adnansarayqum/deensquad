@@ -5,6 +5,8 @@ describe("errors from people's phones", () => {
   it("keeps real faults and drops signal drops, browser quirks and extensions", () => {
     expect(isNoise("TypeError: Cannot read properties of undefined (reading 'height')")).toBe(false);
     expect(isNoise("TypeError: Failed to fetch")).toBe(true);
+    // A crypto wallet's own script in the parent's browser, not the app's code.
+    expect(isNoise("TypeError: undefined is not an object (evaluating 'window.ethereum.selectedAddress = undefined')")).toBe(true);
     expect(isNoise("ResizeObserver loop completed with undelivered notifications.")).toBe(true);
     expect(isNoise("ChunkLoadError: Loading chunk 12 failed")).toBe(true);
     expect(isNoise("Error: boom", "chrome-extension://abc/content.js")).toBe(true);

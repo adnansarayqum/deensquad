@@ -19,6 +19,11 @@ const NOISE = [
   // Safari's words for a fetch it dropped, e.g. Next's background prefetch of a page cancelled by moving to
   // another one ("Fetch API cannot load …?_rsc=… due to access control checks"), seen in the iPhone tests.
   /due to access control checks/i,
+  // Scripts a phone's browser or an app's built-in browser adds to every page, failing on their own: a crypto
+  // wallet ("window.ethereum.selectedAddress", 26 Nov 2026 from a parent's phone on /shop; the app has no such
+  // code), and the bridges some in-app browsers inject.
+  /window\.ethereum|ethereum\.selectedAddress/i,
+  /webkit\.messageHandlers|__firefox__|instantSearchSDKJSBridge|zaloJSV2/i,
 ];
 
 export function isNoise(message: string, source?: string | null): boolean {
