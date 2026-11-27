@@ -75,16 +75,16 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
         }
       />
       {/* Player of the week: one child per group each week; their parents get a card to keep and share. */}
-      <Section title="Player of the week" aside={<span className="text-[13px] text-ink-muted">{groupPlural(player.age_group)}, {weekWords(week)}</span>}>
+      <Section title="Player of the week" aside={<span className="text-meta text-ink-muted">{groupPlural(player.age_group)}, {weekWords(week)}</span>}>
         {holdsIt ? (
-          <p className="mb-3 text-[15px]">
+          <p className="mb-3 text-small">
             {player.first_name} is this week&apos;s Player of the week.{" "}
             <a href={`/api/spotlight/${spotlight!.id}/card`} className="font-bold text-grass-text underline">
               See the card
             </a>
           </p>
         ) : spotlight ? (
-          <p className="mb-3 text-[15px] text-ink-muted">
+          <p className="mb-3 text-small text-ink-muted">
             This week it&apos;s {spotlight.firstName} {spotlight.lastName}. Saving here gives it to {player.first_name} instead.
           </p>
         ) : null}
@@ -92,8 +92,8 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
         {holdsIt ? (
           <form action={removePlayerOfTheWeek} className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3">
             <input type="hidden" name="spotlight" value={spotlight!.id} />
-            <label className="flex min-h-12 items-center gap-3 text-[15px]">
-              <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--grass)]" />
+            <label className="flex min-h-12 items-center gap-3 text-small">
+              <input type="checkbox" name="confirm" value="yes" required className="check" />
               Yes, take it back
             </label>
             <button type="submit" className="btn-chunky btn-paper btn-small" aria-label={`Take Player of the week back from ${player.first_name}`}>
@@ -107,7 +107,7 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
           <AwardForm playerId={player.id} firstName={player.first_name} />
         </Card>
       ) : (
-        <p className="text-[15px] text-ink-muted">The {groupPlural(player.age_group)} don&apos;t have points, stars or badges. Rate them and write notes and reports here.</p>
+        <p className="text-small text-ink-muted">The {groupPlural(player.age_group)} don&apos;t have points, stars or badges. Rate them and write notes and reports here.</p>
       )}
 
       {awarded && recent.length > 0 ? (
@@ -116,11 +116,11 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
             {recent.map((a) => (
               <li key={a.id} className="flex items-center gap-3 rounded-dash border border-line bg-cream px-3.5 py-2.5">
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="flex items-center gap-1.5 text-[15px] font-bold">
-                    {a.stars ? <Star aria-hidden size={15} className="text-gold-text" fill="currentColor" strokeWidth={0} /> : null}
+                  <span className="flex items-center gap-1.5 text-small font-bold">
+                    {a.stars ? <Star aria-hidden size={16} className="text-gold-text" fill="currentColor" strokeWidth={0} /> : null}
                     {[a.stars ? "Star player" : null, a.points ? `${a.points} ${a.points === 1 ? "point" : "points"}` : null].filter(Boolean).join(" and ")}
                   </span>
-                  <span className="text-[13px] text-ink-muted">
+                  <span className="text-meta text-ink-muted">
                     {[a.reason, a.from, day.format(new Date(a.givenAt))].filter(Boolean).join(" · ")}
                   </span>
                 </span>
@@ -129,7 +129,7 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
                     <input type="hidden" name="award" value={a.id} />
                     <button
                       type="submit"
-                      className="min-h-12 px-2 text-sm font-bold text-ink-muted underline"
+                      className="min-h-12 px-2 text-small font-bold text-ink-muted underline"
                       aria-label={`Undo ${[a.stars ? "star" : null, a.points ? `${a.points} ${a.points === 1 ? "point" : "points"}` : null].filter(Boolean).join(" and ")}, ${day.format(new Date(a.givenAt))}`}
                     >
                       Undo
@@ -144,7 +144,7 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
 
       {awarded && badges.length > 0 ? (
           <Card className="flex flex-col gap-3 p-4">
-            <h2 className="text-[18px] font-bold">Badges</h2>
+            <h2 className="text-subhead font-bold">Badges</h2>
             <ul className="flex flex-col gap-2">
               {badges.map((b) => {
                 const Icon = badgeIcon(b.icon);
@@ -156,8 +156,8 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
                       <Icon aria-hidden size={20} />
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="text-[15px] font-bold">{b.name}</span>
-                      <span className="text-[13px] text-ink-muted">
+                      <span className="text-small font-bold">{b.name}</span>
+                      <span className="text-meta text-ink-muted">
                         {b.earned_on ? `Awarded ${day.format(new Date(b.earned_on))}` : b.given_by === "admin" ? "Not yet · from the register" : "Not yet"}
                       </span>
                     </span>
@@ -166,7 +166,7 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
                       <input type="hidden" name="badge" value={b.id} />
                       <input type="hidden" name="give" value={b.earned_on ? "no" : "yes"} />
                       {b.earned_on ? (
-                        <button type="submit" className="min-h-12 px-2 text-sm font-bold text-ink-muted underline" aria-label={`Take back ${b.name}`}>
+                        <button type="submit" className="min-h-12 px-2 text-small font-bold text-ink-muted underline" aria-label={`Take back ${b.name}`}>
                           Take back
                         </button>
                       ) : (
@@ -185,7 +185,7 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
       <Section
         title="Progress"
         aside={
-          <Link href="/coach/ratings" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+          <Link href="/coach/ratings" className="inline-flex min-h-12 items-center text-small font-bold text-grass-text underline">
             Rate players
           </Link>
         }
@@ -193,24 +193,24 @@ export default async function PlayerAwardsPage({ params, searchParams }: PagePro
         {progress.current ? (
           <ProgressSummaryView firstName={player.first_name} progress={progress} by />
         ) : (
-          <p className="text-[15px] text-ink-muted">{player.first_name} hasn&apos;t been rated in the last 3 months.</p>
+          <p className="text-small text-ink-muted">{player.first_name} hasn&apos;t been rated in the last 3 months.</p>
         )}
       </Section>
 
-      <Section title="Progress report" aside={<span className="text-[13px] text-ink-muted">{shown ? "Parents see published reports" : "Parents don't see reports yet"}</span>}>
+      <Section title="Progress report" aside={<span className="text-meta text-ink-muted">{shown ? "Parents see published reports" : "Parents don't see reports yet"}</span>}>
         <nav aria-label="Report month" className="flex flex-wrap gap-2">
           {months.map((m) => (
             <Link
               key={m}
               href={`/coach/awards/${player.id}?month=${m.slice(0, 7)}`}
               aria-current={m === month ? "page" : undefined}
-              className={`inline-flex min-h-12 items-center justify-center rounded-pill px-4 text-sm font-bold ${m === month ? "bg-floodlight text-on-gold" : "border border-line bg-paper text-ink"}`}
+              className={`inline-flex min-h-12 items-center justify-center rounded-pill px-4 text-small font-bold ${m === month ? "bg-floodlight text-on-gold" : "border border-line bg-paper text-ink"}`}
             >
               {monthOnly(m)}
             </Link>
           ))}
         </nav>
-        <p className="text-[14px] text-ink-muted">
+        <p className="text-small text-ink-muted">
           {report
             ? report.publishedAt
               ? `Published ${day.format(new Date(report.publishedAt))}${report.by ? ` · last saved by ${report.by}` : ""}`

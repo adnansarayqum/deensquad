@@ -35,15 +35,15 @@ export function RatingsForm({ sessionId, rows }: { sessionId: string; rows: Rati
               <fieldset className="flex flex-col gap-2">
                 <legend className="flex w-full items-center gap-3 pb-1">
                   <ChildAvatar photoId={r.photoId} firstName={r.firstName} lastName={r.lastInitial} size={40} />
-                  <span className={`min-w-0 flex-1 text-[16px] font-bold ${r.here ? "" : "text-ink-muted"}`}>
+                  <span className={`min-w-0 flex-1 text-body font-bold ${r.here ? "" : "text-ink-muted"}`}>
                     {name}
-                    {r.here ? null : <span className="ml-2 text-[13px] font-bold">Not here</span>}
-                    {r.mine ? <span className="ml-2 text-[13px] font-bold text-grass-text">Rated</span> : null}
+                    {r.here ? null : <span className="ml-2 text-meta font-bold">Not here</span>}
+                    {r.mine ? <span className="ml-2 text-meta font-bold text-grass-text">Rated</span> : null}
                   </span>
                   <button
                     type="button"
                     onClick={() => clear(r.id)}
-                    className="inline-flex min-h-12 shrink-0 items-center px-2 text-sm font-bold text-ink-muted underline"
+                    className="inline-flex min-h-12 shrink-0 items-center px-2 text-small font-bold text-ink-muted underline"
                     aria-label={`Clear ${r.firstName}'s scores`}
                   >
                     Clear
@@ -51,14 +51,14 @@ export function RatingsForm({ sessionId, rows }: { sessionId: string; rows: Rati
                 </legend>
                 {CATEGORIES.map((c) => (
                   <div key={c.key} role="radiogroup" aria-label={`${c.label} for ${r.firstName}`} className="flex items-center gap-2">
-                    <span aria-hidden className="min-w-0 flex-1 text-[14px] leading-[18px] font-bold">
+                    <span aria-hidden className="min-w-0 flex-1 text-small leading-[18px] font-bold">
                       {c.label}
                     </span>
                     <span className="flex shrink-0 gap-1">
                       {SCORES.map((n) => (
                         <label
                           key={n}
-                          className="relative grid h-12 w-10 cursor-pointer place-items-center rounded-dash border border-line bg-cream text-[16px] font-bold tabular-nums has-[:checked]:border-grass has-[:checked]:bg-grass has-[:checked]:text-on-grass has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--focus)]"
+                          className="relative grid h-12 w-10 cursor-pointer place-items-center rounded-dash border border-line bg-cream text-body font-bold tabular-nums has-[:checked]:border-grass has-[:checked]:bg-grass has-[:checked]:text-on-grass has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--focus)]"
                         >
                           <input
                             type="radio"
@@ -83,12 +83,12 @@ export function RatingsForm({ sessionId, rows }: { sessionId: string; rows: Rati
       {/* Stays on screen at the bottom while the list scrolls under it. */}
       <div className="sticky bottom-[var(--staff-bar-height,0px)] lg:bottom-0 z-10 -mx-1 flex flex-col gap-2 border-t border-line bg-cream px-1 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]">
         {state.error ? (
-          <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+          <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
             {state.error}
           </p>
         ) : null}
         {state.saved && !pending ? (
-          <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+          <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
             {state.message}
           </p>
         ) : null}

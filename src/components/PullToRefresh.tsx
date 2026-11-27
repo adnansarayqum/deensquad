@@ -82,16 +82,16 @@ export function PullToRefresh() {
     <div
       aria-hidden={state !== "offline"}
       role={state === "offline" ? "status" : undefined}
-      className="pointer-events-none fixed inset-x-0 z-30 mx-auto flex max-w-[430px] justify-center"
+      className="pointer-events-none fixed inset-x-0 z-30 mx-auto flex app-column justify-center"
       style={{ top: `calc(env(safe-area-inset-top, 0px) + ${busy || state === "offline" ? 12 : Math.max(0, pull - 36)}px)` }}
     >
       {state === "offline" ? (
-        <span className="rounded-pill bg-paper px-4 py-2 text-[15px] font-bold text-ink shadow-card">No signal. Try again in a moment.</span>
+        <span className="rounded-pill bg-paper px-4 py-2 text-small font-bold text-ink shadow-card">No signal. Try again in a moment.</span>
       ) : (
         <span className="grid h-10 w-10 place-items-center rounded-pill bg-paper text-grass-text shadow-card">
           <RefreshCw
             size={20}
-            strokeWidth={2.4}
+            strokeWidth={2}
             className={busy ? "animate-spin motion-reduce:animate-none" : ""}
             style={busy ? undefined : { transform: `rotate(${(pull / TRIGGER) * 270}deg)`, opacity: ready ? 1 : 0.6 }}
           />

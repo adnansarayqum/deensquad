@@ -26,11 +26,11 @@ export default async function WellbeingPage({ searchParams }: PageProps<"/player
       <BackHeader back={back.href} backLabel={back.label} title={child ? `How's ${child.firstName} doing?` : "Wellbeing check-in"} />
       <main className="flex flex-col gap-4 px-4 pt-5 pb-4">
         {!child ? (
-          <p className="rounded-app bg-paper shadow-card p-4 text-[15px]">No players are linked to your email yet.</p>
+          <p className="rounded-app bg-paper shadow-card p-4 text-small">No players are linked to your email yet.</p>
         ) : (
           <>
             <section className="flex flex-col gap-3 rounded-app bg-paper shadow-card p-4" aria-labelledby="checkin">
-              <h2 id="checkin" className="text-[18px] font-bold">
+              <h2 id="checkin" className="text-subhead font-bold">
                 How is {child.firstName} finding football at the moment?
               </h2>
               <StatefulForm action={giveCheckinAction} submitLabel="Send to the club" pendingLabel="Sending…">
@@ -40,7 +40,7 @@ export default async function WellbeingPage({ searchParams }: PageProps<"/player
                   {(Object.keys(MOODS) as Mood[]).map((m) => (
                     <label
                       key={m}
-                      className="flex min-h-14 cursor-pointer items-center justify-center rounded-app bg-fill px-2 text-center text-[15px] font-bold has-[:checked]:border-ink has-[:checked]:bg-paper has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-[var(--focus)]"
+                      className="flex min-h-14 cursor-pointer items-center justify-center rounded-app bg-fill px-2 text-center text-small font-bold has-[:checked]:border-ink has-[:checked]:bg-paper has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-[var(--focus)]"
                     >
                       <input type="radio" name="mood" value={m} required className="sr-only" />
                       {FACES[m]}
@@ -53,31 +53,31 @@ export default async function WellbeingPage({ searchParams }: PageProps<"/player
                   </label>
                   <textarea id="note" name="note" rows={3} maxLength={WELLBEING_NOTE_MAX} className="field" />
                 </div>
-                <label className="flex items-start gap-3 text-[15px]">
-                  <input type="checkbox" name="consent" value="yes" required className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--grass)]" />
+                <label className="flex items-start gap-3 text-small">
+                  <input type="checkbox" name="consent" value="yes" required className="mt-0.5 check" />
                   <span>
                     I&apos;m happy for the club&apos;s admins to see this. Coaches and other parents don&apos;t see it, and nothing you write is put in an email.
                   </span>
                 </label>
               </StatefulForm>
-              <p className="text-[13px] text-ink-muted">If you&apos;re worried about {child.firstName}&apos;s safety, speak to the club straight away rather than waiting for a reply here.</p>
+              <p className="text-meta text-ink-muted">If you&apos;re worried about {child.firstName}&apos;s safety, speak to the club straight away rather than waiting for a reply here.</p>
             </section>
 
             {history.length > 0 ? (
               <section className="rounded-app bg-paper shadow-card p-4" aria-labelledby="earlier">
-                <h2 id="earlier" className="text-[18px] font-bold">
+                <h2 id="earlier" className="text-subhead font-bold">
                   Earlier check-ins
                 </h2>
                 <ul className="mt-2 flex flex-col">
                   {history.map((h) => (
                     <li key={h.id} className="flex flex-col gap-0.5 border-t border-line py-2.5 first:border-t-0">
-                      <span className="flex flex-wrap items-center gap-2 text-[15px] font-bold">
+                      <span className="flex flex-wrap items-center gap-2 text-small font-bold">
                         {shortDay(h.createdAt)}
                         <Pill tone="neutral">{MOODS[h.mood]}</Pill>
                         {h.followedUpAt ? <Pill tone="done">Followed up</Pill> : null}
                       </span>
-                      {h.note ? <span className="text-[15px] whitespace-pre-line">{h.note}</span> : null}
-                      {h.givenBy ? <span className="text-[13px] text-ink-muted">From {h.givenBy}</span> : null}
+                      {h.note ? <span className="text-small whitespace-pre-line">{h.note}</span> : null}
+                      {h.givenBy ? <span className="text-meta text-ink-muted">From {h.givenBy}</span> : null}
                     </li>
                   ))}
                 </ul>

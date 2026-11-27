@@ -51,8 +51,8 @@ function EventFields({ e }: { e?: CommunityEvent }) {
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex min-h-12 items-center gap-3">
-          <input type="checkbox" name="weekly" defaultChecked={e?.weekly ?? false} className="h-5 w-5 accent-[var(--grass)]" />
-          <span className="text-[15px] font-bold">Every week, same day and time</span>
+          <input type="checkbox" name="weekly" defaultChecked={e?.weekly ?? false} className="check" />
+          <span className="text-small font-bold">Every week, same day and time</span>
         </label>
         <div>
           <label htmlFor={`until-${key}`} className="field-label">
@@ -88,8 +88,8 @@ function EventFields({ e }: { e?: CommunityEvent }) {
         </div>
       </div>
       <label className="flex min-h-12 items-center gap-3">
-        <input type="checkbox" name="active" defaultChecked={e ? e.active : true} className="h-5 w-5 accent-[var(--grass)]" />
-        <span className="text-[15px] font-bold">Show to parents</span>
+        <input type="checkbox" name="active" defaultChecked={e ? e.active : true} className="check" />
+        <span className="text-small font-bold">Show to parents</span>
       </label>
     </div>
   );
@@ -116,8 +116,8 @@ export default async function AdminCommunityPage() {
         <details key={e.id} className="rounded-app border border-line bg-paper">
           <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-3 px-4 py-2">
             <span className="flex min-w-0 flex-col">
-              <span className="text-[15px] font-bold break-words">Edit {e.title}</span>
-              <span className="text-[13px] text-ink-muted">{eventWhen(e.weekly, next?.start ?? e.startsAt, next?.end ?? e.endsAt)}</span>
+              <span className="text-small font-bold break-words">Edit {e.title}</span>
+              <span className="text-meta text-ink-muted">{eventWhen(e.weekly, next?.start ?? e.startsAt, next?.end ?? e.endsAt)}</span>
             </span>
             {!e.active ? <Pill tone="neutral">Hidden</Pill> : next ? <Pill tone="done">Showing</Pill> : <Pill tone="neutral">Finished</Pill>}
           </summary>
@@ -127,8 +127,8 @@ export default async function AdminCommunityPage() {
             </StatefulForm>
             <StatefulForm action={removeEvent} submitLabel={`Remove ${e.title}`} savedMessage="Event removed." className="border-t border-line pt-4">
               <input type="hidden" name="id" value={e.id} />
-              <label className="flex min-h-12 items-center gap-3 text-[15px]">
-                <input type="checkbox" name="confirm" value="yes" className="h-5 w-5 accent-[var(--grass)]" />
+              <label className="flex min-h-12 items-center gap-3 text-small">
+                <input type="checkbox" name="confirm" value="yes" className="check" />
                 Yes, remove {e.title} for good
               </label>
             </StatefulForm>
@@ -137,7 +137,7 @@ export default async function AdminCommunityPage() {
       ))}
 
       <Section title="Coach's corner">
-        <p className="text-[15px] text-ink-muted">
+        <p className="text-small text-ink-muted">
           {sheets.length === 0
             ? "No practice sheets are shared here yet."
             : sheets.length === 1
@@ -146,13 +146,13 @@ export default async function AdminCommunityPage() {
           Add one, or put an existing sheet in, from Practice sheets.
         </p>
         {sheets.length ? (
-          <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-[15px]">
+          <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-small">
             {sheets.map((s) => (
               <li key={s.id}>{s.title}</li>
             ))}
           </ul>
         ) : null}
-        <Link href="/coach/practice" className="mt-3 inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
+        <Link href="/coach/practice" className="mt-3 inline-flex min-h-12 items-center text-small font-bold text-grass-text underline">
           Open Practice sheets
         </Link>
       </Section>

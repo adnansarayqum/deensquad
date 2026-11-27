@@ -55,12 +55,12 @@ export default async function ChecklistPage() {
           <>
             <div className="flex items-center gap-3">
               <Progress value={done} max={total} label={`${done} of ${total} steps done`} />
-              <span className="text-[15px] font-bold text-ink-muted tabular-nums">
+              <span className="text-small font-bold text-ink-muted tabular-nums">
                 {done} / {total}
               </span>
             </div>
             {remaining === 0 ? (
-              <p className="text-[15px] text-grass-text font-bold">All done. {single ? `${who} is` : "Everyone is"} fully set up.</p>
+              <p className="text-small text-grass-text font-bold">All done. {single ? `${who} is` : "Everyone is"} fully set up.</p>
             ) : null}
           </>
         ) : null}
@@ -68,7 +68,7 @@ export default async function ChecklistPage() {
 
       <main className="flex flex-col gap-2.5 px-4 pt-4 pb-4">
         {family.children.length === 0 ? (
-          <Card className="p-4 text-[15px] leading-[22px]">No players are linked to your email yet. Ask the club to add your child.</Card>
+          <Card className="p-4 text-small leading-[22px]">No players are linked to your email yet. Ask the club to add your child.</Card>
         ) : null}
 
         {sections.map(({ key, label, heading, items }) => {
@@ -82,11 +82,11 @@ export default async function ChecklistPage() {
             return (
               <details key={key} aria-label={label} className="group mt-2 rounded-app bg-paper shadow-card">
                 <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-2 [&::-webkit-details-marker]:hidden">
-                  <span className="text-[18px] font-bold">{heading}</span>
-                  <span className="flex items-center gap-1.5 text-[15px] font-bold text-grass-text tabular-nums">
+                  <span className="text-subhead font-bold">{heading}</span>
+                  <span className="flex items-center gap-1.5 text-small font-bold text-grass-text tabular-nums">
                     <Check aria-hidden size={16} strokeWidth={3} />
                     {steps.done} of {steps.total} done
-                    <ChevronRight aria-hidden size={18} className="text-ink-muted transition-transform group-open:rotate-90" />
+                    <ChevronRight aria-hidden size={20} className="text-ink-muted transition-transform group-open:rotate-90" />
                   </span>
                 </summary>
                 <div className="flex flex-col gap-2.5 px-2 pb-2">{doneRows}</div>
@@ -96,9 +96,9 @@ export default async function ChecklistPage() {
           return (
             <section key={key} aria-label={label} className="flex flex-col gap-2.5">
               {heading ? (
-                <h2 className="mt-2 flex items-baseline justify-between text-[20px] font-bold">
+                <h2 className="mt-2 flex items-baseline justify-between text-heading font-bold">
                   {heading}
-                  <span className="text-[15px] font-bold text-ink-muted tabular-nums">
+                  <span className="text-small font-bold text-ink-muted tabular-nums">
                     {steps.done} of {steps.total} done
                   </span>
                 </h2>
@@ -135,11 +135,11 @@ function DoneRow({ item }: { item: ChecklistItemView }) {
   const row = (
     <>
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-pill bg-grass text-on-grass">
-        <Check aria-hidden size={18} strokeWidth={3} />
+        <Check aria-hidden size={20} strokeWidth={3} />
       </span>
       <span className="flex flex-col">
-        <span className="text-[15px] font-bold">{item.title}</span>
-        <span className="text-[13px] text-ink-muted">{item.detail}</span>
+        <span className="text-small font-bold">{item.title}</span>
+        <span className="text-meta text-ink-muted">{item.detail}</span>
       </span>
     </>
   );
@@ -161,15 +161,15 @@ function TodoRow({ item }: { item: ChecklistItemView }) {
       href={item.href ?? "/checklist"}
       className="flex items-center gap-3.5 rounded-app bg-paper shadow-card p-3.5 transition-transform active:scale-[0.99]"
     >
-      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[14px] bg-orange-tint text-kit-orange">
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-web bg-orange-tint text-kit-orange">
         <Icon aria-hidden size={24} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-base font-bold">{item.title}</span>
-        <span className="text-[15px] text-ink-muted">{item.detail}</span>
-        {item.note ? <span className="text-[15px] font-bold">{item.note}</span> : null}
+        <span className="text-body font-bold">{item.title}</span>
+        <span className="text-small text-ink-muted">{item.detail}</span>
+        {item.note ? <span className="text-small font-bold">{item.note}</span> : null}
       </span>
-      <span className="rounded-xl bg-grass px-3 py-2 text-[15px] font-bold text-on-grass">{item.actionLabel}</span>
+      <span className="rounded-web bg-grass px-3 py-2 text-small font-bold text-on-grass">{item.actionLabel}</span>
     </Link>
   );
 }
@@ -179,15 +179,15 @@ function OptionalRow({ item }: { item: ChecklistItemView }) {
   const Icon = icons[item.icon];
   return (
     <Link href={item.href ?? "/checklist"} className="flex min-h-12 items-center gap-3.5 rounded-app bg-paper shadow-card px-3.5 py-3">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cream text-ink-muted">
-        <Icon aria-hidden size={22} />
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-web bg-cream text-ink-muted">
+        <Icon aria-hidden size={24} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-[15px] font-bold">{item.title}</span>
-        <span className="text-[13px] text-ink-muted">{item.detail}</span>
+        <span className="text-small font-bold">{item.title}</span>
+        <span className="text-meta text-ink-muted">{item.detail}</span>
       </span>
-      <span className="text-[15px] font-bold text-grass-text">{item.actionLabel}</span>
-      <ChevronRight aria-hidden size={18} className="shrink-0 text-ink-muted" />
+      <span className="text-small font-bold text-grass-text">{item.actionLabel}</span>
+      <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
     </Link>
   );
 }
@@ -198,30 +198,30 @@ function PartsRow({ item }: { item: ChecklistItemView }) {
   return (
     <div className="flex flex-col gap-3 rounded-app bg-paper shadow-card p-3.5">
       <div className="flex items-center gap-3.5">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[14px] bg-orange-tint text-kit-orange">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-web bg-orange-tint text-kit-orange">
           <Icon aria-hidden size={24} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="text-base font-bold">{item.title}</span>
-          <span className="text-[15px] text-ink-muted">{item.detail}</span>
+          <span className="text-body font-bold">{item.title}</span>
+          <span className="text-small text-ink-muted">{item.detail}</span>
         </span>
       </div>
       <ul className="flex flex-col gap-2">
         {item.parts!.map((p) =>
           p.done ? (
-            <li key={p.childId} className="flex min-h-12 items-center gap-3 rounded-xl bg-grass-tint px-3">
-              <Check aria-hidden size={18} strokeWidth={3} className="text-grass-text" />
-              <span className="flex-1 text-[15px] font-bold">{p.name}</span>
-              <span className="text-[15px] font-bold text-grass-text">Signed</span>
+            <li key={p.childId} className="flex min-h-12 items-center gap-3 rounded-web bg-grass-tint px-3">
+              <Check aria-hidden size={20} strokeWidth={3} className="text-grass-text" />
+              <span className="flex-1 text-small font-bold">{p.name}</span>
+              <span className="text-small font-bold text-grass-text">Signed</span>
             </li>
           ) : (
             <li key={p.childId}>
-              <Link href={p.href} className="flex min-h-12 items-center gap-3 rounded-xl border border-line px-3">
-                <span className="flex-1 text-[15px] font-bold">
+              <Link href={p.href} className="flex min-h-12 items-center gap-3 rounded-web border border-line px-3">
+                <span className="flex-1 text-small font-bold">
                   {item.actionLabel} with {p.name}
                 </span>
-                <span className="text-[15px] font-bold text-kit-orange">To sign</span>
-                <ChevronRight aria-hidden size={18} className="text-ink-muted" />
+                <span className="text-small font-bold text-kit-orange">To sign</span>
+                <ChevronRight aria-hidden size={20} className="text-ink-muted" />
               </Link>
             </li>
           ),

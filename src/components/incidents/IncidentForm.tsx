@@ -40,7 +40,7 @@ export function IncidentForm({ childList: children, childId, sessionId, sessionL
         <legend className="field-label">What kind</legend>
         <div className="flex flex-wrap gap-2">
           {Object.entries(INCIDENT_KINDS).map(([value, label], i) => (
-            <label key={value} className="relative inline-flex min-h-12 cursor-pointer items-center rounded-pill border border-line bg-paper px-4 text-[15px] font-bold has-[:checked]:border-ink has-[:checked]:bg-cream has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ink">
+            <label key={value} className="relative inline-flex min-h-12 cursor-pointer items-center rounded-pill border border-line bg-paper px-4 text-small font-bold has-[:checked]:border-ink has-[:checked]:bg-cream has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ink">
               <input type="radio" name="kind" value={value} defaultChecked={i === 0} className="sr-only" />
               {label}
             </label>
@@ -52,7 +52,7 @@ export function IncidentForm({ childList: children, childId, sessionId, sessionL
           When
         </label>
         <input id={`${id}-when`} name="happenedAt" type="datetime-local" defaultValue={now} required className="field w-auto self-start" />
-        {sessionLabel ? <p className="text-[13px] text-ink-muted">At {sessionLabel}.</p> : null}
+        {sessionLabel ? <p className="text-meta text-ink-muted">At {sessionLabel}.</p> : null}
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor={`${id}-what`} className="field-label">
@@ -66,17 +66,17 @@ export function IncidentForm({ childList: children, childId, sessionId, sessionL
         </label>
         <textarea id={`${id}-action`} name="actionTaken" rows={3} maxLength={INCIDENT_TEXT_MAX} required className="field" placeholder="For example: ice pack, sat out 10 minutes, carried on. Told his dad at pick-up." />
       </div>
-      <p className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] leading-[22px] text-ink">
+      <p className="rounded-app bg-grass-tint px-3.5 py-3 text-small leading-[22px] text-ink">
         The child&apos;s parents get this in the app straight away, from you, and can reply. The club&apos;s admins are told too. It&apos;s kept as a
         club record and can&apos;t be changed afterwards.
       </p>
       {/* A last check before it goes, since it can't be changed afterwards (admin UX review, Oct 2026). */}
-      <label className="flex min-h-12 items-start gap-3 text-[15px] leading-[22px]">
-        <input type="checkbox" name="checked" value="yes" required className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--grass)]" />
+      <label className="flex min-h-12 items-start gap-3 text-small leading-[22px]">
+        <input type="checkbox" name="checked" value="yes" required className="mt-0.5 check" />
         <span>I&apos;ve checked the child, the time and the words. Send it to their parents.</span>
       </label>
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
           {state.error}
         </p>
       ) : null}

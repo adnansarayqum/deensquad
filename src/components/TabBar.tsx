@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useSelectedLayoutSegment } from "next/navigation";
 import { CalendarDays, House, ListChecks, ShoppingBag, Users } from "lucide-react";
 import { tabFor } from "@/lib/parent/tabs";
+import { ICON_STROKE } from "@/components/ui";
 
 export function TabBar({ unread, todo = 0, photo = null }: { unread: number; todo?: number; photo?: string | null }) {
   // Pages under a tab keep it lit (the QR code under Sessions, Messages under Family), and a page opened from
@@ -35,7 +36,7 @@ export function TabBar({ unread, todo = 0, photo = null }: { unread: number; tod
     <nav
       ref={bar}
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[430px] border-t border-line bg-paper/95 px-1 backdrop-blur pt-1.5 pb-[max(env(safe-area-inset-bottom),16px)]"
+      className="fixed inset-x-0 bottom-0 z-20 mx-auto app-column border-t border-line bg-paper/95 px-1 backdrop-blur pt-1.5 pb-[max(env(safe-area-inset-bottom),16px)]"
     >
       <ul className="grid grid-cols-5">
         {tabs.map(({ segment, label, icon: Icon }) => {
@@ -45,7 +46,7 @@ export function TabBar({ unread, todo = 0, photo = null }: { unread: number; tod
               <Link
                 href={`/${segment}`}
                 aria-current={isActive ? "page" : undefined}
-                className={`relative flex min-h-12 flex-col items-center gap-0.5 py-1 text-[13px] font-bold ${isActive ? "text-grass-text" : "text-ink-muted"}`}
+                className={`relative flex min-h-12 flex-col items-center gap-0.5 py-1 text-meta font-bold ${isActive ? "text-grass-text" : "text-ink-muted"}`}
               >
                 {/* The tab you're on: its icon sits in a soft green pill, and the label turns green. */}
                 <span className={`grid h-8 w-14 place-items-center rounded-pill transition-colors ${isActive ? "bg-grass-tint" : ""}`}>
@@ -61,7 +62,7 @@ export function TabBar({ unread, todo = 0, photo = null }: { unread: number; tod
                       className={`h-6 w-6 rounded-pill object-cover ${isActive ? "ring-2 ring-grass-text" : "ring-1 ring-line"}`}
                     />
                   ) : (
-                    <Icon aria-hidden size={22} strokeWidth={isActive ? 2.4 : 2} />
+                    <Icon aria-hidden size={24} strokeWidth={isActive ? ICON_STROKE.active : ICON_STROKE.normal} />
                   )}
                 </span>
                 {/* At very narrow widths (200% zoom on a phone) the labels would be cut off, so only the icons show; the label stays as the name. */}
@@ -80,7 +81,7 @@ export function TabBar({ unread, todo = 0, photo = null }: { unread: number; tod
 /** A count on a tab, in the action colour (the only signal colour), with words for screen readers. */
 function Count({ n, label }: { n: number; label: string }) {
   return (
-    <span className="absolute top-0 right-[calc(50%-24px)] grid h-5 min-w-5 place-items-center rounded-pill bg-kit-orange px-1 text-[13px] font-bold text-on-orange">
+    <span className="absolute top-0 right-[calc(50%-24px)] grid h-5 min-w-5 place-items-center rounded-pill bg-kit-orange px-1 text-meta font-bold text-on-orange">
       {n > 9 ? "9+" : n}
       <span className="sr-only"> {label}</span>
     </span>

@@ -61,16 +61,16 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
           </Link>
         }
       />
-      {sessions.length === 0 ? <p className="rounded-app border border-line bg-paper p-4 text-[15px] text-ink-muted">No sessions coming up for your groups. Add them under Sessions.</p> : null}
+      {sessions.length === 0 ? <p className="rounded-app border border-line bg-paper p-4 text-small text-ink-muted">No sessions coming up for your groups. Add them under Sessions.</p> : null}
 
       {/* Phones: a row per group under each session's heading. */}
       <div className="flex flex-col gap-4 lg:hidden">
         {shown.map((s) => (
           <section key={s.id} aria-label={`${shortDay(s.startsAt)} ${s.title}`} className="flex flex-col gap-2">
-            <h2 className="text-[13px] font-bold text-ink-muted">
+            <h2 className="text-meta font-bold text-ink-muted">
               {shortDay(s.startsAt)} · {s.title} {clock(s.startsAt)}
             </h2>
-            {listed(s).length === 0 ? <p className="text-[15px] text-ink-muted">No children in this session&apos;s groups yet.</p> : null}
+            {listed(s).length === 0 ? <p className="text-small text-ink-muted">No children in this session&apos;s groups yet.</p> : null}
             {listed(s).map((g) => {
               const plan = planFor(s, g);
               return (
@@ -82,8 +82,8 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
                 >
                   <span className="font-display text-[26px] leading-none">{g}</span>
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-[15px] text-ink-muted">{planText(plan)}</span>
-                    {empty(s, g) ? <span className="text-[13px] text-ink-muted">No children yet</span> : null}
+                    <span className="truncate text-small text-ink-muted">{planText(plan)}</span>
+                    {empty(s, g) ? <span className="text-meta text-ink-muted">No children yet</span> : null}
                   </span>
                   {plan?.video ? <Pill tone="neutral">Video</Pill> : null}
                   {plan ? <Pill tone="done" icon>Plan added</Pill> : <Pill tone="action">Add plan</Pill>}
@@ -98,10 +98,10 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
       {/* Computers: one table, a light row per session and a row per group under it. */}
       {sessions.length ? (
         <div className="hidden overflow-x-auto rounded-app border border-line bg-paper lg:block">
-          <table className="w-full text-[14px]">
+          <table className="w-full text-small">
             <caption className="sr-only">Session plans by session and group</caption>
             <thead>
-              <tr className="border-b border-line text-left text-[13px] font-bold text-ink-muted">
+              <tr className="border-b border-line text-left text-meta font-bold text-ink-muted">
                 <th scope="col" className="px-4 py-2.5 font-bold">
                   Session
                 </th>
@@ -119,7 +119,7 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
             {shown.map((s) => (
               <tbody key={s.id}>
                 <tr className="border-t border-line bg-cream">
-                  <th scope="rowgroup" colSpan={4} className="px-4 py-2 text-left text-[13px] font-bold">
+                  <th scope="rowgroup" colSpan={4} className="px-4 py-2 text-left text-meta font-bold">
                     {shortDay(s.startsAt)} · {s.title} {clock(s.startsAt)}
                   </th>
                 </tr>
@@ -143,7 +143,7 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
                           {plan ? <Pill tone="done" icon>Plan added</Pill> : <Pill tone="action">No plan yet</Pill>}
                           {plan?.video ? <Pill tone="neutral">Video</Pill> : null}
                           {plan ? <span className="truncate text-ink-muted">{planText(plan)}</span> : null}
-                          {empty(s, g) ? <span className="shrink-0 text-[13px] text-ink-muted">No children yet</span> : null}
+                          {empty(s, g) ? <span className="shrink-0 text-meta text-ink-muted">No children yet</span> : null}
                         </span>
                       </td>
                       <td className="px-3 py-2">
@@ -161,7 +161,7 @@ export default async function PlansPage({ searchParams }: PageProps<"/coach/plan
       ) : null}
 
       {showAll || sessions.length <= SESSIONS_SHOWN ? null : (
-        <Link href="/coach/plans?all=1" className="inline-flex min-h-12 items-center self-start text-sm font-bold text-grass-text underline">
+        <Link href="/coach/plans?all=1" className="inline-flex min-h-12 items-center self-start text-small font-bold text-grass-text underline">
           Later sessions ({sessions.length - SESSIONS_SHOWN})
         </Link>
       )}

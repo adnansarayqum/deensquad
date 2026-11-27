@@ -16,7 +16,7 @@ export default async function OrdersPage() {
     <>
       <BackHeader back="/shop" backLabel="Club shop" title="Your orders" />
       <main className="flex flex-col gap-2 px-4 pt-4 pb-4">
-        {orders.length === 0 ? <Card className="p-4 text-[15px] leading-[22px]">You haven&apos;t ordered anything yet. Order kit in the shop and collect it at Friday training.</Card> : null}
+        {orders.length === 0 ? <Card className="p-4 text-small leading-[22px]">You haven&apos;t ordered anything yet. Order kit in the shop and collect it at Friday training.</Card> : null}
         {orders.map((o) => (
           <Link
             key={o.id}
@@ -25,10 +25,10 @@ export default async function OrdersPage() {
           >
             <span className="flex items-center justify-between gap-2">
               <OrderStatusPill status={o.status} payBy={o.payBy} />
-              <span className="text-[15px] text-ink-muted">{date.format(new Date(o.createdAt))}</span>
+              <span className="text-small text-ink-muted">{date.format(new Date(o.createdAt))}</span>
             </span>
             <span className="flex items-baseline justify-between gap-3">
-              <span className="min-w-0 text-[15px] font-bold">
+              <span className="min-w-0 text-small font-bold">
                 {o.items.map((i) => (i.quantity > 1 ? `${i.quantity} × ${i.productName}` : i.productName)).join(", ")}
               </span>
               <span className="font-bold tabular-nums">{formatPence(o.totalPence)}</span>

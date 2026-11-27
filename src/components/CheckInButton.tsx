@@ -34,7 +34,7 @@ export function CheckInButton({ sessionId, playerId, name, disabled = false }: {
         disabled={pending || disabled || done}
         onClick={mark}
         aria-label={done ? `${name} is marked here` : `Mark ${name} here`}
-        className="min-h-12 shrink-0 rounded-xl border border-line bg-paper px-3.5 text-sm font-bold text-grass-text shadow-[0_3px_0_var(--line)] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-60 disabled:shadow-none"
+        className="min-h-12 shrink-0 rounded-web border border-line bg-paper px-3.5 text-small font-bold text-grass-text shadow-[0_3px_0_var(--line)] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-60 disabled:shadow-none"
       >
         {pending ? "Saving…" : done ? "Here" : "Mark here"}
       </button>
@@ -65,7 +65,7 @@ export function UndoCheckInButton({ sessionId, playerId, name, disabled = false 
         disabled={pending || disabled || done}
         onClick={undo}
         aria-label={`Undo check-in for ${name}`}
-        className="min-h-12 min-w-12 shrink-0 rounded-xl px-3 text-sm font-bold text-ink underline disabled:opacity-60"
+        className="min-h-12 min-w-12 shrink-0 rounded-web px-3 text-small font-bold text-ink underline disabled:opacity-60"
       >
         {pending ? "…" : done ? "Undone" : "Undo"}
       </button>

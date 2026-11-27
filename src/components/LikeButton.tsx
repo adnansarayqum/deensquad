@@ -45,11 +45,11 @@ export function LikeButton({ announcementId, title, liked, likes }: { announceme
         aria-pressed={state.liked}
         aria-label={`Like: ${title}${count ? `, ${count === 1 ? "1 like" : `${count} likes`}` : ""}`}
         onClick={toggle}
-        className={`inline-flex min-h-12 items-center gap-1.5 self-start rounded-pill px-2 -ml-2 text-[15px] font-bold transition-colors ${
+        className={`inline-flex min-h-12 items-center gap-1.5 self-start rounded-pill px-2 -ml-2 text-small font-bold transition-colors ${
           state.liked ? "text-grass-text" : "text-ink-muted"
         }`}
       >
-        <Heart aria-hidden size={22} fill={state.liked ? "currentColor" : "none"} key={state.liked ? "on" : "off"} className={state.liked ? "animate-pop" : undefined} />
+        <Heart aria-hidden size={24} fill={state.liked ? "currentColor" : "none"} key={state.liked ? "on" : "off"} className={state.liked ? "animate-pop" : undefined} />
         <span className="tabular-nums">{count ? count : "Like"}</span>
       </button>
       {problem ? <TapProblem problem={problem} onRetry={retry} retrying={pending} /> : null}

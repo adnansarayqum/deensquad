@@ -46,7 +46,7 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
                 key={g}
                 href={`/coach/awards?group=${g}`}
                 aria-current={g === group ? "page" : undefined}
-                className={`inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-sm font-bold ${g === group ? "bg-floodlight text-on-gold" : "border border-line bg-paper text-ink"}`}
+                className={`inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-small font-bold ${g === group ? "bg-floodlight text-on-gold" : "border border-line bg-paper text-ink"}`}
               >
                 {g}
               </Link>
@@ -55,16 +55,16 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
         ) : null}
       </PageHeader>
       <section aria-label={groupPlural(group)} className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
-        <h2 className="flex flex-wrap items-baseline justify-between gap-2 text-[18px] font-bold">
+        <h2 className="flex flex-wrap items-baseline justify-between gap-2 text-subhead font-bold">
           {groupPlural(group)}
           {squad.length && awarded ? (
-            <span className="text-[13px] font-bold text-ink-muted tabular-nums">
+            <span className="text-meta font-bold text-ink-muted tabular-nums">
               {squad.reduce((n, p) => n + p.points, 0)} points · {squad.reduce((n, p) => n + p.stars, 0)} stars in all
             </span>
           ) : null}
         </h2>
-        {!awarded ? <p className="text-[15px] text-ink-muted">The {groupPlural(group)} don&apos;t have points, stars or badges. Tap a player for notes, ratings and reports.</p> : null}
-        {squad.length === 0 ? <p className="text-[15px] text-ink-muted">No players in the {groupPlural(group)} yet.</p> : null}
+        {!awarded ? <p className="text-small text-ink-muted">The {groupPlural(group)} don&apos;t have points, stars or badges. Tap a player for notes, ratings and reports.</p> : null}
+        {squad.length === 0 ? <p className="text-small text-ink-muted">No players in the {groupPlural(group)} yet.</p> : null}
         {squad.length ? (
           <ul className="grid gap-2 lg:grid-cols-2">
             {squad.map((p) => (
@@ -74,11 +74,11 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
                     {p.shirtNumber ?? p.firstName[0]}
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-[15px] font-bold">
+                    <span className="text-small font-bold">
                       {p.firstName} {p.lastName}
                     </span>
                     {awarded ? (
-                      <span className="text-[13px] text-ink-muted">
+                      <span className="text-meta text-ink-muted">
                         {p.points} {p.points === 1 ? "point" : "points"}
                         {p.points >= REWARD_POINTS ? " · reward earned" : ""}
                         {p.lastAt ? ` · last given ${lastGiven.format(new Date(p.lastAt))}` : ""}
@@ -86,8 +86,8 @@ export default async function AwardsPage({ searchParams }: PageProps<"/coach/awa
                     ) : null}
                   </span>
                   {awarded && p.stars > 0 ? (
-                    <span className="inline-flex items-center gap-1 rounded-pill bg-gold-tint px-2.5 py-1 text-sm font-bold text-gold-text">
-                      <Star aria-hidden size={14} fill="currentColor" strokeWidth={0} />
+                    <span className="inline-flex items-center gap-1 rounded-pill bg-gold-tint px-2.5 py-1 text-small font-bold text-gold-text">
+                      <Star aria-hidden size={16} fill="currentColor" strokeWidth={0} />
                       {p.stars}
                       <span className="sr-only"> {p.stars === 1 ? "star" : "stars"}</span>
                     </span>

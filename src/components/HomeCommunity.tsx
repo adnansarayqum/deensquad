@@ -19,12 +19,12 @@ export async function HomeCommunity({ now }: { now: Date }) {
       href={next ? "/community?from=/news" : "/community?show=corner&from=/news"}
       className="flex min-h-16 items-center gap-3 rounded-app bg-paper px-3.5 py-3 text-ink shadow-card transition-transform active:scale-[0.99]"
     >
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-fill text-ink">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-web bg-fill text-ink">
         <Users aria-hidden size={24} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="text-[15px] font-bold">Community</span>
-        <span className="text-[13px] break-words text-ink-muted">{line}</span>
+        <span className="text-small font-bold">Community</span>
+        <span className="text-meta break-words text-ink-muted">{line}</span>
       </span>
       <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
     </Link>

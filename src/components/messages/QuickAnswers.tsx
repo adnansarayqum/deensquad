@@ -45,7 +45,7 @@ function AnswerRow({ announcementId, title, options, row }: { announcementId: st
     });
   return (
     <div className="flex flex-col gap-2">
-      {row.childName ? <p className="text-[15px] font-bold">For {row.childName}</p> : null}
+      {row.childName ? <p className="text-small font-bold">For {row.childName}</p> : null}
       <div role="group" aria-label={row.childName ? `${title}: ${row.childName}` : title} className="flex flex-wrap gap-2">
         {options.map((option) => {
           const chosen = optimistic === option;
@@ -56,7 +56,7 @@ function AnswerRow({ announcementId, title, options, row }: { announcementId: st
               aria-pressed={chosen}
               aria-label={answerButtonName(option, row.childName)}
               onClick={() => choose(option)}
-              className={`flex min-h-12 min-w-0 flex-1 basis-24 items-center justify-center rounded-app border-2 px-3 text-center text-base font-bold break-words transition-transform active:scale-[0.99] ${
+              className={`flex min-h-12 min-w-0 flex-1 basis-24 items-center justify-center rounded-app border-2 px-3 text-center text-body font-bold break-words transition-transform active:scale-[0.99] ${
                 chosen ? "border-ink bg-cream text-ink" : "border-line bg-paper text-ink"
               }`}
             >
@@ -68,7 +68,7 @@ function AnswerRow({ announcementId, title, options, row }: { announcementId: st
       {failed && !pending ? (
         <TapProblem problem={failed.problem} onRetry={() => choose(failed.value)} />
       ) : (
-        <p className="text-[15px] text-ink-muted" aria-live="polite">
+        <p className="text-small text-ink-muted" aria-live="polite">
           {pending
             ? "Saving…"
             : optimistic

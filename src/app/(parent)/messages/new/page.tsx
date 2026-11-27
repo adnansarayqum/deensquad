@@ -41,7 +41,7 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
         <>
           <BackHeader back="/news" backLabel="Home" title="Reply" />
           <main className="flex flex-col gap-3.5 px-4 pt-[18px] pb-4">
-            <Card className="p-4 text-[15px] leading-[22px]">
+            <Card className="p-4 text-small leading-[22px]">
               Replies are closed for this message.{" "}
               <Link href="/messages/new" className="font-bold text-grass-text underline">
                 Message the coaches
@@ -64,7 +64,7 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
               <Link
                 key={child.id}
                 href={`/messages/new?about=${about}&child=${child.id}`}
-                className="flex min-h-12 items-center justify-between gap-3 rounded-app bg-paper shadow-card px-3.5 py-3 text-[15px] font-bold"
+                className="flex min-h-12 items-center justify-between gap-3 rounded-app bg-paper shadow-card px-3.5 py-3 text-small font-bold"
               >
                 About {child.firstName}
                 <ChevronRight aria-hidden size={20} className="text-ink-muted" />
@@ -102,15 +102,15 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
         <Card className="p-4">
           <MessageForm action={sendParentMessage} hidden={only ? { child: only.id } : {}} submitLabel="Send">
             {only ? (
-              <p className="text-[15px]">About {only.firstName}</p>
+              <p className="text-small">About {only.firstName}</p>
             ) : (
               // Tick boxes, so one message can be about both children (it goes into each child's own conversation).
               <fieldset className="flex flex-col gap-2">
                 <legend className="field-label">Which child is it about? Tick more than one if it&apos;s about both.</legend>
                 {family.children.map((c) => (
                   <label key={c.id} className="flex min-h-12 items-center gap-3 rounded-app bg-paper shadow-card px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
-                    <input type="checkbox" name="child" value={c.id} defaultChecked={c.id === asked?.id} className="h-5 w-5 accent-[var(--grass)]" />
-                    <span className="text-[15px] font-bold">{c.firstName}</span>
+                    <input type="checkbox" name="child" value={c.id} defaultChecked={c.id === asked?.id} className="check" />
+                    <span className="text-small font-bold">{c.firstName}</span>
                   </label>
                 ))}
               </fieldset>
@@ -119,17 +119,17 @@ export default async function NewMessagePage({ searchParams }: PageProps<"/messa
             <fieldset className="flex flex-col gap-2">
               <legend className="field-label">Who is it for?</legend>
               <label className="flex min-h-12 items-center gap-3 rounded-app bg-paper shadow-card px-3.5 py-2 has-[:checked]:bg-grass-tint">
-                <input type="radio" name="to" value="coaches" defaultChecked className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
-                <span className="text-[15px]">
+                <input type="radio" name="to" value="coaches" defaultChecked className="check" />
+                <span className="text-small">
                   <b>The coaches</b>
-                  <span className="block text-[13px] text-ink-muted">Training, matches, injuries, how your child is getting on</span>
+                  <span className="block text-meta text-ink-muted">Training, matches, injuries, how your child is getting on</span>
                 </span>
               </label>
               <label className="flex min-h-12 items-center gap-3 rounded-app bg-paper shadow-card px-3.5 py-2 has-[:checked]:bg-grass-tint">
-                <input type="radio" name="to" value="admins" className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
-                <span className="text-[15px]">
+                <input type="radio" name="to" value="admins" className="check" />
+                <span className="text-small">
                   <b>The club&apos;s admins</b>
-                  <span className="block text-[13px] text-ink-muted">Payments, the shop, your account</span>
+                  <span className="block text-meta text-ink-muted">Payments, the shop, your account</span>
                 </span>
               </label>
             </fieldset>

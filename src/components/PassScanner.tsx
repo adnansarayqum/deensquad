@@ -247,7 +247,7 @@ export function PassScanner({
           title={disabled ? disabledReason : undefined}
           className={`btn-chunky btn-grass disabled:opacity-60 disabled:shadow-none ${className}`}
         >
-          <QrCode aria-hidden size={22} />
+          <QrCode aria-hidden size={24} />
           Scan QR codes
         </button>
         {shield}
@@ -285,18 +285,18 @@ export function PassScanner({
 
       <div className="flex flex-1 flex-col gap-3 px-4 pt-4 pb-[max(env(safe-area-inset-bottom),20px)]" aria-live="assertive">
         {error ? (
-          <p className="rounded-app bg-orange-tint p-4 text-[15px] text-ink">{error}</p>
+          <p className="rounded-app bg-orange-tint p-4 text-small text-ink">{error}</p>
         ) : checking ? (
-          <p className="text-center text-[18px] font-bold">Checking…</p>
+          <p className="text-center text-subhead font-bold">Checking…</p>
         ) : !result ? (
-          <p className="text-center text-[15px] text-on-pitch-muted">Hold the parent&apos;s QR code inside the box.</p>
+          <p className="text-center text-small text-on-pitch-muted">Hold the parent&apos;s QR code inside the box.</p>
         ) : !result.ok && result.reason === "no_signal" ? (
           <div className="flex flex-col gap-3 rounded-app bg-orange-tint p-4 text-ink">
             <div className="flex items-center gap-3">
-              <WifiOff aria-hidden size={28} className="shrink-0 text-kit-orange" />
+              <WifiOff aria-hidden size={32} className="shrink-0 text-kit-orange" />
               <p className="flex flex-col">
-                <span className="text-[18px] font-bold">No signal – not checked in yet</span>
-                <span className="text-[14px]">The QR code is fine. The app couldn&apos;t reach the club, so try again or use Mark here.</span>
+                <span className="text-subhead font-bold">No signal – not checked in yet</span>
+                <span className="text-small">The QR code is fine. The app couldn&apos;t reach the club, so try again or use Mark here.</span>
               </p>
             </div>
             <button type="button" disabled={retrying} onClick={() => retry(result.token)} className="btn-chunky btn-grass w-full">
@@ -305,13 +305,13 @@ export function PassScanner({
             </button>
           </div>
         ) : !result.ok && result.reason === "signed_out" ? (
-          <p className="rounded-app bg-orange-tint p-4 text-[18px] font-bold text-ink">
+          <p className="rounded-app bg-orange-tint p-4 text-subhead font-bold text-ink">
             You&apos;ve been signed out, so nobody was checked in. Close this and sign in again.
           </p>
         ) : !result.ok ? (
           <div className="flex items-center gap-3 rounded-app bg-orange-tint p-4 text-ink">
-            <TriangleAlert aria-hidden size={28} className="shrink-0 text-kit-orange" />
-            <p className="text-[18px] font-bold">{reasonText[result.reason]}</p>
+            <TriangleAlert aria-hidden size={32} className="shrink-0 text-kit-orange" />
+            <p className="text-subhead font-bold">{reasonText[result.reason]}</p>
           </div>
         ) : (
           <ChildResult key={`${result.child.id}:${result.child.session?.id ?? ""}`} child={result.child} />
@@ -333,36 +333,36 @@ export function ChildResult({ child: c }: { child: Extract<ScanResult, { ok: tru
           <span
             className={`absolute -right-1 -bottom-1 grid h-8 w-8 place-items-center rounded-pill border-2 border-paper ${here ? "bg-grass text-on-grass" : "bg-line text-ink-muted"}`}
           >
-            {here ? <Check aria-hidden size={18} strokeWidth={3} /> : <X aria-hidden size={16} />}
+            {here ? <Check aria-hidden size={20} strokeWidth={3} /> : <X aria-hidden size={16} />}
           </span>
         </span>
       ) : (
         <span
           className={`grid h-16 w-16 shrink-0 place-items-center rounded-pill ${here ? "bg-grass text-on-grass" : "bg-line text-ink-muted"}`}
         >
-          {here ? <Check aria-hidden size={34} strokeWidth={3} /> : <X aria-hidden size={30} />}
+          {here ? <Check aria-hidden size={32} strokeWidth={3} /> : <X aria-hidden size={32} />}
         </span>
       )}
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="font-display text-[34px] leading-none tracking-[0.02em]">
           {c.firstName} {c.lastInitial}.
         </span>
-        <span className="text-[15px] font-bold">
+        <span className="text-small font-bold">
           {c.ageGroup} ·{" "}
           {c.status === "checked_in" ? "Checked in" : c.status === "already_here" ? "Already checked in" : "No session for this group today"}
         </span>
-        {here && c.flags.length ? <span className="text-[14px]">Needs a word: {c.flags.map((f) => FLAG_WORDS[f]).join(", ")}</span> : null}
+        {here && c.flags.length ? <span className="text-small">Needs a word: {c.flags.map((f) => FLAG_WORDS[f]).join(", ")}</span> : null}
         {/* How the family pays: pay as you go means taking today's session fee. */}
         {c.paying ? (
-          <span className="mt-1 inline-flex items-center self-start rounded-pill border border-line bg-cream px-2.5 py-0.5 text-[13px] font-bold text-ink">
+          <span className="mt-1 inline-flex items-center self-start rounded-pill border border-line bg-cream px-2.5 py-0.5 text-meta font-bold text-ink">
             {PAYING_WORDS[c.paying]}
           </span>
         ) : null}
         {here && c.session && (c.paysAtGate || c.paidPence) ? <ScannerPay child={c} sessionId={c.session.id} /> : null}
         {/* Only a marker (the details are on the register, a tap away): other parents are at the gate. */}
         {c.medical ? (
-          <span className="mt-1 inline-flex items-center gap-1 self-start rounded-pill border border-line bg-cream px-2.5 py-0.5 text-[13px] font-bold text-ink">
-            <HeartPulse aria-hidden size={13} />
+          <span className="mt-1 inline-flex items-center gap-1 self-start rounded-pill border border-line bg-cream px-2.5 py-0.5 text-meta font-bold text-ink">
+            <HeartPulse aria-hidden size={16} />
             Medical info
           </span>
         ) : null}
@@ -415,7 +415,7 @@ function ScannerPay({ child: c, sessionId }: { child: Extract<ScanResult, { ok: 
     }
   };
   if (paid) {
-    return <span className="mt-2 inline-flex items-center self-start rounded-pill bg-grass px-3 py-1 text-sm font-bold text-on-grass">Paid {poundsText(paid)}</span>;
+    return <span className="mt-2 inline-flex items-center self-start rounded-pill bg-grass px-3 py-1 text-small font-bold text-on-grass">Paid {poundsText(paid)}</span>;
   }
   return (
     <span className="mt-2 flex flex-col items-start gap-1">
@@ -429,7 +429,7 @@ function ScannerPay({ child: c, sessionId }: { child: Extract<ScanResult, { ok: 
         {state === "saving" ? "Saving…" : state === "failed" ? "Try again" : `Paid ${poundsText(c.feePence)}`}
       </button>
       {message ? (
-        <span role="alert" className="text-[14px]">
+        <span role="alert" className="text-small">
           {message}
         </span>
       ) : null}

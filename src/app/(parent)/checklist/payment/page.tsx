@@ -36,12 +36,12 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
 
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">
         <Card className="flex items-start gap-3 p-4">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gold-tint text-gold-text">
-            <PoundSterling aria-hidden size={22} />
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-web bg-gold-tint text-gold-text">
+            <PoundSterling aria-hidden size={24} />
           </span>
           <div className="flex flex-col gap-0.5">
-            <h2 className="text-base font-bold">What it costs</h2>
-            <p className="text-[15px] leading-[22px] whitespace-pre-line">{fee ?? `${feeLine(fee)}.`}</p>
+            <h2 className="text-body font-bold">What it costs</h2>
+            <p className="text-small leading-[22px] whitespace-pre-line">{fee ?? `${feeLine(fee)}.`}</p>
           </div>
         </Card>
 
@@ -49,7 +49,7 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
         {payg.length > 0 ? <Status>Paying as you go for {names(payg)}. You pay for each session at the gate, by card or cash.</Status> : null}
         {reported.length > 0 ? <Status>You&apos;ve told the club it&apos;s set up for {names(reported)}. The club will confirm.</Status> : null}
         {overdue.length > 0 ? (
-          <p className="rounded-app bg-orange-tint p-3.5 text-[15px] text-ink">
+          <p className="rounded-app bg-orange-tint p-3.5 text-small text-ink">
             A payment is overdue for {names(overdue)}. Check TeamFeePay, then tell the club below.
           </p>
         ) : null}
@@ -57,8 +57,8 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
         {needed.length === 0 ? null : url ? (
           <>
             <Card className="flex flex-col gap-3 p-4">
-              <h2 className="text-base font-bold">What happens</h2>
-              <ol className="flex list-decimal flex-col gap-2 pl-5 text-[15px] leading-[22px]">
+              <h2 className="text-body font-bold">What happens</h2>
+              <ol className="flex list-decimal flex-col gap-2 pl-5 text-small leading-[22px]">
                 <li>
                   Open TeamFeePay and choose {needed.length > 1 ? "each child's group" : `${needed[0].firstName}'s group`} ({groups}).
                 </li>
@@ -68,7 +68,7 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
             </Card>
             <a href={url} target="_blank" rel="noopener noreferrer" className="btn-chunky btn-grass">
               Open TeamFeePay
-              <ExternalLink aria-hidden size={18} />
+              <ExternalLink aria-hidden size={20} />
             </a>
             <form action={reportPaymentSetup} className="flex flex-col gap-2">
               {needed.map((c) => (
@@ -77,17 +77,17 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
               <button type="submit" className="btn-chunky btn-paper w-full">
                 {needed.length > 1 ? "I've set it up" : `I've set it up for ${needed[0].firstName}`}
               </button>
-              {needed.length > 1 ? <p className="text-center text-[15px] font-bold">Covers {names(needed)}</p> : null}
+              {needed.length > 1 ? <p className="text-center text-small font-bold">Covers {names(needed)}</p> : null}
             </form>
           </>
         ) : (
-          <p className="rounded-app bg-paper shadow-card p-3.5 text-[15px] text-ink">The club will tell you how to pay.</p>
+          <p className="rounded-app bg-paper shadow-card p-3.5 text-small text-ink">The club will tell you how to pay.</p>
         )}
 
         {canPayg.length > 0 ? (
           <Card className="flex flex-col gap-3 p-4">
-            <h2 className="text-base font-bold">Staying on pay as you go?</h2>
-            <p className="text-[15px] leading-[22px]">
+            <h2 className="text-body font-bold">Staying on pay as you go?</h2>
+            <p className="text-small leading-[22px]">
               If you&apos;ve agreed with the club to pay for each session instead of the monthly plan, tell us here.
             </p>
             <form action={choosePayAsYouGo} className="flex flex-col gap-2">
@@ -97,18 +97,18 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
               <button type="submit" className="btn-chunky btn-paper w-full">
                 {canPayg.length > 1 ? "We're paying as we go" : `We're paying as we go for ${canPayg[0].firstName}`}
               </button>
-              {canPayg.length > 1 ? <p className="text-center text-[15px] font-bold">Covers {names(canPayg)}</p> : null}
+              {canPayg.length > 1 ? <p className="text-center text-small font-bold">Covers {names(canPayg)}</p> : null}
             </form>
           </Card>
         ) : null}
 
         {needed.length === 0 && payg.length > 0 && url ? (
           <Card className="flex flex-col gap-3 p-4">
-            <h2 className="text-base font-bold">Moving to the monthly plan?</h2>
-            <p className="text-[15px] leading-[22px]">Set it up on TeamFeePay, then tell the club here.</p>
+            <h2 className="text-body font-bold">Moving to the monthly plan?</h2>
+            <p className="text-small leading-[22px]">Set it up on TeamFeePay, then tell the club here.</p>
             <a href={url} target="_blank" rel="noopener noreferrer" className="btn-chunky btn-paper">
               Open TeamFeePay
-              <ExternalLink aria-hidden size={18} />
+              <ExternalLink aria-hidden size={20} />
             </a>
             <form action={reportPaymentSetup}>
               {payg.map((c) => (
@@ -127,7 +127,7 @@ export default async function PaymentPage({ searchParams }: PageProps<"/checklis
 
 function Status({ children }: { children: ReactNode }) {
   return (
-    <p className="flex items-center gap-3 rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+    <p className="flex items-center gap-3 rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
       <Check aria-hidden size={20} strokeWidth={3} className="shrink-0" />
       <span>{children}</span>
     </p>

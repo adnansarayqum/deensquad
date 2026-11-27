@@ -12,8 +12,8 @@ export function ClubFacts({ facts }: { facts: Facts }) {
       {lines.map(({ icon, text }) => {
         const Icon = ICONS[icon];
         return (
-          <li key={icon} className="flex items-center gap-3 text-[15px] font-bold">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-grass-tint text-grass-text">
+          <li key={icon} className="flex items-center gap-3 text-small font-bold">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-web bg-grass-tint text-grass-text">
               <Icon aria-hidden size={20} />
             </span>
             {text}

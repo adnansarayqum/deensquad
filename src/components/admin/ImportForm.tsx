@@ -11,12 +11,12 @@ export function ImportForm() {
     const s = state.summary;
     return (
       <div className="flex flex-col gap-4">
-        <p role="status" className="rounded-app bg-grass-tint px-4 py-3 text-[15px] leading-[22px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-4 py-3 text-small leading-[22px] font-bold text-grass-text">
           Imported. {s.childrenAdded} {s.childrenAdded === 1 ? "child" : "children"} added, {s.childrenUpdated} updated
           {s.rowsRepeated ? ` (${s.rowsRepeated} repeated ${s.rowsRepeated === 1 ? "row" : "rows"} merged)` : ""}. {s.parentsAdded}{" "}
           {s.parentsAdded === 1 ? "parent" : "parents"} added, {s.parentsUpdated} updated.
         </p>
-        <p className="text-[15px] leading-[22px]">Next, send the invites from the Families page. Each parent gets a link to sign in.</p>
+        <p className="text-small leading-[22px]">Next, send the invites from the Families page. Each parent gets a link to sign in.</p>
         <Link href="/admin/families" className="btn-chunky btn-grass self-start">
           Go to families
         </Link>
@@ -32,20 +32,20 @@ export function ImportForm() {
         <>
           <input type="hidden" name="csv" value={state.csv} />
           <div className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
-            <h2 className="text-[18px] font-bold">Check before importing</h2>
-            <p className="text-[15px] leading-[22px]">
+            <h2 className="text-subhead font-bold">Check before importing</h2>
+            <p className="text-small leading-[22px]">
               {state.count} {state.count === 1 ? "row" : "rows"} ready: <b>{state.summary!.childrenAdded}</b> new{" "}
               {state.summary!.childrenAdded === 1 ? "child" : "children"}, <b>{state.summary!.childrenUpdated}</b> already in the app (will be
               updated), <b>{state.summary!.parentsAdded}</b> new {state.summary!.parentsAdded === 1 ? "parent" : "parents"}.
             </p>
             {state.summary!.rowsRepeated > 0 ? (
-              <p className="text-[15px] leading-[22px]">
+              <p className="text-small leading-[22px]">
                 <b>{state.summary!.rowsRepeated}</b> {state.summary!.rowsRepeated === 1 ? "row repeats" : "rows repeat"} another row in this sheet
                 (merged).
               </p>
             ) : null}
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-left text-small">
                 <thead className="text-ink-muted">
                   <tr>
                     <th className="py-1.5 pr-3 font-bold">Row</th>
@@ -67,7 +67,7 @@ export function ImportForm() {
               </table>
             </div>
             {(state.count ?? 0) > (state.sample?.length ?? 0) ? (
-              <p className="text-sm text-ink-muted">…and {(state.count ?? 0) - (state.sample?.length ?? 0)} more.</p>
+              <p className="text-small text-ink-muted">…and {(state.count ?? 0) - (state.sample?.length ?? 0)} more.</p>
             ) : null}
           </div>
         </>
@@ -82,22 +82,22 @@ export function ImportForm() {
               name="file"
               type="file"
               accept=".csv,text/csv"
-              className="block w-full rounded-[14px] border-2 border-dashed border-line bg-paper p-4 text-[15px] file:mr-3 file:rounded-xl file:border-0 file:bg-grass file:px-3 file:py-2 file:font-bold file:text-on-grass"
+              className="block w-full rounded-web border-2 border-dashed border-line bg-paper p-4 text-small file:mr-3 file:rounded-web file:border-0 file:bg-grass file:px-3 file:py-2 file:font-bold file:text-on-grass"
             />
           </div>
           <details className="rounded-app border border-line bg-paper px-4 py-3">
-            <summary className="cursor-pointer text-[15px] font-bold">Or paste the rows</summary>
-            <textarea name="csv" rows={8} className="field mt-3 font-mono !text-sm" placeholder="Child first name,Child last name,Group,Parent first name,Parent email" />
+            <summary className="cursor-pointer text-small font-bold">Or paste the rows</summary>
+            <textarea name="csv" rows={8} className="field mt-3 font-mono !text-small" placeholder="Child first name,Child last name,Group,Parent first name,Parent email" />
           </details>
         </>
       )}
 
       {state.errors && state.errors.length > 0 ? (
         <div role="alert" className="flex flex-col gap-2 rounded-app bg-orange-tint px-4 py-3">
-          <p className="text-[15px] font-bold">
+          <p className="text-small font-bold">
             {state.errors.length} {state.errors.length === 1 ? "row needs" : "rows need"} fixing. {preview ? "These rows will be skipped:" : "Fix these and upload again:"}
           </p>
-          <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+          <ul className="flex list-disc flex-col gap-1 pl-5 text-small">
             {state.errors.slice(0, 20).map((e) => (
               <li key={`${e.line}-${e.message}`}>
                 Row {e.line}: {e.message}
@@ -108,22 +108,22 @@ export function ImportForm() {
       ) : null}
       {state.checks && state.checks.length > 0 ? (
         <div className="flex flex-col gap-2 rounded-app border-2 border-crest-gold bg-gold-tint px-4 py-3">
-          <p className="text-[15px] font-bold">
+          <p className="text-small font-bold">
             Check {state.checks.length === 1 ? "this" : `these ${state.checks.length}`} before importing
           </p>
-          <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+          <ul className="flex list-disc flex-col gap-1 pl-5 text-small">
             {state.checks.slice(0, 50).map((c) => (
               <li key={`${c.line}-${c.message}`}>
                 Row {c.line}: {c.message}
               </li>
             ))}
           </ul>
-          {state.checks.length > 50 ? <p className="text-sm text-ink-muted">…and {state.checks.length - 50} more.</p> : null}
-          <p className="text-sm text-ink-muted">Age groups by date of birth are a best guess (no one is put in Girls by age). Check against the club&apos;s rules.</p>
+          {state.checks.length > 50 ? <p className="text-small text-ink-muted">…and {state.checks.length - 50} more.</p> : null}
+          <p className="text-small text-ink-muted">Age groups by date of birth are a best guess (no one is put in Girls by age). Check against the club&apos;s rules.</p>
         </div>
       ) : null}
       {state.warnings && state.warnings.length > 0 ? (
-        <details className="rounded-app bg-gold-tint px-4 py-3 text-sm">
+        <details className="rounded-app bg-gold-tint px-4 py-3 text-small">
           <summary className="cursor-pointer font-bold">
             {state.warnings.length} {state.warnings.length === 1 ? "note" : "notes"}
           </summary>
@@ -137,7 +137,7 @@ export function ImportForm() {
         </details>
       ) : null}
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px]">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small">
           {state.error}
         </p>
       ) : null}

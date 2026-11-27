@@ -20,20 +20,20 @@ export function SpotlightForm({ playerId, firstName, group, comment, max }: { pl
           Why {firstName}? Parents see this on the card
         </label>
         <textarea id="spotlight-comment" name="comment" rows={3} maxLength={max} defaultValue={comment} className="field" placeholder="Worked hard all session and helped a new teammate settle in." />
-        <p className="mt-1 text-[13px] text-ink-muted">First names only. Up to {max} characters.</p>
+        <p className="mt-1 text-meta text-ink-muted">First names only. Up to {max} characters.</p>
       </div>
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
           {state.error}
         </p>
       ) : null}
       {state.saved && !pending ? (
-        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           Saved. {firstName}&apos;s parents are told, and get a card to share.
         </p>
       ) : null}
       <button type="submit" className="btn-chunky btn-grass self-start" disabled={pending}>
-        <Trophy aria-hidden size={18} />
+        <Trophy aria-hidden size={20} />
         {pending ? "Saving…" : comment ? "Update the card" : `Make ${firstName} the ${group} Player of the week`}
       </button>
     </form>

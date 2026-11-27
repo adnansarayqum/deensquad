@@ -24,12 +24,12 @@ export default async function TrialPage({ searchParams }: PageProps<"/trial">) {
       <AuthShell title="Trial booked" intro="We've emailed you the details.">
         <div className="flex items-start gap-3 rounded-app bg-grass-tint p-4 text-ink">
           <CircleCheck aria-hidden size={24} className="mt-0.5 shrink-0 text-grass-text" />
-          <p className="text-[15px] leading-[22px]">
+          <p className="text-small leading-[22px]">
             See you there. Pay the session fee by card or cash at the gate, and tell the coach you&apos;re here for a trial. If the email doesn&apos;t arrive, check
             your junk folder.
           </p>
         </div>
-        <Link href="/trial" className="text-sm font-bold text-grass-text underline">
+        <Link href="/trial" className="text-small font-bold text-grass-text underline">
           Book a trial for another child
         </Link>
       </AuthShell>
@@ -54,7 +54,7 @@ export default async function TrialPage({ searchParams }: PageProps<"/trial">) {
         fee={fee}
         privacyHref={privacy}
       />
-      <p className="text-[15px]">
+      <p className="text-small">
         Already in the club?{" "}
         <Link href="/sign-in" className="font-bold text-grass-text underline">
           Sign in

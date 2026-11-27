@@ -10,7 +10,7 @@ export function Bar({ w = "100%", h = 14, className = "" }: { w?: string | numbe
 export function SkeletonCard({ lines = 3, tile = false }: { lines?: number; tile?: boolean }) {
   return (
     <div aria-hidden className="flex gap-3.5 rounded-app bg-paper p-4 shadow-card">
-      {tile ? <span className="skeleton block h-[60px] w-14 shrink-0 rounded-[14px]" /> : null}
+      {tile ? <span className="skeleton block h-[60px] w-14 shrink-0 rounded-web" /> : null}
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
         <Bar w="60%" h={18} />
         {Array.from({ length: lines }, (_, i) => (
@@ -39,6 +39,33 @@ export function ScreenSkeleton({ title = true, cards = [3, 2, 2], tile = false }
           <SkeletonCard key={i} lines={lines} tile={tile && i === 0} />
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * A staff page while it loads: the PageHeader's Bebas title and line, then `Section`-shaped cards (hairline, no
+ * shadow, as staff cards are). Used by the busiest staff pages' loading.tsx, so a slow signal at the gate shows the
+ * page's shape instead of a blank frame.
+ */
+export function StaffSkeleton({ sections = [3, 4, 2], subtitle = true }: { sections?: number[]; subtitle?: boolean }) {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-4">
+      <p className="sr-only" role="status">
+        Loading
+      </p>
+      <div aria-hidden className="flex flex-col gap-2">
+        <Bar w="45%" h={36} />
+        {subtitle ? <Bar w="70%" h={16} /> : null}
+      </div>
+      {sections.map((lines, i) => (
+        <div key={i} aria-hidden className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
+          <Bar w="40%" h={20} />
+          {Array.from({ length: lines }, (_, j) => (
+            <Bar key={j} w={`${92 - j * 12}%`} h={16} />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

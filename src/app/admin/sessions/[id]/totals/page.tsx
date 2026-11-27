@@ -47,12 +47,12 @@ export default async function SessionTotalsPage({ params }: PageProps<"/admin/se
 
       {!totals ? (
         <Section title="Nobody checked in yet">
-          <p className="text-[15px] text-ink-muted">The totals fill in as children are checked in at the gate.</p>
+          <p className="text-small text-ink-muted">The totals fill in as children are checked in at the gate.</p>
         </Section>
       ) : (
         <>
           <Section title={`${totals.total} ${totals.total === 1 ? "child" : "children"} came`} aside={totals.trialsCame ? <Pill tone="neutral">{`+ ${totals.trialsCame} on trial`}</Pill> : null}>
-            <table className="w-full text-[15px]">
+            <table className="w-full text-small">
               <caption className="sr-only">Children who came, by group</caption>
               <tbody>
                 {TOTAL_GROUPS.filter((g) => totals.byGroup[g] > 0 || session.age_groups.includes(g)).map((g) => (
@@ -67,14 +67,14 @@ export default async function SessionTotalsPage({ params }: PageProps<"/admin/se
                   <th scope="row" className="py-2.5 text-left font-bold">
                     Total
                   </th>
-                  <td className="py-2.5 text-right text-[18px] font-bold tabular-nums">{totals.total}</td>
+                  <td className="py-2.5 text-right text-subhead font-bold tabular-nums">{totals.total}</td>
                 </tr>
               </tbody>
             </table>
           </Section>
 
           <Section title="At the gate">
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[15px] sm:grid-cols-3">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-small sm:grid-cols-3">
               <Figure label="Pay as you go who came" value={String(totals.payAsYouGo)} />
               <Figure label="No payment plan yet who came" value={String(totals.noPlanYet)} />
               <Figure label="Trials who came" value={String(totals.trialsCame)} />
@@ -84,7 +84,7 @@ export default async function SessionTotalsPage({ params }: PageProps<"/admin/se
               <Figure label="Taken in cash" value={pounds(totals.cashPence)} />
               <Figure label="Taken at the gate" value={pounds(takenPence)} strong />
             </dl>
-            <p className="text-[14px] text-ink-muted">
+            <p className="text-small text-ink-muted">
               &ldquo;Taken by card&rdquo; should match the card machine for this session. Monthly-plan families aren&apos;t counted here.
             </p>
           </Section>
@@ -97,7 +97,7 @@ export default async function SessionTotalsPage({ params }: PageProps<"/admin/se
                     <Link href={`/admin/families/${c.id}`} className="font-bold underline underline-offset-4">
                       {c.name}
                     </Link>
-                    <span className="flex items-center gap-2 text-[14px] text-ink-muted">
+                    <span className="flex items-center gap-2 text-small text-ink-muted">
                       {c.group}
                       <Pill tone="neutral">{c.plan === "pay_as_you_go" ? "Pay as you go" : "No plan yet"}</Pill>
                     </span>
@@ -115,8 +115,8 @@ export default async function SessionTotalsPage({ params }: PageProps<"/admin/se
 function Figure({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
   return (
     <div className="flex flex-col-reverse">
-      <dt className="text-[13px] text-ink-muted">{label}</dt>
-      <dd className={`tabular-nums ${strong ? "text-[22px] font-bold" : "text-[18px] font-bold"}`}>{value}</dd>
+      <dt className="text-meta text-ink-muted">{label}</dt>
+      <dd className={`tabular-nums ${strong ? "text-[22px] font-bold" : "text-subhead font-bold"}`}>{value}</dd>
     </div>
   );
 }

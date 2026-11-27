@@ -55,7 +55,7 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
     <form action={run} onSubmit={keep} className="flex flex-col gap-3" aria-label="Pick the squad">
       <input type="hidden" name="session" value={sessionId} />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[15px] font-bold tabular-nums" aria-live="polite">
+        <p className="text-small font-bold tabular-nums" aria-live="polite">
           {picked.size} of {list.length} selected
         </p>
         <div className="flex gap-2">
@@ -76,7 +76,7 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
               type="button"
               aria-pressed={group === g}
               onClick={() => setGroup(g)}
-              className={`inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill border-2 px-4 text-sm font-bold ${
+              className={`inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill border-2 px-4 text-small font-bold ${
                 group === g ? "border-grass bg-grass text-on-grass" : "border-line bg-paper text-ink"
               }`}
             >
@@ -91,7 +91,7 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
           <label htmlFor={searchId} className="sr-only">
             Find a child
           </label>
-          <Search aria-hidden size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-ink-muted" />
+          <Search aria-hidden size={20} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-ink-muted" />
           <input
             id={searchId}
             type="search"
@@ -106,15 +106,15 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
         </div>
       ) : null}
       {list.length > 0 && shown === 0 ? (
-        <p role="status" className="text-[15px] text-ink-muted">
+        <p role="status" className="text-small text-ink-muted">
           No child here matches. Picks in other groups are kept.
         </p>
       ) : null}
 
-      {list.length === 0 ? <p className="text-[15px] text-ink-muted">No children in these groups yet.</p> : null}
+      {list.length === 0 ? <p className="text-small text-ink-muted">No children in these groups yet.</p> : null}
       <table className="w-full border-separate border-spacing-y-1.5 text-left">
         <thead className="sr-only lg:not-sr-only">
-          <tr className="text-[13px] font-bold text-ink-muted">
+          <tr className="text-meta font-bold text-ink-muted">
             <th scope="col" className="px-3 pb-1 font-normal">
               Child
             </th>
@@ -141,14 +141,14 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
                       value={c.id}
                       checked={on}
                       onChange={(e) => toggle(c.id, e.target.checked)}
-                      className="h-5 w-5 shrink-0 accent-[var(--grass)]"
+                      className="check"
                     />
                     <ChildAvatar photoId={c.photoId} firstName={c.firstName} lastName={c.lastName} size={40} />
                     <span className="flex min-w-0 flex-col">
-                      <span className="text-[15px] font-bold">
+                      <span className="text-small font-bold">
                         {c.firstName} {c.lastName}
                       </span>
-                      <span className="text-[13px] text-ink-muted">
+                      <span className="text-meta text-ink-muted">
                         <span className="lg:hidden">{c.ageGroup} · </span>
                         {c.shirtNumber ? `No. ${c.shirtNumber} · ` : ""}
                         {seasonText(c.season) ?? "No register taken yet this season"}
@@ -157,7 +157,7 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
                   </label>
                 </td>
                 {groups.size > 1 ? (
-                  <td className={`hidden border-y-2 px-3 text-sm lg:table-cell ${on ? "border-grass" : "border-line"}`}>{c.ageGroup}</td>
+                  <td className={`hidden border-y-2 px-3 text-small lg:table-cell ${on ? "border-grass" : "border-line"}`}>{c.ageGroup}</td>
                 ) : null}
                 <td className={`rounded-r-app border-y-2 border-r-2 px-3 text-right ${on ? "border-grass" : "border-line"}`}>
                   {c.picked ? <AnswerPill answer={c.answer} /> : null}
@@ -168,17 +168,17 @@ export function SquadPicker({ sessionId, title, list }: { sessionId: string; tit
         </tbody>
       </table>
 
-      <p className="text-sm text-ink-muted">
+      <p className="text-small text-ink-muted">
         Only the families of the children you pick see {title} and are asked if their child can play. Taking a child out hides it from them.
         Pick nobody to open it to every family in these groups again.
       </p>
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
           {state.error}
         </p>
       ) : null}
       {state.saved && !pending ? (
-        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           Squad saved.
         </p>
       ) : null}

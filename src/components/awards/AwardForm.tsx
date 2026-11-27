@@ -12,12 +12,12 @@ function Messages({ state, pending, saved }: { state: AwardState; pending: boole
   return (
     <>
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
           {state.error}
         </p>
       ) : null}
       {state.saved && !pending ? (
-        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           {saved}
         </p>
       ) : null}
@@ -35,7 +35,7 @@ export function AwardForm({ playerId, firstName }: { playerId: string; firstName
   return (
     <form ref={form} action={action} onSubmit={keep} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="player" value={playerId} />
-      <h2 className="text-[18px] font-bold">Give {firstName} points or a star</h2>
+      <h2 className="text-subhead font-bold">Give {firstName} points or a star</h2>
       <fieldset className="flex flex-col gap-2">
         <legend className="field-label">Points</legend>
         <div className="flex flex-wrap gap-2">
@@ -51,9 +51,9 @@ export function AwardForm({ playerId, firstName }: { playerId: string; firstName
         </div>
       </fieldset>
       <label className="flex min-h-12 items-center gap-3 rounded-app border border-line bg-paper px-3.5 has-[:checked]:border-crest-gold has-[:checked]:bg-gold-tint">
-        <input type="checkbox" name="star" className="h-5 w-5 accent-[var(--crest-gold)]" />
+        <input type="checkbox" name="star" className="check check-gold" />
         <Star aria-hidden size={20} className="text-gold-text" fill="currentColor" strokeWidth={0} />
-        <span className="text-base font-bold">Star player</span>
+        <span className="text-body font-bold">Star player</span>
       </label>
       <div>
         <label htmlFor="reason" className="field-label">
@@ -78,7 +78,7 @@ export function NoteForm({ playerId, firstName, ai }: { playerId: string; firstN
   return (
     <form ref={form} action={action} onSubmit={keep} className="flex flex-col gap-3" noValidate>
       <input type="hidden" name="player" value={playerId} />
-      <label htmlFor="note" className="text-[18px] font-bold">
+      <label htmlFor="note" className="text-subhead font-bold">
         Note for {firstName}&apos;s parents
       </label>
       <textarea id="note" name="note" rows={3} maxLength={500} placeholder="What went well and what to work on" className="field" />

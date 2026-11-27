@@ -43,7 +43,7 @@ export default async function CoachMedicalPage({ params, searchParams }: PagePro
       <Section title="From the parents">
         <MedicalDetails medical={medical} firstName={child.first_name} />
       </Section>
-      <p className="text-sm leading-5 text-ink-muted">
+      <p className="text-small leading-5 text-ink-muted">
         Only the club&apos;s admins and the coaches of the {groupPlural(child.age_group)} can see this. Please keep it to yourself.
       </p>
     </div>

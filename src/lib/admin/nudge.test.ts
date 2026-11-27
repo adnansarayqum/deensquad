@@ -61,9 +61,9 @@ describe("read and not read", () => {
     const logged = await t.asSystem((tx) => tx.query<{ guardian_id: string }>(`select guardian_id from announcement_chases where announcement_id = $1 and channel::text = 'nudge'`, [post]));
     expect(logged.map((l) => l.guardian_id)).toEqual([target.id]);
 
-    // Again within the hour: refused. At night: refused.
+    // Again within the hour: refused (at night too: the hour holds whatever the time).
     expect(await t.asSystem((tx) => nudgeUnread(tx, { newsId: post, title: "Kit day", guardianIds: unread, now: new Date(midday.getTime() + 30 * 60_000), send }))).toEqual({ ok: false, reason: "wait" });
-    expect(await t.asSystem((tx) => nudgeUnread(tx, { newsId: post, title: "Kit day", guardianIds: unread, now: new Date("2026-11-02T22:00:00Z"), send }))).toEqual({ ok: false, reason: "quiet" });
+    expect(await t.asSystem((tx) => nudgeUnread(tx, { newsId: post, title: "Kit day", guardianIds: unread, now: new Date(midday.getTime() + 45 * 60_000), send }))).toEqual({ ok: false, reason: "wait" });
     // An hour later it goes again.
     const later = await t.asSystem((tx) => nudgeUnread(tx, { newsId: post, title: "Kit day", guardianIds: unread, now: new Date(midday.getTime() + 61 * 60_000), send }));
     expect(later.ok).toBe(true);
@@ -81,5 +81,9 @@ describe("read and not read", () => {
     const before = mailed.length;
     await t.asSystem((tx) => nudgeUnread(tx, { newsId: post, title: "Kit day", guardianIds: unread, now: new Date(midday.getTime() + 190 * 60_000), send, email }));
     expect(mailed.length).toBe(before);
+
+    // Pressed at night (11pm London): it goes. Only the automatic reminders keep quiet hours.
+    const night = await t.asSystem((tx) => nudgeUnread(tx, { newsId: post, title: "Kit day", guardianIds: unread, now: new Date("2026-11-02T23:00:00Z"), send }));
+    expect(night).toMatchObject({ ok: true, reached: 1 });
   });
 });

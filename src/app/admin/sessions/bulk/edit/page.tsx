@@ -26,7 +26,7 @@ export default async function BulkEdit({ searchParams }: PageProps<"/admin/sessi
         <NothingToDo>None of the sessions you ticked can be changed here.</NothingToDo>
       ) : (
         <Section title="What changes">
-          <p className="text-[15px] text-ink-muted">Fill in only what should change. Anything left blank stays as it is on each session.</p>
+          <p className="text-small text-ink-muted">Fill in only what should change. Anything left blank stays as it is on each session.</p>
           <StatefulForm action={bulkEditSessions} submitLabel={`Save ${count(sessions.length)}`}>
             <BulkSessionList sessions={sessions} ids={sessions.map((s) => s.id)} />
             <div className="grid gap-3 sm:grid-cols-2">
@@ -68,8 +68,8 @@ export default async function BulkEdit({ searchParams }: PageProps<"/admin/sessi
             </div>
             <fieldset className="flex flex-col gap-2">
               <legend className="field-label">Groups</legend>
-              <label className="flex min-h-12 items-center gap-3 text-[15px]">
-                <input type="checkbox" name="changeGroups" className="h-5 w-5 accent-[var(--grass)]" />
+              <label className="flex min-h-12 items-center gap-3 text-small">
+                <input type="checkbox" name="changeGroups" className="check" />
                 <span>
                   <b>Change groups</b> to the ones ticked below (otherwise each session keeps its own)
                 </span>
@@ -77,14 +77,14 @@ export default async function BulkEdit({ searchParams }: PageProps<"/admin/sessi
               <div className="flex flex-wrap gap-2">
                 {staffGroups(user.staff).map((g) => (
                   <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
-                    <input type="checkbox" name="groups" value={g} className="h-4 w-4 accent-[var(--grass)]" />
-                    <span className="text-sm font-bold">{g}</span>
+                    <input type="checkbox" name="groups" value={g} className="check" />
+                    <span className="text-small font-bold">{g}</span>
                   </label>
                 ))}
               </div>
-              {anySquad ? <p className="text-[13px] text-ink-muted">If a group comes off a session with a squad, its children come out of that squad.</p> : null}
+              {anySquad ? <p className="text-meta text-ink-muted">If a group comes off a session with a squad, its children come out of that squad.</p> : null}
             </fieldset>
-            <p className="-mb-1 text-sm font-bold">Briefing parents see on the Friday screen</p>
+            <p className="-mb-1 text-small font-bold">Briefing parents see on the Friday screen</p>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
                 <label htmlFor="arriveBy" className="field-label">
@@ -105,9 +105,9 @@ export default async function BulkEdit({ searchParams }: PageProps<"/admin/sessi
               </label>
               <textarea id="notes" name="notes" rows={3} maxLength={500} placeholder="Keep as they are" className="field" />
             </div>
-            <p className="text-[13px] text-ink-muted">Answers stay when you change the times.</p>
-            <label className="flex min-h-12 items-center gap-3 text-[15px]">
-              <input type="checkbox" name="notify" className="h-5 w-5 accent-[var(--grass)]" />
+            <p className="text-meta text-ink-muted">Answers stay when you change the times.</p>
+            <label className="flex min-h-12 items-center gap-3 text-small">
+              <input type="checkbox" name="notify" className="check" />
               <span>
                 <b>Tell the families about this change</b> in club news (one message per session), by app notification and email straight away
               </span>

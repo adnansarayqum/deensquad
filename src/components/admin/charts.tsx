@@ -77,11 +77,11 @@ export function StackedBar({ label, segments, hideZero = false }: { label: strin
         {legend.map((s) => (
           <li key={s.label}>
             {s.href ? (
-              <Link href={s.href} aria-label={`${s.value} ${s.label}`} className="inline-flex min-h-12 items-center gap-1.5 text-[14px] underline decoration-line underline-offset-4">
+              <Link href={s.href} aria-label={`${s.value} ${s.label}`} className="inline-flex min-h-12 items-center gap-1.5 text-small underline decoration-line underline-offset-4">
                 <Key s={s} />
               </Link>
             ) : (
-              <span className="inline-flex min-h-12 items-center gap-1.5 text-[14px]">
+              <span className="inline-flex min-h-12 items-center gap-1.5 text-small">
                 <Key s={s} />
               </span>
             )}
@@ -99,12 +99,12 @@ export function StackedBar({ label, segments, hideZero = false }: { label: strin
 export function BarLink({ href, name, heading, aside, label, segments }: { href: string; name: string; heading: ReactNode; aside?: ReactNode; label: string; segments: Segment[] }) {
   return (
     <Link href={href} aria-label={name} className="-mx-2 flex min-h-12 flex-col justify-center gap-1.5 rounded-dash px-2 py-1.5 hover:bg-cream">
-      {aside ? <span className="text-[13px] text-ink-muted">{aside}</span> : null}
+      {aside ? <span className="text-meta text-ink-muted">{aside}</span> : null}
       <span className="flex items-center gap-2">
-        <b className="w-11 shrink-0 text-[14px]">{heading}</b>
+        <b className="w-11 shrink-0 text-small">{heading}</b>
         <Bar label={label} segments={segments} />
       </span>
-      <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px]">
+      <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-meta">
         {segments.map((s) => (
           <span key={s.label} className="inline-flex items-center gap-1">
             <Key s={s} />
@@ -131,14 +131,14 @@ export function HBarList({ title, max, rows }: { title: string; max: number; row
             aria-label={`${r.value} ${r.label}`}
             className="-mx-2 flex min-h-12 flex-col justify-center gap-1 rounded-dash px-2 py-1 hover:bg-cream min-[360px]:grid min-[360px]:grid-cols-[8.5rem_minmax(0,1fr)] min-[360px]:items-center min-[360px]:gap-2"
           >
-            <span className="text-[14px] leading-5">{r.label}</span>
+            <span className="text-small leading-5">{r.label}</span>
             <span className="flex items-center gap-1.5">
               <span
                 aria-hidden
                 className="h-3 shrink-0 rounded-r-[4px] bg-ink-muted"
                 style={{ width: `calc((100% - 2.5rem) * ${max > 0 ? Math.min(1, r.value / max) : 0})`, minWidth: r.value > 0 ? "2px" : 0 }}
               />
-              <b className="text-[14px] tabular-nums">{r.value}</b>
+              <b className="text-small tabular-nums">{r.value}</b>
             </span>
           </Link>
         </li>
@@ -176,10 +176,10 @@ export function Sparkline({ values }: { values: number[] }) {
 export function StatTile({ href, name, label, value, of, children }: { href: string; name: string; label: string; value: string; of?: string; children?: ReactNode }) {
   return (
     <Link href={href} aria-label={name} className="flex min-h-12 w-full min-w-0 flex-col gap-1.5 rounded-app border border-line bg-paper p-3 hover:bg-cream">
-      <span className="text-[13px] leading-[18px] font-bold text-ink-muted">{label}</span>
+      <span className="text-meta leading-[18px] font-bold text-ink-muted">{label}</span>
       <span className="flex flex-wrap items-baseline gap-x-1.5">
         <span className="font-display text-[40px] leading-none">{value}</span>
-        {of ? <span className="text-[13px] text-ink-muted">{of}</span> : null}
+        {of ? <span className="text-meta text-ink-muted">{of}</span> : null}
       </span>
       <span className="mt-auto block">{children}</span>
     </Link>
@@ -190,9 +190,9 @@ export function StatTile({ href, name, label, value, of, children }: { href: str
 export function NeedLink({ href, count, text }: { href: string; count: number; text: string }) {
   return (
     <Link href={href} aria-label={`${count} ${text}`} className="-mx-2 flex min-h-12 items-center gap-2.5 rounded-dash px-2 py-1 hover:bg-cream">
-      <span className="w-10 shrink-0 text-right font-display text-[30px] leading-none text-kit-orange">{count}</span>
-      <span className="min-w-0 flex-1 text-[15px] leading-5 font-bold">{text}</span>
-      <ChevronRight aria-hidden size={18} className="-mr-1 shrink-0 text-ink-muted" />
+      <span className="w-10 shrink-0 text-right font-display text-title leading-none text-kit-orange">{count}</span>
+      <span className="min-w-0 flex-1 text-small leading-5 font-bold">{text}</span>
+      <ChevronRight aria-hidden size={20} className="-mr-1 shrink-0 text-ink-muted" />
     </Link>
   );
 }
@@ -227,7 +227,7 @@ export function AttendanceChart({ data, title }: { data: AttendanceChartData; ti
   return (
     <figure className="flex flex-col gap-2">
       {multi ? (
-        <ul aria-label="Groups" className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
+        <ul aria-label="Groups" className="flex flex-wrap gap-x-4 gap-y-1 text-meta">
           {data.series.map((s) => (
             <li key={s.key} className="inline-flex items-center gap-1.5">
               <span aria-hidden className="h-0.5 w-4 rounded-pill" style={{ background: s.colour }} />
@@ -237,7 +237,7 @@ export function AttendanceChart({ data, title }: { data: AttendanceChartData; ti
         </ul>
       ) : null}
       <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_minmax(2.75rem,auto)]" style={{ gridTemplateRows: `${PLOT_H}px auto` }}>
-        <div aria-hidden className="relative text-[12px] text-ink-muted tabular-nums">
+        <div aria-hidden className="relative text-meta text-ink-muted tabular-nums">
           {[100, 50, 0].map((v) => (
             <span key={v} className="absolute right-1.5 -translate-y-1/2" style={{ top: `${100 - v}%` }}>
               {v}%
@@ -290,14 +290,14 @@ export function AttendanceChart({ data, title }: { data: AttendanceChartData; ti
         </div>
         <div aria-hidden className="relative">
           {ends.map((e) => (
-            <span key={e.key} className="absolute left-2 flex -translate-y-1/2 items-center gap-1 text-[12px] leading-4 font-bold whitespace-nowrap tabular-nums" style={{ top: e.top }}>
+            <span key={e.key} className="absolute left-2 flex -translate-y-1/2 items-center gap-1 text-meta leading-4 font-bold whitespace-nowrap tabular-nums" style={{ top: e.top }}>
               {multi ? <span className="h-0.5 w-3 shrink-0 rounded-pill" style={{ background: e.colour }} /> : null}
               {multi ? `${e.label} ` : ""}
               {pctText(e.pct)}
             </span>
           ))}
         </div>
-        <div aria-hidden className="col-start-2 flex justify-between pt-1 text-[12px] text-ink-muted">
+        <div aria-hidden className="col-start-2 flex justify-between pt-1 text-meta text-ink-muted">
           {n === 1 ? <span className="mx-auto">{dayMonth(data.sessions[0].startsAt)}</span> : null}
           {n > 1 ? (
             <>
@@ -308,12 +308,12 @@ export function AttendanceChart({ data, title }: { data: AttendanceChartData; ti
         </div>
       </div>
       <details className="group">
-        <summary className="inline-flex min-h-12 cursor-pointer items-center text-[14px] font-bold text-grass-text underline underline-offset-4">Show as table</summary>
+        <summary className="inline-flex min-h-12 cursor-pointer items-center text-small font-bold text-grass-text underline underline-offset-4">Show as table</summary>
         <div className="overflow-x-auto">
-          <table className="w-full text-[14px]">
+          <table className="w-full text-small">
             <caption className="sr-only">{title}</caption>
             <thead>
-              <tr className="text-left text-[13px] font-bold text-ink-muted">
+              <tr className="text-left text-meta font-bold text-ink-muted">
                 <th scope="col" className="py-1 pr-3 font-bold">
                   Session
                 </th>

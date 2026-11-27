@@ -36,7 +36,7 @@ export function AllComing({ sessionId, kids }: { sessionId: string; kids: { id: 
         aria-label={`${words}: ${who}`}
         className="btn-chunky btn-grass min-h-12 w-full"
       >
-        <CheckCheck aria-hidden size={20} strokeWidth={2.5} />
+        <CheckCheck aria-hidden size={20} strokeWidth={3} />
         {pending ? "Saving…" : words}
       </button>
       {problem && !pending ? <TapProblem problem={problem} onRetry={tap} /> : null}

@@ -68,7 +68,7 @@ export function MessageForm({
                 <button
                   key={text}
                   type="button"
-                  className="min-h-12 rounded-pill border border-line bg-paper px-3 text-left text-[14px] font-bold text-grass-text"
+                  className="min-h-12 rounded-pill border border-line bg-paper px-3 text-left text-small font-bold text-grass-text"
                   onClick={() => {
                     const box = form.current?.querySelector("textarea");
                     if (!box) return;
@@ -111,12 +111,12 @@ export function MessageForm({
         </div>
       )}
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] leading-[22px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small leading-[22px] text-ink">
           {state.error}
         </p>
       ) : null}
       {state.saved && !pending ? (
-        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           Sent.
         </p>
       ) : null}

@@ -17,14 +17,14 @@ export function WeeklyReminderCard({ setting, last, notice }: { setting: Attenda
       <div className="flex flex-col gap-3 lg:max-w-3xl">
         {notice === "saved" ? <Notice>Saved.</Notice> : null}
         {notice === "invalid" ? <Notice tone="action">Choose a day and a time between 08:00 and 20:00.</Notice> : null}
-        <p className="text-[15px] leading-[22px]">
+        <p className="text-small leading-[22px]">
           {setting.enabled ? `${when}` : "When it's on"}, parents who haven&apos;t said if their child is coming to their next session (in the next {REMINDER_WINDOW_DAYS} days) get one app
           notification, or an email if they haven&apos;t turned notifications on. Each parent once per session.
         </p>
-        <p className="text-[15px] text-ink-muted">{last ? `Last sent: ${shortDay(last.at)}, ${last.parents} ${last.parents === 1 ? "parent" : "parents"}` : "Not sent yet."}</p>
+        <p className="text-small text-ink-muted">{last ? `Last sent: ${shortDay(last.at)}, ${last.parents} ${last.parents === 1 ? "parent" : "parents"}` : "Not sent yet."}</p>
         <form action={saveAttendanceReminder} className="flex flex-col gap-3">
-          <label className="flex min-h-12 items-center gap-2 text-[15px] font-bold">
-            <input type="checkbox" name="enabled" value="yes" defaultChecked={setting.enabled} className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+          <label className="flex min-h-12 items-center gap-2 text-small font-bold">
+            <input type="checkbox" name="enabled" value="yes" defaultChecked={setting.enabled} className="check" />
             Send the weekly reminder
           </label>
           <div className="flex flex-wrap gap-3">

@@ -9,7 +9,7 @@ export function OrderTimeline({ order }: { order: Order }) {
   return (
     <ol aria-label="Order progress" className="flex flex-col gap-2.5 rounded-app bg-paper shadow-card p-4">
       {orderTimeline(order).map((step) => (
-        <li key={step.label} className="flex items-center gap-3 text-[15px]">
+        <li key={step.label} className="flex items-center gap-3 text-small">
           {step.done ? (
             <span className="grid h-7 w-7 shrink-0 place-items-center rounded-pill bg-grass text-on-grass">
               <Check aria-hidden size={16} strokeWidth={3} />

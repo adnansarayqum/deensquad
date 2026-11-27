@@ -53,7 +53,7 @@ export function TryNewScanner() {
     window.dispatchEvent(new Event(CHANGED));
   };
   return (
-    <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-ink-muted">
+    <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-small text-ink-muted">
       <span>{on ? "This phone is using the new scanner." : "A new version of the scanner is ready to try on this phone."}</span>
       <button type="button" onClick={() => set(!on)} aria-pressed={on} className="inline-flex min-h-12 items-center font-bold text-ink underline">
         {on ? "Go back to the usual scanner" : "Try the new scanner"}

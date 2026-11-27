@@ -37,17 +37,17 @@ export default async function ChildMedicalPage({ params, searchParams }: PagePro
       </BackHeader>
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">
         {removed === "1" && !medical ? (
-          <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+          <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
             {name}&apos;s medical information is removed.
           </p>
         ) : null}
-        <Card className="flex flex-col gap-2 p-4 text-[15px] leading-[22px]">
-          <h2 className="text-base font-bold">Who sees this</h2>
+        <Card className="flex flex-col gap-2 p-4 text-small leading-[22px]">
+          <h2 className="text-body font-bold">Who sees this</h2>
           <p>
             Only you (and {name}&apos;s other parents in the app), the coaches of the {groupPlural(child.ageGroup)} and the club&apos;s admins. Never other
             parents, and it&apos;s never shown on the register list itself: the coaches tap to read it.
           </p>
-          {medical ? <p className="text-[15px] text-ink-muted">Last saved {day.format(new Date(medical.updatedAt))}.</p> : null}
+          {medical ? <p className="text-small text-ink-muted">Last saved {day.format(new Date(medical.updatedAt))}.</p> : null}
         </Card>
 
         <Card className="p-4">
@@ -57,13 +57,13 @@ export default async function ChildMedicalPage({ params, searchParams }: PagePro
 
         {medical ? (
           <Card className="flex flex-col gap-3 p-4">
-            <h2 className="text-base font-bold">Remove it</h2>
-            <p className="text-[15px] leading-[22px]">This deletes everything above. The coaches won&apos;t see it any more.</p>
+            <h2 className="text-body font-bold">Remove it</h2>
+            <p className="text-small leading-[22px]">This deletes everything above. The coaches won&apos;t see it any more.</p>
             <RemoveMedicalForm child={child} />
           </Card>
         ) : null}
 
-        <p className="px-1 text-[15px] leading-5 text-ink-muted">
+        <p className="px-1 text-small leading-5 text-ink-muted">
           Tell a coach in person about anything urgent on the day: they may not have read this before the session.
         </p>
       </main>

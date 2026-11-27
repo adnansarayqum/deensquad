@@ -32,16 +32,16 @@ export default async function AddParentPage() {
       </BackHeader>
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">
         <section aria-labelledby="parents-now" className="flex flex-col rounded-app bg-paper shadow-card p-1">
-          <h2 id="parents-now" className="px-3 pt-3 pb-1 text-base font-bold">
+          <h2 id="parents-now" className="px-3 pt-3 pb-1 text-body font-bold">
             Parents in the app now
           </h2>
           <ul>
             {parents.map((p, i) => (
               <li key={p.id} className={`flex flex-col px-3 py-2.5 ${i > 0 ? "border-t border-line" : ""}`}>
-                <span className="text-[15px] font-bold">
+                <span className="text-small font-bold">
                   {p.firstName} {p.lastName}
                 </span>
-                <span className="text-[13px] text-ink-muted">
+                <span className="text-meta text-ink-muted">
                   {status(p)}
                   {several ? ` · ${names(p.children)}` : ""}
                 </span>
@@ -52,7 +52,7 @@ export default async function AddParentPage() {
         <Card className="p-4">
           <AddParentForm childList={family.children.map((c) => ({ id: c.id, firstName: c.firstName }))} />
         </Card>
-        <p className="px-1 text-[15px] leading-5 text-ink-muted">
+        <p className="px-1 text-small leading-5 text-ink-muted">
           The club is told who you add. To take a parent off, or change their email, ask the club.
         </p>
       </main>

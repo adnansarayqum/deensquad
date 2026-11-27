@@ -27,7 +27,7 @@ export function EmailForm({ next }: { next: string }) {
           aria-invalid={state.error ? true : undefined}
           aria-describedby={state.error ? "email-error" : "email-hint"}
         />
-        <p id="email-hint" className="mt-1.5 text-sm text-ink-muted">
+        <p id="email-hint" className="mt-1.5 text-small text-ink-muted">
           Use the email you gave the club. We&apos;ll send you a 6-digit code.
         </p>
       </div>

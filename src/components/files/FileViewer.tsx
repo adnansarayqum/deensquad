@@ -90,7 +90,7 @@ function PdfViewer({ src, downloadHref, name, retry }: Props & { retry: () => vo
   const { doc, sizes } = state.loaded;
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[13px] font-bold text-ink-muted" aria-live="polite">
+      <p className="text-meta font-bold text-ink-muted" aria-live="polite">
         {pageCount(sizes.length)}
       </p>
       {texts === "none" ? <p className="sr-only">This file has no readable text. Download it to open in another app.</p> : null}
@@ -209,7 +209,7 @@ function PdfPage({
       />
       {text ? <div className="sr-only whitespace-pre-line">{text}</div> : null}
       {drawn === "failed" ? (
-        <figcaption className="absolute inset-0 grid place-items-center p-4 text-center text-[15px] text-ink-muted">
+        <figcaption className="absolute inset-0 grid place-items-center p-4 text-center text-small text-ink-muted">
           Page {number} couldn&apos;t be shown. Download the file to see it.
         </figcaption>
       ) : null}
@@ -245,8 +245,8 @@ function ImageViewer({ src, downloadHref, name, retry }: Props & { retry: () => 
 function Loading({ label }: { label: string }) {
   return (
     <div role="status" className="flex flex-col items-center gap-3 rounded-app border border-line bg-paper px-4 py-10 text-center">
-      <span aria-hidden className="h-8 w-8 animate-spin rounded-full border-4 border-line border-t-grass" />
-      <span className="text-[15px] text-ink-muted">{label}…</span>
+      <span aria-hidden className="h-8 w-8 animate-spin rounded-pill border-4 border-line border-t-grass" />
+      <span className="text-small text-ink-muted">{label}…</span>
     </div>
   );
 }
@@ -256,14 +256,14 @@ function Failed({ failure, retry, downloadHref }: { failure: Failure; retry: () 
     return (
       <div role="alert" className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
         <span className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-orange-tint text-kit-orange">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-web bg-orange-tint text-kit-orange">
             <FileWarning aria-hidden size={20} />
           </span>
-          <span className="text-[18px] font-bold">This file can&apos;t be shown here</span>
+          <span className="text-subhead font-bold">This file can&apos;t be shown here</span>
         </span>
-        <p className="text-[15px] leading-[22px]">Download it to open on your phone.</p>
+        <p className="text-small leading-[22px]">Download it to open on your phone.</p>
         <a href={downloadHref} className="btn-chunky btn-grass self-start">
-          <Download aria-hidden size={18} />
+          <Download aria-hidden size={20} />
           Download
         </a>
       </div>
@@ -272,18 +272,18 @@ function Failed({ failure, retry, downloadHref }: { failure: Failure; retry: () 
   return (
     <div role="alert" className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
       <span className="flex items-center gap-2.5">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-orange-tint text-kit-orange">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-web bg-orange-tint text-kit-orange">
           <FileWarning aria-hidden size={20} />
         </span>
-        <span className="text-[18px] font-bold">This file didn&apos;t open</span>
+        <span className="text-subhead font-bold">This file didn&apos;t open</span>
       </span>
-      <p className="text-[15px] leading-[22px]">Check your signal and try again, or download it to open on your phone.</p>
+      <p className="text-small leading-[22px]">Check your signal and try again, or download it to open on your phone.</p>
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={retry} className="btn-chunky btn-grass">
           Try again
         </button>
         <a href={downloadHref} className="btn-chunky btn-paper">
-          <Download aria-hidden size={18} />
+          <Download aria-hidden size={20} />
           Download
         </a>
       </div>

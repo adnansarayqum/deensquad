@@ -14,7 +14,7 @@ import { progressForParents } from "@/lib/settings";
 export const metadata: Metadata = { title: "Ratings" };
 
 const tab = (active: boolean) =>
-  `inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-sm font-bold ${active ? "bg-floodlight text-on-gold" : "border border-line bg-paper text-ink"}`;
+  `inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-small font-bold ${active ? "bg-floodlight text-on-gold" : "border border-line bg-paper text-ink"}`;
 
 export default async function RatingsPage({ searchParams }: PageProps<"/coach/ratings">) {
   const user = await requireStaff();
@@ -54,7 +54,7 @@ export default async function RatingsPage({ searchParams }: PageProps<"/coach/ra
             ))}
           </nav>
         ) : session ? (
-          <p className="-mt-1 text-[15px] text-ink-muted">
+          <p className="-mt-1 text-small text-ink-muted">
             {session.title} · {shortDay(session.startsAt)}
           </p>
         ) : null}
@@ -73,17 +73,17 @@ export default async function RatingsPage({ searchParams }: PageProps<"/coach/ra
         rows.length ? (
           <RatingsForm key={`${session.id}-${group}`} sessionId={session.id} rows={rows} />
         ) : (
-          <p className="text-[15px] text-ink-muted">No children in the {groupPlural(group)} for this session.</p>
+          <p className="text-small text-ink-muted">No children in the {groupPlural(group)} for this session.</p>
         )
       ) : null}
 
       {averages.length ? (
-        <Section title="Group averages this month" aside={<span className="text-[13px] text-ink-muted">Staff only, never shown to parents</span>}>
+        <Section title="Group averages this month" aside={<span className="text-meta text-ink-muted">Staff only, never shown to parents</span>}>
           <div className="overflow-x-auto">
-            <table className="w-full text-[14px]">
+            <table className="w-full text-small">
               <caption className="sr-only">Average rating per category this month, by group</caption>
               <thead>
-                <tr className="text-left text-[13px] font-bold text-ink-muted">
+                <tr className="text-left text-meta font-bold text-ink-muted">
                   <th scope="col" className="py-1 pr-3 font-bold">
                     Category
                   </th>
@@ -125,13 +125,13 @@ export default async function RatingsPage({ searchParams }: PageProps<"/coach/ra
 
       {isAdmin ? (
         <section id="parents-switch" aria-labelledby="parents-switch-title" className="flex scroll-mt-4 flex-col gap-3 rounded-app border border-line bg-paper p-4">
-          <h2 id="parents-switch-title" className="text-[18px] font-bold">
+          <h2 id="parents-switch-title" className="text-subhead font-bold">
             Parents see ratings and progress reports: {shown ? "On" : "Off"}
           </h2>
           {sp.switch === "on" ? <Notice>Switched on. Parents now see their own child&apos;s ratings and published reports. No emails were sent for earlier reports.</Notice> : null}
           {sp.switch === "off" ? <Notice>Switched off. Parents see nothing about ratings or reports.</Notice> : null}
           {sp.switch === "confirm" && !shown ? <Notice tone="action">Tick the box to switch it on.</Notice> : null}
-          <p className="text-[15px] leading-[22px]">
+          <p className="text-small leading-[22px]">
             {shown
               ? "Each parent sees their own child's ratings (the last 3 months against the 3 before) and the reports you publish, on the player screen. Never other children's, and never group averages."
               : "Coaches can rate and write reports now; parents see nothing until you switch this on. Reports already published become visible then, without emailing anyone."}
@@ -139,8 +139,8 @@ export default async function RatingsPage({ searchParams }: PageProps<"/coach/ra
           <form action={switchProgressForParents} className="flex flex-col items-start gap-2">
             <input type="hidden" name="on" value={shown ? "no" : "yes"} />
             {shown ? null : (
-              <label className="flex min-h-12 items-center gap-2 text-[15px] font-bold">
-                <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+              <label className="flex min-h-12 items-center gap-2 text-small font-bold">
+                <input type="checkbox" name="confirm" value="yes" required className="check" />
                 Yes, show parents their child&apos;s ratings and published reports
               </label>
             )}

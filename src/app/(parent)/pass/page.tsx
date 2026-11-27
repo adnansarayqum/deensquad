@@ -29,7 +29,7 @@ export default async function PassPage({ searchParams }: PageProps<"/pass">) {
       <PassCacheWriter user={user.id} passes={cachedPasses(cards)} hub={venuePass?.cache ?? null} />
       <main className="flex flex-col items-center gap-4 px-4 pt-5 pb-4">
         {cards.length === 0 ? (
-          <p className="rounded-app bg-paper shadow-card p-4 text-[15px]">No players are linked to your email yet. Ask the club to add your child.</p>
+          <p className="rounded-app bg-paper shadow-card p-4 text-small">No players are linked to your email yet. Ask the club to add your child.</p>
         ) : (
           <>
             {checkedIn.length > 0 ? (
@@ -43,8 +43,8 @@ export default async function PassPage({ searchParams }: PageProps<"/pass">) {
             ) : null}
             <KeepAwake />
             <PassCarousel cards={cards} />
-            <p className="flex items-start gap-2 text-[15px] leading-5 text-ink-muted">
-              <Sun aria-hidden size={18} className="mt-0.5 shrink-0" />
+            <p className="flex items-start gap-2 text-small leading-5 text-ink-muted">
+              <Sun aria-hidden size={20} className="mt-0.5 shrink-0" />
               Turn your screen brightness up at the gate. The screen stays on here, and the codes work with no signal too.
             </p>
           </>

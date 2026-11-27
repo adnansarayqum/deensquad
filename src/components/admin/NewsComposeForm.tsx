@@ -56,23 +56,23 @@ export function NewsComposeForm({ action, children }: { action: (prev: FormState
       <div className={preview ? "hidden" : "contents"}>{children}</div>
       {preview ? (
         <section data-preview tabIndex={-1} aria-label="Preview" className="flex flex-col gap-3 outline-none">
-          <p className="text-[13px] font-bold text-ink-muted">How parents will see it</p>
+          <p className="text-meta font-bold text-ink-muted">How parents will see it</p>
           <div className="flex flex-col gap-2 rounded-app border-2 border-crest-gold bg-gold-tint p-4">
-            <p className="text-[13px] font-bold text-kit-orange">{preview.topic}</p>
-            <h3 className="text-[19px] leading-[25px] font-bold">{preview.title}</h3>
-            <p className="text-[15px] leading-[22px] whitespace-pre-line">{preview.body}</p>
+            <p className="text-meta font-bold text-kit-orange">{preview.topic}</p>
+            <h3 className="text-heading leading-[25px] font-bold">{preview.title}</h3>
+            <p className="text-small leading-[22px] whitespace-pre-line">{preview.body}</p>
             <MediaGallery items={preview.media} label={preview.title} />
           </div>
-          {preview.reach ? <p className="rounded-app bg-cream px-3.5 py-2.5 text-[15px] font-bold">{preview.reach}</p> : null}
+          {preview.reach ? <p className="rounded-app bg-cream px-3.5 py-2.5 text-small font-bold">{preview.reach}</p> : null}
         </section>
       ) : null}
       {error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
           {error}
         </p>
       ) : null}
       {state.saved && !pending ? (
-        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           {state.message}
         </p>
       ) : null}
@@ -86,17 +86,17 @@ export function NewsComposeForm({ action, children }: { action: (prev: FormState
             {pending ? "Posting…" : "Post to parents"}
           </button>
           <button type="submit" name="intent" value="test" className="btn-chunky btn-paper" disabled={pending}>
-            <Mail aria-hidden size={18} />
+            <Mail aria-hidden size={20} />
             Email me a test
           </button>
           <button type="button" onClick={() => setPreview(null)} className="btn-chunky btn-paper" disabled={pending}>
-            <Pencil aria-hidden size={18} />
+            <Pencil aria-hidden size={20} />
             Edit
           </button>
         </div>
       ) : (
         <button type="button" onClick={openPreview} className="btn-chunky btn-grass self-start">
-          <Eye aria-hidden size={18} />
+          <Eye aria-hidden size={20} />
           Preview
         </button>
       )}

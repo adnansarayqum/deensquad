@@ -52,9 +52,9 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/coa
           <input type="hidden" name="group" value={group} />
           {!plan && earlier ? (
             copying ? (
-              <p className="rounded-app bg-grass-tint px-3.5 py-2.5 text-[15px]">Started from the plan for {shortDay(earlier.at)}. Change what you need, then share it.</p>
+              <p className="rounded-app bg-grass-tint px-3.5 py-2.5 text-small">Started from the plan for {shortDay(earlier.at)}. Change what you need, then share it.</p>
             ) : (
-              <Link href={`/coach/plans/${session.id}?group=${group}&copy=1`} className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-grass-text underline">
+              <Link href={`/coach/plans/${session.id}?group=${group}&copy=1`} className="inline-flex min-h-12 items-center self-start text-small font-bold text-grass-text underline">
                 Start from the last plan ({shortDay(earlier.at)})
               </Link>
             )
@@ -80,8 +80,8 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/coa
             <div className="flex flex-col gap-2">
               <span className="field-label">Attached</span>
               <Attachment file={plan.file} from={`/coach/plans/${session.id}?group=${group}`} />
-              <label className="flex min-h-12 items-center gap-3 text-[15px]">
-                <input type="checkbox" name="removeFile" className="h-5 w-5 accent-[var(--grass)]" />
+              <label className="flex min-h-12 items-center gap-3 text-small">
+                <input type="checkbox" name="removeFile" className="check" />
                 Remove this attachment
               </label>
             </div>
@@ -90,7 +90,7 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/coa
             <label htmlFor="file" className="field-label">
               {plan?.file ? "Replace with a new file" : "Attach a PDF or photo"} <span className="font-normal text-ink-muted">(optional, up to 8 MB)</span>
             </label>
-            <input id="file" name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="field py-3 text-[15px]" />
+            <input id="file" name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="field py-3 text-small" />
           </div>
           <VideoField defaultValue={plan?.video ? canonicalYouTube(plan.video) : ""} />
         </StatefulForm>

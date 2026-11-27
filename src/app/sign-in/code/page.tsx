@@ -30,7 +30,7 @@ export default async function CodePage() {
       }
     >
       <CodeForm />
-      <p className="text-sm leading-5 text-ink-muted">
+      <p className="text-small leading-5 text-ink-muted">
         Nothing after a couple of minutes? Check your spam folder, then{" "}
         <Link href="/sign-in" className="font-bold text-grass-text underline">
           try again

@@ -1,5 +1,5 @@
 import type { Queryable } from "../db/types";
-import { dueChases, inQuietHours, logChases, type Senders } from "../chase/ladder";
+import { dueChases, logChases, type Senders } from "../chase/ladder";
 import { pushConfigured, pushToUsers, type PushSend } from "../chase/senders";
 
 /** How long after one "Send a reminder now" before the next (so parents aren't buzzed again and again). */
@@ -7,7 +7,7 @@ export const NUDGE_GAP_MINUTES = 60;
 
 export type NudgeResult =
   | { ok: true; reached: number; noDevice: number; emailed: number }
-  | { ok: false; reason: "off" | "quiet" | "wait" | "nobody" };
+  | { ok: false; reason: "off" | "wait" | "nobody" };
 
 /**
  * "Send a reminder now" (Coach Javed's request): an app notification to the parents who still haven't read a message
@@ -19,6 +19,9 @@ export type NudgeResult =
  * now instead of at its usual time, when `email` is given (24 Nov 2026, the owner's friend's request). It is the same
  * one email per post per parent: logged as 'email', so the ladder doesn't send it again, and never to someone it has
  * already gone to.
+ *
+ * It sends at any hour (27 Nov 2026, the owner's decision: a member of staff who presses it at night means it). The
+ * automatic ladder still keeps quiet hours, 9pm to 8am.
  */
 export async function nudgeUnread(
   tx: Queryable,
@@ -27,7 +30,6 @@ export async function nudgeUnread(
   const now = opts.now ?? new Date();
   const push = pushConfigured() || opts.send !== undefined;
   if (!push && !opts.email) return { ok: false, reason: "off" };
-  if (inQuietHours(now)) return { ok: false, reason: "quiet" };
   if (opts.guardianIds.length === 0) return { ok: false, reason: "nobody" };
   // One reminder at a time per message: two coaches pressing together would both pass the hour's check below.
   await tx.query("select pg_advisory_xact_lock(727281, hashtext($1))", [opts.newsId]);

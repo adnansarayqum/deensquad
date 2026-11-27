@@ -69,7 +69,7 @@ export function AddToBasketForm({
 
   const fieldError = (field: "size" | "player") =>
     problem?.field === field ? (
-      <p id={`${field}-error`} className="text-[15px] font-bold text-kit-orange">
+      <p id={`${field}-error`} className="text-small font-bold text-kit-orange">
         {problem.error}
       </p>
     ) : null;
@@ -111,7 +111,7 @@ export function AddToBasketForm({
           <legend className="field-label">Size</legend>
           {sizeRows(product.sizes).map((row) => (
             <div key={row.label ?? "all"} className="flex flex-col gap-1.5">
-              {row.label ? <p className="text-[13px] font-bold text-ink-muted">{row.label}</p> : null}
+              {row.label ? <p className="text-meta font-bold text-ink-muted">{row.label}</p> : null}
               <div className="flex flex-wrap gap-2">
                 {row.sizes.map((s) => (
                   <label key={s} className="choice-chip">
@@ -183,7 +183,7 @@ export function AddToBasketForm({
       </div>
 
       {problem && problem.field === undefined ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
           {problem.error}
         </p>
       ) : null}
@@ -193,7 +193,7 @@ export function AddToBasketForm({
         </p>
       ) : null}
       {state.added && !pending ? (
-        <p role="status" className="flex items-center justify-between gap-3 rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="flex items-center justify-between gap-3 rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           Added to your basket.
           <Link href="/shop/basket" className="underline underline-offset-2">
             View basket ({count})
@@ -204,7 +204,7 @@ export function AddToBasketForm({
         {pending ? "Adding…" : `Add to basket · ${formatPence(total)}`}
       </button>
       {count > 0 && !state.added ? (
-        <Link href="/shop/basket" className="self-center py-3 text-[15px] font-bold text-grass-text underline underline-offset-2">
+        <Link href="/shop/basket" className="self-center py-3 text-small font-bold text-grass-text underline underline-offset-2">
           View basket ({count})
         </Link>
       ) : null}

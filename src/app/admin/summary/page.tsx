@@ -25,7 +25,7 @@ export default async function SummaryPreview({ searchParams }: PageProps<"/admin
           <ul className="flex flex-col gap-1">
             {s.lines.map((l) => (
               <li key={l.text}>
-                <Link href={l.path} className="inline-flex min-h-12 items-center text-[15px] text-grass-text underline">
+                <Link href={l.path} className="inline-flex min-h-12 items-center text-small text-grass-text underline">
                   {l.text}
                 </Link>
               </li>

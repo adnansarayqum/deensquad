@@ -22,20 +22,20 @@ export function NewsReplyOptions({
   return (
     <fieldset className="group/qa flex flex-col gap-2">
       <legend className="field-label">Answers from parents</legend>
-      <label className="flex min-h-12 items-center gap-3 text-[15px]">
-        <input type="checkbox" name="allowReplies" defaultChecked={replies} className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+      <label className="flex min-h-12 items-center gap-3 text-small">
+        <input type="checkbox" name="allowReplies" defaultChecked={replies} className="check" />
         <span>
           <b>Let parents reply to you</b>: each family&apos;s reply is a private conversation with you
         </span>
       </label>
-      <label className="flex min-h-12 items-center gap-3 text-[15px]">
-        <input type="checkbox" name="quickAnswer" className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+      <label className="flex min-h-12 items-center gap-3 text-small">
+        <input type="checkbox" name="quickAnswer" className="check" />
         <span>
           <b>Ask for a quick answer</b>: one tap per child, which also counts as read
         </span>
       </label>
       <div className="hidden flex-col gap-2 pl-8 group-has-[[name=quickAnswer]:checked]/qa:flex">
-        <p className="text-sm text-ink-muted">2 to 4 answers, up to {QUICK_LENGTH} characters each. Leave a box empty to use fewer.</p>
+        <p className="text-small text-ink-muted">2 to 4 answers, up to {QUICK_LENGTH} characters each. Leave a box empty to use fewer.</p>
         <div className="grid grid-cols-2 gap-2">
           {QUICK_DEFAULTS.map((value, i) => (
             <div key={i}>
@@ -49,7 +49,7 @@ export function NewsReplyOptions({
       </div>
       {sessions.length ? (
         <div className="flex flex-col gap-1">
-          <label htmlFor="comingTo" className="text-[15px]">
+          <label htmlFor="comingTo" className="text-small">
             <b>Ask who&apos;s coming</b>: parents tap Coming or Not coming for each child on the post, and the answer goes
             on the register
           </label>

@@ -70,9 +70,9 @@ export function MediaGallery({ items, label, compact = false }: { items: MediaIt
               {m.kind === "video" ? (
                 <span aria-hidden className="absolute inset-0 flex flex-col items-center justify-center gap-1">
                   <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-pitch-deep/85 text-on-pitch">
-                    <Play size={22} />
+                    <Play size={24} />
                   </span>
-                  {durationText(m.duration) ? <span className="rounded-pill bg-paper px-2 text-[13px] font-bold text-ink">{durationText(m.duration)}</span> : null}
+                  {durationText(m.duration) ? <span className="rounded-pill bg-paper px-2 text-meta font-bold text-ink">{durationText(m.duration)}</span> : null}
                 </span>
               ) : null}
               {i === 3 && more ? (
@@ -136,11 +136,11 @@ function Viewer({ items, start, label, onClose }: { items: MediaItem[]; start: n
     >
       <div className="flex h-full flex-col" style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         <div className="flex items-center justify-between gap-2 px-2 py-1">
-          <p aria-live="polite" className="px-2 text-[15px] font-bold">
+          <p aria-live="polite" className="px-2 text-small font-bold">
             {many ? `${at + 1} of ${items.length}` : ""}
           </p>
-          <button type="button" onClick={() => dialog.current?.close()} className="flex h-12 min-w-12 items-center justify-center gap-1 rounded-pill px-3 text-[15px] font-bold" autoFocus>
-            <X aria-hidden size={22} />
+          <button type="button" onClick={() => dialog.current?.close()} className="flex h-12 min-w-12 items-center justify-center gap-1 rounded-pill px-3 text-small font-bold" autoFocus>
+            <X aria-hidden size={24} />
             Close
           </button>
         </div>
@@ -154,13 +154,13 @@ function Viewer({ items, start, label, onClose }: { items: MediaItem[]; start: n
         </div>
         {many ? (
           <div className="flex justify-between gap-2 px-2 py-2">
-            <button type="button" onClick={() => go(-1)} className="flex h-12 items-center gap-1 rounded-pill px-3 text-[15px] font-bold">
-              <ChevronLeft aria-hidden size={22} />
+            <button type="button" onClick={() => go(-1)} className="flex h-12 items-center gap-1 rounded-pill px-3 text-small font-bold">
+              <ChevronLeft aria-hidden size={24} />
               Previous
             </button>
-            <button type="button" onClick={() => go(1)} className="flex h-12 items-center gap-1 rounded-pill px-3 text-[15px] font-bold">
+            <button type="button" onClick={() => go(1)} className="flex h-12 items-center gap-1 rounded-pill px-3 text-small font-bold">
               Next
-              <ChevronRight aria-hidden size={22} />
+              <ChevronRight aria-hidden size={24} />
             </button>
           </div>
         ) : null}

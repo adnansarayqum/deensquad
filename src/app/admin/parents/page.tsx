@@ -33,7 +33,7 @@ export default async function ParentsNotInPage({ searchParams }: PageProps<"/adm
         {flags.invite === "no-url" ? <Notice tone="action">Set APP_URL in Railway so invite links point at the app.</Notice> : null}
       </PageHeader>
 
-      <p className="text-[18px] leading-[26px]">
+      <p className="text-subhead leading-[26px]">
         {n === 0 ? (
           "Every parent has signed in to the app."
         ) : (
@@ -82,12 +82,12 @@ function ParentList({
 }) {
   return (
     <section id={id} aria-labelledby={`${id}-heading`} className="rounded-app border border-line bg-paper p-4">
-      <h2 id={`${id}-heading`} className="text-[18px] font-bold">
+      <h2 id={`${id}-heading`} className="text-subhead font-bold">
         {title}
       </h2>
-      {hint ? <p className="text-[15px] text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="text-small text-ink-muted">{hint}</p> : null}
       {list.length === 0 ? (
-        <p className="mt-1 text-[15px] text-ink-muted">Nobody.</p>
+        <p className="mt-1 text-small text-ink-muted">Nobody.</p>
       ) : (
         <ul className="mt-2 flex flex-col">
           {list.map((p) => {
@@ -95,8 +95,8 @@ function ParentList({
             return (
               <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line py-3 first:border-t-0">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[18px] font-bold break-words">{name}</p>
-                  <p className="flex flex-wrap items-center gap-x-1.5 text-[15px]">
+                  <p className="text-subhead font-bold break-words">{name}</p>
+                  <p className="flex flex-wrap items-center gap-x-1.5 text-small">
                     <span>Parent of</span>
                     {p.children.map((c, i) => (
                       <span key={c.id} className="inline-flex items-center">
@@ -108,11 +108,11 @@ function ParentList({
                     ))}
                   </p>
                   {p.partnersOnApp.length > 0 ? (
-                    <p className="text-[15px] font-bold text-grass-text">
+                    <p className="text-small font-bold text-grass-text">
                       {names(p.partnersOnApp.map(tidyName))} {p.partnersOnApp.length === 1 ? "is" : "are"} already on the app for this family.
                     </p>
                   ) : null}
-                  <p className="text-[13px] break-all text-ink-muted">
+                  <p className="text-meta break-all text-ink-muted">
                     {p.email ?? "No email on file"}
                     {p.invitedAt ? ` · invite sent ${shortDay(p.invitedAt)}` : ""}
                   </p>

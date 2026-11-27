@@ -11,7 +11,7 @@ export function Directions({ venue }: { venue: string }) {
       target="_blank"
       rel="noopener"
       aria-label={`Directions to ${venue}`}
-      className="inline-flex min-h-12 shrink-0 items-center gap-1.5 text-[15px] font-bold text-grass-text underline"
+      className="inline-flex min-h-12 shrink-0 items-center gap-1.5 text-small font-bold text-grass-text underline"
     >
       Directions
       <ExternalLink aria-hidden size={16} />

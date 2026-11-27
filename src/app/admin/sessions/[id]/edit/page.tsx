@@ -46,25 +46,25 @@ export default async function EditSessionPage({ params }: PageProps<"/admin/sess
           />
           <MediaPicker initial={media} hint={`Parents see these with the session's details. ${PHOTO_CONSENT_HINT}`} />
           {session.picked ? (
-            <p className="text-[13px] text-ink-muted">
+            <p className="text-meta text-ink-muted">
               If you take a group off, its children come out of the squad. Answers stay when you change the date or time.
             </p>
           ) : (
-            <p className="text-[13px] text-ink-muted">Answers stay when you change the date or time.</p>
+            <p className="text-meta text-ink-muted">Answers stay when you change the date or time.</p>
           )}
           {/* An explicit choice, no default (admin UX review, Oct 2026): a moved day, time or place should reach the families,
               and answers already given stay, so they need to know. */}
           <fieldset className="flex flex-col gap-1">
             <legend className="field-label">Tell the families?</legend>
-            <label className="flex min-h-12 items-center gap-3 text-[15px]">
-              <input type="radio" name="notify" value="on" required className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+            <label className="flex min-h-12 items-center gap-3 text-small">
+              <input type="radio" name="notify" value="on" required className="check" />
               <span>
                 <b>Yes, tell them</b> in club news, by app notification and email straight away. Do this if the day, time or place changed: their
                 Coming / Not coming answers stay as they are.
               </span>
             </label>
-            <label className="flex min-h-12 items-center gap-3 text-[15px]">
-              <input type="radio" name="notify" value="off" className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+            <label className="flex min-h-12 items-center gap-3 text-small">
+              <input type="radio" name="notify" value="off" className="check" />
               <span>
                 <b>No</b>, it&apos;s a small fix (a typo, a note)
               </span>
@@ -74,7 +74,7 @@ export default async function EditSessionPage({ params }: PageProps<"/admin/sess
       </Section>
       {/* Deleting sits here, away from the everyday Edit and Cancel on the list. Never once anyone is checked in. */}
       {session.attended === 0 ? (
-        <Link href={`/admin/sessions/${session.id}/delete`} className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-ink-muted underline">
+        <Link href={`/admin/sessions/${session.id}/delete`} className="inline-flex min-h-12 items-center self-start text-small font-bold text-ink-muted underline">
           Delete this session
         </Link>
       ) : null}

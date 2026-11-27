@@ -57,12 +57,12 @@ export default async function AdminHome() {
         actions={
           <>
             <Link href="/admin/app-use" className="btn-chunky btn-paper">
-              <ChartColumn aria-hidden size={18} />
+              <ChartColumn aria-hidden size={20} />
               App use
             </Link>
             {isAdmin && aiConfigured() ? (
               <Link href="/admin/assistant" className="btn-chunky btn-paper">
-                <MessageCircleQuestion aria-hidden size={18} />
+                <MessageCircleQuestion aria-hidden size={20} />
                 Ask the assistant
               </Link>
             ) : null}
@@ -89,7 +89,7 @@ export default async function AdminHome() {
       {empty ? (
         isAdmin ? (
           <Section title="Get started">
-            <ol className="flex list-decimal flex-col gap-2 pl-5 text-[15px] leading-[22px]">
+            <ol className="flex list-decimal flex-col gap-2 pl-5 text-small leading-[22px]">
               <li>
                 <Link href="/admin/families/import" className="font-bold text-grass-text underline">
                   Import families
@@ -112,7 +112,7 @@ export default async function AdminHome() {
             </ol>
           </Section>
         ) : (
-          <p className="text-[15px] text-ink-muted">{limit ? "No children in your groups yet." : "No children yet."}</p>
+          <p className="text-small text-ink-muted">{limit ? "No children in your groups yet." : "No children yet."}</p>
         )
       ) : (
         <>
@@ -134,16 +134,16 @@ export default async function AdminHome() {
 
       {isAdmin ? (
         <details className="rounded-app border border-line bg-paper px-4">
-          <summary className="flex min-h-12 cursor-pointer items-center gap-2 text-[18px] font-bold">
-            <Download aria-hidden size={18} className="text-grass-text" />
+          <summary className="flex min-h-12 cursor-pointer items-center gap-2 text-subhead font-bold">
+            <Download aria-hidden size={20} className="text-grass-text" />
             Download spreadsheets
           </summary>
           <ul className="grid gap-x-4 pb-3 sm:grid-cols-2">
             {Object.entries(EXPORTS).map(([kind, e]) => (
               <li key={kind}>
                 <a href={`/api/admin/export/${kind}`} download className="flex min-h-12 flex-col justify-center border-t border-line py-1.5">
-                  <span className="text-[15px] font-bold text-grass-text underline underline-offset-4">{e.label}</span>
-                  <span className="text-[13px] text-ink-muted">{e.detail}</span>
+                  <span className="text-small font-bold text-grass-text underline underline-offset-4">{e.label}</span>
+                  <span className="text-meta text-ink-muted">{e.detail}</span>
                 </a>
               </li>
             ))}
@@ -158,10 +158,10 @@ export default async function AdminHome() {
 function DeletionRequests({ requests }: { requests: NonNullable<Dashboard["deletionRequests"]> }) {
   return (
     <section aria-labelledby="deletion-requests" className="flex flex-col gap-3 rounded-app border-2 border-kit-orange bg-paper p-4">
-      <h2 id="deletion-requests" className="text-[18px] font-bold">
+      <h2 id="deletion-requests" className="text-subhead font-bold">
         {requests.length === 1 ? "1 family asked to be deleted" : `${requests.length} families asked to be deleted`}
       </h2>
-      <p className="text-[15px] leading-[22px] text-ink-muted">
+      <p className="text-small leading-[22px] text-ink-muted">
         Check with the family first. Removing a child on Families deletes parents left with no children, and that closes the request. If another parent is staying, unlink this parent from each child instead, so the child stays. Tap Done if
         you&apos;ve dealt with it another way.
       </p>
@@ -169,11 +169,11 @@ function DeletionRequests({ requests }: { requests: NonNullable<Dashboard["delet
         {requests.map((r) => (
           <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
             <span className="flex min-w-0 flex-col">
-              <span className="text-[15px] font-bold">
+              <span className="text-small font-bold">
                 {r.parentName} <span className="font-normal text-ink-muted">· asked {dayMonth(r.askedAt)}</span>
               </span>
               {r.children.length ? (
-                <span className="flex flex-wrap gap-x-3 text-[15px]">
+                <span className="flex flex-wrap gap-x-3 text-small">
                   {r.children.map((c) => (
                     <Link key={c.id} href={`/admin/families/${c.id}`} className="inline-flex min-h-12 items-center font-bold text-grass-text underline">
                       {c.name}
@@ -181,7 +181,7 @@ function DeletionRequests({ requests }: { requests: NonNullable<Dashboard["delet
                   ))}
                 </span>
               ) : (
-                <span className="text-[13px] text-ink-muted">No children linked.</span>
+                <span className="text-meta text-ink-muted">No children linked.</span>
               )}
             </span>
             <form action={closeDataRequest}>
@@ -203,17 +203,17 @@ function NeedsYou({ d, now, canInvite }: { d: Dashboard; now: Date; canInvite: b
   return (
     <section aria-labelledby="needs-you" className="flex flex-col gap-1 rounded-app border border-line bg-paper p-4 pt-2 lg:col-span-1">
       <div className="flex flex-wrap items-center justify-between gap-x-3">
-        <h2 id="needs-you" className="text-[18px] font-bold">
+        <h2 id="needs-you" className="text-subhead font-bold">
           Needs you
         </h2>
         {rows.length ? (
-          <Link href="/admin/families" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+          <Link href="/admin/families" className="inline-flex min-h-12 items-center text-small font-bold text-grass-text underline">
             {hidden > 0 ? `See all to-dos (${hidden} more)` : "See all to-dos"}
           </Link>
         ) : null}
       </div>
       {rows.length === 0 ? (
-        <p className="flex min-h-12 items-center text-[15px] font-bold text-grass-text">All up to date.</p>
+        <p className="flex min-h-12 items-center text-small font-bold text-grass-text">All up to date.</p>
       ) : (
         <ul className="flex flex-col divide-y divide-line">
           {rows.slice(0, NEEDS_SHOWN).map((r) => (
@@ -254,7 +254,7 @@ function Tiles({ d, next }: { d: Dashboard; next: NextSessionSummary | null }) {
           of={notYet === 0 ? "every parent" : `${notYet} not yet`}
         >
           <Bar thin label="Parents" segments={[{ label: "on the app", value: f.signedIn, tone: "done" }, { label: "not yet", value: notYet, tone: "rest" }]} />
-          {f.signedIn > 0 ? <span className="mt-1.5 block text-[13px] text-ink-muted">{f.notificationsOn} with notifications on</span> : null}
+          {f.signedIn > 0 ? <span className="mt-1.5 block text-meta text-ink-muted">{f.notificationsOn} with notifications on</span> : null}
         </StatTile>
       </li>
       <li className="flex">
@@ -280,7 +280,7 @@ function Tiles({ d, next }: { d: Dashboard; next: NextSessionSummary | null }) {
           {spark.length >= 4 ? (
             <Sparkline values={spark} />
           ) : d.attendance.seasonPct !== null ? (
-            <span className="text-[13px] text-ink-muted">
+            <span className="text-meta text-ink-muted">
               From {spark.length} {spark.length === 1 ? "session" : "sessions"} so far
             </span>
           ) : null}
@@ -297,16 +297,16 @@ function AttendanceSection({ d }: { d: Dashboard }) {
       title="Attendance this season"
       className="lg:col-span-2"
       aside={
-        <Link href="/admin/sessions" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+        <Link href="/admin/sessions" className="inline-flex min-h-12 items-center text-small font-bold text-grass-text underline">
           Sessions
         </Link>
       }
     >
       {d.attendance.sessions.length === 0 ? (
-        <p className="text-[15px] text-ink-muted">No registers taken yet this season. It fills in as coaches take the register.</p>
+        <p className="text-small text-ink-muted">No registers taken yet this season. It fills in as coaches take the register.</p>
       ) : d.attendance.sessions.length < 4 ? (
         // Two or three points make a misleading line: the figure on its own until there are four sessions.
-        <p className="text-[15px]">
+        <p className="text-small">
           <span className="font-display text-[40px] leading-none tabular-nums">{d.attendance.seasonPct ?? 0}%</span>{" "}
           <span className="text-ink-muted">
             over {d.attendance.sessions.length} {d.attendance.sessions.length === 1 ? "session" : "sessions"} so far. The chart starts after 4.
@@ -316,7 +316,7 @@ function AttendanceSection({ d }: { d: Dashboard }) {
         <>
           {/* The tile's figure is the season's; each line's end label is its last session. Said, so 64% beside 66% isn't
               read as a mismatch (admin review, 23 Nov 2026). */}
-          <p className="text-[14px] text-ink-muted">
+          <p className="text-small text-ink-muted">
             {d.attendance.seasonPct ?? 0}% across the season. The figure at the end of each line is its last session.
           </p>
           <AttendanceChart data={attendanceChart(d)} title={title} />
@@ -331,7 +331,7 @@ function NextSessionSection({ d }: { d: Dashboard }) {
   // When every group with a session coming up starts at the same time, the time is said once, in the heading.
   const sameTime = sharedStart(groups);
   return (
-    <Section title="Next session" aside={sameTime ? <span className="text-[14px] text-ink-muted">{`${shortDay(sameTime)}, ${clock(sameTime)}`}</span> : undefined}>
+    <Section title="Next session" aside={sameTime ? <span className="text-small text-ink-muted">{`${shortDay(sameTime)}, ${clock(sameTime)}`}</span> : undefined}>
       <ul className="flex flex-col">
         {groups.map((g) => (
           <li key={g.group}>
@@ -349,7 +349,7 @@ function NextSessionSection({ d }: { d: Dashboard }) {
                 ]}
               />
             ) : (
-              <p className="flex min-h-12 items-center justify-between gap-3 text-[14px]">
+              <p className="flex min-h-12 items-center justify-between gap-3 text-small">
                 <b>{g.group}</b> <span className="text-ink-muted">No session coming up</span>
               </p>
             )}
@@ -366,7 +366,7 @@ function FamiliesSection({ d }: { d: Dashboard }) {
     <Section
       title="Families and payments"
       aside={
-        <Link href="/admin/families" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+        <Link href="/admin/families" className="inline-flex min-h-12 items-center text-small font-bold text-grass-text underline">
           Families
         </Link>
       }
@@ -411,13 +411,13 @@ function NewsSection({ d }: { d: Dashboard }) {
     <Section
       title="Announcements"
       aside={
-        <Link href="/admin/news" className="inline-flex min-h-12 items-center text-sm font-bold text-grass-text underline">
+        <Link href="/admin/news" className="inline-flex min-h-12 items-center text-small font-bold text-grass-text underline">
           Post news
         </Link>
       }
     >
       {n.recent.length === 0 ? (
-        <p className="text-[15px] text-ink-muted">Nothing posted that asks parents to tap &ldquo;I&apos;ve read this&rdquo; yet.</p>
+        <p className="text-small text-ink-muted">Nothing posted that asks parents to tap &ldquo;I&apos;ve read this&rdquo; yet.</p>
       ) : (
         <ul className="flex flex-col">
           {n.recent.slice(0, 3).map((m) => {
@@ -430,10 +430,10 @@ function NewsSection({ d }: { d: Dashboard }) {
                   aria-label={`${m.title}: ${m.read} of ${m.total} read. ${unread > 0 ? `${unread} not read: see who hasn't read it` : "Everyone has read it"}`}
                   className="-mx-2 flex min-h-12 flex-col gap-1.5 rounded-dash px-2 py-2 hover:bg-cream"
                 >
-                  <span className="text-[14px] leading-5 font-bold underline decoration-line underline-offset-4">{m.title}</span>
+                  <span className="text-small leading-5 font-bold underline decoration-line underline-offset-4">{m.title}</span>
                   <span className="flex items-center gap-2.5">
                     <Bar thin label="Read" segments={[{ label: "read", value: m.read, tone: "done" }, { label: "not read", value: unread, tone: "rest" }]} />
-                    <span className="shrink-0 text-[13px] font-bold tabular-nums">
+                    <span className="shrink-0 text-meta font-bold tabular-nums">
                       {m.read} of {m.total}
                     </span>
                   </span>
@@ -443,7 +443,7 @@ function NewsSection({ d }: { d: Dashboard }) {
           })}
         </ul>
       )}
-      <p className="text-[14px] text-ink-muted">
+      <p className="text-small text-ink-muted">
         {sent.length === 0 ? (
           "No reminders sent this week."
         ) : (
@@ -474,7 +474,7 @@ function ShopSection({ shop }: { shop: NonNullable<Dashboard["shop"]> }) {
   ).filter(([n]) => n > 0);
   return (
     <section aria-labelledby="shop-figures" className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-app border border-line bg-paper px-4 py-2">
-      <h2 id="shop-figures" className="text-[18px] font-bold">
+      <h2 id="shop-figures" className="text-subhead font-bold">
         Shop
       </h2>
       <Link
@@ -482,15 +482,15 @@ function ShopSection({ shop }: { shop: NonNullable<Dashboard["shop"]> }) {
         aria-label={`Paid takings: ${formatPence(shop.monthPence)} this month, ${formatPence(shop.seasonPence)} this season`}
         className="-mx-2 flex min-h-12 flex-wrap items-baseline gap-x-4 rounded-dash px-2 py-1 hover:bg-cream"
       >
-        <span className="text-[14px] text-ink-muted">
+        <span className="text-small text-ink-muted">
           This month <b className="font-display text-[28px] leading-none text-ink">{formatPence(shop.monthPence)}</b>
         </span>
-        <span className="text-[14px] text-ink-muted">
+        <span className="text-small text-ink-muted">
           Season <b className="font-display text-[28px] leading-none text-ink">{formatPence(shop.seasonPence)}</b>
         </span>
       </Link>
       {states.length ? (
-        <Link href="/admin/shop" className="-mx-2 flex min-h-12 items-center rounded-dash px-2 text-[14px] hover:bg-cream">
+        <Link href="/admin/shop" className="-mx-2 flex min-h-12 items-center rounded-dash px-2 text-small hover:bg-cream">
           <span>
             {states.map(([n, label], i) => (
               <span key={label}>
@@ -501,7 +501,7 @@ function ShopSection({ shop }: { shop: NonNullable<Dashboard["shop"]> }) {
           </span>
         </Link>
       ) : (
-        <p className="text-[14px] text-ink-muted">No orders open.</p>
+        <p className="text-small text-ink-muted">No orders open.</p>
       )}
     </section>
   );

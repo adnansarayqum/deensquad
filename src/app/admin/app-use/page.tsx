@@ -45,7 +45,7 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
                 key={g ?? "all"}
                 href={g ? `/admin/app-use?group=${g}` : "/admin/app-use"}
                 aria-current={g === group ? "page" : undefined}
-                className={`inline-flex min-h-12 items-center rounded-pill border px-4 text-[15px] font-bold ${
+                className={`inline-flex min-h-12 items-center rounded-pill border px-4 text-small font-bold ${
                   g === group ? "border-grass bg-grass-tint text-grass-text" : "border-line bg-paper text-ink"
                 }`}
               >
@@ -68,10 +68,10 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
               aria-label={`${t.label}: ${t.value} of ${use.parents} parents opened it. See who`}
               className="flex h-full flex-col gap-1 rounded-app border border-line bg-paper p-3"
             >
-              <span className="text-[13px] font-bold text-ink-muted">{t.label}</span>
+              <span className="text-meta font-bold text-ink-muted">{t.label}</span>
               <span className="font-display text-[40px] leading-none tabular-nums">{t.value}</span>
-              <span className="text-[13px] text-ink-muted">of {use.parents} parents opened it</span>
-              <span className="text-[13px] font-bold text-grass-text underline">See who</span>
+              <span className="text-meta text-ink-muted">of {use.parents} parents opened it</span>
+              <span className="text-meta font-bold text-grass-text underline">See who</span>
             </Link>
           </li>
         ))}
@@ -83,16 +83,16 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
             <span key={d.day} className="flex-1 rounded-t-[3px] bg-grass" style={{ height: `${Math.max(2, (d.parents / maxDay) * 100)}%` }} title={`${shortDay(d.day)}: ${d.parents}`} />
           ))}
         </div>
-        <div aria-hidden className="mt-1 flex justify-between text-[13px] text-ink-muted">
+        <div aria-hidden className="mt-1 flex justify-between text-meta text-ink-muted">
           <span>{use.daily.length ? shortDay(use.daily[0].day) : ""}</span>
           <span>Today</span>
         </div>
-        <details className="mt-2 text-[14px]">
+        <details className="mt-2 text-small">
           <summary className="inline-flex min-h-12 cursor-pointer items-center font-bold text-grass-text underline">Show as table</summary>
           <table className="w-full">
             <caption className="sr-only">Parents who opened the app each day, last 30 days</caption>
             <thead>
-              <tr className="text-left text-[13px] text-ink-muted">
+              <tr className="text-left text-meta text-ink-muted">
                 <th scope="col" className="py-1 font-bold">
                   Day
                 </th>
@@ -111,22 +111,22 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
             </tbody>
           </table>
         </details>
-        <p className="mt-2 text-[15px]">
+        <p className="mt-2 text-small">
           {use.averageSeconds === null
             ? "Time in the app shows here once parents have used it for a few days."
             : `${use.visits.toLocaleString("en-GB")} visits in the last 30 days, ${visitLength(use.averageSeconds)} on average (the whole club, no one's name).`}
         </p>
         {use.comeBack && use.comeBack.before > 0 ? (
-          <p className="text-[15px]">
+          <p className="text-small">
             {use.comeBack.returned} of the {use.comeBack.before} parents who opened it the week before came back in the last 7 days.
           </p>
         ) : null}
         {use.newParents ? (
-          <p className="text-[15px]">
+          <p className="text-small">
             {use.newParents.opened} of {use.newParents.added} parents added since 23 November opened the app in their first week.
           </p>
         ) : null}
-        <p className="text-[14px] text-ink-muted">
+        <p className="text-small text-ink-muted">
           {use.signedIn} of {use.parents} parents have signed in at least once.{" "}
           <Link href="/admin/parents" className="font-bold text-grass-text underline">
             See who hasn&apos;t
@@ -136,7 +136,7 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
 
       <Section title="Posts that ask for a tap">
         {use.posts.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">Nothing posted yet that asks parents to tap I&apos;ve read this.</p>
+          <p className="text-small text-ink-muted">Nothing posted yet that asks parents to tap I&apos;ve read this.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-line">
             {use.posts.map((p) => (
@@ -144,7 +144,7 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
                 <Link href={`/admin/news/${p.id}`} className="font-bold underline decoration-line underline-offset-2">
                   {p.title}
                 </Link>
-                <span className="text-[13px] text-ink-muted">{shortDay(p.postedAt)}</span>
+                <span className="text-meta text-ink-muted">{shortDay(p.postedAt)}</span>
                 <Bar
                   label={p.title}
                   segments={[
@@ -153,11 +153,11 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
                     { label: "not seen", value: Math.max(0, p.reached - p.seen), tone: "rest" },
                   ]}
                 />
-                <span className="text-[14px]">
+                <span className="text-small">
                   <b className="tabular-nums">{p.read}</b> read · <b className="tabular-nums">{p.seen - p.read}</b> seen, not tapped ·{" "}
                   <b className="tabular-nums">{Math.max(0, p.reached - p.seen)}</b> not seen <span className="text-ink-muted">of {p.reached}</span>
                 </span>
-                <span className="text-[13px] text-ink-muted">
+                <span className="text-meta text-ink-muted">
                   {p.readInADay} read within a day
                   {p.medianMinutes === null ? "" : ` · typically read after ${waitWords(p.medianMinutes)}`}
                   {p.fromNotification ? ` · ${p.fromNotification} from the notification` : ""}
@@ -167,7 +167,7 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
             ))}
           </ul>
         )}
-        <p className="mt-2 text-[13px] text-ink-muted">Seen counts once a post&apos;s headline has been on a parent&apos;s screen. It started on 23 November, so older posts show fewer.</p>
+        <p className="mt-2 text-meta text-ink-muted">Seen counts once a post&apos;s headline has been on a parent&apos;s screen. It started on 23 November, so older posts show fewer.</p>
       </Section>
 
       <Section title="When parents read posts">
@@ -176,14 +176,14 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
             <span key={h} className="flex-1 rounded-t-[2px] bg-chart-1" style={{ height: `${Math.max(2, (n / maxHour) * 100)}%` }} title={`${h}:00: ${n}`} />
           ))}
         </div>
-        <div aria-hidden className="mt-1 flex justify-between text-[13px] text-ink-muted">
+        <div aria-hidden className="mt-1 flex justify-between text-meta text-ink-muted">
           <span>Midnight</span>
           <span>6am</span>
           <span>Midday</span>
           <span>6pm</span>
           <span>11pm</span>
         </div>
-        <p className="mt-2 text-[15px]">
+        <p className="mt-2 text-small">
           {busiest ? `Most posts are read between ${busiest}. Posting just before then gets them seen soonest.` : "Not enough reads in the last 60 days to say yet."}
         </p>
       </Section>
@@ -192,16 +192,16 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
         <ul className="flex h-24 items-end gap-2">
           {use.readDays.map((n, i) => (
             <li key={WEEKDAYS[i]} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-              <span className="text-[13px] tabular-nums">{n}</span>
+              <span className="text-meta tabular-nums">{n}</span>
               <span aria-hidden className="w-full rounded-t-[3px] bg-chart-1" style={{ height: `${Math.max(2, (n / maxReadDay) * 70)}%` }} />
-              <span className="text-[13px] text-ink-muted">
+              <span className="text-meta text-ink-muted">
                 <span aria-hidden>{WEEKDAYS[i].slice(0, 3)}</span>
                 <span className="sr-only">{WEEKDAYS[i]}: reads</span>
               </span>
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-[15px]">
+        <p className="mt-2 text-small">
           {readDay ? `Most posts are read on ${readDay}.` : "Not enough reads in the last 60 days to pick a day yet."}
         </p>
       </Section>
@@ -210,23 +210,23 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
         <ul className="flex h-24 items-end gap-2">
           {use.openDays.map((n, i) => (
             <li key={WEEKDAYS[i]} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-              <span className="text-[13px] tabular-nums">{n}</span>
+              <span className="text-meta tabular-nums">{n}</span>
               <span aria-hidden className="w-full rounded-t-[3px] bg-grass" style={{ height: `${Math.max(2, (n / maxOpenDay) * 70)}%` }} />
-              <span className="text-[13px] text-ink-muted">
+              <span className="text-meta text-ink-muted">
                 <span aria-hidden>{WEEKDAYS[i].slice(0, 3)}</span>
                 <span className="sr-only">{WEEKDAYS[i]}: parents on an average day</span>
               </span>
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-[15px]">
+        <p className="mt-2 text-small">
           {openDay ? `${openDay} are busiest. ` : ""}Parents opening the app on an average day of the week, over the last 4 weeks.
         </p>
       </Section>
 
       <Section title="Answers to Is your child coming?">
         {use.answers.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">No sessions have finished yet.</p>
+          <p className="text-small text-ink-muted">No sessions have finished yet.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-line">
             {use.answers.map((a) => (
@@ -242,7 +242,7 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
                     { label: "no answer before it started", value: Math.max(0, a.children - a.answered), tone: "rest" },
                   ]}
                 />
-                <span className="text-[14px]">
+                <span className="text-small">
                   <b className="tabular-nums">{a.dayAhead}</b> a day or more ahead · <b className="tabular-nums">{a.answered - a.dayAhead}</b> in the last day ·{" "}
                   <b className="tabular-nums">{Math.max(0, a.children - a.answered)}</b> no answer <span className="text-ink-muted">of {a.children} children</span>
                 </span>
@@ -254,11 +254,11 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
 
       <Section title={use.quietFrom ? `Not opened for ${QUIET_DAYS} days or more` : `Not opened for ${QUIET_DAYS} days or more (${use.quiet.length})`}>
         {use.quietFrom ? (
-          <p className="text-[15px] text-ink-muted">
+          <p className="text-small text-ink-muted">
             Too early to say. The app has only kept a note of who opens it since 23 November, so this list starts on {shortDay(use.quietFrom)}.
           </p>
         ) : use.quiet.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">Every parent on the app has opened it in the last {QUIET_DAYS} days.</p>
+          <p className="text-small text-ink-muted">Every parent on the app has opened it in the last {QUIET_DAYS} days.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-line">
             {use.quiet.map((q) => (
@@ -266,8 +266,8 @@ export default async function AppUsePage({ searchParams }: PageProps<"/admin/app
                 <Link href={`/admin/families?q=${encodeURIComponent(tidyName(q.name))}`} className="font-bold underline decoration-line underline-offset-2">
                   {tidyName(q.name)}
                 </Link>
-                <span className="text-[13px] text-ink-muted">{q.lastOpened ? `Last opened ${shortDay(q.lastOpened)}` : "Not opened since 23 Nov, when counting began"}</span>
-                <span className="basis-full text-[14px] text-ink-muted">Parent of {q.children}</span>
+                <span className="text-meta text-ink-muted">{q.lastOpened ? `Last opened ${shortDay(q.lastOpened)}` : "Not opened since 23 Nov, when counting began"}</span>
+                <span className="basis-full text-small text-ink-muted">Parent of {q.children}</span>
               </li>
             ))}
           </ul>

@@ -33,15 +33,15 @@ export function SpotlightShare({ id, firstName }: { id: string; firstName: strin
   return (
     <div className="flex flex-col gap-2">
       <button type="button" className="btn-chunky btn-grass w-full" onClick={share} disabled={state === "busy"} aria-label={`Share ${firstName}'s Player of the week card`}>
-        <Share2 aria-hidden size={18} />
+        <Share2 aria-hidden size={20} />
         {state === "busy" ? "Getting the card…" : "Share the card"}
       </button>
       {state === "failed" ? (
-        <p role="alert" className="text-[14px] text-ink">
+        <p role="alert" className="text-small text-ink">
           That didn&apos;t work. Check your signal and try again, or save the picture below.
         </p>
       ) : null}
-      <a href={`/api/spotlight/${id}/card?download=1`} className="inline-flex min-h-12 items-center justify-center text-[15px] font-bold text-grass-text underline">
+      <a href={`/api/spotlight/${id}/card?download=1`} className="inline-flex min-h-12 items-center justify-center text-small font-bold text-grass-text underline">
         Save the picture
       </a>
     </div>

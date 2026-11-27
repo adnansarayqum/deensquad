@@ -16,17 +16,17 @@ export function CalendarLink({ hasLink, count = 0 }: { hasLink: boolean; count?:
   return (
     <div className="flex flex-col gap-4">
       {state?.error ? (
-        <p role="alert" className="text-[15px] font-bold text-kit-orange">
+        <p role="alert" className="text-small font-bold text-kit-orange">
           {state.error}
         </p>
       ) : null}
 
       {links ? (
         <section aria-labelledby="calendar-ready" className="flex flex-col gap-3 rounded-app bg-paper shadow-card p-4">
-          <h2 id="calendar-ready" className="text-[18px] font-bold">
+          <h2 id="calendar-ready" className="text-subhead font-bold">
             Your calendar link
           </h2>
-          <p role="status" className="text-[15px] leading-[22px]">
+          <p role="status" className="text-small leading-[22px]">
             Add it now: this is the only time the app shows it. Keep it to yourself, as anyone with it can see your children&apos;s sessions.
           </p>
           <a href={links.webcal} className="btn-chunky btn-grass inline-flex items-center justify-center gap-2">
@@ -39,11 +39,11 @@ export function CalendarLink({ hasLink, count = 0 }: { hasLink: boolean; count?:
           <CopyLink href={links.https} />
         </section>
       ) : state?.stopped ? (
-        <p role="status" className="text-[15px] leading-[22px]">
+        <p role="status" className="text-small leading-[22px]">
           Every calendar link has stopped. Your calendars keep the sessions they had but won&apos;t get new ones or changes.
         </p>
       ) : hasLink ? (
-        <p className="text-[15px] leading-[22px]">
+        <p className="text-small leading-[22px]">
           Your calendar link is set up{count > 1 ? ` on ${count} phones or apps` : ""}. To add your sessions to another phone, get a link for it below. The
           others keep working.
         </p>
@@ -53,21 +53,21 @@ export function CalendarLink({ hasLink, count = 0 }: { hasLink: boolean; count?:
         <>
           <form action={run} className="flex flex-col gap-2 rounded-app bg-paper shadow-card p-4">
             <input type="hidden" name="intent" value="another" />
-            <h2 className="text-[18px] font-bold">Another phone or calendar</h2>
-            <p className="text-[15px] leading-[22px]">Makes a new link for it. The calendars you&apos;ve already set up keep getting updates.</p>
+            <h2 className="text-subhead font-bold">Another phone or calendar</h2>
+            <p className="text-small leading-[22px]">Makes a new link for it. The calendars you&apos;ve already set up keep getting updates.</p>
             <button type="submit" disabled={pending} className="btn-chunky btn-paper self-start">
               Get a link for another phone
             </button>
           </form>
           <details className="rounded-app bg-paper shadow-card p-4">
-            <summary className="min-h-12 cursor-pointer content-center text-[15px] font-bold">Stop all calendar links</summary>
+            <summary className="min-h-12 cursor-pointer content-center text-small font-bold">Stop all calendar links</summary>
             <form action={run} className="mt-2 flex flex-col gap-3">
               <input type="hidden" name="intent" value="stop" />
-              <p className="text-[15px] leading-[22px]">
+              <p className="text-small leading-[22px]">
                 For a lost phone, or a link you shared by mistake. Every calendar using a link from here stops getting your children&apos;s sessions.
               </p>
-              <label className="flex min-h-12 items-center gap-3 text-[15px]">
-                <input type="checkbox" name="confirm" value="yes" className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+              <label className="flex min-h-12 items-center gap-3 text-small">
+                <input type="checkbox" name="confirm" value="yes" className="check" />
                 Yes, stop every calendar link
               </label>
               <button type="submit" disabled={pending} className="btn-chunky btn-paper self-start">
@@ -100,15 +100,15 @@ function CopyLink({ href }: { href: string }) {
   }
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor="calendar-url" className="text-[15px] font-bold">
+      <label htmlFor="calendar-url" className="text-small font-bold">
         Link for other calendar apps
       </label>
-      <input id="calendar-url" readOnly value={href} className="field min-h-12 font-mono text-[13px]" onFocus={(e) => e.currentTarget.select()} />
+      <input id="calendar-url" readOnly value={href} className="field min-h-12 font-mono text-meta" onFocus={(e) => e.currentTarget.select()} />
       <button type="button" onClick={copy} className="btn-chunky btn-paper inline-flex items-center justify-center gap-2 self-start">
-        <Copy aria-hidden size={18} />
+        <Copy aria-hidden size={20} />
         Copy link
       </button>
-      <p aria-live="polite" className="text-[15px] text-ink-muted">
+      <p aria-live="polite" className="text-small text-ink-muted">
         {copied === "copied" ? "Copied." : copied === "failed" ? "Couldn't copy. Select the link above and copy it." : ""}
       </p>
     </div>

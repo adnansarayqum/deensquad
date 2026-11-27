@@ -97,24 +97,24 @@ export function NotificationsCard({ publicKey, calm = false }: { publicKey: stri
   const off = state !== "done";
   return (
     <div role={off ? "region" : "status"} aria-label={off ? "Notifications are off" : undefined} className={`flex items-start gap-3 rounded-app p-4 ${off && !calm ? "bg-orange-tint text-ink" : "bg-paper shadow-card"}`}>
-      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${off ? (calm ? "bg-fill text-ink" : "bg-kit-orange text-on-orange") : "bg-grass-tint text-grass-text"}`}>
-        {off ? <BellOff aria-hidden size={22} /> : <BellRing aria-hidden size={22} />}
+      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-web ${off ? (calm ? "bg-fill text-ink" : "bg-kit-orange text-on-orange") : "bg-grass-tint text-grass-text"}`}>
+        {off ? <BellOff aria-hidden size={24} /> : <BellRing aria-hidden size={24} />}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
         {state === "ios-install" ? (
-          <p className="text-[15px] leading-[22px]">
-            <b className="block text-[16px]">Your notifications are off</b>
+          <p className="text-small leading-[22px]">
+            <b className="block text-body">Your notifications are off</b>
             You&apos;ll miss cancelled sessions, messages from the coaches and hearing when your child gets a star. On iPhone, add this app to your Home Screen first: tap Share,
             then Add to Home Screen, then open it from there and tap Turn on notifications.
           </p>
         ) : state === "done" ? (
-          <p className="text-[15px] font-bold text-grass-text">Notifications are on. You&apos;ll hear from the club straight away.</p>
+          <p className="text-small font-bold text-grass-text">Notifications are on. You&apos;ll hear from the club straight away.</p>
         ) : state === "blocked" ? (
           <BlockedSteps />
         ) : (
           <>
-            <p className="text-[15px] leading-[22px]">
-              <b className="block text-[16px]">Your notifications are off</b>
+            <p className="text-small leading-[22px]">
+              <b className="block text-body">Your notifications are off</b>
               You&apos;ll miss cancelled sessions, messages from the coaches and hearing when your child gets a star.
             </p>
             <button type="button" onClick={enable} disabled={state === "working"} className="btn-chunky btn-grass btn-small self-start">
@@ -132,8 +132,8 @@ function BlockedSteps() {
   const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
   const help = blockedNotificationHelp(navigator.userAgent, standalone);
   return (
-    <p className="text-[15px] leading-[22px]">
-      <b className="block text-[16px]">Your notifications are off</b>
+    <p className="text-small leading-[22px]">
+      <b className="block text-body">Your notifications are off</b>
       They&apos;re blocked on this phone, so you&apos;ll miss cancelled sessions, messages from the coaches and hearing when your child gets a star. {help.steps}
     </p>
   );

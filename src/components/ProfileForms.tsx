@@ -38,7 +38,7 @@ function Field({
         {label}
       </label>
       <input id={id} name={name} type={type} defaultValue={defaultValue} autoComplete={autoComplete} inputMode={inputMode} max={max} className="field" />
-      {hint ? <p className="mt-1.5 text-[15px] text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1.5 text-small text-ink-muted">{hint}</p> : null}
     </div>
   );
 }
@@ -47,12 +47,12 @@ function Outcome({ state, pending, saved }: { state: ProfileFormState; pending: 
   return (
     <>
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] leading-[22px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small leading-[22px] text-ink">
           {state.error}
         </p>
       ) : null}
       {state.saved && !pending ? (
-        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           {saved}
         </p>
       ) : null}
@@ -140,7 +140,7 @@ export function AddChildForm({ groups, lastName, today }: { groups: Group[]; las
             </option>
           ))}
         </select>
-        <p className="mt-1.5 text-[15px] text-ink-muted">Not sure? Pick your best guess. The club checks every new child&apos;s group.</p>
+        <p className="mt-1.5 text-small text-ink-muted">Not sure? Pick your best guess. The club checks every new child&apos;s group.</p>
       </div>
       <Outcome state={state} pending={pending} saved="Added." />
       <button type="submit" className="btn-chunky btn-grass" disabled={pending}>
@@ -170,20 +170,20 @@ export function AddParentForm({ childList: children }: { childList: { id: string
         <fieldset className="flex flex-col gap-2">
           <legend className="field-label">Their children</legend>
           {children.map((c) => (
-            <label key={c.id} className="flex min-h-12 items-center gap-3 rounded-app bg-paper shadow-card px-3.5 text-[15px] font-bold has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
-              <input type="checkbox" name="child" value={c.id} defaultChecked className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+            <label key={c.id} className="flex min-h-12 items-center gap-3 rounded-app bg-paper shadow-card px-3.5 text-small font-bold has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
+              <input type="checkbox" name="child" value={c.id} defaultChecked className="check" />
               {c.firstName}
             </label>
           ))}
         </fieldset>
       )}
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] leading-[22px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small leading-[22px] text-ink">
           {state.error}
         </p>
       ) : null}
       {state.saved && !pending ? (
-        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           {state.message}
         </p>
       ) : null}

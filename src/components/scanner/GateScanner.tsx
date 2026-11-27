@@ -246,7 +246,7 @@ export function GateScanner({
           title={disabled ? disabledReason : undefined}
           className={`btn-chunky btn-grass disabled:opacity-60 disabled:shadow-none ${className}`}
         >
-          <QrCode aria-hidden size={22} />
+          <QrCode aria-hidden size={24} />
           Scan QR codes
         </button>
         {shield}
@@ -275,7 +275,7 @@ export function GateScanner({
         <canvas ref={canvas} className="hidden" />
         {/* Shows the reader is alive. Not announced: the lines below say what's happening. */}
         {reading && state.phase !== "blocked" ? (
-          <p aria-hidden data-reading className="absolute top-3 left-3 flex items-center gap-1.5 rounded-pill bg-black/60 px-2.5 py-1 text-[13px] font-bold text-on-pitch">
+          <p aria-hidden data-reading className="absolute top-3 left-3 flex items-center gap-1.5 rounded-pill bg-black/60 px-2.5 py-1 text-meta font-bold text-on-pitch">
             <span className="h-2 w-2 animate-pulse rounded-pill bg-floodlight" />
             Reading
           </p>
@@ -295,31 +295,31 @@ function Showing({ state, onRetry }: { state: ScannerState; onRetry: () => void 
     case "closed":
       return null;
     case "starting":
-      return <p className="text-center text-[15px] text-on-pitch-muted">Opening the camera…</p>;
+      return <p className="text-center text-small text-on-pitch-muted">Opening the camera…</p>;
     case "blocked":
-      return <p className="rounded-app bg-orange-tint p-4 text-[15px] text-ink">{BLOCKED_WORDS[state.why]}</p>;
+      return <p className="rounded-app bg-orange-tint p-4 text-small text-ink">{BLOCKED_WORDS[state.why]}</p>;
     case "looking":
-      return <p className="text-center text-[15px] text-on-pitch-muted">Hold the parent&apos;s QR code inside the box.</p>;
+      return <p className="text-center text-small text-on-pitch-muted">Hold the parent&apos;s QR code inside the box.</p>;
     case "stalled":
       return (
         <div className="flex items-center gap-3 rounded-app bg-orange-tint p-4 text-ink">
-          <TriangleAlert aria-hidden size={28} className="shrink-0 text-kit-orange" />
+          <TriangleAlert aria-hidden size={32} className="shrink-0 text-kit-orange" />
           <p className="flex flex-col">
-            <span className="text-[18px] font-bold">The scanner stopped. Restarting…</span>
-            {givenUp(state) ? <span className="text-[14px]">It has stopped more than once. Close this and use Mark here if it doesn&apos;t come back.</span> : null}
+            <span className="text-subhead font-bold">The scanner stopped. Restarting…</span>
+            {givenUp(state) ? <span className="text-small">It has stopped more than once. Close this and use Mark here if it doesn&apos;t come back.</span> : null}
           </p>
         </div>
       );
     case "checking":
-      return <p className="text-center text-[18px] font-bold">Checking…</p>;
+      return <p className="text-center text-subhead font-bold">Checking…</p>;
     case "noSignal":
       return (
         <div className="flex flex-col gap-3 rounded-app bg-orange-tint p-4 text-ink">
           <div className="flex items-center gap-3">
-            <WifiOff aria-hidden size={28} className="shrink-0 text-kit-orange" />
+            <WifiOff aria-hidden size={32} className="shrink-0 text-kit-orange" />
             <p className="flex flex-col">
-              <span className="text-[18px] font-bold">No signal – not checked in yet</span>
-              <span className="text-[14px]">The QR code is fine. The app couldn&apos;t reach the club, so try again or use Mark here.</span>
+              <span className="text-subhead font-bold">No signal – not checked in yet</span>
+              <span className="text-small">The QR code is fine. The app couldn&apos;t reach the club, so try again or use Mark here.</span>
             </p>
           </div>
           <button type="button" onClick={onRetry} className="btn-chunky btn-grass w-full">
@@ -330,15 +330,15 @@ function Showing({ state, onRetry }: { state: ScannerState; onRetry: () => void 
       );
     case "signedOut":
       return (
-        <p className="rounded-app bg-orange-tint p-4 text-[18px] font-bold text-ink">You&apos;ve been signed out, so nobody was checked in. Close this and sign in again.</p>
+        <p className="rounded-app bg-orange-tint p-4 text-subhead font-bold text-ink">You&apos;ve been signed out, so nobody was checked in. Close this and sign in again.</p>
       );
     case "result":
       return state.result.ok ? (
         <ChildResult key={`${state.result.child.id}:${state.result.child.session?.id ?? ""}`} child={state.result.child} />
       ) : (
         <div className="flex items-center gap-3 rounded-app bg-orange-tint p-4 text-ink">
-          <TriangleAlert aria-hidden size={28} className="shrink-0 text-kit-orange" />
-          <p className="text-[18px] font-bold">{reasonText[state.result.reason]}</p>
+          <TriangleAlert aria-hidden size={32} className="shrink-0 text-kit-orange" />
+          <p className="text-subhead font-bold">{reasonText[state.result.reason]}</p>
         </div>
       );
   }

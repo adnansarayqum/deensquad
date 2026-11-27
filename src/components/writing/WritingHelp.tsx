@@ -128,7 +128,7 @@ export function WritingHelp({
   }
 
   if (!canDictate && !ai) return null;
-  const chip = "inline-flex min-h-11 items-center gap-1.5 rounded-pill border-2 px-3.5 text-sm font-bold disabled:opacity-60";
+  const chip = "inline-flex min-h-11 items-center gap-1.5 rounded-pill border-2 px-3.5 text-small font-bold disabled:opacity-60";
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
@@ -139,7 +139,7 @@ export function WritingHelp({
             aria-pressed={listening}
             className={`${chip} ${listening ? "border-kit-orange bg-orange-tint text-kit-orange" : "border-line bg-paper text-ink"}`}
           >
-            {listening ? <Square aria-hidden size={14} fill="currentColor" /> : <Mic aria-hidden size={16} />}
+            {listening ? <Square aria-hidden size={16} fill="currentColor" /> : <Mic aria-hidden size={16} />}
             {listening ? "Stop" : "Dictate"}
           </button>
         ) : null}
@@ -156,14 +156,14 @@ export function WritingHelp({
           </button>
         ) : null}
       </div>
-      {ai ? <p className="text-sm text-ink-muted">First names only. Don&apos;t include children&apos;s surnames.</p> : null}
+      {ai ? <p className="text-small text-ink-muted">First names only. Don&apos;t include children&apos;s surnames.</p> : null}
       {listening ? (
-        <p role="status" className="text-sm text-ink-muted">
+        <p role="status" className="text-small text-ink-muted">
           Listening. Speak normally; your words appear in the box.
         </p>
       ) : null}
       {message ? (
-        <p role={message.tone === "error" ? "alert" : "status"} className={`rounded-xl px-3 py-2 text-sm ${message.tone === "error" ? "bg-orange-tint" : "bg-grass-tint text-grass-text"}`}>
+        <p role={message.tone === "error" ? "alert" : "status"} className={`rounded-web px-3 py-2 text-small ${message.tone === "error" ? "bg-orange-tint" : "bg-grass-tint text-grass-text"}`}>
           {message.text}
         </p>
       ) : null}
@@ -178,8 +178,8 @@ export function PracticeFromPlan({ plans, titleId, bodyId }: { plans: { id: stri
   const [pending, start] = useTransition();
   if (plans.length === 0) return null;
   return (
-    <div className="flex flex-col gap-2 rounded-xl bg-grass-tint p-3">
-      <label htmlFor="fromPlan" className="text-sm font-bold text-grass-text">
+    <div className="flex flex-col gap-2 rounded-web bg-grass-tint p-3">
+      <label htmlFor="fromPlan" className="text-small font-bold text-grass-text">
         Or let AI draft one from a session plan
       </label>
       <div className="flex gap-2">
@@ -210,7 +210,7 @@ export function PracticeFromPlan({ plans, titleId, bodyId }: { plans: { id: stri
         </button>
       </div>
       {error ? (
-        <p role="alert" className="text-sm">
+        <p role="alert" className="text-small">
           {error}
         </p>
       ) : null}

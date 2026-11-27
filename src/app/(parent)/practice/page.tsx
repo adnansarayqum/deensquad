@@ -24,17 +24,17 @@ export default async function PracticePage({ searchParams }: PageProps<"/practic
         Drills from the coaches for {who} to try between sessions.
       </BackHeader>
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
-        {sheets.length === 0 ? <Card className="p-4 text-[15px]">Nothing from the coaches yet. Check back after Friday.</Card> : null}
+        {sheets.length === 0 ? <Card className="p-4 text-small">Nothing from the coaches yet. Check back after Friday.</Card> : null}
         {sheets.map((s) => (
           <Card key={s.id} className="flex flex-col gap-2.5 p-4">
             <div className="flex items-start justify-between gap-2">
-              <h2 className="text-[18px] font-bold">{s.title}</h2>
+              <h2 className="text-subhead font-bold">{s.title}</h2>
               <Pill tone="neutral">{s.ageGroups.length ? s.ageGroups.join(", ") : "All groups"}</Pill>
             </div>
             {s.body ? <StepsText text={s.body} /> : null}
             {s.file ? <Attachment file={s.file} label={attachmentTitle("sheet", s.file)} from="/practice" /> : null}
             {s.video ? <VideoCard video={s.video} name={s.title} /> : null}
-            <p className="text-[13px] text-ink-muted">{[staffNameForParents(s.from), day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</p>
+            <p className="text-meta text-ink-muted">{[staffNameForParents(s.from), day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</p>
           </Card>
         ))}
       </main>

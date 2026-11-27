@@ -30,7 +30,7 @@ function SponsorFields({ s }: { s?: Sponsor }) {
             What they sponsor <span className="font-normal text-ink-muted">(optional)</span>
           </label>
           <input id={`what-${key}`} name="sponsorsWhat" defaultValue={s?.sponsorsWhat ?? ""} maxLength={80} placeholder="U10 tournament kit" className="field" />
-          <p className="mt-1 text-sm text-ink-muted">Parents see &ldquo;Sponsors the U10 tournament kit&rdquo;.</p>
+          <p className="mt-1 text-small text-ink-muted">Parents see &ldquo;Sponsors the U10 tournament kit&rdquo;.</p>
         </div>
       </div>
       <div>
@@ -65,13 +65,13 @@ function SponsorFields({ s }: { s?: Sponsor }) {
           {s?.logoFileId ? (
             <div className="flex items-center gap-3">
               <SponsorLogo name={s.name} fileId={s.logoFileId} bg={s.logoBg} size={64} />
-              <label className="flex min-h-12 items-center gap-2 text-[15px]">
-                <input type="checkbox" name="removeLogo" className="h-5 w-5 accent-[var(--grass)]" />
+              <label className="flex min-h-12 items-center gap-2 text-small">
+                <input type="checkbox" name="removeLogo" className="check" />
                 Remove logo
               </label>
             </div>
           ) : null}
-          <input id={`logo-${key}`} name="logo" type="file" accept="image/jpeg,image/png,image/webp" aria-label={s?.logoFileId ? `Replace the logo for ${s.name}` : "Add a logo"} className="field py-3 text-[15px]" />
+          <input id={`logo-${key}`} name="logo" type="file" accept="image/jpeg,image/png,image/webp" aria-label={s?.logoFileId ? `Replace the logo for ${s.name}` : "Add a logo"} className="field py-3 text-small" />
         </div>
         <div>
           <label htmlFor={`sort-${key}`} className="field-label">
@@ -84,24 +84,24 @@ function SponsorFields({ s }: { s?: Sponsor }) {
         <span className="field-label">
           Small square icon <span className="font-normal text-ink-muted">(optional)</span>
         </span>
-        <p className="text-sm text-ink-muted">
+        <p className="text-small text-ink-muted">
           Shown at thumbnail size beside the sponsor&apos;s name, on Home and after check-in. A wide logo is hard to read that small, so add just its symbol here. Without one,
           the logo is used.
         </p>
         {s?.iconFileId ? (
           <div className="flex items-center gap-3">
             <SponsorLogo name={s.name} fileId={s.iconFileId} bg={s.iconBg} size={48} />
-            <label className="flex min-h-12 items-center gap-2 text-[15px]">
-              <input type="checkbox" name="removeIcon" className="h-5 w-5 accent-[var(--grass)]" />
+            <label className="flex min-h-12 items-center gap-2 text-small">
+              <input type="checkbox" name="removeIcon" className="check" />
               Remove icon
             </label>
           </div>
         ) : null}
-        <input id={`icon-${key}`} name="icon" type="file" accept="image/jpeg,image/png,image/webp" aria-label={s?.iconFileId ? `Replace the small icon for ${s.name}` : "Add a small square icon"} className="field py-3 text-[15px]" />
+        <input id={`icon-${key}`} name="icon" type="file" accept="image/jpeg,image/png,image/webp" aria-label={s?.iconFileId ? `Replace the small icon for ${s.name}` : "Add a small square icon"} className="field py-3 text-small" />
       </div>
       <label className="flex min-h-12 items-center gap-3">
-        <input type="checkbox" name="active" defaultChecked={s ? s.active : true} className="h-5 w-5 accent-[var(--grass)]" />
-        <span className="text-[15px] font-bold">Show to parents</span>
+        <input type="checkbox" name="active" defaultChecked={s ? s.active : true} className="check" />
+        <span className="text-small font-bold">Show to parents</span>
       </label>
     </div>
   );
@@ -121,7 +121,7 @@ export default async function AdminSponsorsPage() {
         subtitle="Shown on Home, after check-in, on the sign-up page and on Our sponsors. They take a week each on Home and after check-in, lowest order number first."
       />
       {sponsors.length ? (
-        <p className="text-[15px] text-ink-muted">
+        <p className="text-small text-ink-muted">
           Figures to pass on to a sponsor: {parents === 1 ? "1 parent uses" : `${parents} parents use`} the app, and each sponsor&apos;s count beside its name. Counts are totals of times shown to
           parents and taps on the sponsor&apos;s link, never who.
         </p>
@@ -138,23 +138,23 @@ export default async function AdminSponsorsPage() {
           <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-3 px-4 py-2">
             <span className="flex min-w-0 items-center gap-3">
               <SponsorLogo name={s.name} fileId={sponsorIcon(s).fileId} bg={sponsorIcon(s).bg} size={40} />
-              <span className="min-w-0 text-[15px] font-bold break-words">Edit {s.name}</span>
+              <span className="min-w-0 text-small font-bold break-words">Edit {s.name}</span>
             </span>
             <span className="flex shrink-0 flex-col items-end gap-1">
               {s.active ? <Pill tone="done">Showing</Pill> : <Pill tone="neutral">Hidden</Pill>}
               {/* The figure to pass on to the sponsor, on the closed row (admin review, 23 Nov 2026: it was inside the fold). */}
-              <span className="text-[13px] text-ink-muted tabular-nums">{viewsShort(views[s.id])}</span>
+              <span className="text-meta text-ink-muted tabular-nums">{viewsShort(views[s.id])}</span>
             </span>
           </summary>
           <div className="flex flex-col gap-5 border-t border-line p-4">
-            <p className="text-[15px]">{viewsSentence(views[s.id])}</p>
+            <p className="text-small">{viewsSentence(views[s.id])}</p>
             <StatefulForm action={saveSponsor} keepOnFailure={NOT_SAVED} submitLabel={`Save ${s.name}`} savedMessage="Saved.">
               <SponsorFields s={s} />
             </StatefulForm>
             <StatefulForm action={removeSponsor} submitLabel={`Remove ${s.name}`} savedMessage="Sponsor removed." className="border-t border-line pt-4">
               <input type="hidden" name="id" value={s.id} />
-              <label className="flex min-h-12 items-center gap-3 text-[15px]">
-                <input type="checkbox" name="confirm" value="yes" className="h-5 w-5 accent-[var(--grass)]" />
+              <label className="flex min-h-12 items-center gap-3 text-small">
+                <input type="checkbox" name="confirm" value="yes" className="check" />
                 Yes, remove {s.name} and its logo for good
               </label>
             </StatefulForm>

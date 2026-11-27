@@ -22,7 +22,7 @@ export default async function WellbeingAdminPage() {
       <PageHeader back={{ href: "/admin", label: "Overview" }} title="Wellbeing check-ins" subtitle="Only admins can see these. Coaches and other parents can't." />
       <Section title={`To look at (${open.length})`}>
         {open.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">Nothing to follow up.</p>
+          <p className="text-small text-ink-muted">Nothing to follow up.</p>
         ) : (
           <ul className="flex flex-col">
             {open.map((c) => (
@@ -33,7 +33,7 @@ export default async function WellbeingAdminPage() {
       </Section>
       <Section title="Last 30 days">
         {recent.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">No other check-ins.</p>
+          <p className="text-small text-ink-muted">No other check-ins.</p>
         ) : (
           <ul className="flex flex-col">
             {recent.map((c) => (
@@ -50,14 +50,14 @@ function CheckinRow({ c, action = false }: { c: AdminCheckin; action?: boolean }
   return (
     <li className="flex flex-col gap-1 border-t border-line py-3 first:border-t-0">
       <span className="flex flex-wrap items-center gap-2">
-        <Link href={`/admin/families/${c.playerId}`} className="text-[15px] font-bold underline">
+        <Link href={`/admin/families/${c.playerId}`} className="text-small font-bold underline">
           {c.child}
         </Link>
         <Pill tone="neutral">{c.group}</Pill>
         <Pill tone={c.mood === "low" ? "action" : c.mood === "good" ? "done" : "neutral"}>{MOODS[c.mood]}</Pill>
       </span>
-      {c.note ? <p className="text-[15px] whitespace-pre-line">{c.note}</p> : null}
-      <span className="text-[13px] text-ink-muted">
+      {c.note ? <p className="text-small whitespace-pre-line">{c.note}</p> : null}
+      <span className="text-meta text-ink-muted">
         {c.givenBy ? `From ${c.givenBy}, ` : ""}
         {shortDay(c.createdAt)} {clock(c.createdAt)}
         {c.followedUpAt ? ` · followed up${c.followedUpBy ? ` by ${c.followedUpBy}` : ""} ${shortDay(c.followedUpAt)}` : ""}

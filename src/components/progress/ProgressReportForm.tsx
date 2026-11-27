@@ -70,7 +70,7 @@ export function ProgressReportForm({
               type="button"
               onClick={draft}
               disabled={drafting}
-              className="inline-flex min-h-12 items-center gap-1.5 rounded-pill border-2 border-grass bg-grass-tint px-3.5 text-sm font-bold text-grass-text disabled:opacity-60"
+              className="inline-flex min-h-12 items-center gap-1.5 rounded-pill border-2 border-grass bg-grass-tint px-3.5 text-small font-bold text-grass-text disabled:opacity-60"
             >
               <Sparkles aria-hidden size={16} />
               {drafting ? "Drafting…" : "Draft with AI"}
@@ -84,28 +84,28 @@ export function ProgressReportForm({
                   setUndo(null);
                   setMessage(null);
                 }}
-                className="inline-flex min-h-12 items-center gap-1.5 rounded-pill border border-line bg-paper px-3.5 text-sm font-bold text-ink-muted"
+                className="inline-flex min-h-12 items-center gap-1.5 rounded-pill border border-line bg-paper px-3.5 text-small font-bold text-ink-muted"
               >
                 <Undo2 aria-hidden size={16} />
                 Undo
               </button>
             ) : null}
           </div>
-          <p className="text-[13px] text-ink-muted">Uses first names only. Nothing reaches parents until you publish.</p>
+          <p className="text-meta text-ink-muted">Uses first names only. Nothing reaches parents until you publish.</p>
           {message ? (
-            <p role={message.tone === "error" ? "alert" : "status"} className={`text-[14px] ${message.tone === "error" ? "text-ink" : "text-ink-muted"}`}>
+            <p role={message.tone === "error" ? "alert" : "status"} className={`text-small ${message.tone === "error" ? "text-ink" : "text-ink-muted"}`}>
               {message.text}
             </p>
           ) : null}
         </div>
       ) : null}
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
           {state.error}
         </p>
       ) : null}
       {state.saved && !pending ? (
-        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           {state.message}
         </p>
       ) : null}

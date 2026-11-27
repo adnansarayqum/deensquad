@@ -67,12 +67,12 @@ export function StatefulForm({
     <form ref={form} action={run} onSubmit={submitCatching} className={`flex flex-col gap-4 ${className}`} noValidate>
       {children}
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
           {state.error}
         </p>
       ) : null}
       {state.saved && !pending ? (
-        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           {state.message ?? savedMessage}
         </p>
       ) : null}

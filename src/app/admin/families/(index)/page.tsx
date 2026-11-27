@@ -78,7 +78,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
 
       {isAdmin && notInvited > 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-app bg-gold-tint px-4 py-3">
-          <p className="text-[15px]">
+          <p className="text-small">
             <b>{notInvited}</b> {notInvited === 1 ? "parent" : "parents"} {familiesScope(filter)} {notInvited === 1 ? "hasn't" : "haven't"} had an invite
             yet.
           </p>
@@ -96,7 +96,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
               key={g ?? "all"}
               href={familiesHref({ group: g, need, q })}
               aria-current={g === group ? "page" : undefined}
-              className={`inline-flex min-h-11 items-center rounded-pill border-2 px-4 text-sm font-bold ${
+              className={`inline-flex min-h-11 items-center rounded-pill border-2 px-4 text-small font-bold ${
                 g === group ? "border-grass bg-grass-tint text-grass-text" : "border-line bg-paper text-ink"
               }`}
             >
@@ -140,7 +140,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
             key={n}
             href={familiesHref({ group, need: need === n ? null : n, q })}
             aria-current={need === n ? "page" : undefined}
-            className={`inline-flex min-h-12 items-center gap-1.5 rounded-pill border-2 px-3.5 text-sm font-bold ${
+            className={`inline-flex min-h-12 items-center gap-1.5 rounded-pill border-2 px-3.5 text-small font-bold ${
               need === n ? "border-grass bg-grass text-on-grass" : "border-line bg-paper text-ink"
             }`}
           >
@@ -151,7 +151,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
       </nav>
 
       {filtered ? (
-        <p role="status" className="flex flex-wrap items-center gap-x-3 text-[15px]">
+        <p role="status" className="flex flex-wrap items-center gap-x-3 text-small">
           {behind !== null ? (
             <span>
               <b className="tabular-nums">{behind}</b> {behind === 1 ? "parent hasn't" : "parents haven't"} tapped &ldquo;I&apos;ve read this&rdquo; on 2 or
@@ -172,7 +172,7 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
       ) : null}
 
       {families.length === 0 ? (
-        <p className="rounded-app border border-line bg-paper p-4 text-[15px]">
+        <p className="rounded-app border border-line bg-paper p-4 text-small">
           {filtered
             ? "No children match."
             : group
@@ -189,14 +189,14 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
               return (
                 <li key={f.id}>
                   <Link href={familyChildHref(f.id, filter)} className="flex items-center gap-3 rounded-app border border-line bg-paper px-3.5 py-3">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-pitch font-display text-[20px] text-on-pitch">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-pitch font-display text-heading text-on-pitch">
                       {f.shirtNumber ?? f.firstName[0]}
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col gap-1">
-                      <span className="text-[15px] font-bold">
+                      <span className="text-small font-bold">
                         {tidyName(`${f.firstName} ${f.lastName}`)} <span className="font-normal text-ink-muted">· {f.ageGroup}</span>
                       </span>
-                      <span className="truncate text-[13px] text-ink-muted">{parents || "No parent linked"}</span>
+                      <span className="truncate text-meta text-ink-muted">{parents || "No parent linked"}</span>
                       <span className="flex flex-wrap gap-1.5">
                         {f.awaitingApproval ? <Pill tone="action">Waiting for approval</Pill> : null}
                         {status === "in" ? null : status === "invited" ? <Pill tone="gold">Invited, not signed in</Pill> : <Pill tone="neutral">Not invited</Pill>}
@@ -221,10 +221,10 @@ export default async function FamiliesPage({ searchParams }: PageProps<"/admin/f
 
           {/* Computers: a table, one row per child. */}
           <div className="hidden overflow-x-auto rounded-dash border border-line bg-paper lg:block">
-            <table className="w-full text-[14px] [&_.rounded-pill]:whitespace-nowrap">
+            <table className="w-full text-small [&_.rounded-pill]:whitespace-nowrap">
               <caption className="sr-only">Children{group ? ` in the ${groupPlural(group)}` : ""}, their parents and what they still need</caption>
               <thead>
-                <tr className="border-b border-line text-left text-[13px] font-bold text-ink-muted">
+                <tr className="border-b border-line text-left text-meta font-bold text-ink-muted">
                   <th scope="col" className="px-3 py-2.5 font-bold">
                     Child
                   </th>

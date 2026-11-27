@@ -13,14 +13,14 @@ export function SessionNow({ session, now }: { session: NewsSession; now: Date }
   if (session.finished) return null;
   const when = `${dayHeading(session.startsAt, now)} · ${clock(session.startsAt)}`;
   return session.cancelled ? (
-    <p role="status" className="flex items-center gap-2 rounded-app bg-orange-tint px-3.5 py-2.5 text-[16px] font-bold text-ink">
+    <p role="status" className="flex items-center gap-2 rounded-app bg-orange-tint px-3.5 py-2.5 text-body font-bold text-ink">
       <CalendarX aria-hidden size={20} className="shrink-0 text-kit-orange" />
       <span>
         Now: {session.title} is cancelled ({dayHeading(session.startsAt, now)})
       </span>
     </p>
   ) : (
-    <p role="status" className="flex items-center gap-2 rounded-app bg-grass-tint px-3.5 py-2.5 text-[16px] font-bold text-grass-text">
+    <p role="status" className="flex items-center gap-2 rounded-app bg-grass-tint px-3.5 py-2.5 text-body font-bold text-grass-text">
       <CalendarCheck aria-hidden size={20} className="shrink-0" />
       <span>
         Now: going ahead, {when}
@@ -47,7 +47,7 @@ export function ComingOnNews({ session, family, now }: { session: NewsSession; f
         const record = session.answers[c.id];
         return (
           <div key={c.id} className="flex flex-col gap-2">
-            {kids.length > 1 ? <p className="text-[16px] font-bold">{c.firstName}</p> : null}
+            {kids.length > 1 ? <p className="text-body font-bold">{c.firstName}</p> : null}
             <AvailabilityPicker
               sessionId={session.id}
               playerId={c.id}

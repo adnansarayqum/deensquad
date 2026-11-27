@@ -114,8 +114,8 @@ export default async function AdminNewsPage({ searchParams }: PageProps<"/admin/
                 label: `${shortDay(iso(s.starts_at))} · ${s.title} · ${clock(iso(s.starts_at))} · ${s.age_groups.join(", ")}`,
               }))}
             />
-            <label className="flex min-h-11 items-center gap-3 text-[15px]">
-              <input type="checkbox" name="requiresAck" defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
+            <label className="flex min-h-11 items-center gap-3 text-small">
+              <input type="checkbox" name="requiresAck" defaultChecked className="check" />
               <span>
                 <b>Ask parents to tap &ldquo;I&apos;ve read this&rdquo;</b> so you can see who has read it.{" "}
                 <span className="text-ink-muted">Keep it for posts that matter: when every post asks, parents stop tapping.</span>
@@ -125,17 +125,17 @@ export default async function AdminNewsPage({ searchParams }: PageProps<"/admin/
         </FoldCard>
 
         <section aria-labelledby="posted" className="flex flex-col gap-2">
-          <h2 id="posted" className="text-[13px] font-bold text-ink-muted">
+          <h2 id="posted" className="text-meta font-bold text-ink-muted">
             Posted
           </h2>
-          {news.length === 0 ? <p className="text-[15px] text-ink-muted">Nothing posted yet.</p> : null}
+          {news.length === 0 ? <p className="text-small text-ink-muted">Nothing posted yet.</p> : null}
           {news.map((n) => (
             <Link key={n.id} href={`/admin/news/${n.id}`} className="flex flex-col gap-2 rounded-app border border-line bg-paper px-4 py-3">
-              <span className="text-[13px] text-ink-muted">
+              <span className="text-meta text-ink-muted">
                 {n.topic} · {audienceLabel(n)} · {postedLabel(n.postedAt, now)}
                 {n.postedBy ? ` · ${n.postedBy}` : ""}
               </span>
-              <span className="text-base font-bold">{n.title}</span>
+              <span className="text-body font-bold">{n.title}</span>
               {n.requiresAck ? <ReadBar read={n.readCount} total={n.audienceCount} groupsOnly={n.groupsOnly} /> : null}
             </Link>
           ))}

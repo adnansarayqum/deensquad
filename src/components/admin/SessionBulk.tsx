@@ -18,7 +18,7 @@ function tickedCount(form: HTMLFormElement): number {
 export function SelectRow({ id, name }: { id: string; name: string }) {
   return (
     <label className="flex min-h-12 min-w-12 cursor-pointer items-center justify-center">
-      <input type="checkbox" name="ids" value={id} aria-label={name} className="h-5 w-5 accent-[var(--grass)]" />
+      <input type="checkbox" name="ids" value={id} aria-label={name} className="check" />
     </label>
   );
 }
@@ -58,7 +58,7 @@ export function SelectAll({ label }: { label: string }) {
   };
   return (
     <label className="flex min-h-12 min-w-12 cursor-pointer items-center justify-center lg:min-w-0">
-      <input ref={box} type="checkbox" aria-label={label} onChange={toggle} className="h-5 w-5 accent-[var(--grass)]" />
+      <input ref={box} type="checkbox" aria-label={label} onChange={toggle} className="check" />
     </label>
   );
 }
@@ -77,7 +77,7 @@ export function BulkBar() {
   }, []);
   if (count === 0) return null;
   // Tighter than the usual chunky button so the four fit one row on a 390px phone (still 48px tall).
-  const button = "btn-chunky btn-paper min-h-12 px-3 text-[15px]";
+  const button = "btn-chunky btn-paper min-h-12 px-3 text-small";
   return (
     <div
       ref={bar}
@@ -85,7 +85,7 @@ export function BulkBar() {
       aria-label="With the ticked sessions"
       className="sticky bottom-[var(--staff-bar-height,0px)] lg:bottom-0 z-10 -mx-4 -mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-b-app border-t border-line bg-paper px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)]"
     >
-      <span aria-live="polite" className="min-w-24 text-[15px] font-bold tabular-nums">
+      <span aria-live="polite" className="min-w-24 text-small font-bold tabular-nums">
         {count === null ? "Ticked sessions:" : `${count} selected`}
       </span>
       <span className="flex flex-wrap items-center gap-1.5">

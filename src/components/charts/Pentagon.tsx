@@ -61,7 +61,7 @@ export function Pentagon({ current, previous, label, className = "" }: { current
 /** The key under the pentagon: what the solid shape and the dashed outline stand for. */
 export function PentagonKey({ hasPrevious }: { hasPrevious: boolean }) {
   return (
-    <ul aria-hidden className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-ink-muted">
+    <ul aria-hidden className="flex flex-wrap gap-x-4 gap-y-1 text-meta text-ink-muted">
       <li className="inline-flex items-center gap-1.5">
         <span className="h-0.5 w-4 rounded-pill bg-chart-1" />
         Last 3 months

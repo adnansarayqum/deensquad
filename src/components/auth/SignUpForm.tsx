@@ -14,7 +14,7 @@ export function SignUpForm({ groups, maxChildren }: { groups: Group[]; maxChildr
   return (
     <form action={action} onSubmit={keep} className="flex flex-col gap-5" noValidate>
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1 text-[18px] font-bold">About you</legend>
+        <legend className="mb-1 text-subhead font-bold">About you</legend>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label htmlFor="firstName" className="field-label">
@@ -34,7 +34,7 @@ export function SignUpForm({ groups, maxChildren }: { groups: Group[]; maxChildr
             Email address
           </label>
           <input id="email" name="email" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required className="field" />
-          <p className="mt-1.5 text-sm text-ink-muted">We&apos;ll send a 6-digit code here to check it&apos;s yours.</p>
+          <p className="mt-1.5 text-small text-ink-muted">We&apos;ll send a 6-digit code here to check it&apos;s yours.</p>
         </div>
         <div>
           <label htmlFor="phone" className="field-label">
@@ -46,7 +46,7 @@ export function SignUpForm({ groups, maxChildren }: { groups: Group[]; maxChildr
 
       {Array.from({ length: children }, (_, i) => (
         <fieldset key={i} className="flex flex-col gap-3 rounded-app bg-paper p-4 shadow-card">
-          <legend className="float-left w-full text-[18px] font-bold">{children === 1 ? "Your child" : `Child ${i + 1}`}</legend>
+          <legend className="float-left w-full text-subhead font-bold">{children === 1 ? "Your child" : `Child ${i + 1}`}</legend>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor={`childFirstName-${i}`} className="field-label">

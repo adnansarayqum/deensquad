@@ -23,7 +23,7 @@ export default async function ProductPage({ params }: PageProps<"/shop/[id]">) {
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">
         <Card className="overflow-hidden">
           <ProductImage src={product.imageUrl} name={product.name} large />
-          {product.description ? <p className="p-4 text-[15px] leading-[22px]">{product.description}</p> : null}
+          {product.description ? <p className="p-4 text-small leading-[22px]">{product.description}</p> : null}
         </Card>
         <AddToBasketForm
           product={{

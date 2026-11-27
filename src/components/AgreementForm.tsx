@@ -11,14 +11,14 @@ export function AgreementForm({ childId, childName, parentName }: { childId: str
     <form action={action} onSubmit={keep} className="flex flex-col gap-3" noValidate>
       <input type="hidden" name="child" value={childId} />
       <label className={box}>
-        <input type="checkbox" name="playerAgrees" className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--grass)]" />
-        <span className="text-[15px] leading-[22px]">
+        <input type="checkbox" name="playerAgrees" className="mt-0.5 check" />
+        <span className="text-small leading-[22px]">
           I&apos;ve gone through the player responsibilities with <b>{childName}</b>, who agrees to them.
         </span>
       </label>
       <label className={box}>
-        <input type="checkbox" name="parentAgrees" className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--grass)]" />
-        <span className="text-[15px] leading-[22px]">I agree to the parent or guardian responsibilities.</span>
+        <input type="checkbox" name="parentAgrees" className="mt-0.5 check" />
+        <span className="text-small leading-[22px]">I agree to the parent or guardian responsibilities.</span>
       </label>
       <div>
         <label htmlFor="parentName" className="field-label">
@@ -27,7 +27,7 @@ export function AgreementForm({ childId, childName, parentName }: { childId: str
         <input id="parentName" name="parentName" defaultValue={parentName} autoComplete="name" maxLength={80} className="field" />
       </div>
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
           {state.error}
         </p>
       ) : null}

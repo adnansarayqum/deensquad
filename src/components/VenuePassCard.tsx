@@ -63,13 +63,13 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
 
   return (
     <section aria-labelledby="hub-code" className="flex w-full flex-col gap-3 rounded-app bg-paper shadow-card p-4">
-      <h2 id="hub-code" className="text-[18px] font-bold">
+      <h2 id="hub-code" className="text-subhead font-bold">
         Your sports hub entry code
       </h2>
       {view ? (
         <>
           <VenuePassPicture view={view} />
-          <p className="text-[15px] leading-5 text-ink-muted">
+          <p className="text-small leading-5 text-ink-muted">
             Only you can see this, not the club or the coaches.{" "}
             {view.kind === "code" || view.offline
               ? "This phone keeps a copy for when there's no signal."
@@ -77,7 +77,7 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
           </p>
         </>
       ) : (
-        <p className="text-[15px] leading-[22px]">
+        <p className="text-small leading-[22px]">
           Add your Bobby Moore Sports Hub entry code from your screenshots. Only you can see it, not the club or the coaches.
         </p>
       )}
@@ -102,11 +102,11 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
             onChange={(e) => {
               if (e.currentTarget.files?.length) e.currentTarget.form?.requestSubmit();
             }}
-            className={live ? "sr-only" : "field mt-2 py-3 text-[15px]"}
+            className={live ? "sr-only" : "field mt-2 py-3 text-small"}
           />
         </label>
         {live ? (
-          <p className="text-[15px] leading-5 text-ink-muted">Choose the screenshot from your photos. It saves straight away.</p>
+          <p className="text-small leading-5 text-ink-muted">Choose the screenshot from your photos. It saves straight away.</p>
         ) : (
           <button type="submit" className={view ? "btn-chunky btn-paper" : "btn-chunky btn-grass"} disabled={busy}>
             {saving ? "Saving…" : "Save screenshot"}
@@ -130,11 +130,11 @@ export function VenuePassCard({ view }: { view: VenuePassView | null }) {
         </form>
       ) : null}
       {error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] leading-[22px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small leading-[22px] text-ink">
           {error}
         </p>
       ) : message && !busy ? (
-        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           {message}
         </p>
       ) : null}

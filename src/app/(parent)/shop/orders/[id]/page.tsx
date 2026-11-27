@@ -60,7 +60,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/sh
           <OrderStatusPill status={order.status} payBy={order.payBy} />
         </div>
         {note ? (
-          <p role="status" className={`rounded-app px-3.5 py-3 text-[15px] ${note.tone === "done" ? "bg-grass-tint font-bold text-grass-text" : "bg-orange-tint"}`}>
+          <p role="status" className={`rounded-app px-3.5 py-3 text-small ${note.tone === "done" ? "bg-grass-tint font-bold text-grass-text" : "bg-orange-tint"}`}>
             {note.text}
           </p>
         ) : null}
@@ -69,11 +69,11 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/sh
           {order.items.map((i) => (
             <div key={i.id} className="flex items-center gap-3 p-3.5">
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-base font-bold">
+                <span className="text-body font-bold">
                   {i.quantity > 1 ? `${i.quantity} × ` : ""}
                   {i.productName}
                 </span>
-                <span className="text-[15px] text-ink-muted">
+                <span className="text-small text-ink-muted">
                   {[i.childName ? `For ${i.childName}` : null, i.size ? `Size ${i.size}` : null, i.initials ? `Initials ${i.initials}` : null]
                     .filter(Boolean)
                     .join(" · ") || "One size"}
@@ -84,14 +84,14 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/sh
           ))}
           <div className="flex items-baseline justify-between p-3.5">
             <span className="font-bold">Total</span>
-            <span className="font-display text-[30px] leading-none tabular-nums">{formatPence(order.totalPence)}</span>
+            <span className="font-display text-title leading-none tabular-nums">{formatPence(order.totalPence)}</span>
           </div>
         </Card>
         {order.status === "awaiting_payment" && order.payBy === "bank" ? (
           bank ? (
             <Card tone="gold" className="flex flex-col gap-2 p-4">
-              <h2 className="text-[18px] font-bold">Pay by bank transfer</h2>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[15px]">
+              <h2 className="text-subhead font-bold">Pay by bank transfer</h2>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-small">
                 <dt className="text-ink-muted">Amount</dt>
                 <dd className="font-bold tabular-nums">{formatPence(order.totalPence)}</dd>
                 <dt className="text-ink-muted">Account name</dt>
@@ -103,10 +103,10 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/sh
                 <dt className="text-ink-muted">Reference</dt>
                 <dd className="font-bold tracking-[0.04em]">{order.reference}</dd>
               </dl>
-              <p className="text-[15px] text-ink-muted">Please use the reference so the club can match your payment to this order.</p>
+              <p className="text-small text-ink-muted">Please use the reference so the club can match your payment to this order.</p>
             </Card>
           ) : (
-            <Card className="p-4 text-[15px]">The club will send you its bank details. Use the reference {order.reference} when you pay.</Card>
+            <Card className="p-4 text-small">The club will send you its bank details. Use the reference {order.reference} when you pay.</Card>
           )
         ) : null}
         {order.status === "awaiting_payment" && order.payBy === "card" && query.checking ? (
@@ -116,7 +116,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/sh
             <button type="submit" className="btn-chunky btn-paper w-full">
               Pay by bank transfer instead
             </button>
-            <p className="text-[15px] text-ink-muted">If you already paid by card, we&apos;ll match it and refund any double payment.</p>
+            <p className="text-small text-ink-muted">If you already paid by card, we&apos;ll match it and refund any double payment.</p>
           </form>
         ) : order.status === "awaiting_payment" && order.payBy === "card" && canPayOnline ? (
           <form action={payAgain}>

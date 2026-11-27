@@ -77,9 +77,9 @@ export function TapProblem({ problem, onRetry, retrying = false, className = "" 
   const offline = problem.kind === "offline";
   const Icon = offline ? WifiOff : CircleAlert;
   return (
-    <div role="alert" className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border-2 border-kit-orange bg-orange-tint px-3 py-2 text-ink ${className}`}>
-      <p className="flex min-w-[14ch] flex-1 items-center gap-2 text-sm leading-5 font-bold">
-        <Icon aria-hidden size={18} className="shrink-0 text-kit-orange" />
+    <div role="alert" className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-app border-2 border-kit-orange bg-orange-tint px-3 py-2 text-ink ${className}`}>
+      <p className="flex min-w-[14ch] flex-1 items-center gap-2 text-small leading-5 font-bold">
+        <Icon aria-hidden size={20} className="shrink-0 text-kit-orange" />
         {offline ? "That didn't save. Check your signal and try again." : problem.message}
       </p>
       {offline && onRetry ? (
@@ -87,7 +87,7 @@ export function TapProblem({ problem, onRetry, retrying = false, className = "" 
           type="button"
           onClick={onRetry}
           disabled={retrying}
-          className="min-h-12 shrink-0 rounded-xl border border-line bg-paper px-3.5 text-sm font-bold text-ink shadow-[0_3px_0_var(--line)] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-60"
+          className="min-h-12 shrink-0 rounded-web border border-line bg-paper px-3.5 text-small font-bold text-ink shadow-[0_3px_0_var(--line)] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-60"
         >
           {retrying ? "Saving…" : "Try again"}
         </button>

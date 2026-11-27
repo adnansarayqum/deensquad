@@ -26,17 +26,17 @@ export default async function SignUpPage() {
     <AuthShell title="Join the club" intro="Sign up to get club news, tell the coach who's coming on Friday and follow your child's progress.">
       {info ? (
         <section aria-labelledby="about-club" className="flex flex-col gap-1 rounded-app bg-paper p-4 shadow-card">
-          <h2 id="about-club" className="text-[18px] font-bold">
+          <h2 id="about-club" className="text-subhead font-bold">
             About the club
           </h2>
-          <p className="text-[15px] leading-[22px] whitespace-pre-line">{info}</p>
+          <p className="text-small leading-[22px] whitespace-pre-line">{info}</p>
         </section>
       ) : null}
       <ClubFacts facts={facts} />
       <SignUpForm groups={AGE_GROUPS.map((g) => ({ value: g, label: GROUP_LABELS[g] }))} maxChildren={MAX_CHILDREN} />
       {sponsors.length ? (
         <section aria-labelledby="supported-by" className="flex flex-col gap-3">
-          <h2 id="supported-by" className="text-center text-[15px] text-ink-muted">
+          <h2 id="supported-by" className="text-center text-small text-ink-muted">
             Proudly supported by
           </h2>
           <ul className="grid grid-cols-2 gap-2.5">
@@ -48,13 +48,13 @@ export default async function SignUpPage() {
           </ul>
         </section>
       ) : null}
-      <p className="text-[15px]">
+      <p className="text-small">
         Already signed up?{" "}
         <Link href="/sign-in" className="font-bold text-grass-text underline">
           Sign in
         </Link>
       </p>
-      <a href={privacy} className="text-sm font-bold text-grass-text underline" target="_blank" rel="noopener noreferrer">
+      <a href={privacy} className="text-small font-bold text-grass-text underline" target="_blank" rel="noopener noreferrer">
         How the club uses your information
       </a>
     </AuthShell>

@@ -79,13 +79,13 @@ export function SessionFields({ defaults, groups, repeat = false }: { defaults: 
         <div className="flex flex-wrap gap-2">
           {groups.map((g) => (
             <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
-              <input type="checkbox" name="groups" value={g} defaultChecked={defaults.groups.includes(g)} className="h-4 w-4 accent-[var(--grass)]" />
-              <span className="text-sm font-bold">{g}</span>
+              <input type="checkbox" name="groups" value={g} defaultChecked={defaults.groups.includes(g)} className="check" />
+              <span className="text-small font-bold">{g}</span>
             </label>
           ))}
         </div>
       </fieldset>
-      <p className="-mb-1 text-sm font-bold">Briefing parents see on the Friday screen (optional)</p>
+      <p className="-mb-1 text-small font-bold">Briefing parents see on the Friday screen (optional)</p>
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
           <label htmlFor="arriveBy" className="field-label">

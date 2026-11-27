@@ -64,7 +64,7 @@ export default async function StaffPracticePage() {
             <label htmlFor="file" className="field-label">
               Attach a PDF or photo <span className="font-normal text-ink-muted">(optional, up to 8 MB)</span>
             </label>
-            <input id="file" name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="field py-3 text-[15px]" />
+            <input id="file" name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="field py-3 text-small" />
           </div>
           <VideoField />
           <fieldset className="group/for flex flex-col gap-2">
@@ -85,15 +85,15 @@ export default async function StaffPracticePage() {
             <div className={`flex flex-wrap gap-2 ${limited ? "" : "hidden group-has-[[value=groups]:checked]/for:flex"}`}>
               {groups.map((g) => (
                 <label key={g} className="flex min-h-12 items-center gap-2 rounded-pill border border-line bg-paper px-3.5 has-[:checked]:border-grass has-[:checked]:bg-grass-tint">
-                  <input type="checkbox" name="groups" value={g} defaultChecked={limited && groups.length === 1} className="h-4 w-4 accent-[var(--grass)]" />
-                  <span className="text-sm font-bold">{g}</span>
+                  <input type="checkbox" name="groups" value={g} defaultChecked={limited && groups.length === 1} className="check" />
+                  <span className="text-small font-bold">{g}</span>
                 </label>
               ))}
             </div>
           </fieldset>
           {user.staff.role === "admin" ? (
-            <label className="flex min-h-12 items-start gap-3 text-[15px]">
-              <input type="checkbox" name="community" className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--grass)]" />
+            <label className="flex min-h-12 items-start gap-3 text-small">
+              <input type="checkbox" name="community" className="mt-0.5 check" />
               <span>
                 <span className="font-bold">Also put it in Coach&apos;s corner</span>
                 <span className="block text-ink-muted">Everyone on the app sees it on the Community page, whatever their child&apos;s group.</span>
@@ -103,22 +103,22 @@ export default async function StaffPracticePage() {
         </StatefulForm>
       </div>
 
-      <h2 className="text-[13px] font-bold text-ink-muted">Shared</h2>
-      {sheets.length === 0 ? <Card className="p-4 text-[15px] text-ink-muted">Nothing shared yet.</Card> : null}
+      <h2 className="text-meta font-bold text-ink-muted">Shared</h2>
+      {sheets.length === 0 ? <Card className="p-4 text-small text-ink-muted">Nothing shared yet.</Card> : null}
       {sheets.map((s) => (
         <Card key={s.id} className="flex flex-col gap-2 p-3.5">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-base font-bold">{s.title}</h3>
+            <h3 className="text-body font-bold">{s.title}</h3>
             <span className="flex flex-wrap justify-end gap-1">
               {s.video ? <Pill tone="neutral">Video</Pill> : null}
               {s.community ? <Pill tone="neutral">Coach&apos;s corner</Pill> : null}
               <Pill tone="neutral">{s.ageGroups.length ? s.ageGroups.join(", ") : "Everyone"}</Pill>
             </span>
           </div>
-          {s.body ? <p className="text-[15px] leading-[22px] whitespace-pre-line">{s.body}</p> : null}
+          {s.body ? <p className="text-small leading-[22px] whitespace-pre-line">{s.body}</p> : null}
           {s.file ? <Attachment file={s.file} from="/coach/practice" /> : null}
           {s.video ? <VideoCard video={s.video} name={s.title} /> : null}
-          <div className="flex items-center justify-between gap-2 text-[13px] text-ink-muted">
+          <div className="flex items-center justify-between gap-2 text-meta text-ink-muted">
             <span>{[s.from, day.format(new Date(s.createdAt))].filter(Boolean).join(" · ")}</span>
             {user.staff.role === "admin" ? (
               <form action={setSheetCommunity}>
@@ -127,7 +127,7 @@ export default async function StaffPracticePage() {
                 <button
                   type="submit"
                   aria-label={s.community ? `Take ${s.title} out of Coach's corner` : `Put ${s.title} in Coach's corner`}
-                  className="min-h-12 px-1 text-[13px] font-bold text-grass-text underline"
+                  className="min-h-12 px-1 text-meta font-bold text-grass-text underline"
                 >
                   {s.community ? "Take out of Coach's corner" : "Put in Coach's corner"}
                 </button>

@@ -29,17 +29,17 @@ export default async function InviteConfirmPage({ searchParams }: PageProps<"/ad
       {count === 0 ? (
         <>
           <PageHeader back={{ href: back, label: "Families" }} title="No one to invite" />
-          <p className="text-[15px]">Every parent {scope} has already had an invite or signed in.</p>
+          <p className="text-small">Every parent {scope} has already had an invite or signed in.</p>
         </>
       ) : (
         <>
           <PageHeader back={{ href: back, label: "Families" }} title={whole ? `Email all ${parents} in the club?` : `Email ${parents} ${scope}?`} />
           {need || q ? (
-            <p className="text-[15px] text-ink-muted">
+            <p className="text-small text-ink-muted">
               The list: {[group, need ? NEEDS[need].label.toLowerCase() : null, q ? `matching “${q}”` : null].filter(Boolean).join(" · ")}
             </p>
           ) : null}
-          <p className="text-[15px]">
+          <p className="text-small">
             Each gets an email with a sign-in link that works for 7 days. Parents who have already had an invite or signed in aren&apos;t emailed
             again.
           </p>

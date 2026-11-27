@@ -25,7 +25,7 @@ export default async function WhoOpenedPage({ searchParams }: PageProps<"/admin/
   const who = await asUser(user.id, (tx) => loadOpeners(tx, group ? [group] : allowed, period));
   const href = (d: WhoPeriod, g: string | null) => `/admin/app-use/who?days=${d}${g ? `&group=${g}` : ""}`;
   const chip = (on: boolean) =>
-    `inline-flex min-h-12 items-center rounded-pill border px-4 text-[15px] font-bold ${on ? "border-grass bg-grass-tint text-grass-text" : "border-line bg-paper text-ink"}`;
+    `inline-flex min-h-12 items-center rounded-pill border px-4 text-small font-bold ${on ? "border-grass bg-grass-tint text-grass-text" : "border-line bg-paper text-ink"}`;
   const total = who.opened.length + who.notOpened.length + who.notOnApp.length;
 
   return (
@@ -58,14 +58,14 @@ export default async function WhoOpenedPage({ searchParams }: PageProps<"/admin/
       </Section>
 
       <Section title={`On the app, but didn't open it (${who.notOpened.length})`}>
-        {who.sinceStart ? <p className="mb-2 text-[14px] text-ink-muted">The app has kept a note of who opens it since 23 November, so this means not since then.</p> : null}
+        {who.sinceStart ? <p className="mb-2 text-small text-ink-muted">The app has kept a note of who opens it since 23 November, so this means not since then.</p> : null}
         <People list={who.notOpened} empty="Every parent on the app opened it." detail={(o) => (o.lastOpened ? `Last opened ${shortDay(o.lastOpened)}` : "No open on record yet")} />
       </Section>
 
       <Section title={`Not signed in to the app yet (${who.notOnApp.length})`}>
         <People list={who.notOnApp} empty="Every parent has signed in." detail={() => ""} />
         {who.notOnApp.length ? (
-          <p className="mt-2 text-[14px]">
+          <p className="mt-2 text-small">
             <Link href="/admin/parents" className="font-bold text-grass-text underline">
               Invite them
             </Link>
@@ -77,7 +77,7 @@ export default async function WhoOpenedPage({ searchParams }: PageProps<"/admin/
 }
 
 function People({ list, empty, detail }: { list: Opener[]; empty: string; detail: (o: Opener) => string }) {
-  if (list.length === 0) return <p className="text-[15px] text-ink-muted">{empty}</p>;
+  if (list.length === 0) return <p className="text-small text-ink-muted">{empty}</p>;
   return (
     <ul className="flex flex-col divide-y divide-line">
       {list.map((o) => (
@@ -85,8 +85,8 @@ function People({ list, empty, detail }: { list: Opener[]; empty: string; detail
           <Link href={`/admin/families?q=${encodeURIComponent(tidyName(o.name))}`} className="font-bold underline decoration-line underline-offset-2">
             {tidyName(o.name)}
           </Link>
-          <span className="text-[13px] text-ink-muted">{detail(o)}</span>
-          <span className="basis-full text-[14px] text-ink-muted">Parent of {o.children}</span>
+          <span className="text-meta text-ink-muted">{detail(o)}</span>
+          <span className="basis-full text-small text-ink-muted">Parent of {o.children}</span>
         </li>
       ))}
     </ul>

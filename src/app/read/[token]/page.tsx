@@ -43,7 +43,7 @@ export default async function ReadPage({ params, searchParams }: PageProps<"/rea
         </>
       }
     >
-      {busy ? <p className="mb-3 text-[15px] text-kit-orange">That didn&apos;t save. Try again in a few minutes.</p> : null}
+      {busy ? <p className="mb-3 text-small text-kit-orange">That didn&apos;t save. Try again in a few minutes.</p> : null}
       <form action={confirmRead}>
         <input type="hidden" name="token" value={token} />
         <button type="submit" className="btn-chunky btn-grass w-full">

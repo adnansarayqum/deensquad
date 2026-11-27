@@ -15,14 +15,14 @@ export default async function AssistantPage() {
       {aiConfigured() ? (
         <>
           <AssistantChat />
-          <p className="text-[13px] text-ink-muted">
+          <p className="text-meta text-ink-muted">
             Your questions and what it looks up (names, contact details, payments, sessions) go to Claude, by Anthropic, to answer. It never sees medical
             needs, wellbeing check-ins or sports hub codes.
           </p>
         </>
       ) : (
         <Section title="Not switched on yet">
-          <p className="text-[15px]">The assistant needs the club&apos;s Claude key, the same one that powers Tidy up with AI.</p>
+          <p className="text-small">The assistant needs the club&apos;s Claude key, the same one that powers Tidy up with AI.</p>
         </Section>
       )}
     </div>

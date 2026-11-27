@@ -11,10 +11,10 @@ function src(fileId: string, open: boolean): string {
  */
 export function SponsorLogo({ name, fileId, bg, size, open = false }: { name: string; fileId: string | null; bg?: string | null; size: number; open?: boolean }) {
   const box = { width: size, height: size };
-  const radius = size < 40 ? "rounded-lg" : "rounded-xl";
+  const radius = size < 40 ? "rounded-web" : "rounded-web";
   if (!fileId) {
     return (
-      <span aria-hidden style={box} className={`grid shrink-0 place-items-center ${radius} bg-fill font-bold text-ink ${size < 40 ? "text-[11px]" : "text-[15px]"}`}>
+      <span aria-hidden style={box} className={`grid shrink-0 place-items-center ${radius} bg-fill font-bold text-ink ${size < 40 ? "text-meta" : "text-small"}`}>
         {sponsorInitials(name)}
       </span>
     );
@@ -51,13 +51,13 @@ export function SponsorCard({
   const size = shape === "banner" ? "h-28 w-full" : "aspect-[3/2] w-full";
   if (!fileId) {
     return (
-      <span aria-hidden={decorative} className={`grid ${size} place-items-center rounded-xl bg-fill px-2 text-center text-[15px] font-bold text-ink`}>
+      <span aria-hidden={decorative} className={`grid ${size} place-items-center rounded-web bg-fill px-2 text-center text-small font-bold text-ink`}>
         {decorative ? sponsorInitials(name) : name}
       </span>
     );
   }
   return (
-    <span style={{ background: bg ?? "#ffffff" }} className={`relative block ${size} overflow-hidden rounded-xl ring-1 ring-line`}>
+    <span style={{ background: bg ?? "#ffffff" }} className={`relative block ${size} overflow-hidden rounded-web ring-1 ring-line`}>
       {/* Placed over the box, so the picture's own size never stretches it: the whole logo always fits inside. */}
       {/* eslint-disable-next-line @next/next/no-img-element -- the club's own stored file, already sized */}
       <img src={src(fileId, open)} alt={decorative ? "" : name} loading="lazy" className="absolute inset-0 h-full w-full object-contain p-3" />

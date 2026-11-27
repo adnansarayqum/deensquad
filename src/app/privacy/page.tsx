@@ -14,8 +14,8 @@ const UPDATED = "November 2026";
 function Part({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-[18px] font-bold">{title}</h2>
-      <div className="flex flex-col gap-2 text-[15px] leading-[23px]">{children}</div>
+      <h2 className="text-subhead font-bold">{title}</h2>
+      <div className="flex flex-col gap-2 text-small leading-[23px]">{children}</div>
     </section>
   );
 }

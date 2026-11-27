@@ -37,7 +37,7 @@ export default async function TripPage({ params }: PageProps<"/admin/sessions/[i
         subtitle={`${shortDay(session.startsAt)} · ${clock(session.startsAt)} · ${session.venue} · ${session.ageGroups.join(", ")}`}
       >
         {trip ? (
-          <p className="text-[15px] font-bold">
+          <p className="text-small font-bold">
             {yes.length} cleared to travel · {no.length} not going · {none.length} not answered
           </p>
         ) : null}
@@ -87,12 +87,12 @@ export default async function TripPage({ params }: PageProps<"/admin/sessions/[i
         </StatefulForm>
         {trip ? (
           <details className="mt-3 border-t border-line pt-1">
-            <summary className="inline-flex min-h-12 cursor-pointer items-center text-sm font-bold text-ink-muted underline underline-offset-4">Remove the trip</summary>
+            <summary className="inline-flex min-h-12 cursor-pointer items-center text-small font-bold text-ink-muted underline underline-offset-4">Remove the trip</summary>
             <form action={deleteTripAction} className="flex flex-col items-start gap-2">
               <input type="hidden" name="session" value={session.id} />
-              <p className="text-sm">Every parent&apos;s answer goes with it.</p>
-              <label className="flex min-h-12 items-center gap-2 text-sm font-bold">
-                <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--kit-orange)]" />
+              <p className="text-small">Every parent&apos;s answer goes with it.</p>
+              <label className="flex min-h-12 items-center gap-2 text-small font-bold">
+                <input type="checkbox" name="confirm" value="yes" required className="check check-warning" />
                 Yes, remove this trip
               </label>
               <button type="submit" className="btn-chunky btn-paper btn-small">
@@ -110,9 +110,9 @@ export default async function TripPage({ params }: PageProps<"/admin/sessions/[i
           <RosterList id="not-going" title={`Not going (${no.length})`} list={no} />
         </>
       ) : (
-        <p className="text-[15px] text-ink-muted">Once you save the details, each child&apos;s parents can say yes or no in the app.</p>
+        <p className="text-small text-ink-muted">Once you save the details, each child&apos;s parents can say yes or no in the app.</p>
       )}
-      {trip?.costPence ? <p className="text-sm text-ink-muted">Parents see the cost ({poundsFromPence(trip.costPence)}); collect it as you usually do.</p> : null}
+      {trip?.costPence ? <p className="text-small text-ink-muted">Parents see the cost ({poundsFromPence(trip.costPence)}); collect it as you usually do.</p> : null}
     </div>
   );
 }
@@ -122,7 +122,7 @@ function RosterList({ id, title, list }: { id: string; title: string; list: Rost
     <Section title={title}>
       <div id={id} className="-mt-3" />
       {list.length === 0 ? (
-        <p className="text-[15px] text-ink-muted">Nobody.</p>
+        <p className="text-small text-ink-muted">Nobody.</p>
       ) : (
         <ul className="flex flex-col">
           {list.map((c) => {
@@ -130,20 +130,20 @@ function RosterList({ id, title, list }: { id: string; title: string; list: Rost
             return (
               <li key={c.id} className="flex flex-col gap-0.5 border-t border-line py-2.5 first:border-t-0">
                 <span className="flex flex-wrap items-center gap-2">
-                  <span className="text-[15px] font-bold">
+                  <span className="text-small font-bold">
                     {c.firstName} {c.lastName}
                   </span>
                   <Pill tone="neutral">{c.group}</Pill>
                   {c.answer?.consent === true ? <Pill tone="done">Cleared</Pill> : null}
                 </span>
                 {c.answer ? (
-                  <span className="text-[13px] text-ink-muted">
+                  <span className="text-meta text-ink-muted">
                     {c.answer.answeredBy ? `Answered by ${c.answer.answeredBy}, ` : ""}
                     {shortDay(c.answer.answeredAt)}
                   </span>
                 ) : null}
-                {c.answer?.consent && phone ? <span className="text-[13px]">On the day: {phone}</span> : null}
-                {c.answer?.note ? <span className="text-[13px]">Note: {c.answer.note}</span> : null}
+                {c.answer?.consent && phone ? <span className="text-meta">On the day: {phone}</span> : null}
+                {c.answer?.note ? <span className="text-meta">Note: {c.answer.note}</span> : null}
               </li>
             );
           })}

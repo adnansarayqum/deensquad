@@ -19,7 +19,7 @@ export const viewport: Viewport = {
 export default async function ParentLayout({ children }: { children: ReactNode }) {
   const shell = await getShell();
   return (
-    <div className="relative mx-auto flex min-h-dvh max-w-[430px] flex-col bg-cream pb-[calc(var(--tab-bar-height,calc(80px+env(safe-area-inset-bottom)))+16px)]">
+    <div className="relative mx-auto flex min-h-dvh app-column flex-col bg-cream pb-[calc(var(--tab-bar-height,calc(80px+env(safe-area-inset-bottom)))+16px)]">
       <TopShortcuts unread={shell.messages} sessionToday={shell.sessionToday} hasChildren={shell.hasChildren} />
       {children}
       <InstallGate isStaff={shell.isStaff} />

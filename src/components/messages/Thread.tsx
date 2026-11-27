@@ -8,15 +8,15 @@ import { MediaGallery } from "@/components/media/MediaGallery";
  * A list, so screen readers hear how many messages there are; each says who and when before the text.
  */
 export function Thread({ messages, now, seenBy = null }: { messages: MessageView[]; now: Date; /** Parent side: a member of staff has read it since the last parent message. */ seenBy?: string | null }) {
-  if (messages.length === 0) return <p className="text-[15px] text-ink-muted">No messages yet.</p>;
+  if (messages.length === 0) return <p className="text-small text-ink-muted">No messages yet.</p>;
   return (
     <ol aria-label="Messages" className="flex flex-col gap-3">
       {messages.map((m, i) => (
         <li key={m.id} className={`flex flex-col gap-1 ${m.mine ? "items-end" : "items-start"}`}>
-          <p className="flex flex-wrap items-center gap-x-2 px-1 text-[13px] text-ink-muted">
+          <p className="flex flex-wrap items-center gap-x-2 px-1 text-meta text-ink-muted">
             <span className="font-bold text-ink">{m.mine ? "You" : m.authorName}</span>
             {m.mine ? null : (
-              <span className="rounded-pill border border-line bg-paper px-2 py-0.5 text-[13px] leading-5 font-bold">{m.authorKind === "staff" ? "Coach" : "Parent"}</span>
+              <span className="rounded-pill border border-line bg-paper px-2 py-0.5 text-meta leading-5 font-bold">{m.authorKind === "staff" ? "Coach" : "Parent"}</span>
             )}
             <span>{postedLabel(m.at, now)}</span>
           </p>
@@ -26,14 +26,14 @@ export function Thread({ messages, now, seenBy = null }: { messages: MessageView
             </div>
           ) : null}
           <p
-            className={`max-w-[85%] rounded-app border-2 px-3.5 py-2.5 text-[15px] leading-[22px] break-words whitespace-pre-line ${
+            className={`max-w-[85%] rounded-app border-2 px-3.5 py-2.5 text-small leading-[22px] break-words whitespace-pre-line ${
               m.mine ? "border-grass bg-grass-tint text-ink" : "border-line bg-paper text-ink"
             }`}
           >
             {m.body}
           </p>
           {/* Parents see that the club has read their latest message, so nobody has to type "got it" (messaging review, Nov 2026). */}
-          {seenBy && i === messages.length - 1 && m.authorKind === "parent" ? <p className="px-1 text-[13px] font-bold text-grass-text">Seen by {seenBy}</p> : null}
+          {seenBy && i === messages.length - 1 && m.authorKind === "parent" ? <p className="px-1 text-meta font-bold text-grass-text">Seen by {seenBy}</p> : null}
         </li>
       ))}
     </ol>
@@ -46,20 +46,20 @@ export function QuotedNews({ news, now }: { news: { title: string; body: string;
   const meta = [news.postedBy, postedLabel(news.postedAt, now)].filter(Boolean).join(" · ");
   return (
     <section aria-label="The message this is about" className="flex flex-col gap-1.5 rounded-app border border-line border-l-[6px] border-l-grass bg-paper px-3.5 py-3">
-      <p className="text-[13px] font-bold text-ink-muted">Replying to</p>
-      <h2 className="text-[16px] leading-[22px] font-bold">{news.title}</h2>
+      <p className="text-meta font-bold text-ink-muted">Replying to</p>
+      <h2 className="text-body leading-[22px] font-bold">{news.title}</h2>
       {long ? (
         <details className="group">
-          <summary className="cursor-pointer list-none text-[15px] leading-[22px]">
+          <summary className="cursor-pointer list-none text-small leading-[22px]">
             <span className="group-open:hidden">{news.body.slice(0, 220).trimEnd()}… </span>
             <span className="inline-flex min-h-12 items-center font-bold text-grass-text underline group-open:hidden">Show all</span>
           </summary>
-          <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
+          <p className="text-small leading-[22px] whitespace-pre-line">{news.body}</p>
         </details>
       ) : (
-        <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
+        <p className="text-small leading-[22px] whitespace-pre-line">{news.body}</p>
       )}
-      {meta ? <p className="text-[13px] text-ink-muted">{meta}</p> : null}
+      {meta ? <p className="text-meta text-ink-muted">{meta}</p> : null}
     </section>
   );
 }

@@ -21,11 +21,11 @@ export async function StaffShell({ user, children }: { user: CurrentUser & { sta
       <aside aria-label="Club admin menu" className="hidden w-60 shrink-0 bg-pitch text-on-pitch lg:block">
         <div className="sticky top-0 flex h-dvh flex-col gap-6 overflow-y-auto px-3 py-6">
           <Link href="/admin" className="flex items-center gap-2.5 px-3">
-            <Image src="/crest.png" alt="" width={40} height={40} className="rounded-[8px]" />
-            <span className="font-display text-[30px] leading-none tracking-[0.02em]">Club admin</span>
+            <Image src="/crest.png" alt="" width={40} height={40} className="rounded-web" />
+            <span className="font-display text-title leading-none tracking-[0.02em]">Club admin</span>
           </Link>
           <AdminNav isAdmin={isAdmin} layout="sidebar" unreadMessages={unreadMessages} />
-          <div className="mt-auto flex flex-col gap-1 border-t border-pitch-stripe pt-4 text-[15px] font-bold text-on-pitch-muted">
+          <div className="mt-auto flex flex-col gap-1 border-t border-pitch-stripe pt-4 text-small font-bold text-on-pitch-muted">
             {user.guardian ? (
               <Link href="/news" className="flex min-h-12 items-center rounded-dash px-3 hover:bg-pitch-deep">
                 Parent view
@@ -44,10 +44,10 @@ export async function StaffShell({ user, children }: { user: CurrentUser & { sta
         <header className="px-4 pt-[max(env(safe-area-inset-top),12px)] lg:hidden">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 pt-1">
             <Link href="/admin" className="flex min-h-12 items-center gap-2.5">
-              <Image src="/crest.png" alt="" width={32} height={32} className="rounded-[8px]" />
-              <span className="text-[15px] font-bold whitespace-nowrap text-ink-muted">Club admin</span>
+              <Image src="/crest.png" alt="" width={32} height={32} className="rounded-web" />
+              <span className="text-small font-bold whitespace-nowrap text-ink-muted">Club admin</span>
             </Link>
-            <div className="flex items-center gap-4 text-sm font-bold whitespace-nowrap text-grass-text">
+            <div className="flex items-center gap-4 text-small font-bold whitespace-nowrap text-grass-text">
               {user.guardian ? (
                 <Link href="/news" className="inline-flex min-h-12 items-center">
                   Parent view

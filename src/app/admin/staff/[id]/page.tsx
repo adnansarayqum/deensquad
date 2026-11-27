@@ -33,29 +33,29 @@ export default async function StaffChecksPage({ params }: PageProps<"/admin/staf
   return (
     <div className="flex flex-col gap-4 lg:max-w-3xl">
       <PageHeader back={{ href: "/admin/staff", label: "Staff" }} title={person.display_name} subtitle={`${person.role === "admin" ? "Admin" : "Coach"} · ${person.email}`}>
-        <p className="flex flex-wrap items-center gap-2 text-[15px]">
+        <p className="flex flex-wrap items-center gap-2 text-small">
           <ClearancePill state={summary.state} words={summary.words} />
         </p>
       </PageHeader>
 
       <Section title="DBS and certificates">
         {checks.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">Nothing recorded yet. Every coach and admin needs a DBS check.</p>
+          <p className="text-small text-ink-muted">Nothing recorded yet. Every coach and admin needs a DBS check.</p>
         ) : (
           <ul className="flex flex-col">
             {checks.map((c) => (
               <li key={c.id} className="border-t border-line py-3 first:border-t-0">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-[15px] font-bold">{checkName(c)}</p>
-                    <p className="text-[13px] text-ink-muted">
+                    <p className="text-small font-bold">{checkName(c)}</p>
+                    <p className="text-meta text-ink-muted">
                       {[c.issuedOn ? `Issued ${dayText(c.issuedOn)}` : null, expiryText(c, today), c.reference ? `Ref ${c.reference}` : null].filter(Boolean).join(" · ")}
                     </p>
                   </div>
                   <StatePill check={c} today={today} />
                 </div>
                 <details className="mt-1">
-                  <summary className="inline-flex min-h-12 cursor-pointer items-center text-sm font-bold text-grass-text underline underline-offset-4">
+                  <summary className="inline-flex min-h-12 cursor-pointer items-center text-small font-bold text-grass-text underline underline-offset-4">
                     Change<span className="sr-only"> {checkName(c)}</span>
                   </summary>
                   <div className="flex flex-col gap-3 pt-2">
@@ -63,8 +63,8 @@ export default async function StaffChecksPage({ params }: PageProps<"/admin/staf
                     <form action={deleteStaffCheckAction} className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
                       <input type="hidden" name="staff" value={person.id} />
                       <input type="hidden" name="check" value={c.id} />
-                      <label className="flex min-h-12 items-center gap-2 text-sm font-bold">
-                        <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--kit-orange)]" />
+                      <label className="flex min-h-12 items-center gap-2 text-small font-bold">
+                        <input type="checkbox" name="confirm" value="yes" required className="check check-warning" />
                         Yes, remove this
                       </label>
                       <button type="submit" className="btn-chunky btn-paper btn-small">

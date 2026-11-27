@@ -20,7 +20,7 @@ export function TeamFeePayForm() {
   if (state.stage === "done") {
     return (
       <div className="flex flex-col gap-4">
-        <p role="status" className="rounded-app bg-grass-tint px-4 py-3 text-[15px] leading-[22px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-4 py-3 text-small leading-[22px] font-bold text-grass-text">
           Done. {state.applied} {state.applied === 1 ? "plan" : "plans"} updated, {state.unchanged} already right.
           {state.skipped?.length ? ` ${state.skipped.length} ${state.skipped.length === 1 ? "row" : "rows"} skipped.` : ""}
         </p>
@@ -41,13 +41,13 @@ export function TeamFeePayForm() {
         <>
           <input type="hidden" name="csv" value={state.csv} />
           <section className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4" aria-labelledby="tfp-changes">
-            <h2 id="tfp-changes" className="text-[18px] font-bold">
+            <h2 id="tfp-changes" className="text-subhead font-bold">
               {changes.length === 0 ? "Nothing to change" : `${changes.length} ${changes.length === 1 ? "plan" : "plans"} will change`}
             </h2>
-            <p className="text-[15px]">{state.unchanged} already right in the app.</p>
+            <p className="text-small">{state.unchanged} already right in the app.</p>
             {changes.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table className="w-full text-left text-small">
                   <caption className="sr-only">Plans that will change</caption>
                   <thead className="text-ink-muted">
                     <tr>
@@ -67,7 +67,7 @@ export function TeamFeePayForm() {
                       <tr key={c.playerId} className="border-t border-line">
                         <th scope="row" className="py-1.5 pr-3 font-bold">
                           {c.child}
-                          {c.byEmail ? <span className="block text-[12px] font-normal text-ink-muted">Matched by parent email (row {c.line})</span> : null}
+                          {c.byEmail ? <span className="block text-meta font-normal text-ink-muted">Matched by parent email (row {c.line})</span> : null}
                         </th>
                         <td className="py-1.5 pr-3">{WORDS[c.from]}</td>
                         <td className="py-1.5 font-bold">{WORDS[c.to]}</td>
@@ -80,17 +80,17 @@ export function TeamFeePayForm() {
           </section>
           {skipped.length > 0 ? (
             <section className="flex flex-col gap-2 rounded-app border-2 border-crest-gold bg-gold-tint px-4 py-3" aria-labelledby="tfp-skipped">
-              <h2 id="tfp-skipped" className="text-[15px] font-bold">
+              <h2 id="tfp-skipped" className="text-small font-bold">
                 {skipped.length} {skipped.length === 1 ? "row" : "rows"} won&apos;t be used
               </h2>
-              <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+              <ul className="flex list-disc flex-col gap-1 pl-5 text-small">
                 {skipped.slice(0, 50).map((s) => (
                   <li key={`${s.line}-${s.who}`}>
                     Row {s.line}, {s.who}: {s.reason}
                   </li>
                 ))}
               </ul>
-              {skipped.length > 50 ? <p className="text-sm text-ink-muted">…and {skipped.length - 50} more.</p> : null}
+              {skipped.length > 50 ? <p className="text-small text-ink-muted">…and {skipped.length - 50} more.</p> : null}
             </section>
           ) : null}
         </>
@@ -104,13 +104,13 @@ export function TeamFeePayForm() {
             name="file"
             type="file"
             accept=".csv,text/csv"
-            className="block w-full rounded-[14px] border-2 border-dashed border-line bg-paper p-4 text-[15px] file:mr-3 file:rounded-xl file:border-0 file:bg-grass file:px-3 file:py-2 file:font-bold file:text-on-grass"
+            className="block w-full rounded-web border-2 border-dashed border-line bg-paper p-4 text-small file:mr-3 file:rounded-web file:border-0 file:bg-grass file:px-3 file:py-2 file:font-bold file:text-on-grass"
           />
         </div>
       )}
 
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px]">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small">
           {state.error}
         </p>
       ) : null}

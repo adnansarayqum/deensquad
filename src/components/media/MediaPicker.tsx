@@ -158,7 +158,7 @@ export function MediaPicker({ initial = [], hint }: { initial?: MediaItem[]; hin
       <legend className="field-label">
         Photos and videos <span className="font-normal text-ink-muted">(optional)</span>
       </legend>
-      {hint ? <p className="-mt-1 text-[13px] text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="-mt-1 text-meta text-ink-muted">{hint}</p> : null}
       {done.map((t) => (
         <input key={t.key} type="hidden" name="media" value={t.media!.id} />
       ))}
@@ -175,7 +175,7 @@ export function MediaPicker({ initial = [], hint }: { initial?: MediaItem[]; hin
                 />
               ) : null}
               {t.kind === "video" && t.status !== "error" ? (
-                <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-[13px] font-bold">
+                <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-meta font-bold">
                   <span className="flex h-9 w-9 items-center justify-center rounded-pill bg-pitch-deep text-on-pitch">
                     <Play aria-hidden size={16} />
                   </span>
@@ -191,7 +191,7 @@ export function MediaPicker({ initial = [], hint }: { initial?: MediaItem[]; hin
                 </span>
               ) : null}
               {t.status === "error" ? (
-                <span role="alert" className="absolute inset-0 overflow-y-auto bg-orange-tint p-2 pr-12 text-[13px] leading-[17px] text-ink">
+                <span role="alert" className="absolute inset-0 overflow-y-auto bg-orange-tint p-2 pr-12 text-meta leading-[17px] text-ink">
                   {t.error}
                 </span>
               ) : null}
@@ -210,14 +210,14 @@ export function MediaPicker({ initial = [], hint }: { initial?: MediaItem[]; hin
         </ul>
       ) : null}
       {problem ? (
-        <p data-media-problem tabIndex={-1} role="alert" className="rounded-app bg-orange-tint px-3.5 py-2.5 text-[15px] text-ink outline-none">
+        <p data-media-problem tabIndex={-1} role="alert" className="rounded-app bg-orange-tint px-3.5 py-2.5 text-small text-ink outline-none">
           {problem}
         </p>
       ) : null}
       {live ? (
         tiles.length < MAX_MEDIA_ITEMS ? (
           <label className="btn-chunky btn-paper relative cursor-pointer self-start has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-[var(--focus)]">
-            <ImagePlus aria-hidden size={18} />
+            <ImagePlus aria-hidden size={20} />
             {tiles.length ? "Add more" : "Add photos or videos"}
             <input
               type="file"
@@ -232,7 +232,7 @@ export function MediaPicker({ initial = [], hint }: { initial?: MediaItem[]; hin
           </label>
         ) : null
       ) : (
-        <input type="file" name="mediaFile" accept="image/*,video/*" multiple className="text-[15px]" aria-label="Photos and videos (up to 8 MB in all)" />
+        <input type="file" name="mediaFile" accept="image/*,video/*" multiple className="text-small" aria-label="Photos and videos (up to 8 MB in all)" />
       )}
     </fieldset>
   );

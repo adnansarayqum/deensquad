@@ -47,14 +47,14 @@ export function VideoCard({ video, name, title = "Practice video" }: { video: Yo
             <img src={thumbnailUrl(video)} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full object-cover" />
             <span aria-hidden className="absolute inset-0 grid place-items-center">
               <span className="grid h-16 w-16 place-items-center rounded-pill bg-paper text-ink transition-transform group-active:translate-y-0.5">
-                <Play size={30} fill="currentColor" className="translate-x-0.5" />
+                <Play size={32} fill="currentColor" className="translate-x-0.5" />
               </span>
             </span>
-            <span className="relative m-2.5 rounded-pill bg-paper px-3 py-1.5 text-[15px] font-bold text-ink">Watch video</span>
+            <span className="relative m-2.5 rounded-pill bg-paper px-3 py-1.5 text-small font-bold text-ink">Watch video</span>
           </a>
         )}
       </div>
-      <a href={watch} target="_blank" rel="noopener" className="inline-flex min-h-12 items-center self-start px-1 text-[15px] font-bold text-grass-text underline">
+      <a href={watch} target="_blank" rel="noopener" className="inline-flex min-h-12 items-center self-start px-1 text-small font-bold text-grass-text underline">
         Open in YouTube
       </a>
     </div>

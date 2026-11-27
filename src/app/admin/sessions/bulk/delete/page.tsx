@@ -45,8 +45,8 @@ export default async function BulkDelete({ searchParams }: PageProps<"/admin/ses
         <form action={bulkDeleteSessions} className="flex flex-col gap-4 rounded-app border border-line bg-paper p-4">
           <input type="hidden" name="confirm" value="yes" />
           <BulkSessionList sessions={sessions} ids={sessions.map((s) => s.id)} aside={(s) => (s.attended > 0 ? "Has check-ins: kept" : null)} />
-          <p className="text-[15px] font-bold">{lossesSentence(total, true)}</p>
-          <p className="text-[15px] text-ink-muted">To keep them on the calendar but tell parents they&apos;re off, cancel them instead.</p>
+          <p className="text-small font-bold">{lossesSentence(total, true)}</p>
+          <p className="text-small text-ink-muted">To keep them on the calendar but tell parents they&apos;re off, cancel them instead.</p>
           <div className="flex flex-wrap items-center gap-3">
             <button type="submit" className="btn-chunky btn-paper border-kit-orange">
               Delete {count(todo.length)}

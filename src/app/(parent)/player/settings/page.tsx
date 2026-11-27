@@ -13,7 +13,7 @@ import { loadFamilyParents } from "@/lib/parent/profile";
 
 export const metadata: Metadata = { title: "Settings" };
 
-const row = "flex min-h-[52px] items-center justify-between gap-3 border-b border-line px-3 text-[16px] font-bold last:border-b-0";
+const row = "flex min-h-[52px] items-center justify-between gap-3 border-b border-line px-3 text-body font-bold last:border-b-0";
 
 /**
  * Family → Settings (redesign brief, Oct 2026): the account things that used to sit at the foot of Family, so Family
@@ -30,7 +30,7 @@ export default async function SettingsPage() {
       <BackHeader back="/player" backLabel="Family" title="Settings" />
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">
         <section aria-labelledby="account" className="flex flex-col rounded-app bg-paper shadow-card p-1">
-          <h2 id="account" className="px-3 pt-3 pb-1 text-[18px] font-bold">
+          <h2 id="account" className="px-3 pt-3 pb-1 text-subhead font-bold">
             You and your family
           </h2>
           <Link href="/player/me" className={row}>
@@ -61,49 +61,49 @@ export default async function SettingsPage() {
         </section>
 
         <section aria-labelledby="notifications" className="flex flex-col gap-2">
-          <h2 id="notifications" className="text-[18px] font-bold">
+          <h2 id="notifications" className="text-subhead font-bold">
             Notifications
           </h2>
           <NotificationsCard publicKey={process.env.VAPID_PUBLIC_KEY ?? null} />
-          <p className="text-[15px] leading-[22px] text-ink-muted">
+          <p className="text-small leading-[22px] text-ink-muted">
             Club news that asks to be read is emailed too if you haven&apos;t read it after a day, or a few hours before your child&apos;s next session if that&apos;s sooner.
           </p>
         </section>
 
         <section aria-labelledby="appearance" className="flex flex-col gap-2">
-          <h2 id="appearance" className="text-[18px] font-bold">
+          <h2 id="appearance" className="text-subhead font-bold">
             Appearance
           </h2>
           <AppearanceChoice />
         </section>
 
         <section aria-labelledby="your-data" className="flex flex-col gap-2 rounded-app bg-paper shadow-card p-4">
-          <h2 id="your-data" className="text-[18px] font-bold">
+          <h2 id="your-data" className="text-subhead font-bold">
             Your data
           </h2>
-          <p className="text-[15px] leading-[22px]">See everything the app holds about you and your children, or ask the club to delete your account.</p>
+          <p className="text-small leading-[22px]">See everything the app holds about you and your children, or ask the club to delete your account.</p>
           <DownloadMyData />
           {deletionAsked ? (
-            <p role="status" className="text-[15px] leading-[22px]">
+            <p role="status" className="text-small leading-[22px]">
               You asked the club to delete your account on{" "}
               {new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "Europe/London" }).format(new Date(deletionAsked))}. An admin will be in
               touch.
             </p>
           ) : (
-            <Link href="/player/delete-account" className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-ink-muted underline">
+            <Link href="/player/delete-account" className="inline-flex min-h-12 items-center self-start text-small font-bold text-ink-muted underline">
               Ask the club to delete my account
             </Link>
           )}
         </section>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-[15px]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-small">
           <span className="min-w-0 text-ink-muted [overflow-wrap:anywhere]">Signed in as {user.email}</span>
           <a href="/privacy?from=/player/settings" className="inline-flex min-h-12 items-center font-bold text-ink-muted underline">
             Privacy
           </a>
           <SignOutForm>
             <button type="submit" className="inline-flex min-h-12 items-center gap-1.5 font-bold text-ink-muted">
-              <LogOut aria-hidden size={18} />
+              <LogOut aria-hidden size={20} />
               Sign out
             </button>
           </SignOutForm>

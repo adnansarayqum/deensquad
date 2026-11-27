@@ -15,9 +15,9 @@ export async function StaffSwitch({ on = "pitch", className = "", compact = fals
   if (compact) {
     return (
       <Link href={admin ? "/admin" : "/coach"} className={`-my-2 inline-flex min-h-12 items-center self-start ${className}`}>
-        <span className="inline-flex h-8 items-center gap-0.5 rounded-pill bg-pitch pr-2 pl-3 text-[13px] font-bold text-on-pitch">
+        <span className="inline-flex h-8 items-center gap-0.5 rounded-pill bg-pitch pr-2 pl-3 text-meta font-bold text-on-pitch">
           {label}
-          <ChevronRight aria-hidden size={15} />
+          <ChevronRight aria-hidden size={16} />
         </span>
       </Link>
     );
@@ -26,10 +26,10 @@ export async function StaffSwitch({ on = "pitch", className = "", compact = fals
     <div className={`relative flex justify-start pr-32 ${className}`}>
       <Link
         href={admin ? "/admin" : "/coach"}
-        className={`inline-flex min-h-12 items-center gap-1 rounded-pill px-4 text-[15px] font-bold ${on === "pitch" ? "bg-pitch text-on-pitch" : "bg-pitch text-on-pitch"}`}
+        className={`inline-flex min-h-12 items-center gap-1 rounded-pill px-4 text-small font-bold ${on === "pitch" ? "bg-pitch text-on-pitch" : "bg-pitch text-on-pitch"}`}
       >
         {admin ? "Club admin" : "Coach tools"}
-        <ChevronRight aria-hidden size={18} />
+        <ChevronRight aria-hidden size={20} />
       </Link>
     </div>
   );

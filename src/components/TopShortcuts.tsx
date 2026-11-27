@@ -9,7 +9,7 @@ const ROUND = "relative grid h-12 w-12 place-items-center rounded-pill";
  * parents guessing (UX review, Oct 2026). The whole column is the link, so the tap area is larger than the circle. */
 const ITEM = "flex w-[66px] flex-col items-center gap-0.5 text-ink max-[374px]:w-12";
 // On the narrowest phones (and at large zoom) the words would run into the screen titles, so the buttons stand alone there.
-const LABEL = "text-[13px] leading-4 font-bold whitespace-nowrap text-ink-muted max-[374px]:hidden";
+const LABEL = "text-meta leading-4 font-bold whitespace-nowrap text-ink-muted max-[374px]:hidden";
 
 /**
  * The shortcuts at the top right of every parent screen (the layout places them, so headers keep that corner free):
@@ -34,7 +34,7 @@ export function TopShortcuts({ unread, sessionToday, hasChildren }: { unread: nu
           className={ITEM}
         >
           <span className={`${ROUND} ${sessionToday ? "bg-floodlight text-on-gold shadow-card" : "bg-paper shadow-card"}`}>
-            <QrCode aria-hidden size={22} />
+            <QrCode aria-hidden size={24} />
           </span>
           <span aria-hidden className={LABEL}>
             QR codes
@@ -44,9 +44,9 @@ export function TopShortcuts({ unread, sessionToday, hasChildren }: { unread: nu
       {showMessages ? (
         <Link href={`/messages?from=${from}`} aria-label={unread > 0 ? `Messages, ${unread} new` : "Messages"} className={ITEM}>
           <span className={`${ROUND} bg-paper shadow-card`}>
-            <Mail aria-hidden size={22} />
+            <Mail aria-hidden size={24} />
             {unread > 0 ? (
-              <span aria-hidden className="absolute -top-0.5 -right-0.5 grid h-5 min-w-5 place-items-center rounded-pill bg-kit-orange px-1 text-[13px] font-bold text-on-orange">
+              <span aria-hidden className="absolute -top-0.5 -right-0.5 grid h-5 min-w-5 place-items-center rounded-pill bg-kit-orange px-1 text-meta font-bold text-on-orange">
                 {unread}
               </span>
             ) : null}

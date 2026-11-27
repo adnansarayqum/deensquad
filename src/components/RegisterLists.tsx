@@ -58,9 +58,9 @@ export function MedicalLink({ id, name, from }: { id: string; name: string; from
       href={`/coach/child/${id}/medical?from=${encodeURIComponent(from)}`}
       aria-label={`Medical info for ${name}`}
       // The pill stays small so the row keeps its height; the tap area reaches 48px tall around it.
-      className="relative inline-flex items-center gap-1 rounded-pill bg-pitch px-2.5 py-0.5 text-[13px] font-bold text-on-pitch underline-offset-2 after:absolute after:-inset-x-1 after:-inset-y-3 after:content-[''] hover:underline"
+      className="relative inline-flex items-center gap-1 rounded-pill bg-pitch px-2.5 py-0.5 text-meta font-bold text-on-pitch underline-offset-2 after:absolute after:-inset-x-1 after:-inset-y-3 after:content-[''] hover:underline"
     >
-      <HeartPulse aria-hidden size={13} />
+      <HeartPulse aria-hidden size={16} />
       Medical info
     </Link>
   );
@@ -113,7 +113,7 @@ export function RegisterLists({
   /** The child's name, with "Medical info" beside it when there is some (under it on a phone, so Mark here stays on the right). */
   const title = (r: GateRow) => (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <span className="text-[15px] font-bold">{name(r)}</span>
+      <span className="text-small font-bold">{name(r)}</span>
       {/* Medical first: on register night it matters more than how the family pays. */}
       {r.medical ? <MedicalLink id={r.id} name={name(r)} from={from} /> : null}
       <PayingPill paying={r.paying} />
@@ -129,7 +129,7 @@ export function RegisterLists({
         <label htmlFor={id} className="sr-only">
           Find a child
         </label>
-        <Search aria-hidden size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-ink-muted" />
+        <Search aria-hidden size={20} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-ink-muted" />
         <input
           id={id}
           type="search"
@@ -144,24 +144,24 @@ export function RegisterLists({
         />
       </div>
       {searching && n.length + a.length + h.length === 0 ? (
-        <p role="status" className="text-[15px] text-ink-muted">
+        <p role="status" className="text-small text-ink-muted">
           No child on this register matches &ldquo;{query.trim()}&rdquo;.
         </p>
       ) : null}
 
       {notHere.length > 0 ? (
         <section aria-labelledby="register-not-here" className="flex flex-col gap-2.5">
-          <h3 id="register-not-here" className="mt-1 text-[13px] font-bold text-ink-muted">
+          <h3 id="register-not-here" className="mt-1 text-meta font-bold text-ink-muted">
             Not here yet ({notHere.length})
           </h3>
           <ul className="flex flex-col gap-2.5">
             {n.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-paper py-2.5 pr-3 pl-3">
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-app border border-line bg-paper py-2.5 pr-3 pl-3">
                 <span className="flex min-w-0 flex-1 basis-40 items-center gap-3">
                   {face(r)}
                   <span className="flex flex-col items-start gap-1">
                     {title(r)}
-                    <span className="text-[13px] text-ink-muted">{r.answer === "coming" ? "Said they're coming" : "No answer"}</span>
+                    <span className="text-meta text-ink-muted">{r.answer === "coming" ? "Said they're coming" : "No answer"}</span>
                     {group(r)}
                   </span>
                 </span>
@@ -171,18 +171,18 @@ export function RegisterLists({
           </ul>
         </section>
       ) : (
-        <p className="mt-1 text-[13px] font-bold text-ink-muted">Everyone expected is here</p>
+        <p className="mt-1 text-meta font-bold text-ink-muted">Everyone expected is here</p>
       )}
 
       {away.length > 0 ? (
         <section aria-labelledby="register-away" className="mt-2 flex flex-col gap-2.5">
-          <h3 id="register-away" className="text-[13px] font-bold text-ink-muted">
+          <h3 id="register-away" className="text-meta font-bold text-ink-muted">
             Said not coming ({away.length})
           </h3>
-          <p className="text-[13px] text-ink-muted">If one of them turns up, mark them here.</p>
+          <p className="text-meta text-ink-muted">If one of them turns up, mark them here.</p>
           <ul className="flex flex-col gap-2.5">
             {a.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-cream py-2.5 pr-3 pl-3">
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-app border border-line bg-cream py-2.5 pr-3 pl-3">
                 <span className="flex min-w-0 flex-1 basis-40 items-center gap-3">
                   {face(r)}
                   <span className="flex flex-col items-start gap-1">
@@ -191,7 +191,7 @@ export function RegisterLists({
                       <Pill tone="neutral">Said not coming</Pill>
                       {group(r)}
                     </span>
-                    {r.awayReason ? <span className="text-[13px] leading-[18px] break-words text-ink-muted">Reason: {r.awayReason}</span> : null}
+                    {r.awayReason ? <span className="text-meta leading-[18px] break-words text-ink-muted">Reason: {r.awayReason}</span> : null}
                   </span>
                 </span>
                 <CheckInButton sessionId={sessionId} playerId={r.id} name={name(r)} disabled={!open} />
@@ -204,20 +204,20 @@ export function RegisterLists({
       {children}
 
       <section aria-labelledby="register-here" className="mt-2 flex flex-col gap-2.5">
-        <h3 id="register-here" className="text-[13px] font-bold text-ink-muted">
+        <h3 id="register-here" className="text-meta font-bold text-ink-muted">
           Here ({here.length})
         </h3>
         {here.length === 0 ? (
-          <p className="text-[13px] text-ink-muted">{open ? "Nobody checked in yet. Scan a QR code or tap Mark here." : "Nobody checked in yet."}</p>
+          <p className="text-meta text-ink-muted">{open ? "Nobody checked in yet. Scan a QR code or tap Mark here." : "Nobody checked in yet."}</p>
         ) : (
           <ul className="flex flex-col gap-2.5">
             {h.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-grass-tint py-2 pr-2 pl-3">
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-app bg-grass-tint py-2 pr-2 pl-3">
                 <span className="flex min-w-0 flex-1 items-center gap-3">
                   {face(r)}
                   <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
                     {title(r)}
-                    <span className="text-[13px] text-ink-muted">{r.checkedIn}</span>
+                    <span className="text-meta text-ink-muted">{r.checkedIn}</span>
                     {r.paid ? <GatePayButton sessionId={sessionId} id={r.id} name={name(r)} fee={fee} paid={r.paid} disabled={!open} /> : null}
                     {showGroup || r.flags.length ? (
                       <span className="flex flex-wrap gap-1">

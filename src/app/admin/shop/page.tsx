@@ -45,7 +45,7 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
       {cancelled ? <Notice>{emailConfigured() ? "Order cancelled. The parent will be emailed." : "Order cancelled."}</Notice> : null}
 
       {paymentOptions().length < 2 ? (
-        <p className="rounded-app bg-gold-tint px-3.5 py-3 text-[15px] leading-[22px]">
+        <p className="rounded-app bg-gold-tint px-3.5 py-3 text-small leading-[22px]">
           {paymentOptions().length === 0
             ? "Parents can't check out yet. Add the club's bank details or SumUp key to open the shop."
             : paymentOptions()[0] === "card"
@@ -55,10 +55,10 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
       ) : null}
 
       {!past && supplier.length > 0 ? (
-        <Section title="To order from the supplier" aside={<span className="text-sm text-ink-muted">Not yet marked as ordered</span>}>
-          <table className="w-full text-[15px]">
+        <Section title="To order from the supplier" aside={<span className="text-small text-ink-muted">Not yet marked as ordered</span>}>
+          <table className="w-full text-small">
             <thead>
-              <tr className="text-left text-[13px] font-bold text-ink-muted">
+              <tr className="text-left text-meta font-bold text-ink-muted">
                 <th className="py-1 font-normal">Item</th>
                 <th className="py-1 font-normal">Size</th>
                 <th className="py-1 text-right font-normal">Qty</th>
@@ -88,20 +88,20 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
         </Link>
       </nav>
 
-      {orders.length === 0 ? <p className="text-[15px] text-ink-muted">No orders here.</p> : null}
+      {orders.length === 0 ? <p className="text-small text-ink-muted">No orders here.</p> : null}
       <ul className="grid gap-2 lg:grid-cols-2 lg:items-start">
         {orders.map((o) => (
           <li key={o.id} className="flex flex-col gap-2.5 rounded-app border border-line bg-paper px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[15px] font-bold">
+              <span className="text-small font-bold">
                 {o.parentName ?? "Parent removed"} <span className="font-normal text-ink-muted">· {o.reference}</span>
               </span>
               <span className="flex items-center gap-2">
-                <span className="text-[13px] text-ink-muted">{date.format(new Date(o.createdAt))}</span>
+                <span className="text-meta text-ink-muted">{date.format(new Date(o.createdAt))}</span>
                 <OrderStatusPill status={o.status} payBy={o.payBy} />
               </span>
             </div>
-            <ul className="flex flex-col gap-0.5 text-[15px]">
+            <ul className="flex flex-col gap-0.5 text-small">
               {o.items.map((i) => (
                 <li key={i.id} className="flex justify-between gap-3">
                   <span>
@@ -115,7 +115,7 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
               ))}
             </ul>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[15px] font-bold tabular-nums">
+              <span className="text-small font-bold tabular-nums">
                 {formatPence(o.totalPence)}{" "}
                 <span className="font-normal text-ink-muted">
                   {o.paidAt ? `paid by ${o.payBy === "bank" ? "transfer" : "card"}` : o.payBy === "bank" ? `transfer, ref ${o.reference}` : "card, not paid"}
@@ -129,7 +129,7 @@ export default async function AdminShopPage({ searchParams }: PageProps<"/admin/
                       key={step.status}
                       href={`/admin/shop/orders/${o.id}/cancel`}
                       aria-label={`Cancel order ${o.reference}`}
-                      className="inline-flex min-h-11 items-center px-2 text-sm font-bold text-ink-muted underline"
+                      className="inline-flex min-h-11 items-center px-2 text-small font-bold text-ink-muted underline"
                     >
                       {step.label}
                     </Link>

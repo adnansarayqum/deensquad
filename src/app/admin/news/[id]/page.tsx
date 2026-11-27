@@ -53,9 +53,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
       ? nudgeWords(Number(flags.nudged) || 0, Number(flags.emailed) || 0, Number(flags.missed) || 0)
       : flags.nudge === "wait"
         ? "A reminder went less than an hour ago. Try again later."
-        : flags.nudge === "quiet"
-          ? "Reminders aren't sent between 9pm and 8am. Try again after 8am."
-          : flags.nudge === "off"
+        : flags.nudge === "off"
             ? "App notifications aren't set up yet."
             : flags.nudge === "nobody"
               ? "Everyone has read it."
@@ -88,11 +86,11 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
       ) : null}
 
       <Section title="Message">
-        {news.chosen && news.chosen.length > 2 ? <p className="text-sm text-ink-muted">For {news.chosen.join(", ")}</p> : null}
-        <p className="text-[15px] leading-[22px] whitespace-pre-line">{news.body}</p>
+        {news.chosen && news.chosen.length > 2 ? <p className="text-small text-ink-muted">For {news.chosen.join(", ")}</p> : null}
+        <p className="text-small leading-[22px] whitespace-pre-line">{news.body}</p>
         <MediaGallery items={media} label={news.title} />
         {likedBy.length ? (
-          <p className="flex items-start gap-1.5 text-sm">
+          <p className="flex items-start gap-1.5 text-small">
             <Heart aria-hidden size={16} className="mt-0.5 shrink-0 fill-current text-grass-text" />
             <span>
               <span className="font-bold">{likedBy.length === 1 ? "1 like" : `${likedBy.length} likes`}</span>
@@ -100,11 +98,11 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
             </span>
           </p>
         ) : null}
-        {news.requiresAck ? <ReadBar read={news.readCount} total={news.audienceCount} groupsOnly={news.groupsOnly} /> : <p className="text-sm text-ink-muted">No read receipts asked for.</p>}
+        {news.requiresAck ? <ReadBar read={news.readCount} total={news.audienceCount} groupsOnly={news.groupsOnly} /> : <p className="text-small text-ink-muted">No read receipts asked for.</p>}
         {/* The three numbers that make up the total, side by side (admin UX review, Oct 2026: 50 read, 39 to remind and 8
             whose partner read it looked like a mismatch when the 8 were only at the foot of the list). */}
         {news.requiresAck && unread.length ? (
-          <p className="text-sm text-ink-muted">
+          <p className="text-small text-ink-muted">
             <a href="#read" className="font-bold text-grass-text underline">{news.readCount} read</a> ·{" "}
             <a href="#not-read" className="font-bold text-grass-text underline">{chase.length} still to read</a>
             {covered.length ? ` · ${covered.length} whose child's other parent has read it` : ""}
@@ -113,7 +111,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
         {/* Seen (migration 0055): parents who had it on screen, tapped or not, so "not read" can be told apart from
             "never opened". Counted from 23 Nov 2026. */}
         {news.requiresAck && news.audienceCount ? (
-          <p className="text-sm">
+          <p className="text-small">
             <b className="tabular-nums">{news.seenCount}</b> of {news.audienceCount} have seen it
             {chase.some((u) => u.seenAt) ? (
               <span className="text-ink-muted"> · {chase.filter((u) => u.seenAt).length} seen it but haven&apos;t tapped</span>
@@ -128,7 +126,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
 
       {news.requiresAck ? (
         <Section id="not-read" title={chase.length ? `Not read yet (${chase.length})` : news.audienceCount === 0 ? "No parents to read it yet" : "Everyone has read it"}>
-          {nudgeNotice ? <Notice>{nudgeNotice}</Notice> : null}
+          {nudgeNotice ? <Notice tone={typeof flags.nudged === "string" ? "done" : "action"}>{nudgeNotice}</Notice> : null}
           {chase.length ? (
             // Coach Javed's request: buzz everyone still to read in one tap, rather than one WhatsApp at a time.
             <form action={remindUnreadNow} className="flex flex-col gap-1.5 rounded-app bg-fill px-3.5 py-3">
@@ -141,24 +139,24 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
                 <BellRing aria-hidden size={16} />
                 Send a reminder now
               </button>
-              <p className="text-sm text-ink-muted">
+              <p className="text-small text-ink-muted">
                 {withDevices === 0
                   ? "Nobody here has notifications on, so they get the reminder email now (once per post each)."
                   : withDevices === chase.length
                     ? `An app notification to ${chase.length === 1 ? "this parent" : `all ${chase.length}`}.`
                     : `An app notification to the ${withDevices} of ${chase.length} with notifications on. The others get the reminder email now (once per post each).`}{" "}
-                At most once an hour, never 9pm to 8am.
+                At most once an hour.
                 {nudged ? ` Last sent ${postedLabel(nudged.at, new Date())} to ${nudged.count}.` : ""}
               </p>
             </form>
           ) : null}
-          {chase.length ? <p className="text-sm text-ink-muted">Or WhatsApp one parent: it opens with a short reminder ready to send. Each reminder is logged.</p> : null}
+          {chase.length ? <p className="text-small text-ink-muted">Or WhatsApp one parent: it opens with a short reminder ready to send. Each reminder is logged.</p> : null}
           <ul className="flex flex-col gap-2">
             {chase.map((u) => (
               <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2 first:border-0 first:pt-0">
                 <span className="flex flex-col">
-                  <span className="text-[15px] font-bold">{u.name}</span>
-                  <span className="text-[13px] text-ink-muted">
+                  <span className="text-small font-bold">{u.name}</span>
+                  <span className="text-meta text-ink-muted">
                     {u.children} · {!u.inApp ? "hasn't signed in yet" : u.seenAt ? `seen ${postedLabel(u.seenAt, new Date())}, not tapped` : u.lastOpened ? `not seen · last opened the app ${shortDay(u.lastOpened)}` : "not seen"}
                   </span>
                   {u.chased.length ? (
@@ -193,7 +191,7 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
             ))}
           </ul>
           {covered.length ? (
-            <p className="text-sm text-ink-muted">
+            <p className="text-small text-ink-muted">
               The other parent has read it for: {covered.map((u) => `${u.name} (${u.children})`).join(", ")}.
             </p>
           ) : null}
@@ -207,29 +205,29 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
               {readers.map((r) => (
                 <li key={r.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-t border-line pt-2 first:border-0 first:pt-0">
                   <span className="flex flex-col">
-                    <span className="text-[15px] font-bold">{r.name}</span>
-                    <span className="text-[13px] text-ink-muted">
+                    <span className="text-small font-bold">{r.name}</span>
+                    <span className="text-meta text-ink-muted">
                       {r.children}
                       {r.fromNotification ? " · from the notification" : r.fromEmail ? " · from the email" : ""}
                     </span>
                   </span>
-                  <span className="inline-flex items-center gap-1 text-[13px] text-ink-muted">
-                    <Check aria-hidden size={14} strokeWidth={3} className="text-grass-text" />
+                  <span className="inline-flex items-center gap-1 text-meta text-ink-muted">
+                    <Check aria-hidden size={16} strokeWidth={3} className="text-grass-text" />
                     {postedLabel(r.readAt, new Date())}
                   </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-ink-muted">Nobody has read it yet.</p>
+            <p className="text-small text-ink-muted">Nobody has read it yet.</p>
           )}
         </Section>
       ) : null}
 
       {tally ? (
-        <Section title="Quick answers" aside={<span className="text-sm text-ink-muted">{answers!.children.length - tally.none.length} of {answers!.children.length} answered</span>}>
-          <p className="text-sm text-ink-muted">One answer per child; either parent can give or change it. Answering counts as reading it.</p>
-          <ul className="flex flex-col gap-2 text-[15px]">
+        <Section title="Quick answers" aside={<span className="text-small text-ink-muted">{answers!.children.length - tally.none.length} of {answers!.children.length} answered</span>}>
+          <p className="text-small text-ink-muted">One answer per child; either parent can give or change it. Answering counts as reading it.</p>
+          <ul className="flex flex-col gap-2 text-small">
             {tally.tally.map((t) => (
               <li key={t.answer} className="border-t border-line pt-2 first:border-0 first:pt-0">
                 <b>
@@ -248,13 +246,13 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
 
       {answers?.allowReplies || replies > 0 ? (
         <Section title="Replies">
-          <p className="text-[15px]">
+          <p className="text-small">
             {replies === 0
               ? "No replies yet. Each parent's reply starts a private conversation in Messages."
               : `${replies} ${replies === 1 ? "conversation" : "conversations"} with families about this message.`}
           </p>
           {replies > 0 ? (
-            <Link href={`/admin/messages?about=${news.id}`} className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-grass-text underline underline-offset-4">
+            <Link href={`/admin/messages?about=${news.id}`} className="inline-flex min-h-12 items-center self-start text-small font-bold text-grass-text underline underline-offset-4">
               See the replies
             </Link>
           ) : null}
@@ -263,11 +261,11 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
 
       {news.requiresAck ? (
         <Section title="Automatic reminders">
-          <p className="text-sm text-ink-muted">
-            Only parents who haven&apos;t read it (and whose child&apos;s other parent hasn&apos;t either) are reminded. Nothing is sent between 9pm and 8am.
+          <p className="text-small text-ink-muted">
+            Only parents who haven&apos;t read it (and whose child&apos;s other parent hasn&apos;t either) are reminded. Nothing is sent automatically between 9pm and 8am.
             Children of parents who still haven&apos;t read it after two days are flagged on the coach&apos;s register.
           </p>
-          <ol className="flex flex-col gap-1.5 text-[15px]">
+          <ol className="flex flex-col gap-1.5 text-small">
             {steps.map((s) => (
               <li key={s.label} className="flex flex-wrap items-center justify-between gap-2">
                 <span>
@@ -282,11 +280,11 @@ export default async function NewsDetailPage({ params, searchParams }: PageProps
 
       {canDelete ? (
         <details className="rounded-app border border-line bg-paper px-4 py-3">
-          <summary className="cursor-pointer text-[15px] font-bold">Delete this message</summary>
+          <summary className="cursor-pointer text-small font-bold">Delete this message</summary>
           <form action={deleteNews} className="mt-3 flex flex-col gap-3">
             <input type="hidden" name="id" value={news.id} />
-            <label className="flex min-h-11 items-center gap-3 text-[15px] font-bold">
-              <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--kit-orange)]" />
+            <label className="flex min-h-11 items-center gap-3 text-small font-bold">
+              <input type="checkbox" name="confirm" value="yes" required className="check check-warning" />
               Yes, delete it for every parent
             </label>
             <button type="submit" className="btn-chunky btn-paper self-start">

@@ -56,7 +56,7 @@ export default async function NotificationsPage({ searchParams }: PageProps<"/ad
         </nav>
       </PageHeader>
 
-      <p className="text-[16px] leading-6">
+      <p className="text-body leading-6">
         {show === "off"
           ? "These parents are on the app but haven't turned notifications on, so they only see club news when they open it. Reminders reach them by email instead."
           : show === "on"
@@ -75,15 +75,15 @@ export default async function NotificationsPage({ searchParams }: PageProps<"/ad
       {show === "off" && isAdmin && lists.off.length > 0 ? (
         // One email to everyone listed here, with the steps for iPhone and Android. Asks first.
         <section id="help" className="flex flex-col gap-2 rounded-app border border-line bg-paper p-4">
-          <h2 className="text-[18px] font-bold">Email them how to turn notifications on</h2>
-          <p className="text-[15px] text-ink-muted">
+          <h2 className="text-subhead font-bold">Email them how to turn notifications on</h2>
+          <p className="text-small text-ink-muted">
             Steps for iPhone and Android, and a link to the app.
             {recent > 0 ? ` ${recent} emailed in the last ${HELP_GAP_DAYS} days will be skipped.` : ` Each parent gets it at most once a week.`}
           </p>
           {emailable.length > 0 ? (
             <form action={emailNotificationHelp} className="flex flex-col gap-2">
-              <label className="flex min-h-12 items-center gap-3 text-[15px]">
-                <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 shrink-0 accent-[var(--grass)]" />
+              <label className="flex min-h-12 items-center gap-3 text-small">
+                <input type="checkbox" name="confirm" value="yes" required className="check" />
                 Yes, email {emailable.length === 1 ? "this parent" : `these ${emailable.length} parents`}
               </label>
               <button type="submit" className="btn-chunky btn-grass btn-small self-start">
@@ -92,14 +92,14 @@ export default async function NotificationsPage({ searchParams }: PageProps<"/ad
               </button>
             </form>
           ) : (
-            <p className="text-[15px]">Everyone here has been emailed in the last week, or has no email address.</p>
+            <p className="text-small">Everyone here has been emailed in the last week, or has no email address.</p>
           )}
         </section>
       ) : null}
 
       <section aria-label={`Parents: ${SHOWS.find((s) => s.key === show)!.label}`} className="rounded-app border border-line bg-paper p-4">
         {list.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">Nobody.</p>
+          <p className="text-small text-ink-muted">Nobody.</p>
         ) : (
           <ul className="flex flex-col">
             {list.map((p) => (
@@ -116,8 +116,8 @@ function ParentRow({ p, showHelp }: { p: NotificationParent; showHelp: boolean }
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line py-3 first:border-t-0">
       <div className="min-w-0 flex-1">
-        <p className="text-[17px] font-bold break-words">{tidyName(p.name)}</p>
-        <p className="flex flex-wrap items-center gap-x-1.5 text-[15px]">
+        <p className="text-subhead font-bold break-words">{tidyName(p.name)}</p>
+        <p className="flex flex-wrap items-center gap-x-1.5 text-small">
           <span>Parent of</span>
           {p.children.map((c, i) => (
             <span key={c.id} className="inline-flex items-center">
@@ -128,7 +128,7 @@ function ParentRow({ p, showHelp }: { p: NotificationParent; showHelp: boolean }
             </span>
           ))}
         </p>
-        <p className="text-[13px] break-all text-ink-muted">
+        <p className="text-meta break-all text-ink-muted">
           {[p.email ?? "No email on file", p.phone].filter(Boolean).join(" · ")}
           {showHelp && p.helpSentAt ? ` · help email sent ${shortDay(p.helpSentAt)}` : ""}
         </p>

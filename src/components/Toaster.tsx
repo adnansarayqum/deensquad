@@ -32,7 +32,7 @@ export function Toaster() {
   return (
     <div
       aria-hidden
-      className={`pointer-events-none fixed inset-x-0 z-30 mx-auto flex max-w-[430px] justify-center px-4 transition-all duration-300 ease-out ${
+      className={`pointer-events-none fixed inset-x-0 z-30 mx-auto flex app-column justify-center px-4 transition-all duration-300 ease-out ${
         shown ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
       }`}
       style={{ bottom: "calc(var(--tab-bar-height, 84px) + 12px)" }}
@@ -41,10 +41,10 @@ export function Toaster() {
         <span
           key={message.key}
           data-toast
-          className="inline-flex max-w-full items-center gap-2 rounded-pill bg-pitch px-4 py-2.5 text-[15px] font-bold text-on-pitch shadow-card"
+          className="inline-flex max-w-full items-center gap-2 rounded-pill bg-pitch px-4 py-2.5 text-small font-bold text-on-pitch shadow-card"
         >
           <span className="grid h-5 w-5 shrink-0 place-items-center rounded-pill bg-grass text-on-grass animate-pop">
-            <Check size={13} strokeWidth={3.5} />
+            <Check size={16} strokeWidth={3} />
           </span>
           <span className="truncate">{message.text}</span>
         </span>

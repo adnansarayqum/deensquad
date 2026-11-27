@@ -13,7 +13,7 @@ export function CheckoutForm({ options, total }: { options: ("card" | "bank")[];
   const [state, action, pending] = useActionState<CheckoutState, FormData>(checkout, {});
   const [payBy, setPayBy] = useState(options[0]);
   if (options.length === 0) {
-    return <p className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px]">The club is still setting up payments. Please check back soon.</p>;
+    return <p className="rounded-app bg-orange-tint px-3.5 py-3 text-small">The club is still setting up payments. Please check back soon.</p>;
   }
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -30,19 +30,19 @@ export function CheckoutForm({ options, total }: { options: ("card" | "bank")[];
               value={o}
               checked={payBy === o}
               onChange={() => setPayBy(o)}
-              className="h-5 w-5 accent-[var(--grass)]"
+              className="check"
             />
             <span className="flex flex-col">
-              <span className="text-base font-bold">{LABELS[o].title}</span>
-              <span className="text-[15px] text-ink-muted">{LABELS[o].detail}</span>
+              <span className="text-body font-bold">{LABELS[o].title}</span>
+              <span className="text-small text-ink-muted">{LABELS[o].detail}</span>
             </span>
           </label>
         ))}
       </fieldset>
       {/* The owner's figure: kit is ready about a week after it's paid for, handed out at Friday training. */}
-      <p className="text-[15px] leading-[22px] text-ink-muted">Kit is usually ready about a week after you pay. We&apos;ll email you, and you collect it at Friday training.</p>
+      <p className="text-small leading-[22px] text-ink-muted">Kit is usually ready about a week after you pay. We&apos;ll email you, and you collect it at Friday training.</p>
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
           {state.error}
         </p>
       ) : null}

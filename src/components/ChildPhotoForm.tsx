@@ -54,7 +54,7 @@ export function ChildPhotoForm({ child }: { child: { id: string; firstName: stri
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-4">
         <ChildAvatar photoId={child.photoId} firstName={child.firstName} lastName={child.lastName} size={96} />
-        <p className="text-[15px] leading-[22px]">{has ? `This is the photo the coaches see beside ${child.firstName}'s name.` : `No photo of ${child.firstName} yet.`}</p>
+        <p className="text-small leading-[22px]">{has ? `This is the photo the coaches see beside ${child.firstName}'s name.` : `No photo of ${child.firstName} yet.`}</p>
       </div>
       {/* A new key after each change clears the chosen file. */}
       <form key={child.photoId ?? "none"} action={save} onSubmit={onSubmit} className="flex flex-col gap-2" noValidate>
@@ -79,7 +79,7 @@ export function ChildPhotoForm({ child }: { child: { id: string; firstName: stri
             <label htmlFor="photo" className="field-label">
               {has ? "Change photo" : "Add photo"}
             </label>
-            <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/*" className="field py-3 text-[15px]" />
+            <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/*" className="field py-3 text-small" />
             <button type="submit" className="btn-chunky btn-grass">
               Save photo
             </button>
@@ -104,11 +104,11 @@ export function ChildPhotoForm({ child }: { child: { id: string; firstName: stri
         </form>
       ) : null}
       {error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] leading-[22px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small leading-[22px] text-ink">
           {error}
         </p>
       ) : last.saved && !busy ? (
-        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           {last.saved === "added" ? "Photo saved. The coaches will see it on the register." : "Photo removed."}
         </p>
       ) : null}

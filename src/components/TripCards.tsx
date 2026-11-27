@@ -20,27 +20,27 @@ export function TripCards({ trips, from }: { trips: FamilyTrip[]; from: string }
         const href = `/trip/${t.session.id}?from=${encodeURIComponent(from)}`;
         return waiting.length > 0 ? (
           <Link key={t.session.id} href={href} className="flex items-center gap-3 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 py-3 text-ink transition-transform active:scale-[0.99]">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-kit-orange text-on-orange">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-web bg-kit-orange text-on-orange">
               <Bus aria-hidden size={24} />
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[15px] font-bold">
+              <span className="text-small font-bold">
                 Away trip: {t.session.title}, {shortDay(t.session.startsAt)}
               </span>
-              <span className="text-[13px] break-words">Say if {orNames(waiting.map((c) => c.firstName))} can go</span>
+              <span className="text-meta break-words">Say if {orNames(waiting.map((c) => c.firstName))} can go</span>
             </span>
             <ChevronRight aria-hidden size={20} className="shrink-0" />
           </Link>
         ) : (
           <Link key={t.session.id} href={href} className="flex items-center gap-3 rounded-app bg-paper shadow-card px-3.5 py-3 text-ink">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-grass-tint text-grass-text">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-web bg-grass-tint text-grass-text">
               <Bus aria-hidden size={24} />
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[15px] font-bold">
+              <span className="text-small font-bold">
                 Away trip: {t.session.title}, {shortDay(t.session.startsAt)}
               </span>
-              <span className="text-[13px] break-words text-ink-muted">{going.length ? `${joinNames(going.map((c) => c.firstName))} going` : "Not going"} · details and changes</span>
+              <span className="text-meta break-words text-ink-muted">{going.length ? `${joinNames(going.map((c) => c.firstName))} going` : "Not going"} · details and changes</span>
             </span>
             <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
           </Link>

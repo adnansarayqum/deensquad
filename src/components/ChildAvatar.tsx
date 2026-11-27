@@ -17,7 +17,7 @@ export function ChildAvatar({
   size: 40 | 72 | 96;
   className?: string;
 }) {
-  const box = { 40: "h-10 w-10 text-[15px]", 72: "h-[72px] w-[72px] text-[26px]", 96: "h-24 w-24 text-[32px]" }[size];
+  const box = { 40: "h-10 w-10 text-small", 72: "h-[72px] w-[72px] text-[26px]", 96: "h-24 w-24 text-[32px]" }[size];
   if (photoId) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- served by the app's own /api/files with row level security

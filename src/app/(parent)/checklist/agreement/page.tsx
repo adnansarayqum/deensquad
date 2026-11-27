@@ -15,8 +15,8 @@ const date = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", y
 function Section({ heading, points }: { heading: string; points: readonly string[] }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-[18px] font-bold">{heading}</h2>
-      <ul className="flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-[22px]">
+      <h2 className="text-subhead font-bold">{heading}</h2>
+      <ul className="flex list-disc flex-col gap-1.5 pl-5 text-small leading-[22px]">
         {points.map((p) => (
           <li key={p}>{p}</li>
         ))}
@@ -45,16 +45,16 @@ export default async function AgreementPage({ searchParams }: PageProps<"/checkl
       </BackHeader>
       <main className="flex flex-col gap-4 px-4 pt-4 pb-4">
         <Card className="flex flex-col gap-5 p-4">
-          <p className="text-[15px] leading-[22px]">{CONTRACT.intro}</p>
+          <p className="text-small leading-[22px]">{CONTRACT.intro}</p>
           <Section {...CONTRACT.player} />
           <Section {...CONTRACT.parent} />
           <Section {...CONTRACT.academy} />
-          <p className="text-[15px] text-ink-muted">
+          <p className="text-small text-ink-muted">
             Signed for the academy by {CONTRACT.academy.signedBy}. {CONTRACT.validity}
           </p>
         </Card>
         {signed ? (
-          <p role="status" className="flex items-center gap-3 rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+          <p role="status" className="flex items-center gap-3 rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
             <Check aria-hidden size={20} strokeWidth={3} />
             Signed by {signed.parent_name} on {date.format(new Date(signed.signed_at))}.
           </p>

@@ -66,7 +66,7 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
         <div className="lg:max-w-3xl">
           <StatefulForm action={addSessions} submitLabel="Add sessions" savedMessage="Sessions added. Parents can answer straight away.">
             <SessionFields repeat groups={staffGroups(user.staff)} defaults={{ date: firstDate, start: "18:30", end: "20:00", venue: lastVenue ?? "", groups: defaultSessionGroups(staffGroups(user.staff)) }} />
-            <p className="text-[13px] text-ink-muted">Dates that already have a session at the same time for one of these groups are skipped.</p>
+            <p className="text-meta text-ink-muted">Dates that already have a session at the same time for one of these groups are skipped.</p>
           </StatefulForm>
         </div>
       </FoldCard>
@@ -74,16 +74,16 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
       <section aria-labelledby="coming-up" className="rounded-app border border-line bg-paper p-4">
         {/* One plain form: the rows' tick boxes and the bulk bar's buttons (openBulk), so bulk changes work without JavaScript. */}
         <form action={openBulk} className="flex flex-col gap-3">
-          <h2 id="coming-up" className="text-[18px] font-bold">
+          <h2 id="coming-up" className="text-subhead font-bold">
             Coming up
           </h2>
           {upcoming.length === 0 ? (
-            <p className="text-[15px] text-ink-muted">None yet. Add the term&apos;s sessions and parents can answer straight away.</p>
+            <p className="text-small text-ink-muted">None yet. Add the term&apos;s sessions and parents can answer straight away.</p>
           ) : (
             <SessionTable sessions={shown} mine={mine} editable selectable={selectable} />
           )}
           {showAll ? null : (
-            <Link href="/admin/sessions?all=1#coming-up" className="inline-flex min-h-12 items-center self-start text-sm font-bold text-grass-text underline">
+            <Link href="/admin/sessions?all=1#coming-up" className="inline-flex min-h-12 items-center self-start text-small font-bold text-grass-text underline">
               Show all {upcoming.length} upcoming
             </Link>
           )}
@@ -92,7 +92,7 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
       </section>
       {recent.length ? (
         <details className="rounded-app border border-line bg-paper px-4">
-          <summary className="flex min-h-12 cursor-pointer items-center text-[18px] font-bold">Recent sessions ({recent.length})</summary>
+          <summary className="flex min-h-12 cursor-pointer items-center text-subhead font-bold">Recent sessions ({recent.length})</summary>
           <div className="pb-4">
             <SessionTable sessions={recent} mine={mine} />
           </div>
@@ -114,7 +114,7 @@ export default async function SessionsPage({ searchParams }: PageProps<"/admin/s
 }
 
 /** A row's action: a text link, 48px tall to tap, so four fit on one line of a table. */
-const action = "inline-flex min-h-12 items-center px-2 text-sm font-bold text-grass-text underline underline-offset-4";
+const action = "inline-flex min-h-12 items-center px-2 text-small font-bold text-grass-text underline underline-offset-4";
 
 /**
  * One row per session: a table at lg, compact cards on phones. The same actions in both. `selectable` adds a tick
@@ -135,7 +135,7 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
     <span className="flex flex-wrap items-center gap-1.5">
       {s.cancelled ? <Pill tone="action">Cancelled</Pill> : null}
       {s.picked ? <Pill tone="neutral">Squad: {s.picked} picked</Pill> : null}
-      {!s.cancelled && !s.picked ? <span className="text-[13px] text-ink-muted">{editable ? "On" : "Held"}</span> : null}
+      {!s.cancelled && !s.picked ? <span className="text-meta text-ink-muted">{editable ? "On" : "Held"}</span> : null}
     </span>
   );
   const actions = (s: AdminSession) =>
@@ -185,7 +185,7 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
       {/* Phones: one compact card per session. */}
       <ul className="flex flex-col gap-2 lg:hidden">
         {selectable ? (
-          <li className="flex items-center gap-2 text-sm font-bold">
+          <li className="flex items-center gap-2 text-small font-bold">
             <SelectAll label="Select all shown" />
             <span aria-hidden>Select all shown</span>
           </li>
@@ -195,14 +195,14 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
             {selectable ? <div className="-ml-2 shrink-0 self-start">{select(s)}</div> : null}
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[15px] font-bold">
+                <span className="text-small font-bold">
                   {shortDay(s.startsAt)} · {s.title} {clock(s.startsAt)}–{clock(s.endsAt)}
                 </span>
-                <span className="text-[13px] text-ink-muted">
+                <span className="text-meta text-ink-muted">
                   {s.ageGroups.join(", ")} · {s.venue}
                 </span>
-                <span className="text-[13px]">{answers(s)}</span>
-                {s.cancelReason ? <span className="text-[13px]">Reason: {s.cancelReason}</span> : null}
+                <span className="text-meta">{answers(s)}</span>
+                {s.cancelReason ? <span className="text-meta">Reason: {s.cancelReason}</span> : null}
               </div>
               {s.cancelled || s.picked ? status(s) : null}
               {actions(s)}
@@ -213,10 +213,10 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
 
       {/* Computers: a table, one row per session. */}
       <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full text-[14px]">
+        <table className="w-full text-small">
           <caption className="sr-only">{editable ? "Sessions coming up" : "Recent sessions"}</caption>
           <thead>
-            <tr className="border-b border-line text-left text-[13px] font-bold text-ink-muted">
+            <tr className="border-b border-line text-left text-meta font-bold text-ink-muted">
               {selectable ? (
                 <th scope="col" className="w-12 px-0 py-1 font-bold">
                   <SelectAll label="Select all" />
@@ -257,7 +257,7 @@ function SessionTable({ sessions, mine, editable = false, selectable = false }: 
                 </th>
                 <td className="px-2 py-2">
                   <span className="font-bold">{s.title}</span>
-                  {s.cancelReason ? <span className="block text-[13px] text-ink-muted">Reason: {s.cancelReason}</span> : null}
+                  {s.cancelReason ? <span className="block text-meta text-ink-muted">Reason: {s.cancelReason}</span> : null}
                 </td>
                 <td className="px-2 py-2 whitespace-nowrap tabular-nums">
                   {clock(s.startsAt)}–{clock(s.endsAt)}

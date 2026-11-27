@@ -32,17 +32,17 @@ export default async function ContactsPage({ searchParams }: PageProps<"/checkli
             </Eyebrow>
             {contacts.map((c) => (
               <Card key={c.id} className="flex items-center gap-3 px-3.5 py-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-grass-tint text-grass-text">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-web bg-grass-tint text-grass-text">
                   <Phone aria-hidden size={20} />
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-[15px] font-bold">{c.name}</span>
-                  <span className="text-[13px] text-ink-muted">
+                  <span className="text-small font-bold">{c.name}</span>
+                  <span className="text-meta text-ink-muted">
                     {c.phone}
                     {c.relationship ? ` · ${c.relationship}` : ""}
                   </span>
                   {c.isParent ? (
-                    <span className="text-[13px] font-bold text-kit-orange">A parent&apos;s number, so it doesn&apos;t count. Add someone else.</span>
+                    <span className="text-meta font-bold text-kit-orange">A parent&apos;s number, so it doesn&apos;t count. Add someone else.</span>
                   ) : null}
                 </span>
                 <form action={removeEmergencyContact}>
@@ -50,7 +50,7 @@ export default async function ContactsPage({ searchParams }: PageProps<"/checkli
                   <button
                     type="submit"
                     aria-label={`Remove ${c.name}`}
-                    className="grid h-11 w-11 place-items-center rounded-xl text-ink-muted hover:bg-orange-tint hover:text-kit-orange"
+                    className="grid h-11 w-11 place-items-center rounded-web text-ink-muted hover:bg-orange-tint hover:text-kit-orange"
                   >
                     <Trash2 aria-hidden size={20} />
                   </button>
@@ -61,7 +61,7 @@ export default async function ContactsPage({ searchParams }: PageProps<"/checkli
         ) : null}
 
         <section aria-labelledby="add" className="flex flex-col gap-3">
-          <h2 id="add" className="text-base font-bold">
+          <h2 id="add" className="text-body font-bold">
             {contacts.length ? "Add another contact" : "Add a contact"}
           </h2>
           <ContactForm child={{ id: child.id, firstName: child.firstName }} siblings={siblings} />

@@ -38,7 +38,7 @@ export default async function FamilyChatPage({ params }: PageProps<"/admin/messa
   return (
     <div className="flex flex-col gap-3 lg:max-w-3xl">
       <PageHeader back={{ href: "/admin/messages", label: "Inbox" }} title={familyName(chat.parents.map((p) => p.name), chat.children[0])}>
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px]">
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-small">
           {chat.children.map((c) => (
             <Link key={c.id} href={`/admin/families/${c.id}`} className="inline-flex min-h-12 items-center gap-1.5 font-bold text-grass-text underline underline-offset-4">
               {c.firstName} {c.lastName}
@@ -46,7 +46,7 @@ export default async function FamilyChatPage({ params }: PageProps<"/admin/messa
             </Link>
           ))}
         </p>
-        <p className="text-[13px] text-ink-muted">
+        <p className="text-meta text-ink-muted">
           {chat.parents.length ? "Every parent of these children sees this chat" : "No parent is linked yet, so nobody will see a message"}, as do their coaches and the club&apos;s admins. Messages
           can&apos;t be edited or deleted.
         </p>
@@ -54,7 +54,7 @@ export default async function FamilyChatPage({ params }: PageProps<"/admin/messa
       {chat.messages.length ? (
         <Chat chat={chat} now={now} side="staff" />
       ) : (
-        <p className="rounded-app border border-line bg-paper p-4 text-[15px] text-ink-muted">No messages with this family yet. Write the first one below.</p>
+        <p className="rounded-app border border-line bg-paper p-4 text-small text-ink-muted">No messages with this family yet. Write the first one below.</p>
       )}
       <ChatLive count={chat.messages.length} lastId={chat.messages.at(-1)?.id ?? null} />
       <ChatComposer

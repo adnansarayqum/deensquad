@@ -28,7 +28,7 @@ export function ViewerBack({ href }: { href: string }) {
           router.back();
         }
       }}
-      className="inline-flex min-h-12 items-center gap-1 pr-3 text-[15px] font-bold text-on-pitch"
+      className="inline-flex min-h-12 items-center gap-1 pr-3 text-small font-bold text-on-pitch"
     >
       <ChevronLeft aria-hidden size={20} />
       Back

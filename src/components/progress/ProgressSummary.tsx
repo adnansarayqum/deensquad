@@ -18,14 +18,14 @@ export function ProgressSummaryView({ firstName, progress, by = false }: { first
         <Pentagon current={current} previous={previous} label={summaryLabel(firstName, current, previous)} />
         <PentagonKey hasPrevious={previous !== null} />
       </div>
-      <ul className="flex flex-col divide-y divide-line text-[15px] leading-[22px]">
+      <ul className="flex flex-col divide-y divide-line text-small leading-[22px]">
         {CATEGORIES.map((c) => (
           <li key={c.key} className="py-1.5">
             {categoryLine(c.label, current[c.key], previous ? previous[c.key] : null)}
           </li>
         ))}
       </ul>
-      <p className="text-[15px] text-ink-muted">
+      <p className="text-small text-ink-muted">
         {ratedLine(progress.count, progress.since)}
         {by && last ? ` · last ${last}${progress.last?.by ? ` by ${progress.last.by}` : ""}` : ""}
       </p>

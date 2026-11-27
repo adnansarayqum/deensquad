@@ -175,26 +175,26 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
       onKeyDown={trapFocus}
       className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-cream text-ink"
     >
-      <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col">
+      <div className="mx-auto flex min-h-dvh app-column flex-col">
         <AppHeader>
           <div className="flex items-center gap-3">
-            <Image src="/crest.png" alt="" width={52} height={52} className="rounded-[12px]" priority />
-            <p className="text-[15px] leading-5 font-bold text-floodlight">The Deen Squad Football Academy</p>
+            <Image src="/crest.png" alt="" width={52} height={52} className="rounded-web" priority />
+            <p className="text-small leading-5 font-bold text-floodlight">The Deen Squad Football Academy</p>
           </div>
           <h2 id="install-gate-title" ref={heading} tabIndex={-1} className="font-display text-[44px] leading-[0.95] tracking-[0.02em] shadow-none outline-none">
             Add Deen Squad to your home screen
           </h2>
-          <p className="text-[15px] leading-[22px] text-on-pitch-muted">Get club news notifications, and open it in one tap like an app.</p>
+          <p className="text-small leading-[22px] text-on-pitch-muted">Get club news notifications, and open it in one tap like an app.</p>
         </AppHeader>
 
         <div className="flex flex-1 flex-col gap-4 px-4 pt-5 pb-4">
           {installed ? (
-            <p role="status" className="flex items-center gap-2.5 rounded-app bg-grass-tint px-4 py-3.5 text-[16px] font-bold text-grass-text">
-              <Check aria-hidden size={22} className="shrink-0" />
+            <p role="status" className="flex items-center gap-2.5 rounded-app bg-grass-tint px-4 py-3.5 text-body font-bold text-grass-text">
+              <Check aria-hidden size={24} className="shrink-0" />
               Done. Open Deen Squad from your home screen.
             </p>
           ) : view.mode === "android-prompt" ? (
-            <p className="text-[16px] leading-6">Tap <b>Install the app</b> below, then <b>Install</b>.</p>
+            <p className="text-body leading-6">Tap <b>Install the app</b> below, then <b>Install</b>.</p>
           ) : view.mode === "android-manual" || view.mode === "android-inapp" ? (
             <Steps>
               {view.mode === "android-inapp" ? (
@@ -238,16 +238,16 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
               <Step n={first + 1} icon={<SquarePlus aria-hidden size={24} />}>
                 Choose <b>Add to Home Screen</b>.
               </Step>
-              <Step n={first + 2} icon={<span className="text-[15px] font-bold">Add</span>}>
+              <Step n={first + 2} icon={<span className="text-small font-bold">Add</span>}>
                 Tap <b>Add</b>, then open Deen Squad from your home screen.
               </Step>
             </Steps>
           )}
 
           {ios ? (
-            <p className="text-[15px] leading-5 text-ink-muted">You&apos;ll sign in once more in the app. We&apos;ll email you a 6-digit code, it takes 10 seconds.</p>
+            <p className="text-small leading-5 text-ink-muted">You&apos;ll sign in once more in the app. We&apos;ll email you a 6-digit code, it takes 10 seconds.</p>
           ) : view.mode === "android-inapp" ? (
-            <p className="text-[15px] leading-5 text-ink-muted">You&apos;ll sign in once more in Chrome. We&apos;ll email you a 6-digit code, it takes 10 seconds.</p>
+            <p className="text-small leading-5 text-ink-muted">You&apos;ll sign in once more in Chrome. We&apos;ll email you a 6-digit code, it takes 10 seconds.</p>
           ) : null}
         </div>
 
@@ -263,7 +263,7 @@ export function InstallGate({ isStaff }: { isStaff: boolean }) {
               Not now
             </button>
           ) : (
-            <button type="button" onClick={dismiss} className="min-h-12 px-4 text-[15px] text-ink-muted underline underline-offset-2">
+            <button type="button" onClick={dismiss} className="min-h-12 px-4 text-small text-ink-muted underline underline-offset-2">
               Continue in browser
             </button>
           )}
@@ -280,14 +280,14 @@ function Steps({ children }: { children: ReactNode }) {
 function Step({ n, icon, extra, children }: { n: number; icon: ReactNode; extra?: ReactNode; children: ReactNode }) {
   return (
     <li className="flex items-start gap-3 rounded-app border border-line bg-paper p-4">
-      <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-pill bg-pitch text-[16px] font-bold text-on-pitch">
+      <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-pill bg-pitch text-body font-bold text-on-pitch">
         {n}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-3 pt-1.5">
-        <p className="text-[16px] leading-6">{children}</p>
+        <p className="text-body leading-6">{children}</p>
         {extra}
       </div>
-      <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-cream text-ink">
+      <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-web bg-cream text-ink">
         {icon}
       </span>
     </li>
@@ -309,7 +309,7 @@ function InAppMenuIcons({ android = false }: { android?: boolean }) {
   return (
     <span className="flex flex-col items-center">
       {android ? <EllipsisVertical aria-hidden size={20} /> : <Ellipsis aria-hidden size={20} />}
-      {android ? <Ellipsis aria-hidden size={18} /> : <Compass aria-hidden size={18} />}
+      {android ? <Ellipsis aria-hidden size={20} /> : <Compass aria-hidden size={20} />}
     </span>
   );
 }
@@ -354,13 +354,13 @@ function CopyLink() {
   return (
     <div className="flex flex-col gap-2">
       <button ref={button} type="button" onClick={copy} className="btn-chunky btn-paper btn-small min-h-12 self-start">
-        {state === "copied" ? <Check aria-hidden size={18} /> : <Copy aria-hidden size={18} />}
+        {state === "copied" ? <Check aria-hidden size={20} /> : <Copy aria-hidden size={20} />}
         {state === "copied" ? "Link copied" : "Copy link"}
       </button>
       {state === "manual" ? (
-        <label className="flex flex-col gap-1 text-[15px] text-ink-muted">
+        <label className="flex flex-col gap-1 text-small text-ink-muted">
           Press and hold the link to copy it
-          <input ref={field} readOnly value={href} className="field text-[15px]" onFocus={(e) => e.currentTarget.select()} />
+          <input ref={field} readOnly value={href} className="field text-small" onFocus={(e) => e.currentTarget.select()} />
         </label>
       ) : null}
       <p role="status" className="sr-only">

@@ -28,15 +28,15 @@ export default async function DeleteSessionPage({ params }: PageProps<"/admin/se
     <div className="flex flex-col gap-4 lg:max-w-3xl">
       <SessionHeader session={session} heading={`Delete ${session.title}?`} />
       {losses.attended > 0 ? (
-        <p className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px]">
+        <p className="rounded-app bg-orange-tint px-3.5 py-3 text-small">
           Children have been checked in to this session, so it can&apos;t be deleted. Cancel it instead.
         </p>
       ) : (
         <form action={deleteSession} className="flex flex-col gap-4 rounded-app border border-line bg-paper p-4">
           <input type="hidden" name="id" value={session.id} />
           <input type="hidden" name="confirm" value="yes" />
-          <p className="text-[15px] font-bold">{lossesSentence(losses)}</p>
-          <p className="text-[15px] text-ink-muted">To keep it on the calendar but tell parents it&apos;s off, cancel it instead.</p>
+          <p className="text-small font-bold">{lossesSentence(losses)}</p>
+          <p className="text-small text-ink-muted">To keep it on the calendar but tell parents it&apos;s off, cancel it instead.</p>
           <div className="flex flex-wrap items-center gap-3">
             <button type="submit" className="btn-chunky btn-paper border-kit-orange">
               Delete session

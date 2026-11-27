@@ -39,19 +39,19 @@ export function ContactForm({ child, siblings }: { child: Kid; siblings: Kid[] }
           <legend className="field-label">Also add for</legend>
           {siblings.map((s) => (
             <label key={s.id} className="flex min-h-12 items-center gap-3 rounded-app bg-paper shadow-card px-3.5">
-              <input type="checkbox" name="child" value={s.id} defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
-              <span className="text-base font-bold">{s.firstName}</span>
+              <input type="checkbox" name="child" value={s.id} defaultChecked className="check" />
+              <span className="text-body font-bold">{s.firstName}</span>
             </label>
           ))}
         </fieldset>
       ) : null}
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
           {state.error}
         </p>
       ) : null}
       {state.saved && !pending ? (
-        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+        <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
           Contact saved.
         </p>
       ) : null}

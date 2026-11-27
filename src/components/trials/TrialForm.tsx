@@ -26,7 +26,7 @@ export function TrialForm({ groups, sessions, fee, privacyHref }: { groups: { va
   return (
     <form action={run} onSubmit={keep} className="flex flex-col gap-4">
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1 text-base font-bold">Your child</legend>
+        <legend className="mb-1 text-body font-bold">Your child</legend>
         <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
           {field("childFirstName", "First name", { required: true, autoComplete: "off" })}
           {field("childLastName", "Last name", { required: true, autoComplete: "off" })}
@@ -50,19 +50,19 @@ export function TrialForm({ groups, sessions, fee, privacyHref }: { groups: { va
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-base font-bold">Which session</legend>
+        <legend className="mb-1 text-body font-bold">Which session</legend>
         {shown.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">{group ? `No ${group} sessions in the next four weeks. Contact the club.` : "No sessions to book in the next four weeks."}</p>
+          <p className="text-small text-ink-muted">{group ? `No ${group} sessions in the next four weeks. Contact the club.` : "No sessions to book in the next four weeks."}</p>
         ) : (
           shown.map((s) => (
             <label
               key={s.id}
               className="flex min-h-12 cursor-pointer items-start gap-3 rounded-app border border-line bg-paper p-3 has-[:checked]:border-grass has-[:checked]:bg-grass-tint"
             >
-              <input type="radio" name="session" value={s.id} required className="mt-1 h-5 w-5 shrink-0 accent-[var(--grass)]" />
+              <input type="radio" name="session" value={s.id} required className="mt-1 check" />
               <span className="flex flex-col">
-                <span className="text-[15px] font-bold">{s.label}</span>
-                <span className="text-sm text-ink-muted">{s.detail}</span>
+                <span className="text-small font-bold">{s.label}</span>
+                <span className="text-small text-ink-muted">{s.detail}</span>
               </span>
             </label>
           ))
@@ -70,7 +70,7 @@ export function TrialForm({ groups, sessions, fee, privacyHref }: { groups: { va
       </fieldset>
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1 text-base font-bold">You</legend>
+        <legend className="mb-1 text-body font-bold">You</legend>
         <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
           {field("parentFirstName", "First name", { required: true, autoComplete: "given-name" })}
           {field("parentLastName", "Last name", { required: true, autoComplete: "family-name" })}
@@ -85,11 +85,11 @@ export function TrialForm({ groups, sessions, fee, privacyHref }: { groups: { va
         <input id={`${id}-website`} name="website" tabIndex={-1} autoComplete="off" />
       </div>
 
-      <p className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] leading-[22px] text-ink">
+      <p className="rounded-app bg-grass-tint px-3.5 py-3 text-small leading-[22px] text-ink">
         A trial session costs <b>{fee}</b>, paid by card or cash at the gate on the day.
       </p>
-      <label className="flex min-h-12 items-start gap-3 text-[15px]">
-        <input type="checkbox" name="privacy" value="yes" required className="mt-1 h-5 w-5 shrink-0 accent-[var(--grass)]" />
+      <label className="flex min-h-12 items-start gap-3 text-small">
+        <input type="checkbox" name="privacy" value="yes" required className="mt-1 check" />
         <span>
           I&apos;ve read{" "}
           <a href={privacyHref} target="_blank" rel="noopener noreferrer" className="font-bold text-grass-text underline">
@@ -98,12 +98,12 @@ export function TrialForm({ groups, sessions, fee, privacyHref }: { groups: { va
           .
         </span>
       </label>
-      <label className="flex min-h-12 items-start gap-3 text-[15px]">
-        <input type="checkbox" name="noFollowUp" value="yes" className="mt-1 h-5 w-5 shrink-0 accent-[var(--grass)]" />
+      <label className="flex min-h-12 items-start gap-3 text-small">
+        <input type="checkbox" name="noFollowUp" value="yes" className="mt-1 check" />
         <span>Don&apos;t email me after the trial about joining the club.</span>
       </label>
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small text-ink">
           {state.error}
         </p>
       ) : null}

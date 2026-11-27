@@ -73,11 +73,11 @@ export function AvailabilityPicker({
   // Several children on one screen: a segmented switch per child (one track, the chosen side lifted onto white), so
   // an answer reads as a setting, not as a big button still to press. One child: two large cards, as before.
   const seg = (on: boolean, tone: "grass" | "ink") =>
-    `flex min-h-12 min-w-0 flex-1 basis-28 items-center justify-center gap-1.5 rounded-[11px] px-2 text-[15px] font-bold transition-[background-color,color,box-shadow] duration-200 ${
+    `flex min-h-12 min-w-0 flex-1 basis-28 items-center justify-center gap-1.5 rounded-web px-2 text-small font-bold transition-[background-color,color,box-shadow] duration-200 ${
       on ? `bg-paper shadow-card ${tone === "grass" ? "text-grass-text" : "text-ink"}` : "text-ink-muted"
     }`;
   const card = (on: boolean, tone: "grass" | "ink") =>
-    `flex min-h-[96px] min-w-0 flex-1 basis-32 flex-col items-center justify-center gap-1.5 rounded-[18px] border-[1.5px] px-2 text-center text-[18px] font-bold transition-transform active:scale-[0.99] ${
+    `flex min-h-[96px] min-w-0 flex-1 basis-32 flex-col items-center justify-center gap-1.5 rounded-app border-[1.5px] px-2 text-center text-subhead font-bold transition-transform active:scale-[0.99] ${
       on ? (tone === "grass" ? "border-grass bg-grass-tint text-grass-text" : "border-ink bg-fill text-ink") : "border-line bg-paper text-ink"
     }`;
   const icon = compact ? 18 : 28;
@@ -85,7 +85,7 @@ export function AvailabilityPicker({
   return (
     <div className="flex flex-col gap-2.5">
       {/* Side by side on a phone; one above the other when the screen is very narrow (200% zoom), never wider than it. */}
-      <div role="group" aria-label={question} className={compact ? "flex flex-wrap gap-1 rounded-[14px] bg-fill p-1" : "flex flex-wrap gap-3"}>
+      <div role="group" aria-label={question} className={compact ? "flex flex-wrap gap-1 rounded-web bg-fill p-1" : "flex flex-wrap gap-3"}>
         <button
           type="button"
           aria-pressed={coming}
@@ -111,7 +111,7 @@ export function AvailabilityPicker({
       {failed && !pending ? (
         <TapProblem problem={failed.problem} onRetry={() => choose(failed.value)} />
       ) : (
-      <p className={`text-[14px] text-ink-muted empty:hidden ${compact ? "" : "text-center"} ${quiet && tapped && !pending ? "sr-only" : ""}`} aria-live="polite">
+      <p className={`text-small text-ink-muted empty:hidden ${compact ? "" : "text-center"} ${quiet && tapped && !pending ? "sr-only" : ""}`} aria-live="polite">
         {pending
           ? "Saving…"
           : !tapped && answered && optimistic
@@ -156,8 +156,8 @@ function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: stri
   if (sent && !editing) {
     return (
       <div className="flex flex-col gap-1 rounded-app bg-paper shadow-card px-3.5 py-3" role="status">
-        <p className="flex items-start gap-2 text-[15px] leading-[22px]">
-          <MessageSquare aria-hidden size={18} className="mt-0.5 shrink-0 text-ink-muted" />
+        <p className="flex items-start gap-2 text-small leading-[22px]">
+          <MessageSquare aria-hidden size={20} className="mt-0.5 shrink-0 text-ink-muted" />
           <span className="min-w-0 break-words">
             Sent to the coaches: <span className="font-bold">{sent}</span>
           </span>
@@ -167,11 +167,11 @@ function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: stri
             type="button"
             onClick={() => setEditing(true)}
             aria-label={`Change the reason for ${childName}`}
-            className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline"
+            className="inline-flex min-h-12 items-center text-small font-bold text-grass-text underline"
           >
             Change
           </button>
-          <Link href={thread} className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
+          <Link href={thread} className="inline-flex min-h-12 items-center text-small font-bold text-grass-text underline">
             See in Messages
           </Link>
         </div>
@@ -183,7 +183,7 @@ function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: stri
     <form action={run} onSubmit={keep} className="flex flex-col gap-2 rounded-app bg-paper shadow-card px-3.5 py-3">
       <input type="hidden" name="session" value={sessionId} />
       <input type="hidden" name="child" value={playerId} />
-      <label htmlFor={id} className="text-[15px] font-bold">
+      <label htmlFor={id} className="text-small font-bold">
         Tell the coaches why? <span className="font-normal text-ink-muted">(optional)</span>
       </label>
       <input
@@ -194,10 +194,10 @@ function AwayReason({ sessionId, playerId, childName, saved }: { sessionId: stri
         defaultValue={editing ? (saved ?? "") : ""}
         placeholder="For example: poorly, family wedding"
         autoComplete="off"
-        className="field text-base"
+        className="field text-body"
       />
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3 py-2 text-[15px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3 py-2 text-small text-ink">
           {state.error}
         </p>
       ) : null}
@@ -239,7 +239,7 @@ export function AddToCalendar({ links }: { links: CalendarLinks }) {
         className="btn-chunky btn-paper btn-small inline-flex min-h-12 items-center gap-2"
         onClick={() => track("calendar_added", { kind: platform === "android" ? "android" : "ics" })}
       >
-        <CalendarPlus aria-hidden size={18} />
+        <CalendarPlus aria-hidden size={20} />
         Add to my calendar
       </a>
       {platform === "other" ? (
@@ -248,13 +248,13 @@ export function AddToCalendar({ links }: { links: CalendarLinks }) {
           target="_blank"
           rel="noopener"
           aria-label={`Or use Google Calendar on the web: ${links.label}`}
-          className="inline-flex min-h-12 items-center text-[15px] text-ink-muted underline"
+          className="inline-flex min-h-12 items-center text-small text-ink-muted underline"
           onClick={() => track("calendar_added", { kind: "google" })}
         >
           Or use Google Calendar on the web
         </a>
       ) : null}
-      <Link href="/player/calendar?from=/friday" className="inline-flex min-h-12 items-center text-[15px] text-ink-muted underline">
+      <Link href="/player/calendar?from=/friday" className="inline-flex min-h-12 items-center text-small text-ink-muted underline">
         Add every session automatically
       </Link>
     </div>

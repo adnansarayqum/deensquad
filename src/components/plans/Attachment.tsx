@@ -17,14 +17,14 @@ export function Attachment({ file, label, from }: { file: FileRef; label?: strin
     <Link
       href={href}
       onClick={() => markViewerOpened(href)}
-      className="flex min-h-12 items-center gap-3 rounded-xl border border-line bg-paper px-3 py-2 transition-transform active:scale-[0.99]"
+      className="flex min-h-12 items-center gap-3 rounded-web border border-line bg-paper px-3 py-2 transition-transform active:scale-[0.99]"
     >
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-grass-tint text-grass-text">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-web bg-grass-tint text-grass-text">
         <Icon aria-hidden size={20} />
       </span>
       <span className="flex min-w-0 flex-col">
-        <span className="truncate text-[15px] font-bold">{label ?? file.name}</span>
-        <span className="text-[13px] text-ink-muted">{fileLabel(file)}</span>
+        <span className="truncate text-small font-bold">{label ?? file.name}</span>
+        <span className="text-meta text-ink-muted">{fileLabel(file)}</span>
       </span>
     </Link>
   );

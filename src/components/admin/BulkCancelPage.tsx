@@ -38,8 +38,8 @@ export async function BulkCancelPage({ restore, ids: raw }: { restore: boolean; 
               <input id="reason" name="reason" maxLength={120} placeholder="Half term" className="field" />
             </div>
           )}
-          <label className="flex min-h-12 items-center gap-3 text-[15px]">
-            <input type="checkbox" name="notify" defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
+          <label className="flex min-h-12 items-center gap-3 text-small">
+            <input type="checkbox" name="notify" defaultChecked className="check" />
             <span>
               <b>Tell the families now.</b> Posts one message in club news per session for the families it reaches, with an app notification and an
               email straight away (after 8am if it&apos;s late at night).

@@ -16,18 +16,18 @@ export function AwaitingApproval({ children }: { children: Child[] }) {
   const groups = list([...new Set(waiting.map((c) => groupPlural(c.ageGroup)))]);
   return (
     <section aria-labelledby="awaiting-approval" className="flex gap-3 rounded-app bg-paper p-4 shadow-card">
-      <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-fill text-ink">
-        <Hourglass size={22} />
+      <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-web bg-fill text-ink">
+        <Hourglass size={24} />
       </span>
       <div className="flex min-w-0 flex-col gap-1.5">
-        <h2 id="awaiting-approval" className="text-[18px] font-bold">
+        <h2 id="awaiting-approval" className="text-subhead font-bold">
           The club is checking {names}&apos;s details
         </h2>
-        <p className="text-[15px] leading-[22px] text-ink-muted">
+        <p className="text-small leading-[22px] text-ink-muted">
           You&apos;ll see the {groups} news and sessions once they&apos;ve approved {waiting.length === 1 ? names : "them"}. We&apos;ll email you. Meanwhile you can fill in
           your To-do.
         </p>
-        <Link href="/checklist" className="self-start text-[15px] font-bold text-grass-text underline">
+        <Link href="/checklist" className="self-start text-small font-bold text-grass-text underline">
           Open To-do
         </Link>
       </div>

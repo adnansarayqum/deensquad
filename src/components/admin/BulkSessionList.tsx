@@ -16,7 +16,7 @@ export function BulkSessionList({ sessions, aside, ids }: { sessions: AdminSessi
         {sessions.map((s) => {
           const note = aside?.(s) ?? null;
           return (
-            <li key={s.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-[15px]">
+            <li key={s.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-small">
               <span className={note ? "text-ink-muted" : ""}>
                 <b>{shortDay(s.startsAt)}</b> · {s.title} · {clock(s.startsAt)}–{clock(s.endsAt)} · {s.ageGroups.join(", ")}
               </span>
@@ -42,7 +42,7 @@ export function BulkHeader({ title, notYours, skipped }: { title: string; notYou
 export function NothingToDo({ children }: { children: string }) {
   return (
     <div className="flex flex-col gap-4 rounded-app border border-line bg-paper p-4">
-      <p className="text-[15px]">{children}</p>
+      <p className="text-small">{children}</p>
       <Link href="/admin/sessions" className="btn-chunky btn-grass self-start">
         Back to Sessions
       </Link>

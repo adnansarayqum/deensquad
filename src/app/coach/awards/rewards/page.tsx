@@ -24,7 +24,7 @@ export default async function RewardsPage() {
 
       <Section title={`Reached ${REWARD_POINTS} points (${rewards.toReward.length})`} id="to-reward">
         {rewards.toReward.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">Nobody is waiting for a reward. You and the parents are told when a child reaches {REWARD_POINTS} points.</p>
+          <p className="text-small text-ink-muted">Nobody is waiting for a reward. You and the parents are told when a child reaches {REWARD_POINTS} points.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {rewards.toReward.map((r) => (
@@ -38,12 +38,12 @@ export default async function RewardsPage() {
         const Icon = badgeIcon(b.icon);
         return (
           <Section key={b.id} title={`${b.name} (${b.candidates.length})`} id={b.id}>
-            <p className="flex items-center gap-2 text-[14px] text-ink-muted">
+            <p className="flex items-center gap-2 text-small text-ink-muted">
               <Icon aria-hidden size={16} className="shrink-0" />
               {b.rule} Only admins give this badge.
             </p>
             {b.candidates.length === 0 ? (
-              <p className="text-[15px] text-ink-muted">Nobody new has earned it.</p>
+              <p className="text-small text-ink-muted">Nobody new has earned it.</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {b.candidates.map((c) => (
@@ -61,17 +61,17 @@ export default async function RewardsPage() {
             {rewards.rewarded.map((r) => (
               <li key={r.playerId} className="flex items-center gap-3 rounded-dash border border-line bg-cream px-3.5 py-2">
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <Link href={`/coach/awards/${r.playerId}`} className="text-[15px] font-bold underline-offset-2 hover:underline">
+                  <Link href={`/coach/awards/${r.playerId}`} className="text-small font-bold underline-offset-2 hover:underline">
                     {r.name}
                   </Link>
-                  <span className="text-[13px] text-ink-muted">
+                  <span className="text-meta text-ink-muted">
                     {[r.group, `given ${day.format(new Date(r.rewardedAt!))}`, r.rewardedBy ? `by ${r.rewardedBy}` : null].filter(Boolean).join(" · ")}
                   </span>
                 </span>
                 <form action={setRewardGiven}>
                   <input type="hidden" name="player" value={r.playerId} />
                   <input type="hidden" name="given" value="no" />
-                  <button type="submit" className="min-h-12 px-2 text-sm font-bold text-ink-muted underline" aria-label={`Undo reward given: ${r.name}`}>
+                  <button type="submit" className="min-h-12 px-2 text-small font-bold text-ink-muted underline" aria-label={`Undo reward given: ${r.name}`}>
                     Undo
                   </button>
                 </form>
@@ -88,10 +88,10 @@ function RewardItem({ row }: { row: RewardRow }) {
   return (
     <li className="flex flex-wrap items-center gap-3 rounded-dash border border-line bg-cream px-3.5 py-2">
       <span className="flex min-w-0 flex-1 flex-col">
-        <Link href={`/coach/awards/${row.playerId}`} className="text-[15px] font-bold underline-offset-2 hover:underline">
+        <Link href={`/coach/awards/${row.playerId}`} className="text-small font-bold underline-offset-2 hover:underline">
           {row.name}
         </Link>
-        <span className="text-[13px] text-ink-muted">
+        <span className="text-meta text-ink-muted">
           {row.group} · {row.points} points · reached {day.format(new Date(row.reachedAt))}
         </span>
       </span>
@@ -111,10 +111,10 @@ function BadgeItem({ badge, candidate }: { badge: { id: string; name: string }; 
   return (
     <li className="flex flex-wrap items-center gap-3 rounded-dash border border-line bg-cream px-3.5 py-2">
       <span className="flex min-w-0 flex-1 flex-col">
-        <Link href={`/coach/awards/${candidate.playerId}`} className="text-[15px] font-bold underline-offset-2 hover:underline">
+        <Link href={`/coach/awards/${candidate.playerId}`} className="text-small font-bold underline-offset-2 hover:underline">
           {candidate.name}
         </Link>
-        <span className="text-[13px] text-ink-muted">
+        <span className="text-meta text-ink-muted">
           {candidate.group} · {candidate.count} {unit}
         </span>
       </span>

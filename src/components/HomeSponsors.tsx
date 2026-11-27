@@ -22,15 +22,15 @@ export async function HomeSponsors() {
       className="flex min-h-14 items-center gap-2.5 rounded-app bg-paper py-2 pr-3 pl-4 text-ink shadow-card transition-transform active:scale-[0.99]"
     >
       <span className="flex min-w-0 flex-col">
-        <span className="text-[15px] font-bold whitespace-nowrap">Our sponsors</span>
-        {offers ? <span className="text-[13px] whitespace-nowrap text-ink-muted">{offers === 1 ? "1 offer" : `${offers} offers`}</span> : null}
+        <span className="text-small font-bold whitespace-nowrap">Our sponsors</span>
+        {offers ? <span className="text-meta whitespace-nowrap text-ink-muted">{offers === 1 ? "1 offer" : `${offers} offers`}</span> : null}
       </span>
       <span className="flex min-w-0 flex-1 items-center justify-end gap-1.5 overflow-hidden">
         {sponsors.slice(0, 5).map((s) => {
           const icon = sponsorIcon(s);
           return <SponsorLogo key={s.id} name={s.name} fileId={icon.fileId} bg={icon.bg} size={32} />;
         })}
-        {sponsors.length > 5 ? <span className="text-[13px] text-ink-muted">+{sponsors.length - 5}</span> : null}
+        {sponsors.length > 5 ? <span className="text-meta text-ink-muted">+{sponsors.length - 5}</span> : null}
       </span>
       <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
     </Link>

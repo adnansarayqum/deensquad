@@ -43,7 +43,7 @@ const gate = (r: RegisterRow): GateRow => ({
 });
 
 const tab = (active: boolean) =>
-  `inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-sm font-bold ${active ? "bg-floodlight text-on-gold" : "border border-line bg-paper text-ink"}`;
+  `inline-flex min-h-12 min-w-14 items-center justify-center rounded-pill px-4 text-small font-bold ${active ? "bg-floodlight text-on-gold" : "border border-line bg-paper text-ink"}`;
 
 export default async function CoachRegisterPage({ searchParams }: PageProps<"/coach">) {
   const user = await requireStaff();
@@ -67,7 +67,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
     return (
       <>
         <PageHeader title="Register" subtitle="No sessions coming up for your groups." />
-        <p className="rounded-app border border-line bg-paper p-4 text-[15px] text-ink-muted">
+        <p className="rounded-app border border-line bg-paper p-4 text-small text-ink-muted">
           Add the term&apos;s sessions under{" "}
           <Link href="/admin/sessions" className="font-bold text-grass-text underline">
             Sessions
@@ -94,14 +94,14 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
       {/* Scan sits beside the title and the clock on the session line, so the lists start higher on a phone at the gate. */}
       <PageHeader title="Register" actions={<ScannerChoice disabled={!open} disabledReason={open ? undefined : registerClosedMessage(session.startsAt, now)} className="" />}>
         <div className="-mt-1 flex items-center justify-between gap-3">
-          <p className="min-w-0 text-[15px] leading-[22px] text-ink-muted">
+          <p className="min-w-0 text-small leading-[22px] text-ink-muted">
             {session.title} · {shortDay(session.startsAt)}
             {/* With several sessions today their tabs below carry the times, so the time isn't said twice. */}
             {todays.length > 1 ? null : ` ${clock(session.startsAt)}`}
           </p>
           {/* When the list was last loaded (it refreshes itself every 20 s), not a live clock. Never wraps: a
               two-line "10:25 PM" pushed the lists down on a phone in the evening. */}
-          <span className="shrink-0 whitespace-nowrap text-[13px] text-ink-muted">
+          <span className="shrink-0 whitespace-nowrap text-meta text-ink-muted">
             Updated <span className="tabular-nums">{time}</span>
           </span>
         </div>
@@ -124,8 +124,8 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
           </nav>
         ) : null}
         {open ? null : (
-          <p className="flex items-center gap-3 rounded-app bg-grass-tint px-3.5 py-3 text-[15px] leading-[22px] text-ink">
-            <CalendarClock aria-hidden size={22} className="shrink-0 text-grass-text" />
+          <p className="flex items-center gap-3 rounded-app bg-grass-tint px-3.5 py-3 text-small leading-[22px] text-ink">
+            <CalendarClock aria-hidden size={24} className="shrink-0 text-grass-text" />
             {registerClosedMessage(session.startsAt, now)}
           </p>
         )}
@@ -144,10 +144,10 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
               <span className="flex min-w-0 flex-1 flex-col items-start">
                 {/* With "Paid £7" beside it the words get shorter, so the card stays two lines and the list still to arrive
                     stays on the first screen. */}
-                <span className="text-[15px] font-bold">
+                <span className="text-small font-bold">
                   {r.firstName} {r.lastInitial}.{r.paysAtGate && !r.paidPence ? "" : " checked in"}
                 </span>
-                <span className="text-[13px] text-ink-muted">
+                <span className="text-meta text-ink-muted">
                   {r.paysAtGate && !r.paidPence ? `In at ${clock(r.checkedInAt!)}` : `${groupPlural(r.ageGroup)} · ${clock(r.checkedInAt!)}`}
                 </span>
                 <PayingPill paying={r.paying} />
@@ -171,23 +171,23 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
             {all ? "All groups" : groupPlural(group)}
           </h2>
           {/* Here, said coming and the group, each named (admin UX review, Oct 2026: "0 of 21 expected" read as replies). */}
-          <p className="text-sm text-ink-muted">
+          <p className="text-small text-ink-muted">
             <span className="font-display text-[26px] text-ink tabular-nums">{s.here.length}</span> here · {s.saidComing} said coming · {s.groupTotal} in the group
           </p>
         </div>
         <Progress value={s.here.length} max={Math.max(1, s.expectedTotal)} label={`${s.here.length} of ${s.expectedTotal} here`} className="w-full" />
         {view.rows.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">No players in the {groupPlural(group)} yet. A club admin adds families.</p>
+          <p className="text-small text-ink-muted">No players in the {groupPlural(group)} yet. A club admin adds families.</p>
         ) : (
           <RegisterLists sessionId={session.id} from={link({ group })} open={open} showGroup={all} notHere={s.notHere.map(gate)} away={s.away.map(gate)} here={s.here.map(gate)} fee={fee}>
             {needsAWord ? (
               // One line for everyone already in who needs a word; the names (and their pills in Here) are a tap away.
               <details className="mt-2 rounded-app border-2 border-kit-orange bg-orange-tint px-3.5 text-ink">
-                <summary className="flex min-h-12 cursor-pointer items-center py-2 text-[15px] font-bold">{needsAWord}</summary>
+                <summary className="flex min-h-12 cursor-pointer items-center py-2 text-small font-bold">{needsAWord}</summary>
                 <ul className="flex flex-col gap-2 pb-3">
                   {s.flagged.map((r) => (
                     <li key={r.id} className="flex flex-col items-start gap-1">
-                      <span className="text-[15px] font-bold">
+                      <span className="text-small font-bold">
                         {r.firstName} {r.lastInitial}.{all ? ` · ${r.ageGroup}` : ""}
                       </span>
                       <FlagPills flags={r.flags} />
@@ -217,7 +217,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
       ) : null}
       {/* What's been taken at the gate for this session (every group), after the lists. */}
       {taken && taken.count > 0 ? (
-        <p className="text-[15px] text-ink-muted">
+        <p className="text-small text-ink-muted">
           Paid at the gate for this session: <span className="font-bold text-ink">{poundsText(taken.total)}</span> from {taken.count}{" "}
           {taken.count === 1 ? "child" : "children"}.{" "}
           <Link href={`/admin/sessions/${session.id}/totals`} className="inline-flex min-h-12 items-center font-bold text-grass-text underline underline-offset-4">
@@ -235,7 +235,7 @@ export default async function CoachRegisterPage({ searchParams }: PageProps<"/co
         <Link href={`/coach/incidents/new?session=${session.id}`} className="btn-chunky btn-paper">
           Log an accident or incident
         </Link>
-        <Link href="/coach/incidents" className="inline-flex min-h-12 items-center text-[15px] font-bold text-grass-text underline">
+        <Link href="/coach/incidents" className="inline-flex min-h-12 items-center text-small font-bold text-grass-text underline">
           All incidents
         </Link>
       </div>

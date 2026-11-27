@@ -30,7 +30,7 @@ export default async function WhoIsComingPage({ searchParams }: PageProps<"/admi
     return (
       <div className="flex flex-col gap-4 lg:max-w-3xl">
         <PageHeader back={{ href: "/admin", label: "Overview" }} title="Who's coming" />
-        <p className="rounded-app border border-line bg-paper p-4 text-[15px]">No session coming up.</p>
+        <p className="rounded-app border border-line bg-paper p-4 text-small">No session coming up.</p>
       </div>
     );
   }
@@ -63,7 +63,7 @@ export default async function WhoIsComingPage({ searchParams }: PageProps<"/admi
                 key={g ?? "all"}
                 href={g ? `/admin/coming?group=${g}` : "/admin/coming"}
                 aria-current={g === group ? "page" : undefined}
-                className={`inline-flex min-h-12 items-center rounded-pill border-2 px-4 text-sm font-bold ${
+                className={`inline-flex min-h-12 items-center rounded-pill border-2 px-4 text-small font-bold ${
                   g === group ? "border-grass bg-grass-tint text-grass-text" : "border-line bg-paper text-ink"
                 }`}
               >
@@ -79,7 +79,7 @@ export default async function WhoIsComingPage({ searchParams }: PageProps<"/admi
           <li key={s.answer}>
             <a href={`#${s.id}`} className="flex min-h-12 flex-col rounded-app border border-line bg-paper px-3 py-2.5">
               <span className={`font-display text-[34px] leading-none ${s.answer === "coming" ? "text-grass-text" : ""}`}>{counts[s.answer]}</span>
-              <span className="text-[13px] font-bold text-ink-muted">{s.title.toLowerCase()}</span>
+              <span className="text-meta font-bold text-ink-muted">{s.title.toLowerCase()}</span>
             </a>
           </li>
         ))}
@@ -95,22 +95,22 @@ export default async function WhoIsComingPage({ searchParams }: PageProps<"/admi
 function AnswerList({ id, title, list, showGroup }: { id: string; title: string; list: ComingChild[]; showGroup: boolean }) {
   return (
     <section id={id} aria-labelledby={`${id}-heading`} className="scroll-mt-4 rounded-app border border-line bg-paper p-4">
-      <h2 id={`${id}-heading`} className="text-[18px] font-bold">
+      <h2 id={`${id}-heading`} className="text-subhead font-bold">
         {title} ({list.length})
       </h2>
       {list.length === 0 ? (
-        <p className="mt-1 text-[15px] text-ink-muted">Nobody.</p>
+        <p className="mt-1 text-small text-ink-muted">Nobody.</p>
       ) : (
         <ul className="mt-2 grid gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((c) => (
             <li key={c.id} className="flex min-h-11 flex-col justify-center border-t border-line py-1.5 first:border-t-0 sm:[&:nth-child(2)]:border-t-0 lg:[&:nth-child(3)]:border-t-0">
               <span className="flex items-center gap-2">
-                <Link href={`/admin/families/${c.id}`} className="text-[15px] font-bold">
+                <Link href={`/admin/families/${c.id}`} className="text-small font-bold">
                   {c.firstName} {c.lastName}
                 </Link>
                 {showGroup ? <Pill tone="neutral">{c.group}</Pill> : null}
               </span>
-              {c.reason ? <span className="text-[13px] text-ink-muted">Reason: {c.reason}</span> : null}
+              {c.reason ? <span className="text-meta text-ink-muted">Reason: {c.reason}</span> : null}
             </li>
           ))}
         </ul>

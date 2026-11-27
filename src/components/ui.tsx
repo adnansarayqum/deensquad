@@ -1,8 +1,16 @@
 import type { ReactNode } from "react";
 import { Check } from "lucide-react";
 
+/**
+ * Icon sizes and strokes (lucide). 16 beside small or meta text and in pills, 20 in buttons and list rows, 24 for
+ * navigation and the round header buttons, 32 for a status icon that leads a card (scanner, no signal); larger only
+ * for pictures. Stroke 2, `active` for the lit tab, `tick` for ticks. `src/lib/design-system.test.ts` keeps to it.
+ */
+export const ICON = { sm: 16, md: 20, lg: 24, xl: 32 } as const;
+export const ICON_STROKE = { normal: 2, active: 2.5, tick: 3 } as const;
+
 export function Eyebrow({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <p className={`text-[15px] leading-5 font-bold text-ink-muted ${className}`}>{children}</p>;
+  return <p className={`text-small leading-5 font-bold text-ink-muted ${className}`}>{children}</p>;
 }
 
 type PillTone = "done" | "action" | "gold" | "neutral";
@@ -16,8 +24,8 @@ const pillTone: Record<PillTone, string> = {
 /** Status pill. Always carries a word, never colour alone. */
 export function Pill({ tone, children, icon = false }: { tone: PillTone; children: ReactNode; icon?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-pill px-2.5 py-0.5 text-[13px] leading-5 font-bold ${pillTone[tone]}`}>
-      {icon && tone === "done" ? <Check aria-hidden size={13} strokeWidth={3} /> : null}
+    <span className={`inline-flex items-center gap-1 rounded-pill px-2.5 py-0.5 text-meta leading-5 font-bold ${pillTone[tone]}`}>
+      {icon && tone === "done" ? <Check aria-hidden size={16} strokeWidth={3} /> : null}
       {children}
     </span>
   );
@@ -75,7 +83,7 @@ export function AppHeader({ children }: { children: ReactNode; stripes?: boolean
 }
 
 /** A screen's title on parent screens: 30px bold, tight, left-aligned. */
-export const TITLE = "text-[30px] leading-9 font-bold tracking-[-0.02em]";
+export const TITLE = "text-title leading-9 font-bold tracking-[-0.02em]";
 
 export function ScreenTitle({ children }: { children: ReactNode }) {
   return <h1 className={`pr-36 max-[374px]:pr-28 ${TITLE}`}>{children}</h1>;

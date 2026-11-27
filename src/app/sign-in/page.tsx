@@ -29,12 +29,12 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
           <form key={r.role} action={demoSignIn}>
             <input type="hidden" name="role" value={r.role} />
             <button type="submit" className="flex w-full flex-col items-start gap-0.5 rounded-app bg-paper p-4 text-left shadow-card transition-transform active:scale-[0.99]">
-              <span className="text-[17px] font-bold">{r.label}</span>
-              <span className="text-sm text-ink-muted">{r.detail}</span>
+              <span className="text-subhead font-bold">{r.label}</span>
+              <span className="text-small text-ink-muted">{r.detail}</span>
             </button>
           </form>
         ))}
-        <p className="text-sm leading-5 text-ink-muted">To switch role, sign out from the player tab or the admin menu.</p>
+        <p className="text-small leading-5 text-ink-muted">To switch role, sign out from the player tab or the admin menu.</p>
       </AuthShell>
     );
   }
@@ -45,10 +45,10 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
         <FormError id="link-error">That sign-in link has expired or has already been used. Ask for a new code below.</FormError>
       ) : null}
       <EmailForm next={next} />
-      <p className="text-sm leading-5 text-ink-muted">
+      <p className="text-small leading-5 text-ink-muted">
         Not getting emails? Check your spam folder, or ask the club which email address they have for you.
       </p>
-      <p className="text-[15px]">
+      <p className="text-small">
         New to the club?{" "}
         <Link href="/sign-up" className="font-bold text-grass-text underline">
           Sign up
@@ -57,7 +57,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
       {/* The built-in notice opens in the same window (its Back returns here): a new tab in an installed iPhone app can be Safari, which doesn't share the app's sign-in. */}
       <a
         href={privacy}
-        className="text-sm font-bold text-grass-text underline"
+        className="text-small font-bold text-grass-text underline"
         {...(privacy.startsWith("/") ? {} : { target: "_blank", rel: "noopener noreferrer" })}
       >
         How the club uses your information

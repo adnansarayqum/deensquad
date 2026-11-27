@@ -67,17 +67,17 @@ export function ChatComposer({
         <input key={name} type="hidden" name={name} value={value} />
       ))}
       {state.error ? (
-        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-2.5 text-[15px] leading-[22px] text-ink">
+        <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-2.5 text-small leading-[22px] text-ink">
           {state.error}
         </p>
       ) : null}
       {about.length > 1 ? (
         <fieldset className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <legend className="float-left mr-1 py-3 text-[13px] font-bold text-ink-muted">About</legend>
+          <legend className="float-left mr-1 py-3 text-meta font-bold text-ink-muted">About</legend>
           {about.map((c) => (
             <label key={c.id} className="relative inline-flex min-h-12 shrink-0 cursor-pointer items-center">
               <input type="radio" name="about" value={c.id} defaultChecked={c.id === (aboutNow ?? about[0].id)} className="peer sr-only" />
-              <span className="rounded-pill border border-line bg-paper px-3 py-1 text-[14px] font-bold text-ink-muted peer-checked:border-grass peer-checked:bg-grass-tint peer-checked:text-grass-text peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-grass">
+              <span className="rounded-pill border border-line bg-paper px-3 py-1 text-small font-bold text-ink-muted peer-checked:border-grass peer-checked:bg-grass-tint peer-checked:text-grass-text peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-grass">
                 {c.firstName}
               </span>
             </label>
@@ -90,7 +90,7 @@ export function ChatComposer({
             <button
               key={text}
               type="button"
-              className="min-h-12 shrink-0 rounded-pill border border-line bg-paper px-3 text-[14px] font-bold whitespace-nowrap text-grass-text"
+              className="min-h-12 shrink-0 rounded-pill border border-line bg-paper px-3 text-small font-bold whitespace-nowrap text-grass-text"
               onClick={() => {
                 const el = box.current;
                 if (!el) return;
@@ -111,7 +111,7 @@ export function ChatComposer({
             aria-label="Attach photos or videos"
             aria-pressed={attach}
             onClick={() => setAttach((on) => !on)}
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-line ${attach ? "bg-grass-tint text-grass-text" : "bg-paper text-ink-muted"}`}
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-pill border border-line ${attach ? "bg-grass-tint text-grass-text" : "bg-paper text-ink-muted"}`}
           >
             <Paperclip aria-hidden size={20} />
           </button>
@@ -126,14 +126,14 @@ export function ChatComposer({
           rows={1}
           maxLength={BODY_MAX}
           placeholder={placeholder}
-          className="max-h-40 min-h-12 flex-1 resize-none rounded-[24px] border border-line bg-paper px-4 py-3 text-[16px] leading-[22px] text-ink placeholder:text-ink-muted focus:border-grass focus:outline-none"
+          className="max-h-40 min-h-12 flex-1 resize-none rounded-[24px] border border-line bg-paper px-4 py-3 text-body leading-[22px] text-ink placeholder:text-ink-muted focus:border-grass"
           onInput={(e) => {
             const el = e.currentTarget;
             el.style.height = "auto";
             el.style.height = `${el.scrollHeight + 2}px`;
           }}
         />
-        <button type="submit" aria-label="Send" disabled={pending} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-grass text-on-grass disabled:opacity-60">
+        <button type="submit" aria-label="Send" disabled={pending} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-pill bg-grass text-on-grass disabled:opacity-60">
           <SendHorizontal aria-hidden size={20} />
         </button>
       </div>

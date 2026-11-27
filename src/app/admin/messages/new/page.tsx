@@ -43,10 +43,10 @@ async function ChooseChild({ userId, mine, q }: { userId: string; mine: readonly
         </button>
       </form>
       <ul className="flex flex-col divide-y divide-line rounded-app border border-line bg-paper">
-        {shown.length === 0 ? <li className="p-4 text-[15px] text-ink-muted">No child by that name.</li> : null}
+        {shown.length === 0 ? <li className="p-4 text-small text-ink-muted">No child by that name.</li> : null}
         {shown.slice(0, 100).map((c) => (
           <li key={c.id}>
-            <Link href={`/admin/messages/new?child=${c.id}`} className="flex min-h-12 items-center justify-between gap-3 px-4 py-2 text-[15px] font-bold">
+            <Link href={`/admin/messages/new?child=${c.id}`} className="flex min-h-12 items-center justify-between gap-3 px-4 py-2 text-small font-bold">
               <span>
                 {c.firstName} {c.lastName}
               </span>

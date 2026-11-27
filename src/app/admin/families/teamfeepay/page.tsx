@@ -19,7 +19,7 @@ export default async function TeamFeePayPage() {
         subtitle={last ? `Last updated from TeamFeePay on ${shortDay(last.toISOString())}.` : undefined}
       />
       <Section title="How it works">
-        <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-[15px] leading-[22px]">
+        <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-small leading-[22px]">
           <li>In TeamFeePay, export your members list as a CSV, with each member&apos;s name, the payer&apos;s email and their status.</li>
           <li>Upload it here. You&apos;ll see every plan that would change, and any row that doesn&apos;t match a child, before anything is saved.</li>
           <li>Active members get a monthly plan, failed or overdue ones show as overdue, and cancelled ones go back to no plan (pay-as-you-go families stay as they are).</li>

@@ -14,8 +14,8 @@ export default function ParentError({ error, retry }: { error: Error & { digest?
 
   return (
     <div className="flex flex-col gap-4 px-4 pt-8">
-      <h1 className="text-[30px] leading-9 font-bold text-ink">That didn&apos;t load</h1>
-      <p className="text-[16px] text-ink">Check your signal and try again. Anything you&apos;d already saved is safe.</p>
+      <h1 className="text-title leading-9 font-bold text-ink">That didn&apos;t load</h1>
+      <p className="text-body text-ink">Check your signal and try again. Anything you&apos;d already saved is safe.</p>
       <div className="flex flex-wrap gap-3">
         <button type="button" onClick={() => retry()} className="btn-chunky btn-grass">
           Try again
@@ -25,7 +25,7 @@ export default function ParentError({ error, retry }: { error: Error & { digest?
           Show attendance QR codes
         </a>
       </div>
-      {error.digest ? <p className="text-[13px] text-ink-muted">If it keeps happening, tell the club this code: {error.digest}</p> : null}
+      {error.digest ? <p className="text-meta text-ink-muted">If it keeps happening, tell the club this code: {error.digest}</p> : null}
     </div>
   );
 }

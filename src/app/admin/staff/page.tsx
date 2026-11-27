@@ -27,7 +27,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
     <Link
       href={`/admin/staff/${s.id}`}
       aria-label={`DBS and certificates for ${s.displayName}: ${cleared.get(s.id)!.words}`}
-      className={`inline-flex min-h-12 items-center gap-1 ${compact ? "" : "text-[15px] font-bold text-grass-text"}`}
+      className={`inline-flex min-h-12 items-center gap-1 ${compact ? "" : "text-small font-bold text-grass-text"}`}
     >
       <ClearancePill state={cleared.get(s.id)!.state} words={cleared.get(s.id)!.words} />
       {compact ? null : <span className="underline underline-offset-4">DBS and certificates</span>}
@@ -46,26 +46,26 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
         <input type="hidden" name="role" value={s.role === "admin" ? "coach" : "admin"} />
         <button
           type="submit"
-          className={compact ? "inline-flex min-h-12 items-center px-1.5 text-sm font-bold text-grass-text underline underline-offset-4" : "btn-chunky btn-paper btn-small min-h-12"}
+          className={compact ? "inline-flex min-h-12 items-center px-1.5 text-small font-bold text-grass-text underline underline-offset-4" : "btn-chunky btn-paper btn-small min-h-12"}
           aria-label={`Make ${s.displayName} ${s.role === "admin" ? "a coach" : "an admin"}`}
           title={compact ? roleHint(s) : undefined}
         >
           {s.role === "admin" ? "Make coach" : "Make admin"}
         </button>
-        {compact ? null : <span className="text-[13px] text-ink-muted">{roleHint(s)}</span>}
+        {compact ? null : <span className="text-meta text-ink-muted">{roleHint(s)}</span>}
       </form>
     ) : null;
   const removeForm = (s: StaffRow): ReactNode =>
     changeable(s) ? (
       // One tap would remove them at once, so it opens a "Yes, remove" tick first (removeStaff checks confirm=yes).
       <details>
-        <summary className="inline-flex min-h-12 cursor-pointer items-center px-1.5 text-sm font-bold text-ink-muted underline underline-offset-4">
+        <summary className="inline-flex min-h-12 cursor-pointer items-center px-1.5 text-small font-bold text-ink-muted underline underline-offset-4">
           Remove<span className="sr-only"> {s.displayName}</span>
         </summary>
         <form action={removeStaff} className="mt-1 flex flex-col items-start gap-2">
           <input type="hidden" name="id" value={s.id} />
-          <label className="flex min-h-12 items-center gap-2 text-sm font-bold">
-            <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--kit-orange)]" />
+          <label className="flex min-h-12 items-center gap-2 text-small font-bold">
+            <input type="checkbox" name="confirm" value="yes" required className="check check-warning" />
             Yes, remove {s.displayName}
           </label>
           <button type="submit" className="btn-chunky btn-paper btn-small">
@@ -84,7 +84,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
         </button>
       </form>
     ) : (
-      <span className="text-[13px] text-ink-muted">Every group</span>
+      <span className="text-meta text-ink-muted">Every group</span>
     );
   const name = (s: StaffRow) => (
     <>
@@ -102,15 +102,15 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
       <Section title={needing.length ? `Checks to sort (${needing.length})` : "DBS and certificates"}>
         <div id="checks" className="-mt-2 scroll-mt-4" />
         {needing.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">Every coach and admin has a DBS check, and nothing runs out in the next 60 days.</p>
+          <p className="text-small text-ink-muted">Every coach and admin has a DBS check, and nothing runs out in the next 60 days.</p>
         ) : (
           <ul className="flex flex-col">
             {needing.map((s) => (
               <li key={s.id}>
                 <Link href={`/admin/staff/${s.id}`} className="-mx-2 flex min-h-12 items-center gap-3 rounded-dash px-2 hover:bg-cream">
-                  <span className="min-w-0 flex-1 text-[15px] font-bold">{s.displayName}</span>
+                  <span className="min-w-0 flex-1 text-small font-bold">{s.displayName}</span>
                   <ClearancePill state={cleared.get(s.id)!.state} words={cleared.get(s.id)!.words} />
-                  <ChevronRight aria-hidden size={18} className="shrink-0 text-ink-muted" />
+                  <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
                 </Link>
               </li>
             ))}
@@ -136,12 +136,12 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
           </div>
           <fieldset className="flex flex-wrap gap-4">
             <legend className="field-label">Role</legend>
-            <label className="flex min-h-11 items-center gap-2 text-[15px] font-bold">
-              <input type="radio" name="role" value="coach" defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
+            <label className="flex min-h-11 items-center gap-2 text-small font-bold">
+              <input type="radio" name="role" value="coach" defaultChecked className="check" />
               Coach
             </label>
-            <label className="flex min-h-11 items-center gap-2 text-[15px] font-bold">
-              <input type="radio" name="role" value="admin" className="h-5 w-5 accent-[var(--grass)]" />
+            <label className="flex min-h-11 items-center gap-2 text-small font-bold">
+              <input type="radio" name="role" value="admin" className="check" />
               Admin
             </label>
           </fieldset>
@@ -162,8 +162,8 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
           <li key={s.id} className="flex flex-col gap-3 rounded-app border border-line bg-paper p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <span className="flex min-w-0 flex-col">
-                <span className="text-[15px] font-bold">{name(s)}</span>
-                <span className="text-[13px] break-all text-ink-muted">{s.email}</span>
+                <span className="text-small font-bold">{name(s)}</span>
+                <span className="text-meta break-all text-ink-muted">{s.email}</span>
               </span>
               <span className="flex items-center gap-2">
                 <Pill tone={s.role === "admin" ? "gold" : "neutral"}>{s.role === "admin" ? "Admin" : "Coach"}</Pill>
@@ -171,13 +171,13 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
               </span>
             </div>
             {checksLink(s)}
-            <p className="text-[13px] text-ink-muted">
+            <p className="text-meta text-ink-muted">
               {s.role === "admin" ? "Every group" : s.ageGroups.length ? `Groups: ${s.ageGroups.join(", ")}` : "Every group"}
               {s.signedIn ? "" : ` · Not signed in yet: ask them to sign in with ${s.email}`}
             </p>
             {/* The controls fold away, so the list of people stays short. */}
             <details className="group border-t border-line pt-1">
-              <summary className="inline-flex min-h-12 cursor-pointer list-none items-center gap-1 text-[15px] font-bold text-grass-text [&::-webkit-details-marker]:hidden">
+              <summary className="inline-flex min-h-12 cursor-pointer list-none items-center gap-1 text-small font-bold text-grass-text [&::-webkit-details-marker]:hidden">
                 Edit {name(s)}
               </summary>
               <div className="flex flex-col gap-3 pt-2">
@@ -196,10 +196,10 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
 
       {/* Computers: a table, one row per person. */}
       <div className="relative hidden overflow-x-auto rounded-app border border-line bg-paper lg:block">
-        <table className="w-full text-[14px]">
+        <table className="w-full text-small">
           <caption className="sr-only">Coaches and admins</caption>
           <thead>
-            <tr className="border-b border-line text-left text-[13px] font-bold text-ink-muted">
+            <tr className="border-b border-line text-left text-meta font-bold text-ink-muted">
               <th scope="col" className="py-2.5 pr-2 pl-2.5 font-bold">
                 Name
               </th>
@@ -229,7 +229,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
                 <th scope="row" className="py-1.5 pr-2 pl-2.5 text-left font-bold whitespace-nowrap">
                   {name(s)}
                 </th>
-                <td className="px-2 py-1.5 text-xs text-ink-muted">{s.email}</td>
+                <td className="px-2 py-1.5 text-meta text-ink-muted">{s.email}</td>
                 <td className="px-2 py-1.5 whitespace-nowrap">
                   <Pill tone={s.role === "admin" ? "gold" : "neutral"}>{s.role === "admin" ? "Admin" : "Coach"}</Pill>
                 </td>
@@ -248,7 +248,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
             ))}
           </tbody>
         </table>
-        <p className="border-t border-line px-4 py-2.5 text-[13px] text-ink-muted">A new admin sees every group and runs the shop. Someone made a coach coaches every group until you tick theirs.</p>
+        <p className="border-t border-line px-4 py-2.5 text-meta text-ink-muted">A new admin sees every group and runs the shop. Someone made a coach coaches every group until you tick theirs.</p>
       </div>
 
     </>
@@ -260,19 +260,19 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
  * nothing ticked, so the form asks for a choice; an existing coach with no groups shows All groups ticked.
  */
 function GroupBoxes({ selected, small = false, fresh = false }: { selected: AgeGroup[]; /** The staff table's one-line rows: smaller chips. */ small?: boolean; fresh?: boolean }) {
-  const chip = `flex items-center rounded-pill border border-line bg-paper has-[:checked]:border-grass has-[:checked]:bg-grass-tint ${small ? "min-h-9 gap-1 px-1.5" : "min-h-11 gap-2 px-3.5"}`;
-  const box = `accent-[var(--grass)] ${small ? "h-3.5 w-3.5" : "h-4 w-4"}`;
+  const chip = `flex items-center rounded-pill border border-line bg-paper has-[:checked]:border-grass has-[:checked]:bg-grass-tint ${small ? "min-h-11 gap-1.5 px-2.5" : "min-h-12 gap-2 px-3.5"}`;
+  const box = "check";
   return (
     <>
       {AGE_GROUPS.map((g) => (
         <label key={g} className={chip}>
           <input type="checkbox" name="groups" value={g} defaultChecked={selected.includes(g)} className={box} />
-          <span className="text-sm font-bold">{g}</span>
+          <span className="text-small font-bold">{g}</span>
         </label>
       ))}
       <label className={chip}>
         <input type="checkbox" name="allGroups" value="yes" defaultChecked={!fresh && selected.length === 0} className={box} />
-        <span className="text-sm font-bold">All groups</span>
+        <span className="text-small font-bold">All groups</span>
       </label>
     </>
   );

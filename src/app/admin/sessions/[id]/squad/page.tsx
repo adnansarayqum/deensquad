@@ -36,7 +36,7 @@ export default async function SquadPage({ params }: PageProps<"/admin/sessions/[
         subtitle={`${shortDay(session.startsAt)} · ${clock(session.startsAt)}–${clock(session.endsAt)} · ${session.venue} · ${session.ageGroups.join(", ")}`}
       >
         {picked > 0 ? (
-          <p className="text-[15px] font-bold">
+          <p className="text-small font-bold">
             {picked} picked · {confirmed} confirmed · {declined} can&apos;t play · {picked - confirmed - declined} not answered
           </p>
         ) : null}
@@ -48,11 +48,11 @@ export default async function SquadPage({ params }: PageProps<"/admin/sessions/[
 
       <Section title="Message the squad">
         {picked === 0 ? (
-          <p className="text-[15px] text-ink-muted">Save a squad first. The message then goes only to the parents of the children picked.</p>
+          <p className="text-small text-ink-muted">Save a squad first. The message then goes only to the parents of the children picked.</p>
         ) : (
           <StatefulForm action={postNews} submitLabel="Send to the squad's parents" pendingLabel="Sending…">
             <input type="hidden" name="squadSession" value={session.id} />
-            <p className="text-sm text-ink-muted">
+            <p className="text-small text-ink-muted">
               Goes to the parents of the {picked} {picked === 1 ? "child" : "children"} picked, and to any you add to the squad later. Reminders
               follow as for club news.
             </p>
@@ -83,8 +83,8 @@ export default async function SquadPage({ params }: PageProps<"/admin/sessions/[
                 <WritingHelp bodyId="body" titleId="title" kind="news" ai={aiConfigured()} />
               </div>
             </div>
-            <label className="flex min-h-11 items-center gap-3 text-[15px]">
-              <input type="checkbox" name="requiresAck" defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
+            <label className="flex min-h-11 items-center gap-3 text-small">
+              <input type="checkbox" name="requiresAck" defaultChecked className="check" />
               <span>
                 <b>Ask parents to tap &ldquo;I&apos;ve read this&rdquo;</b> so you can see who has read it
               </span>

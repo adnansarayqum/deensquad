@@ -33,7 +33,7 @@ export function PassCarousel({ cards }: { cards: PassCard[] }) {
               type="button"
               aria-pressed={i === index}
               onClick={() => goTo(i)}
-              className={`inline-flex min-h-12 items-center rounded-pill px-4 text-[15px] font-bold ${
+              className={`inline-flex min-h-12 items-center rounded-pill px-4 text-small font-bold ${
                 i === index ? "bg-pitch text-on-pitch" : "bg-fill text-ink"
               }`}
             >
@@ -68,18 +68,18 @@ export function PassCarousel({ cards }: { cards: PassCard[] }) {
               <div aria-hidden className="stripes-v absolute inset-x-0 top-0 h-32 opacity-70" />
               <div className="relative flex items-center gap-2.5 px-4 pt-4">
                 {/* eslint-disable-next-line @next/next/no-img-element -- the crest from public/, tiny */}
-                <img src="/crest.png" alt="" width={32} height={32} className="h-8 w-8 rounded-[8px] bg-on-pitch" />
-                <span className="text-[13px] font-bold text-on-pitch-muted">Deen Squad</span>
-                <span className="ml-auto rounded-pill bg-floodlight px-2.5 py-0.5 text-[12px] font-bold text-on-gold">Attendance</span>
+                <img src="/crest.png" alt="" width={32} height={32} className="h-8 w-8 rounded-web bg-on-pitch" />
+                <span className="text-meta font-bold text-on-pitch-muted">Deen Squad</span>
+                <span className="ml-auto rounded-pill bg-floodlight px-2.5 py-0.5 text-meta font-bold text-on-gold">Attendance</span>
               </div>
               <div className="relative flex items-center gap-3 px-4 pt-4 pb-4">
                 {c.photoFileId ? <ChildAvatar photoId={c.photoFileId} firstName={c.firstName} size={72} className="border-2 border-on-pitch/30" /> : null}
                 <div className="flex min-w-0 flex-col">
                   <h2 className="font-display text-[36px] leading-none tracking-[0.02em] break-words">{c.firstName}</h2>
-                  <p className="text-[14px] font-bold text-floodlight">{groupPlural(c.ageGroup)}</p>
+                  <p className="text-small font-bold text-floodlight">{groupPlural(c.ageGroup)}</p>
                 </div>
               </div>
-              <div className="relative mx-3 mb-3 rounded-[18px] bg-white p-2">
+              <div className="relative mx-3 mb-3 rounded-app bg-white p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element -- a small PNG data URL drawn on the server */}
                 <img src={c.src} alt={`QR code that checks ${c.firstName} in`} className={QR_IMG_CLASS} />
               </div>

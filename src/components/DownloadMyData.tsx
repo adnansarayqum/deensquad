@@ -51,10 +51,10 @@ export function DownloadMyData() {
   return (
     <>
       <a href="/api/me/export" download onClick={download} aria-disabled={busy || undefined} className="btn-chunky btn-paper self-start">
-        <Download aria-hidden size={18} />
+        <Download aria-hidden size={20} />
         Download my data
       </a>
-      <p role="status" className={problem ? "rounded-app bg-orange-tint px-3.5 py-3 text-[15px] leading-[22px]" : "sr-only"}>
+      <p role="status" className={problem ? "rounded-app bg-orange-tint px-3.5 py-3 text-small leading-[22px]" : "sr-only"}>
         {problem}
       </p>
     </>

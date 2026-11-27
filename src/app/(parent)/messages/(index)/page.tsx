@@ -40,10 +40,10 @@ export default async function MessagesPage({ searchParams }: PageProps<"/message
       </BackHeader>
       <main className="flex flex-col gap-3 px-4 pt-3">
         {family.children.length === 0 ? (
-          <Card className="p-4 text-[15px] leading-[22px]">No players are linked to your email yet. Ask the club to add your child.</Card>
+          <Card className="p-4 text-small leading-[22px]">No players are linked to your email yet. Ask the club to add your child.</Card>
         ) : (
           <>
-            <p className="text-[13px] leading-5 text-ink-muted">
+            <p className="text-meta leading-5 text-ink-muted">
               Your children&apos;s parents and carers, their coaches and the club&apos;s admins can read this. Other families never can.{" "}
               <Link href="/messages/new" className="inline-flex min-h-12 items-center font-bold text-grass-text underline">
                 Write to the club&apos;s admins instead

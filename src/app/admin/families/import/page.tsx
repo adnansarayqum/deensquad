@@ -15,7 +15,7 @@ export default async function ImportPage() {
       <PageHeader back={{ href: "/admin/families", label: "Families" }} title="Import families" />
 
       <Section title="How it works">
-        <ul className="flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-[22px]">
+        <ul className="flex list-disc flex-col gap-1.5 pl-5 text-small leading-[22px]">
           <li>One row per child. Brothers and sisters each get their own row with the same parent email, and become one family.</li>
           <li>
             Needed: child&apos;s first and last name, group ({AGE_GROUPS.join(", ")}) or date of birth, and a parent&apos;s name and email.
@@ -33,8 +33,8 @@ export default async function ImportPage() {
           <li>Importing the same sheet again updates children already in the app rather than adding them twice.</li>
           <li>Nothing is emailed until you send the invites.</li>
         </ul>
-        <a href="/families-template.csv" download className="inline-flex min-h-11 items-center gap-2 self-start text-[15px] font-bold text-grass-text underline">
-          <Download aria-hidden size={18} />
+        <a href="/families-template.csv" download className="inline-flex min-h-11 items-center gap-2 self-start text-small font-bold text-grass-text underline">
+          <Download aria-hidden size={20} />
           Download the template
         </a>
       </Section>

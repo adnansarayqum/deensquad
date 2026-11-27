@@ -17,14 +17,14 @@ export default async function BasketPage() {
       <BackHeader back="/shop" backLabel="Club shop" title="Your basket" />
       <main className="flex flex-col gap-3 px-4 pt-4 pb-4">
         {unavailable > 0 ? (
-          <p role="status" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px]">
+          <p role="status" className="rounded-app bg-orange-tint px-3.5 py-3 text-small">
             {unavailable === 1 ? "One item" : `${unavailable} items`} in your basket {unavailable === 1 ? "isn't" : "aren't"} sold any more and{" "}
             {unavailable === 1 ? "has" : "have"} been left out.
           </p>
         ) : null}
 
         {lines.length === 0 ? (
-          <Card className="flex flex-col gap-3 p-4 text-[15px] leading-[22px]">
+          <Card className="flex flex-col gap-3 p-4 text-small leading-[22px]">
             Your basket is empty.
             <Link href="/shop" className="btn-chunky btn-paper">
               Browse the shop
@@ -37,11 +37,11 @@ export default async function BasketPage() {
                 <li key={l.index}>
                   <Card className="flex items-center gap-3 p-3.5">
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="text-base font-bold">
+                      <span className="text-body font-bold">
                         {l.quantity > 1 ? `${l.quantity} × ` : ""}
                         {l.product.name}
                       </span>
-                      <span className="text-[15px] text-ink-muted">
+                      <span className="text-small text-ink-muted">
                         {[l.childName ? `For ${l.childName}` : null, l.size ? `Size ${l.size}` : null, l.initials ? `Initials ${l.initials}` : null]
                           .filter(Boolean)
                           .join(" · ") || "One size"}
@@ -53,7 +53,7 @@ export default async function BasketPage() {
                       <button
                         type="submit"
                         aria-label={`Remove ${l.product.name}`}
-                        className="grid h-12 w-12 place-items-center rounded-xl text-ink-muted"
+                        className="grid h-12 w-12 place-items-center rounded-web text-ink-muted"
                       >
                         <Trash2 aria-hidden size={20} />
                       </button>
@@ -63,10 +63,10 @@ export default async function BasketPage() {
               ))}
             </ul>
             <div className="flex items-baseline justify-between px-1 pt-1">
-              <span className="text-base font-bold">Total</span>
+              <span className="text-body font-bold">Total</span>
               <span className="font-display text-[34px] leading-none tabular-nums">{formatPence(totalPence)}</span>
             </div>
-            <p className="px-1 text-[15px] text-ink-muted">The club orders your kit once you&apos;ve paid, and hands it out at Friday training.</p>
+            <p className="px-1 text-small text-ink-muted">The club orders your kit once you&apos;ve paid, and hands it out at Friday training.</p>
             <CheckoutForm options={options} total={formatPence(totalPence)} />
           </>
         )}

@@ -22,6 +22,18 @@
 }
 
 @layer components {
+  /* The parent and sign-in column: a phone's width on phones, a little wider on tablets and computers so cards
+     breathe without lines growing too long to read. The tab bar, toasts and pull-to-refresh use it too, so they
+     always line up with the screen above them. */
+  .app-column {
+    max-width: 430px;
+  }
+  @media (min-width: 768px) {
+    .app-column {
+      max-width: 600px;
+    }
+  }
+
   /* Mowing stripes: the one decorative pattern. Never behind body text. */
   .stripes-v {
     background: repeating-linear-gradient(90deg, var(--pitch) 0 48px, var(--pitch-stripe) 48px 96px);
@@ -39,7 +51,7 @@
     gap: 0.5rem;
     min-height: 52px;
     padding-inline: 1.25rem;
-    border-radius: 14px;
+    border-radius: var(--radius-m);
     font-weight: 700;
     font-size: 16px;
     transition: transform 120ms ease, filter 120ms ease;
@@ -74,7 +86,7 @@
     min-height: 48px;
     padding-inline: 0.875rem;
     font-size: 15px;
-    border-radius: 12px;
+    border-radius: var(--radius-m);
   }
 
   /* Text inputs: 52px tall so they're easy to tap, 17px text so iOS doesn't zoom in. */
@@ -124,6 +136,24 @@
     outline-offset: 2px;
     box-shadow: 0 0 0 2px var(--focus-halo);
   }
+  /* Tick boxes and radios: one size (20px; the label around each is the 48px tap area) and the brand's accent.
+     Variants carry meaning: warning for a confirm that deletes or cancels, neutral for a "No" answer, gold for a star. */
+  .check {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    accent-color: var(--grass);
+    cursor: pointer;
+  }
+  .check-warning {
+    accent-color: var(--kit-orange);
+  }
+  .check-neutral {
+    accent-color: var(--ink);
+  }
+  .check-gold {
+    accent-color: var(--crest-gold);
+  }
   .field-label {
     display: block;
     margin-bottom: 6px;
@@ -149,7 +179,7 @@
 }
 .skeleton {
   background: var(--fill);
-  border-radius: 10px;
+  border-radius: var(--radius-s);
   animation: shimmer 1.4s ease-in-out infinite;
 }
 

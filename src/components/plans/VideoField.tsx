@@ -17,7 +17,7 @@ export function VideoField({ defaultValue = "" }: { defaultValue?: string }) {
         aria-describedby="video-hint"
         className="field"
       />
-      <p id="video-hint" className="mt-1.5 text-sm text-ink-muted">
+      <p id="video-hint" className="mt-1.5 text-small text-ink-muted">
         From YouTube&apos;s Share button. Parents tap to play it in the app. Leave it empty for no video.
       </p>
     </div>

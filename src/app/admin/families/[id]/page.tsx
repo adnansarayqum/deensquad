@@ -67,7 +67,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
         }
       >
         {child.missedLast3 ? (
-          <p className="flex flex-wrap items-center gap-2 text-[15px]">
+          <p className="flex flex-wrap items-center gap-2 text-small">
             <Pill tone="action">Missed the last 3 sessions</Pill>
             <span className="text-ink-muted">
               {child.lastHereThisSeason ? `Last here ${signedOn.format(new Date(child.lastHereThisSeason))}` : "Not here yet this season"}
@@ -87,7 +87,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
 
       {child.awaitingApproval ? (
         <Section title="Waiting for approval" id="approve">
-          <p className="text-[15px]">
+          <p className="text-small">
             A parent added {child.firstName} in the app. Until you approve {child.firstName}, the family sees no club news, sessions, plans or photos for the{" "}
             {groupPlural(child.ageGroup)}. Check you know the family and the group is right.
           </p>
@@ -100,16 +100,16 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
               </button>
             </form>
           ) : (
-            <p className="text-[14px] text-ink-muted">An admin approves new children.</p>
+            <p className="text-small text-ink-muted">An admin approves new children.</p>
           )}
         </Section>
       ) : null}
 
       <Section title="Payment" aside={<Pill tone={PAYMENT_TONE[child.payment]}>{paymentLabel[child.payment]}</Pill>}>
-        <p className="text-sm text-ink-muted">Set this after checking TeamFeePay. Pay as you go: the family pays for each session.</p>
+        <p className="text-small text-ink-muted">Set this after checking TeamFeePay. Pay as you go: the family pays for each session.</p>
         {/* Where the status came from and how old it is (admin UX review, Oct 2026): it's the app's record, not TeamFeePay live. */}
         {child.paymentChangedAt ? (
-          <p className="text-[14px] text-ink-muted">
+          <p className="text-small text-ink-muted">
             {child.paymentSyncedAt && Math.abs(new Date(child.paymentSyncedAt).getTime() - new Date(child.paymentChangedAt).getTime()) < 60_000
               ? `From a TeamFeePay file on ${shortDay(child.paymentSyncedAt)}.`
               : `Last changed ${shortDay(child.paymentChangedAt)}${child.payment === "self_reported" ? " by the parent" : ""}.`}
@@ -132,14 +132,14 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
       </Section>
 
       <Section title={child.guardians.length === 1 ? "Parent" : "Parents"}>
-        {child.guardians.length === 0 ? <p className="text-[15px] text-ink-muted">No parent linked yet.</p> : null}
+        {child.guardians.length === 0 ? <p className="text-small text-ink-muted">No parent linked yet.</p> : null}
         {child.guardians.map((g) => (
           <div key={g.id} className="flex flex-col gap-3 border-t border-line pt-3 first:border-0 first:pt-0">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="flex flex-col">
-                <span className="text-base font-bold">{g.name}</span>
-                <span className="text-sm text-ink-muted">{[g.email, g.phone].filter(Boolean).join(" · ")}</span>
-                {g.otherChildren.length ? <span className="text-sm text-ink-muted">Also parent of {g.otherChildren.join(", ")}</span> : null}
+                <span className="text-body font-bold">{g.name}</span>
+                <span className="text-small text-ink-muted">{[g.email, g.phone].filter(Boolean).join(" · ")}</span>
+                {g.otherChildren.length ? <span className="text-small text-ink-muted">Also parent of {g.otherChildren.join(", ")}</span> : null}
               </div>
               <span className="flex flex-wrap gap-1.5">
                 {g.inApp ? <Pill tone="done">Signed in</Pill> : g.invited ? <Pill tone="gold">Invited</Pill> : <Pill tone="neutral">Not invited</Pill>}
@@ -162,7 +162,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                   </form>
                 ) : null}
                 <details className="w-full rounded-app border border-line px-3.5 py-2.5">
-                  <summary className="cursor-pointer text-sm font-bold">Edit {g.firstName}&apos;s details</summary>
+                  <summary className="cursor-pointer text-small font-bold">Edit {g.firstName}&apos;s details</summary>
                   <StatefulForm action={saveGuardian} submitLabel={`Save ${g.name}`} savedMessage="Parent saved." className="mt-3">
                     <input type="hidden" name="child" value={child.id} />
                     <input type="hidden" name="guardian" value={g.id} />
@@ -172,11 +172,11 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
                     <input type="hidden" name="child" value={child.id} />
                     <input type="hidden" name="guardian" value={g.id} />
                     <FamiliesFilterFields filter={filter} />
-                    <p className="text-sm text-ink-muted">
+                    <p className="text-small text-ink-muted">
                       If {g.firstName} has no other children at the club, their details and sign-in are deleted. This can&apos;t be undone.
                     </p>
-                    <label className="flex min-h-11 items-center gap-3 text-sm font-bold">
-                      <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--kit-orange)]" />
+                    <label className="flex min-h-11 items-center gap-3 text-small font-bold">
+                      <input type="checkbox" name="confirm" value="yes" required className="check check-warning" />
                       Yes, unlink {g.firstName} from {child.firstName}
                     </label>
                     <button type="submit" className="btn-chunky btn-paper btn-small self-start">
@@ -190,7 +190,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
         ))}
         {isAdmin ? (
           <details className="rounded-app border-2 border-dashed border-line px-3.5 py-2.5">
-            <summary className="cursor-pointer text-sm font-bold">Add another parent</summary>
+            <summary className="cursor-pointer text-small font-bold">Add another parent</summary>
             <StatefulForm action={saveGuardian} submitLabel="Add parent" savedMessage="Parent added." className="mt-3">
               <input type="hidden" name="child" value={child.id} />
               <GuardianFields prefix="new-parent" />
@@ -203,21 +203,21 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
         {child.photo ? (
           <div className="flex items-center gap-4">
             <ChildAvatar photoId={child.photo.id} firstName={child.firstName} lastName={child.lastName} size={96} />
-            <p className="text-[15px] leading-[22px]">
+            <p className="text-small leading-[22px]">
               <span className="font-bold">Photo for the coaches</span>
               {child.photo.addedAt ? (
-                <span className="block text-sm text-ink-muted">Added by the parent on {signedOn.format(new Date(child.photo.addedAt))}</span>
+                <span className="block text-small text-ink-muted">Added by the parent on {signedOn.format(new Date(child.photo.addedAt))}</span>
               ) : null}
             </p>
           </div>
         ) : null}
-        <dl className="grid gap-2 text-[15px] sm:grid-cols-2">
+        <dl className="grid gap-2 text-small sm:grid-cols-2">
           <div>
-            <dt className="text-sm text-ink-muted">Photo consent</dt>
+            <dt className="text-small text-ink-muted">Photo consent</dt>
             <dd className="font-bold">{child.photoConsent === null ? "Not answered" : child.photoConsent ? "Photos are fine" : "No photos"}</dd>
           </div>
           <div>
-            <dt className="text-sm text-ink-muted">Club contract</dt>
+            <dt className="text-small text-ink-muted">Club contract</dt>
             <dd className="font-bold">
               {child.contract ? (
                 `Signed ${signedOn.format(new Date(child.contract.signedAt))} by ${child.contract.parentName}`
@@ -227,7 +227,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
             </dd>
           </div>
           <div>
-            <dt className="text-sm text-ink-muted">Emergency contacts</dt>
+            <dt className="text-small text-ink-muted">Emergency contacts</dt>
             <dd className="font-bold">
               {child.contacts.length === 0
                 ? "None yet"
@@ -246,23 +246,23 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
       <Section
         title="Accidents and incidents"
         aside={
-          <Link href={`/coach/incidents/new?child=${child.id}`} className="text-sm font-bold text-grass-text underline">
+          <Link href={`/coach/incidents/new?child=${child.id}`} className="text-small font-bold text-grass-text underline">
             Log one
           </Link>
         }
       >
         {incidents.length === 0 ? (
-          <p className="text-[15px] text-ink-muted">Nothing logged.</p>
+          <p className="text-small text-ink-muted">Nothing logged.</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {incidents.map((i) => (
               <li key={i.id} className="flex flex-col gap-1 border-t border-line pt-3 first:border-t-0 first:pt-0">
-                <span className="text-[15px] font-bold">
+                <span className="text-small font-bold">
                   {INCIDENT_KINDS[i.kind]} · {shortDay(i.happenedAt)} {clock(i.happenedAt)}
                 </span>
-                <span className="text-[15px] whitespace-pre-line">{i.whatHappened}</span>
-                <span className="text-sm whitespace-pre-line text-ink-muted">What we did: {i.actionTaken}</span>
-                <span className="text-sm text-ink-muted">Logged by {i.reportedBy}. The parents were sent it in the app.</span>
+                <span className="text-small whitespace-pre-line">{i.whatHappened}</span>
+                <span className="text-small whitespace-pre-line text-ink-muted">What we did: {i.actionTaken}</span>
+                <span className="text-small text-ink-muted">Logged by {i.reportedBy}. The parents were sent it in the app.</span>
               </li>
             ))}
           </ul>
@@ -272,7 +272,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
       {isAdmin ? (
         <Section title="Child's details">
           {child.changedByParentAt ? (
-            <p className="text-sm text-ink-muted">Last changed by the parent on {signedOn.format(new Date(child.changedByParentAt))}.</p>
+            <p className="text-small text-ink-muted">Last changed by the parent on {signedOn.format(new Date(child.changedByParentAt))}.</p>
           ) : null}
           <StatefulForm action={updateChild} submitLabel="Save details" savedMessage="Details saved.">
             <input type="hidden" name="id" value={child.id} />
@@ -299,16 +299,16 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/ad
 
       {isAdmin ? (
         <details className="rounded-app border-2 border-kit-orange bg-paper px-4 py-3">
-          <summary className="cursor-pointer text-[15px] font-bold text-kit-orange">Remove {child.firstName} from the club</summary>
+          <summary className="cursor-pointer text-small font-bold text-kit-orange">Remove {child.firstName} from the club</summary>
           <form action={removeChild} className="mt-3 flex flex-col gap-3">
             <input type="hidden" name="child" value={child.id} />
             <FamiliesFilterFields filter={filter} />
-            <p className="text-[15px] leading-[22px]">
+            <p className="text-small leading-[22px]">
               This deletes {child.firstName}&apos;s record, attendance, answers and messages with the club. Parents with no other children at the club are removed too. It
               can&apos;t be undone.
             </p>
-            <label className="flex min-h-11 items-center gap-3 text-[15px] font-bold">
-              <input type="checkbox" name="confirm" value="yes" required className="h-5 w-5 accent-[var(--kit-orange)]" />
+            <label className="flex min-h-11 items-center gap-3 text-small font-bold">
+              <input type="checkbox" name="confirm" value="yes" required className="check check-warning" />
               Yes, remove {child.firstName}
             </label>
             <button type="submit" className="btn-chunky btn-paper self-start">

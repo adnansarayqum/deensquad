@@ -85,7 +85,7 @@ function Rich({ text }: { text: string }) {
     if (line.trim()) blocks.push(<p key={`p${k}`}>{inline(line, `p${k}`)}</p>);
   });
   flush(-1);
-  return <div className="flex flex-col gap-2 text-[15px] leading-[22px] break-words">{blocks}</div>;
+  return <div className="flex flex-col gap-2 text-small leading-[22px] break-words">{blocks}</div>;
 }
 
 function DraftCard({ draft }: { draft: Draft }) {
@@ -106,15 +106,15 @@ function DraftCard({ draft }: { draft: Draft }) {
   const done = outcome?.ok;
   return (
     <section aria-label={`Draft: ${draft.summary}`} className="flex flex-col gap-2 rounded-app border-2 border-crest-gold bg-gold-tint p-3.5">
-      <p className="text-[13px] font-bold text-gold-text">{done ? (which === "confirm" ? "Done" : "Not done") : "Check, then confirm"}</p>
-      <p className="text-[16px] leading-[22px] font-bold">{draft.summary}</p>
-      <ul className="flex flex-col gap-1 text-[14px] leading-5 whitespace-pre-line">
+      <p className="text-meta font-bold text-gold-text">{done ? (which === "confirm" ? "Done" : "Not done") : "Check, then confirm"}</p>
+      <p className="text-body leading-[22px] font-bold">{draft.summary}</p>
+      <ul className="flex flex-col gap-1 text-small leading-5 whitespace-pre-line">
         {draft.lines.map((l, i) => (
           <li key={i}>{l}</li>
         ))}
       </ul>
       {outcome ? (
-        <p role="status" className={`rounded-app px-3 py-2 text-[15px] font-bold ${outcome.ok ? "bg-grass-tint text-grass-text" : "bg-orange-tint text-ink"}`}>
+        <p role="status" className={`rounded-app px-3 py-2 text-small font-bold ${outcome.ok ? "bg-grass-tint text-grass-text" : "bg-orange-tint text-ink"}`}>
           {outcome.message}
           {outcome.link ? (
             <>
@@ -129,11 +129,11 @@ function DraftCard({ draft }: { draft: Draft }) {
       {done ? null : (
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => act("confirm")} disabled={pending} className="btn-chunky btn-grass" aria-label={`Confirm: ${draft.summary}`}>
-            <Check aria-hidden size={18} />
+            <Check aria-hidden size={20} />
             {pending && which === "confirm" ? "Doing it…" : "Confirm"}
           </button>
           <button type="button" onClick={() => act("dismiss")} disabled={pending} className="btn-chunky btn-paper" aria-label={`Not now: ${draft.summary}`}>
-            <X aria-hidden size={18} />
+            <X aria-hidden size={20} />
             Not now
           </button>
         </div>
@@ -219,12 +219,12 @@ export function AssistantChat() {
     <div className="flex flex-col gap-4">
       {entries.length === 0 ? (
         <section aria-labelledby="try" className="flex flex-col gap-2">
-          <h2 id="try" className="text-[13px] font-bold text-ink-muted">
+          <h2 id="try" className="text-meta font-bold text-ink-muted">
             Try asking
           </h2>
           <div className="flex flex-wrap gap-2">
             {SUGGESTIONS.map((s) => (
-              <button key={s} type="button" onClick={() => ask(s)} className="min-h-12 rounded-pill border border-line bg-paper px-4 py-2 text-left text-[15px] font-bold">
+              <button key={s} type="button" onClick={() => ask(s)} className="min-h-12 rounded-pill border border-line bg-paper px-4 py-2 text-left text-small font-bold">
                 {s}
               </button>
             ))}
@@ -236,12 +236,12 @@ export function AssistantChat() {
         {entries.map((e, i) => (
           <li key={i} className={`flex flex-col gap-2 ${e.role === "user" ? "items-end" : "items-start"}`}>
             {e.role === "user" ? (
-              <p className="max-w-[85%] rounded-app border-2 border-grass bg-grass-tint px-3.5 py-2.5 text-[15px] leading-[22px] whitespace-pre-line">
+              <p className="max-w-[85%] rounded-app border-2 border-grass bg-grass-tint px-3.5 py-2.5 text-small leading-[22px] whitespace-pre-line">
                 <span className="sr-only">You: </span>
                 {e.text}
               </p>
             ) : e.role === "problem" ? (
-              <p role="alert" className="max-w-[92%] rounded-app bg-orange-tint px-3.5 py-2.5 text-[15px] text-ink">
+              <p role="alert" className="max-w-[92%] rounded-app bg-orange-tint px-3.5 py-2.5 text-small text-ink">
                 {e.text}
               </p>
             ) : (
@@ -260,7 +260,7 @@ export function AssistantChat() {
           </li>
         ))}
         {busy ? (
-          <li className="self-start rounded-app border border-line bg-paper px-3.5 py-2.5 text-[15px] text-ink-muted" role="status">
+          <li className="self-start rounded-app border border-line bg-paper px-3.5 py-2.5 text-small text-ink-muted" role="status">
             Looking in the app…
           </li>
         ) : null}
@@ -296,11 +296,11 @@ export function AssistantChat() {
           />
           {canDictate ? (
             <button type="button" onClick={dictate} className="btn-chunky btn-paper shrink-0" aria-pressed={listening} aria-label={listening ? "Stop dictating" : "Dictate"}>
-              {listening ? <Square aria-hidden size={18} /> : <Mic aria-hidden size={18} />}
+              {listening ? <Square aria-hidden size={20} /> : <Mic aria-hidden size={20} />}
             </button>
           ) : null}
           <button type="submit" className="btn-chunky btn-grass shrink-0" disabled={busy || !draftText.trim()} aria-label="Send">
-            <Send aria-hidden size={18} />
+            <Send aria-hidden size={20} />
           </button>
         </div>
       </form>

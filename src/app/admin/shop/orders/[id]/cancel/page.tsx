@@ -30,7 +30,7 @@ export default async function CancelOrderPage({ params }: PageProps<"/admin/shop
           <input type="hidden" name="order" value={order.id} />
           <input type="hidden" name="status" value="cancelled" />
           <input type="hidden" name="confirm" value="yes" />
-          <ul className="flex flex-col gap-0.5 text-[15px]">
+          <ul className="flex flex-col gap-0.5 text-small">
             {order.items.map((i) => (
               <li key={i.id}>
                 {i.quantity} × {i.productName}
@@ -40,9 +40,9 @@ export default async function CancelOrderPage({ params }: PageProps<"/admin/shop
               </li>
             ))}
           </ul>
-          <p className="text-[15px] font-bold">{emailConfigured() ? "The parent will be emailed. " : ""}This can&apos;t be undone.</p>
+          <p className="text-small font-bold">{emailConfigured() ? "The parent will be emailed. " : ""}This can&apos;t be undone.</p>
           {order.paidAt ? (
-            <p className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px]">
+            <p className="rounded-app bg-orange-tint px-3.5 py-3 text-small">
               This order is paid ({formatPence(order.totalPence)}), so refund it separately{order.payBy === "card" ? " in SumUp" : " by bank transfer"}.
             </p>
           ) : null}
@@ -56,7 +56,7 @@ export default async function CancelOrderPage({ params }: PageProps<"/admin/shop
           </div>
         </form>
       ) : (
-        <p className="rounded-app border border-line bg-paper p-4 text-[15px]">
+        <p className="rounded-app border border-line bg-paper p-4 text-small">
           {order.status === "cancelled" ? "This order is already cancelled." : "This order is ready or handed over, so it can't be cancelled here."}
         </p>
       )}

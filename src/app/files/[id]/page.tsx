@@ -37,20 +37,20 @@ export default async function FilePage({ params, searchParams }: PageProps<"/fil
   const downloadHref = `${src}?download=1`;
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-cream pb-[max(env(safe-area-inset-bottom),24px)] lg:max-w-3xl">
+    <div className="mx-auto flex min-h-dvh app-column flex-col bg-cream pb-[max(env(safe-area-inset-bottom),24px)] lg:max-w-3xl">
       <AppHeader>
         <div className="flex items-center justify-between gap-2">
           <ViewerBack href={back} />
           <a
             href={downloadHref}
-            className="inline-flex min-h-12 items-center gap-1.5 rounded-pill border-2 border-on-pitch-muted px-4 text-[15px] font-bold text-on-pitch"
+            className="inline-flex min-h-12 items-center gap-1.5 rounded-pill border-2 border-on-pitch-muted px-4 text-small font-bold text-on-pitch"
           >
-            <Download aria-hidden size={18} />
+            <Download aria-hidden size={20} />
             Download
           </a>
         </div>
-        <h1 className="text-[20px] leading-[26px] font-extrabold break-words">{title}</h1>
-        <p className="text-sm text-on-pitch-muted">{fileLabel(file)}</p>
+        <h1 className="text-heading leading-[26px] font-extrabold break-words">{title}</h1>
+        <p className="text-small text-on-pitch-muted">{fileLabel(file)}</p>
       </AppHeader>
       <main className="flex flex-col gap-3 px-4 pt-4">
         <FileViewer src={src} downloadHref={downloadHref} name={title} mime={file.mime} />

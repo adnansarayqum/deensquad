@@ -19,13 +19,13 @@ const FIELDS: { name: MedicalField; label: string; hint: (child: string) => stri
 function Outcome({ state, pending, saved }: { state: MedicalFormState; pending: boolean; saved: string }) {
   if (state.error) {
     return (
-      <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-[15px] leading-[22px] text-ink">
+      <p role="alert" className="rounded-app bg-orange-tint px-3.5 py-3 text-small leading-[22px] text-ink">
         {state.error}
       </p>
     );
   }
   return state.saved && !pending ? (
-    <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+    <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
       {saved}
     </p>
   ) : null;
@@ -56,18 +56,18 @@ export function MedicalForm({ child, medical }: { child: { id: string; firstName
             aria-describedby={`medical-${f.name}-hint`}
             className="field min-h-24 py-3 leading-[22px]"
           />
-          <p id={`medical-${f.name}-hint`} className="mt-1.5 text-[15px] text-ink-muted">
+          <p id={`medical-${f.name}-hint`} className="mt-1.5 text-small text-ink-muted">
             {f.hint(name)}
           </p>
         </div>
       ))}
-      <label className="flex items-start gap-3 rounded-app bg-fill p-3.5 text-[15px] leading-[22px]">
+      <label className="flex items-start gap-3 rounded-app bg-fill p-3.5 text-small leading-[22px]">
         <input
           type="checkbox"
           name="consent"
           value="yes"
           // Never ticked for the parent: each save is a fresh, explicit agreement (recorded as consent_at).
-          className="mt-0.5 h-6 w-6 shrink-0 accent-[var(--grass)]"
+          className="mt-0.5 check"
         />
         <span>
           I agree to the club&apos;s coaches for {name}&apos;s group and the club&apos;s admins seeing this, to look after {name}. I can change or
@@ -88,8 +88,8 @@ export function RemoveMedicalForm({ child }: { child: { id: string; firstName: s
   return (
     <form action={run} onSubmit={keep} className="flex flex-col gap-3" noValidate>
       <input type="hidden" name="child" value={child.id} />
-      <label className="flex min-h-12 items-center gap-3 text-[15px] font-bold">
-        <input type="checkbox" name="confirm" value="yes" className="h-6 w-6 shrink-0 accent-[var(--kit-orange)]" />
+      <label className="flex min-h-12 items-center gap-3 text-small font-bold">
+        <input type="checkbox" name="confirm" value="yes" className="check check-warning" />
         Yes, remove all of {name}&apos;s medical information
       </label>
       <Outcome state={state} pending={pending} saved={`${name}'s medical information is removed.`} />

@@ -53,10 +53,10 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
         {/* One row: crest and greeting, with the QR codes and Messages buttons in the corner beside them (the layout
             places those), so the padding keeps a long name clear of them. */}
         <div className="flex items-center gap-3 pr-[132px] max-[374px]:pr-28">
-          <Image src="/crest.png" alt="Deen Squad crest" width={40} height={40} className="shrink-0 rounded-[10px]" priority />
+          <Image src="/crest.png" alt="Deen Squad crest" width={40} height={40} className="shrink-0 rounded-web" priority />
           <div className="min-w-0">
-            <p className="text-[13px] leading-[18px] break-words text-ink-muted">Assalamu alaikum, {family.guardian.firstName}</p>
-            <h1 className="text-[20px] leading-6 font-bold tracking-[-0.01em]">Deen Squad</h1>
+            <p className="text-meta leading-[18px] break-words text-ink-muted">Assalamu alaikum, {family.guardian.firstName}</p>
+            <h1 className="text-heading leading-6 font-bold tracking-[-0.01em]">Deen Squad</h1>
           </div>
         </div>
         <StaffSwitch compact />
@@ -82,11 +82,11 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
             href="/messages?from=/news"
             className={`flex items-center gap-3 rounded-app px-3.5 py-3 text-ink transition-transform active:scale-[0.99] ${lead === "messages" ? "bg-orange-tint" : "bg-paper shadow-card"}`}
           >
-            <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${lead === "messages" ? "bg-kit-orange text-on-orange" : "bg-fill text-ink"}`}>
+            <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-web ${lead === "messages" ? "bg-kit-orange text-on-orange" : "bg-fill text-ink"}`}>
               <MessageCircle aria-hidden size={24} />
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[15px] font-bold">
+              <span className="text-small font-bold">
                 {unreadMessages === 1 ? "1 new message from the club" : `${unreadMessages} new messages from the club`}
               </span>
             </span>
@@ -99,8 +99,8 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
             className="flex items-center gap-3 rounded-app bg-paper shadow-card px-3.5 py-3 text-ink"
           >
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[15px] font-bold">How&apos;s {wellbeingChild.firstName} finding football?</span>
-              <span className="text-[13px] text-ink-muted">A quick private check-in with the club</span>
+              <span className="text-small font-bold">How&apos;s {wellbeingChild.firstName} finding football?</span>
+              <span className="text-meta text-ink-muted">A quick private check-in with the club</span>
             </span>
             <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
           </Link>
@@ -122,7 +122,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
                 key={key}
                 href={key === "all" ? "/news" : `/news?show=${key}`}
                 aria-current={show === key ? "page" : undefined}
-                className={`inline-flex min-h-11 shrink-0 items-center rounded-pill border-2 px-3.5 text-[15px] font-bold whitespace-nowrap ${
+                className={`inline-flex min-h-11 shrink-0 items-center rounded-pill border-2 px-3.5 text-small font-bold whitespace-nowrap ${
                   show === key ? "border-grass bg-grass-tint text-grass-text" : "border-line bg-paper text-ink"
                 }`}
               >
@@ -132,7 +132,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
           </nav>
         ) : null}
         {family.children.length === 0 ? (
-          <Card className="p-4 text-[15px] leading-[22px]">
+          <Card className="p-4 text-small leading-[22px]">
             No players are linked to your email yet. Ask the club to add your child, then open the app again.
           </Card>
         ) : unread.length > 0 ? (
@@ -141,7 +141,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
               <Eyebrow>
                 <span id="needs-tap">Needs your tap</span>
               </Eyebrow>
-              <span className="rounded-pill bg-kit-orange px-2.5 py-0.5 text-[13px] font-bold text-on-orange">{unread.length} unread</span>
+              <span className="rounded-pill bg-kit-orange px-2.5 py-0.5 text-meta font-bold text-on-orange">{unread.length} unread</span>
             </div>
             {unread.map((a, i) => (
               <Fragment key={a.id}>
@@ -152,16 +152,16 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
                       {a.topic}
                       {a.audience === "all" ? "" : ` · ${groupsPlural(a.audience)}`}
                     </Pill>
-                    <span className="text-[13px] text-ink-muted">{postedLabel(a.postedAt, now)}</span>
+                    <span className="text-meta text-ink-muted">{postedLabel(a.postedAt, now)}</span>
                   </div>
                   {/* Seen once the headline has been on screen for a moment (SeenTracker): the club's Seen figure. */}
-                  <h2 data-seen={a.id} className="text-[20px] leading-[25px] font-bold">
+                  <h2 data-seen={a.id} className="text-heading leading-[25px] font-bold">
                     {a.title}
                   </h2>
-                  <p className="text-[16px] leading-6 whitespace-pre-line">{a.body}</p>
+                  <p className="text-body leading-6 whitespace-pre-line">{a.body}</p>
                   <MediaGallery items={a.media} label={a.title} />
                   {outOfDate(a) ? <SessionNow session={a.session!} now={now} /> : null}
-                  {a.postedBy ? <p className="text-[15px] text-ink-muted">From {a.postedBy}</p> : null}
+                  {a.postedBy ? <p className="text-small text-ink-muted">From {a.postedBy}</p> : null}
                   {a.quickAnswers && a.reaches.length ? (
                     <Answers a={a} family={family} />
                   ) : canAnswerComing(a.session) ? (
@@ -178,12 +178,12 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
             ))}
           </section>
         ) : (
-          <p className="flex items-center gap-2 px-1 text-[15px] font-bold text-grass-text">
+          <p className="flex items-center gap-2 px-1 text-small font-bold text-grass-text">
             {news.length && show !== "all" && shown.length === 0 ? (
               <span className="font-normal text-ink-muted">Nothing here right now.</span>
             ) : news.length ? (
               <>
-                <Check aria-hidden size={18} strokeWidth={3} />
+                <Check aria-hidden size={20} strokeWidth={3} />
                 You&apos;re all caught up.
               </>
             ) : (
@@ -204,7 +204,7 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
               <DoubleTapLike id={a.id}>
                 <ReadFocus id={a.id} className="flex flex-col gap-2 rounded-app bg-paper shadow-card px-4 py-3.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[15px] text-ink-muted">
+                    <span className="text-small text-ink-muted">
                       {a.topic} · {a.audience === "all" ? "All groups" : a.audience.join(", ")} · {postedLabel(a.postedAt, now)}
                     </span>
                     {outOfDate(a) ? (
@@ -214,14 +214,14 @@ export default async function NewsPage({ searchParams }: PageProps<"/news">) {
                       </span>
                     ) : a.requiresAck ? (
                       // Quiet once done: the unread messages above are the ones that stand out.
-                      <span className="inline-flex shrink-0 items-center gap-1 text-[13px] font-bold text-ink-muted">
-                        <Check aria-hidden size={14} strokeWidth={3} />
+                      <span className="inline-flex shrink-0 items-center gap-1 text-meta font-bold text-ink-muted">
+                        <Check aria-hidden size={16} strokeWidth={3} />
                         Read
                       </span>
                     ) : null}
                   </div>
-                  <h2 className={`text-[18px] leading-[23px] font-bold ${outOfDate(a) ? "text-ink-muted line-through decoration-1" : ""}`}>{a.title}</h2>
-                  <p className="text-[16px] leading-6 whitespace-pre-line text-ink-muted">{a.body}</p>
+                  <h2 className={`text-subhead leading-[23px] font-bold ${outOfDate(a) ? "text-ink-muted line-through decoration-1" : ""}`}>{a.title}</h2>
+                  <p className="text-body leading-6 whitespace-pre-line text-ink-muted">{a.body}</p>
                   <MediaGallery items={a.media} label={a.title} />
                   {outOfDate(a) ? <SessionNow session={a.session!} now={now} /> : null}
                   {a.quickAnswers && a.reaches.length ? <Answers a={a} family={family} /> : canAnswerComing(a.session) ? <ComingOnNews session={a.session} family={family} now={now} /> : null}
@@ -277,7 +277,7 @@ function ReplyLink({ a }: { a: AnnouncementView }) {
       <Link
         href={`/messages/${a.replied.conversation}`}
         aria-label={`You replied, ${postedLabel(a.replied.at, new Date())}. Open the conversation: ${a.title}`}
-        className="inline-flex min-h-12 items-center gap-2 self-start text-[15px] text-ink-muted"
+        className="inline-flex min-h-12 items-center gap-2 self-start text-small text-ink-muted"
       >
         <Check aria-hidden size={16} strokeWidth={3} />
         You replied · {postedLabel(a.replied.at, new Date())}
@@ -290,9 +290,9 @@ function ReplyLink({ a }: { a: AnnouncementView }) {
     <Link
       href={href}
       aria-label={`Reply to ${a.postedBy ?? "the club"}: ${a.title}`}
-      className="inline-flex min-h-12 items-center gap-2 self-start text-[15px] font-bold text-grass-text underline"
+      className="inline-flex min-h-12 items-center gap-2 self-start text-small font-bold text-grass-text underline"
     >
-      <Reply aria-hidden size={18} />
+      <Reply aria-hidden size={20} />
       Reply to {a.postedBy ?? "the club"}
     </Link>
   );

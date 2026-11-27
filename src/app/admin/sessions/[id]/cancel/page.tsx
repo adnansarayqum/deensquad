@@ -24,7 +24,7 @@ export default async function CancelSessionPage({ params }: PageProps<"/admin/se
   return (
     <div className="flex flex-col gap-4 lg:max-w-3xl">
       <SessionHeader session={session} heading={restore ? `Put ${session.title} back on?` : `Cancel ${session.title}?`} />
-      {restore && session.cancelReason ? <p className="text-[15px]">Cancelled because: {session.cancelReason}</p> : null}
+      {restore && session.cancelReason ? <p className="text-small">Cancelled because: {session.cancelReason}</p> : null}
       <form action={setSessionCancelled} className="flex flex-col gap-4 rounded-app border border-line bg-paper p-4">
         <input type="hidden" name="id" value={session.id} />
         <input type="hidden" name="cancel" value={restore ? "no" : "yes"} />
@@ -36,8 +36,8 @@ export default async function CancelSessionPage({ params }: PageProps<"/admin/se
             <input id="reason" name="reason" maxLength={120} placeholder="Pitch waterlogged" className="field" />
           </div>
         )}
-        <label className="flex min-h-12 items-center gap-3 text-[15px]">
-          <input type="checkbox" name="notify" defaultChecked className="h-5 w-5 accent-[var(--grass)]" />
+        <label className="flex min-h-12 items-center gap-3 text-small">
+          <input type="checkbox" name="notify" defaultChecked className="check" />
           <span>
             <b>Tell the families now.</b> Posts it in club news for {who}, with an app notification and an email straight away (after 8am if
             it&apos;s late at night).

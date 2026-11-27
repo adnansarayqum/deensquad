@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarDays, ClipboardCheck, ClipboardList, FileText, House, Inbox, Megaphone, MoreHorizontal, HeartHandshake, PartyPopper, ShoppingBag, Star, UserCog, Users } from "lucide-react";
+import { ICON_STROKE } from "@/components/ui";
 
 /** Every staff page, in the order the club works through them. Coaches don't see the admin-only ones. */
 export const STAFF_NAV = [
@@ -42,7 +43,7 @@ export function AdminNav({ isAdmin, layout = "tabs", unreadMessages = 0 }: { isA
   const label = (item: (typeof STAFF_NAV)[number]) => (unread(item) ? `${item.label}, ${unreadMessages} unread` : undefined);
   const badge = (item: (typeof STAFF_NAV)[number]) =>
     unread(item) ? (
-      <span aria-hidden className="ml-1.5 inline-grid h-6 min-w-6 place-items-center rounded-pill bg-kit-orange px-1.5 text-xs font-bold text-on-orange">
+      <span aria-hidden className="ml-1.5 inline-grid h-6 min-w-6 place-items-center rounded-pill bg-kit-orange px-1.5 text-meta font-bold text-on-orange">
         {unreadMessages}
       </span>
     ) : null;
@@ -57,12 +58,12 @@ export function AdminNav({ isAdmin, layout = "tabs", unreadMessages = 0 }: { isA
             const heading = i === 0 || items[i - 1].section !== item.section ? item.section : null;
             return (
               <li key={item.href} className={heading && i > 0 ? "mt-3" : undefined}>
-                {heading ? <p className="px-3 pb-1 text-[13px] font-bold text-on-pitch-muted">{heading}</p> : null}
+                {heading ? <p className="px-3 pb-1 text-meta font-bold text-on-pitch-muted">{heading}</p> : null}
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   aria-label={label(item)}
-                  className={`flex min-h-12 items-center rounded-dash px-3 text-[15px] font-bold ${
+                  className={`flex min-h-12 items-center rounded-dash px-3 text-small font-bold ${
                     active ? "bg-floodlight text-on-gold" : "text-on-pitch hover:bg-pitch-deep"
                   }`}
                 >
@@ -126,7 +127,7 @@ function TabBar({ items, isActive, label, unreadMessages }: { items: readonly It
     };
   }, []);
 
-  const tabClass = (on: boolean) => `relative flex min-h-12 w-full flex-col items-center gap-0.5 py-1 text-[13px] font-bold ${on ? "text-grass-text" : "text-ink-muted"}`;
+  const tabClass = (on: boolean) => `relative flex min-h-12 w-full flex-col items-center gap-0.5 py-1 text-meta font-bold ${on ? "text-grass-text" : "text-ink-muted"}`;
   const iconPill = (on: boolean) => `grid h-8 w-14 place-items-center rounded-pill transition-colors ${on ? "bg-grass-tint" : ""}`;
   return (
     <nav
@@ -142,11 +143,11 @@ function TabBar({ items, isActive, label, unreadMessages }: { items: readonly It
             <li key={item.href}>
               <Link href={item.href} aria-current={on ? "page" : undefined} aria-label={label(item)} className={tabClass(on)}>
                 <span className={iconPill(on)}>
-                  <Icon aria-hidden size={22} strokeWidth={on ? 2.4 : 2} />
+                  <Icon aria-hidden size={24} strokeWidth={on ? ICON_STROKE.active : ICON_STROKE.normal} />
                 </span>
                 <span className="max-w-full truncate px-0.5 max-[239px]:sr-only">{item.label}</span>
                 {item.href === "/admin/messages" && unreadMessages > 0 ? (
-                  <span aria-hidden className="absolute top-0 right-[calc(50%-24px)] grid h-5 min-w-5 place-items-center rounded-pill bg-kit-orange px-1 text-[13px] font-bold text-on-orange">
+                  <span aria-hidden className="absolute top-0 right-[calc(50%-24px)] grid h-5 min-w-5 place-items-center rounded-pill bg-kit-orange px-1 text-meta font-bold text-on-orange">
                     {unreadMessages > 9 ? "9+" : unreadMessages}
                   </span>
                 ) : null}
@@ -158,7 +159,7 @@ function TabBar({ items, isActive, label, unreadMessages }: { items: readonly It
           <details ref={more} className="group/more">
             <summary className={`${tabClass(moreActive)} cursor-pointer list-none group-open/more:text-grass-text [&::-webkit-details-marker]:hidden`}>
               <span className={`${iconPill(moreActive)} group-open/more:bg-grass-tint`}>
-                <MoreHorizontal aria-hidden size={22} strokeWidth={2.4} />
+                <MoreHorizontal aria-hidden size={24} strokeWidth={moreActive ? ICON_STROKE.active : ICON_STROKE.normal} />
               </span>
               <span className="max-w-full truncate px-0.5 max-[239px]:sr-only">More</span>
             </summary>
@@ -174,11 +175,11 @@ function TabBar({ items, isActive, label, unreadMessages }: { items: readonly It
                       <Link
                         href={item.href}
                         aria-current={on ? "page" : undefined}
-                        className={`flex min-h-13 items-center gap-3 py-2 text-base font-bold ${on ? "text-grass-text" : "text-ink"}`}
+                        className={`flex min-h-13 items-center gap-3 py-2 text-body font-bold ${on ? "text-grass-text" : "text-ink"}`}
                       >
-                        <Icon aria-hidden size={22} className="shrink-0 text-grass-text" />
+                        <Icon aria-hidden size={24} className="shrink-0 text-grass-text" />
                         <span>{item.label}</span>
-                        {"hint" in item ? <span className="ml-auto text-right text-sm font-normal text-ink-muted">{item.hint}</span> : null}
+                        {"hint" in item ? <span className="ml-auto text-right text-small font-normal text-ink-muted">{item.hint}</span> : null}
                       </Link>
                     </li>
                   );

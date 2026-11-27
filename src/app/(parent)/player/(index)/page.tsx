@@ -34,7 +34,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                   key={c.id}
                   href={`/player?child=${c.id}`}
                   aria-current={c.id === child.id ? "page" : undefined}
-                  className={`inline-flex min-h-12 items-center rounded-pill px-4 text-[15px] font-bold ${
+                  className={`inline-flex min-h-12 items-center rounded-pill px-4 text-small font-bold ${
                     c.id === child.id ? "bg-pitch text-on-pitch" : "bg-fill text-ink"
                   }`}
                 >
@@ -56,15 +56,15 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                 <h1 className="font-display text-[40px] leading-[0.9] tracking-[0.02em]">
                   {child.firstName} {child.lastName[0]}.
                 </h1>
-                <p className="text-[15px] text-on-pitch-muted">
+                <p className="text-small text-on-pitch-muted">
                   {child.shirtNumber ? <span className="sr-only">Shirt number {child.shirtNumber}. </span> : null}
                   {[groupPlural(child.ageGroup), child.position, `since ${new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric" }).format(new Date(child.joinedOn))}`]
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
                 {stats.streakWeeks >= 2 ? (
-                  <span className="inline-flex items-center gap-1.5 self-start rounded-pill bg-floodlight px-3 py-1 text-[13px] font-bold text-on-gold">
-                    <Flame aria-hidden size={14} fill="currentColor" strokeWidth={0} />
+                  <span className="inline-flex items-center gap-1.5 self-start rounded-pill bg-floodlight px-3 py-1 text-meta font-bold text-on-gold">
+                    <Flame aria-hidden size={16} fill="currentColor" strokeWidth={0} />
                     {stats.streakWeeks}-week streak
                   </span>
                 ) : null}
@@ -77,7 +77,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
             </div>
             {/* This season at a glance, on the card itself. */}
             {stats.attendancePct === null ? (
-              <p className="relative border-t border-on-pitch/15 px-4 py-3 text-[14px] text-on-pitch-muted">{child.firstName}&apos;s season starts after their first session.</p>
+              <p className="relative border-t border-on-pitch/15 px-4 py-3 text-small text-on-pitch-muted">{child.firstName}&apos;s season starts after their first session.</p>
             ) : (
               <dl className={`relative grid ${awards ? "grid-cols-4" : "grid-cols-2"} divide-x divide-on-pitch/15 border-t border-on-pitch/15 bg-pitch-deep/60`}>
                 <SeasonStat label={stats.sessions === 1 ? "session" : "sessions"} value={String(stats.sessions)} />
@@ -93,7 +93,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
             )}
             {/* The club rewards a child on reaching 20 points (the owner's own reward), so say how close they are. */}
             {awards && awards.totals.points > 0 && awards.totals.points < REWARD_POINTS ? (
-              <p className="relative border-t border-on-pitch/15 px-4 py-2.5 text-[14px] text-on-pitch-muted">
+              <p className="relative border-t border-on-pitch/15 px-4 py-2.5 text-small text-on-pitch-muted">
                 {REWARD_POINTS - awards.totals.points} more {REWARD_POINTS - awards.totals.points === 1 ? "point" : "points"} to a reward from the club
               </p>
             ) : null}
@@ -108,7 +108,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
       <main className="flex flex-col gap-3.5 px-4 pt-4 pb-4">
         {!child ? (
-          <Card className="flex flex-col gap-2 p-4 text-[15px] leading-[22px]">
+          <Card className="flex flex-col gap-2 p-4 text-small leading-[22px]">
             <p>No players are linked to your email yet. Add your child here, or ask the club to add them.</p>
             <Link href="/player/add-child" className="btn-chunky btn-grass">
               Add a child
@@ -117,7 +117,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         ) : null}
 
         {justAdded ? (
-          <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-[15px] font-bold text-grass-text">
+          <p role="status" className="rounded-app bg-grass-tint px-3.5 py-3 text-small font-bold text-grass-text">
             {child.firstName} is now on your account. The club will check the details and approve {child.firstName}, then you&apos;ll see their group&apos;s news and sessions.
           </p>
         ) : null}
@@ -127,10 +127,10 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         {child && spotlights.length ? (
           <section aria-labelledby="spotlight" className="flex flex-col gap-3 rounded-app bg-paper p-4 shadow-card">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-              <h2 id="spotlight" className="text-[18px] font-bold">
+              <h2 id="spotlight" className="text-subhead font-bold">
                 Player of the week
               </h2>
-              <span className="text-[13px] text-ink-muted">
+              <span className="text-meta text-ink-muted">
                 {groupPlural(spotlights[0].ageGroup)}, {weekWords(spotlights[0].week)}
               </span>
             </div>
@@ -141,11 +141,11 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
               width={1080}
               height={1350}
               loading="lazy"
-              className="h-auto w-full rounded-[14px]"
+              className="h-auto w-full rounded-web"
             />
             <SpotlightShare id={spotlights[0].id} firstName={child.firstName} />
             {spotlights.length > 1 ? (
-              <p className="text-[14px] text-ink-muted">
+              <p className="text-small text-ink-muted">
                 Also Player of the week: {spotlights.slice(1).map((sp) => weekWords(sp.week)).join(", ")}.
               </p>
             ) : null}
@@ -154,7 +154,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
         {child && records ? (
           <section aria-labelledby="child-records" className="flex flex-col rounded-app bg-paper shadow-card p-1">
-            <h2 id="child-records" className="px-3 pt-3 pb-1 text-[18px] font-bold">
+            <h2 id="child-records" className="px-3 pt-3 pb-1 text-subhead font-bold">
               {child.firstName}&apos;s details
             </h2>
             <DetailRow href={`/player/child/${child.id}`} title="Name, date of birth and photo" pill={child.photoFileId ? { tone: "done", text: "Photo added" } : { tone: "neutral", text: "Optional" }} />
@@ -182,11 +182,11 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         {child ? (
           <Link
             href={`/player/wellbeing?child=${child.id}`}
-            className="flex min-h-12 items-center justify-between gap-3 rounded-app bg-paper shadow-card px-4 py-3 text-[16px] font-bold"
+            className="flex min-h-12 items-center justify-between gap-3 rounded-app bg-paper shadow-card px-4 py-3 text-body font-bold"
           >
             <span className="flex flex-col">
               How&apos;s {child.firstName} finding football?
-              <span className="text-[15px] font-normal text-ink-muted">A private check-in with the club</span>
+              <span className="text-small font-normal text-ink-muted">A private check-in with the club</span>
             </span>
             <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
           </Link>
@@ -194,18 +194,18 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
         {child && awards && awards.recent.length > 0 ? (
           <Card className="flex flex-col gap-2 p-3.5">
-            <h2 className="text-base font-bold">From the coaches</h2>
+            <h2 className="text-body font-bold">From the coaches</h2>
             <ul className="flex flex-col divide-y divide-line">
               {awards.recent.map((a) => (
                 <li key={a.id} className="flex items-center gap-3 py-2">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill bg-crest-gold text-on-gold">
-                    {a.stars ? <Star aria-hidden size={20} fill="currentColor" strokeWidth={0} /> : <span className="font-display text-[20px]">+{a.points}</span>}
+                    {a.stars ? <Star aria-hidden size={20} fill="currentColor" strokeWidth={0} /> : <span className="font-display text-heading">+{a.points}</span>}
                   </span>
                   <span className="flex min-w-0 flex-col">
-                    <span className="text-[15px] font-bold">
+                    <span className="text-small font-bold">
                       {[a.stars ? "Star player" : null, a.points ? `${a.points} ${a.points === 1 ? "point" : "points"}` : null].filter(Boolean).join(" and ")}
                     </span>
-                    <span className="text-[13px] text-ink-muted">
+                    <span className="text-meta text-ink-muted">
                       {[a.reason, a.from, new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" }).format(new Date(a.givenAt))]
                         .filter(Boolean)
                         .join(" · ")}
@@ -219,7 +219,7 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
         {child && badges.length > 0 ? (
           <Card className="flex flex-col gap-3 p-3.5">
-            <h2 className="text-[18px] font-bold">Badges</h2>
+            <h2 className="text-subhead font-bold">Badges</h2>
             <ul className="grid grid-cols-4 gap-2">
               {badges.map((b) => {
                 const Icon = b.earnedOn ? badgeIcon(b.icon) : Lock;
@@ -232,16 +232,16 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
                           : "border-2 border-dashed border-line bg-fill text-ink-muted"
                       }`}
                     >
-                      <Icon aria-hidden size={26} />
+                      <Icon aria-hidden size={24} />
                     </span>
-                    <span className={`text-[13px] font-bold ${b.earnedOn ? "" : "text-ink-muted"}`}>{b.name}</span>
-                    <span className="text-[13px] leading-[17px] text-ink-muted">
+                    <span className={`text-meta font-bold ${b.earnedOn ? "" : "text-ink-muted"}`}>{b.name}</span>
+                    <span className="text-meta leading-[17px] text-ink-muted">
                       {b.earnedOn ? "Earned" : (BADGE_RULES[b.id] ?? "Given by the coaches.")}
                     </span>
                     {/* How close, where the app knows (sessions come from the register). Coaches still award it. */}
                     {!b.earnedOn && b.id === "ten-sessions" && stats ? (
                       <span className="flex w-full flex-col items-center gap-1">
-                        <span className="text-[13px] font-bold text-gold-text tabular-nums">{Math.min(stats.sessions, 10)} of 10 so far</span>
+                        <span className="text-meta font-bold text-gold-text tabular-nums">{Math.min(stats.sessions, 10)} of 10 so far</span>
                         <span aria-hidden className="h-1.5 w-full overflow-hidden rounded-pill bg-line">
                           <span className="block h-full bg-crest-gold" style={{ width: `${Math.min(100, stats.sessions * 10)}%` }} />
                         </span>
@@ -257,17 +257,17 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
         {child && progress ? (
           // Only while an admin has switched progress on for parents; this child's own ratings and reports, nothing else.
           <Card className="flex flex-col gap-3 p-3.5">
-            <h2 className="text-[18px] font-bold">Progress</h2>
+            <h2 className="text-subhead font-bold">Progress</h2>
             <ProgressSummaryView firstName={child.firstName} progress={progress.summary} />
             {progress.latest ? (
               <section aria-labelledby="latest-report" className="flex flex-col gap-1.5 border-t border-line pt-3">
-                <h3 id="latest-report" className="text-[15px] font-bold">
+                <h3 id="latest-report" className="text-small font-bold">
                   Progress report: {monthLabel(progress.latest.month)}
                 </h3>
-                {progress.latest.by ? <p className="text-[13px] text-ink-muted">From {progress.latest.by}</p> : null}
-                <p className="text-[15px] leading-[22px] whitespace-pre-line">{progress.latest.body}</p>
+                {progress.latest.by ? <p className="text-meta text-ink-muted">From {progress.latest.by}</p> : null}
+                <p className="text-small leading-[22px] whitespace-pre-line">{progress.latest.body}</p>
                 {progress.earlier ? (
-                  <Link href={`/player/progress?child=${child.id}`} className="inline-flex min-h-12 items-center self-start text-[15px] font-bold text-grass-text underline">
+                  <Link href={`/player/progress?child=${child.id}`} className="inline-flex min-h-12 items-center self-start text-small font-bold text-grass-text underline">
                     Earlier reports
                   </Link>
                 ) : null}
@@ -278,21 +278,21 @@ export default async function PlayerPage({ searchParams }: PageProps<"/player">)
 
         {note ? (
           <div className="flex items-start gap-3 rounded-app bg-grass-tint px-3.5 py-3">
-            <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-pill bg-pitch text-[13px] font-bold text-on-pitch">
+            <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-pill bg-pitch text-meta font-bold text-on-pitch">
               {note.initials}
             </span>
             <p className="flex flex-col gap-0.5">
-              <span className="text-[15px] font-bold">Note from {note.from}</span>
-              <span className="text-[15px] leading-5">{note.text}</span>
+              <span className="text-small font-bold">Note from {note.from}</span>
+              <span className="text-small leading-5">{note.text}</span>
             </p>
           </div>
         ) : null}
 
         {/* Account things live in Settings, so Family stays about the children. */}
-        <Link href="/player/settings" className="flex min-h-[52px] items-center justify-between gap-3 rounded-app bg-paper shadow-card px-4 py-3 text-[16px] font-bold">
+        <Link href="/player/settings" className="flex min-h-[52px] items-center justify-between gap-3 rounded-app bg-paper shadow-card px-4 py-3 text-body font-bold">
           <span className="flex flex-col">
             Settings
-            <span className="text-[15px] font-normal text-ink-muted">Your details, parents and carers, notifications, your data, sign out</span>
+            <span className="text-small font-normal text-ink-muted">Your details, parents and carers, notifications, your data, sign out</span>
           </span>
           <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-muted" />
         </Link>
@@ -314,8 +314,8 @@ function DetailRow({ href, title, hint, pill }: { href: string; title: string; h
   return (
     <Link href={href} className="flex min-h-[52px] flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line px-3 py-2 last:border-b-0">
       <span className="flex min-w-0 flex-1 basis-40 flex-col">
-        <span className="text-[16px] font-bold">{title}</span>
-        {hint ? <span className="text-[15px] text-ink-muted">{hint}</span> : null}
+        <span className="text-body font-bold">{title}</span>
+        {hint ? <span className="text-small text-ink-muted">{hint}</span> : null}
       </span>
       <span className="ml-auto flex shrink-0 items-center gap-1">
         <Pill tone={pill.tone}>{pill.text}</Pill>
@@ -329,8 +329,8 @@ function DetailRow({ href, title, hint, pill }: { href: string; title: string; h
 function SeasonStat({ label, value, gold = false }: { label: string; value: string; gold?: boolean }) {
   return (
     <div className="flex min-w-0 flex-col-reverse items-center px-1 py-2.5">
-      <dt className="max-w-full truncate text-[13px] font-bold text-on-pitch-muted">{label}</dt>
-      <dd className={`font-display text-[30px] leading-none tabular-nums ${gold && value !== "0" ? "text-floodlight" : "text-on-pitch"}`}>{value}</dd>
+      <dt className="max-w-full truncate text-meta font-bold text-on-pitch-muted">{label}</dt>
+      <dd className={`font-display text-title leading-none tabular-nums ${gold && value !== "0" ? "text-floodlight" : "text-on-pitch"}`}>{value}</dd>
     </div>
   );
 }
